@@ -27,7 +27,8 @@ readme = 'README.md'
   include = "apps/uvian_worker"
 
   [tool.poetry.dependencies]
-  python = ">=3.9,<3.15"
+  python = ">=3.10,<3.15"
+  bullmq = "^2.19.4"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.3.1"

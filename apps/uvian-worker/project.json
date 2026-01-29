@@ -80,6 +80,13 @@
         "command": "poetry run python apps/uvian_worker/hello.py",
         "cwd": "{projectRoot}"
       }
+    },
+    "start-worker": {
+      "executor": "@nxlv/python:run-commands",
+      "options": {
+        "command": "poetry run python apps/uvian_worker/worker.py",
+        "cwd": "{projectRoot}"
+      }
     }
   },
   "tags": [],
