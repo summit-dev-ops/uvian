@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "apps/uvian-web/tailwind.config.js",
+    "css": "apps/uvian-web/src/app/global.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@org/ui",
+    "utils": "@org/ui/utils",
+    "ui": "@org/ui"
+  },
+  "iconLibrary": "lucide"
+}

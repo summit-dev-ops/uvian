@@ -1,3 +1,5 @@
+import { Button } from '@org/ui';
+
 export default function Index() {
   /*
    * Replace the elements below with your own.
@@ -33,7 +35,7 @@ export default function Index() {
                 </svg>
                 <span>You&apos;re up and running</span>
               </h2>
-              <a href="#commands"> What&apos;s next? </a>
+              <Button variant={"destructive"}>What&apos;s next?</Button>
             </div>
             <div className="logo-container">
               <svg
