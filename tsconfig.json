@@ -4,7 +4,10 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/web"
+      "path": "./apps/uvian-web"
+    },
+    {
+      "path": "./apps/uvian-api"
     }
   ]
 }
