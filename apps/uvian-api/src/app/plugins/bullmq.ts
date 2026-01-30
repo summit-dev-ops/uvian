@@ -1,9 +1,8 @@
 import fp from 'fastify-plugin';
-import { FastifyInstance } from 'fastify';
 import { redisConnection } from '../clients/redis';
 import { queueService } from '../services/queue.service';
 
-export default fp(async (fastify: FastifyInstance) => {
+export default fp(async (fastify) => {
   fastify.decorate('redis', redisConnection);
   fastify.decorate('queueService', queueService);
 
@@ -11,10 +10,3 @@ export default fp(async (fastify: FastifyInstance) => {
     await redisConnection.quit();
   });
 });
-
-declare module 'fastify' {
-  export interface FastifyInstance {
-    redis: typeof redisConnection;
-    queueService: typeof queueService;
-  }
-}

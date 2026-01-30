@@ -1,13 +1,35 @@
 import asyncio
 import os
+import json
+from redis import Redis
 from bullmq import Worker
+
+redis_host = os.getenv("REDIS_HOST", "localhost")
+redis_port = int(os.getenv("REDIS_PORT", 6379))
+r = Redis(host=redis_host, port=redis_port, decode_responses=True)
 
 async def process_job(job, token):
     print(f"Processing job {job.id}...", flush=True)
     print(f"Job Data: {job.data}", flush=True)
     
+    conversation_id = "hi" #job.data.get("conversationId", "default")
+    
+    # Notify start of work
+    r.publish(f"conversation:{conversation_id}:messages", json.dumps({
+        "text": f"AI is processing job {job.id}...",
+        "sender": "AI",
+        "type": "status"
+    }))
+
     # Simulate work
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
+    
+    # Send actual result
+    r.publish(f"conversation:{conversation_id}:messages", json.dumps({
+        "text": f"Finished processing job {job.id}. Result: 42",
+        "sender": "AI",
+        "type": "message"
+    }))
     
     print(f"Finished job {job.id}", flush=True)
     return {"status": "success", "result": "Job completed by Python worker"}
