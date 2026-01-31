@@ -11,9 +11,8 @@
     "prefix": ""
   },
   "aliases": {
-    "components": "@org/ui",
-    "utils": "@org/ui/utils",
-    "ui": "@org/ui"
+    "components": "packages/ui/src/components",
+    "utils": "packages/ui/src/lib/utils.ts"
   },
   "iconLibrary": "lucide"
 }

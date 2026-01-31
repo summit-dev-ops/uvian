@@ -66,6 +66,8 @@
   "dependencies": {
     "@fastify/autoload": "^5.0.0",
     "@fastify/sensible": "^5.0.0",
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.15",
     "bullmq": "^5.67.2",
     "fastify": "^4.29.1",
     "fastify-plugin": "^4.0.0",
