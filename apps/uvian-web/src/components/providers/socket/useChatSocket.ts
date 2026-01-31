@@ -1,6 +1,6 @@
 "use client"
 import { useCallback } from 'react';
-import { useSocket } from './SocketProvider';
+import { useSocket } from './socket-provider';
 import type { JoinConversationPayload, SendMessagePayload, NewMessagePayload } from './types';
 
 

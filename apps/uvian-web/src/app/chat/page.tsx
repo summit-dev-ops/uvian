@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { useChatSocket } from '../socket/useChatSocket';
+import { useChatSocket } from '~/components/providers/socket/useChatSocket';
 
 export default function ChatPage() {
   const { joinConversation, sendMessage, onNewMessage, isConnected } = useChatSocket();
