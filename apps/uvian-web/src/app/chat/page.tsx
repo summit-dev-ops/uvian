@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { useChatSocket } from '~/components/providers/socket/useChatSocket';
+import { Button, Input, Card, CardContent } from "@org/ui";
 
 export default function ChatPage() {
   const { joinConversation, sendMessage, onNewMessage, isConnected } = useChatSocket();
@@ -35,30 +36,34 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <h2>Chat Demo (room: {conversationId})</h2>
+    <div className="p-4">
+      <h2 className="text-xl font-semibold mb-2">Chat Demo (room: {conversationId})</h2>
       
       {/* Visual Indicator */}
-      <div style={{ marginBottom: '10px', fontSize: '12px' }}>
-        Status: {isConnected ? <span style={{color:'green'}}>● Connected</span> : <span style={{color:'red'}}>● Disconnected</span>}
+      <div className="mb-2 text-xs">
+        Status: {isConnected ? <span className="text-green-600">● Connected</span> : <span className="text-red-600">● Disconnected</span>}
       </div>
 
-      <div style={{ border: '1px solid #ccc', padding: '0.5rem', height: '300px', overflowY: 'auto', marginBottom: '1rem' }}>
-        {messages.map((msg, idx) => (
-          <div key={idx} style={{ marginBottom: '0.5rem' }}>
-            <strong>{msg.sender}:</strong> {msg.text}
-          </div>
-        ))}
+      <Card className="mb-4">
+        <CardContent className="h-80 overflow-y-auto p-2">
+          {messages.map((msg, idx) => (
+            <div key={idx} className="mb-1">
+              <strong>{msg.sender}:</strong> {msg.text}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <div className="flex items-center space-x-2 mb-4">
+        <Input
+          type="text"
+          value={text}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value)}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleSend()}
+          placeholder="Type a message"
+          className="flex-1"
+        />
+        <Button onClick={handleSend} disabled={!isConnected}>Send</Button>
       </div>
-      <input
-        type="text"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-        placeholder="Type a message"
-        style={{ width: '70%', marginRight: '0.5rem' }}
-      />
-      <button onClick={handleSend} disabled={!isConnected}>Send</button>
     </div>
   );
 }
