@@ -15,7 +15,8 @@ export default fp(async (fastify) => {
     fastify.io.on('connection', (socket) => {
       fastify.log.info(`Socket connected: ${socket.id}`);
 
-      socket.on('join_conversation', (conversationId: string) => {
+      socket.on('join_conversation', (payload: {conversationId: string}) => {
+          const { conversationId } = payload;
         fastify.log.info(`Socket ${socket.id} joining room: ${conversationId}`);
         socket.join(conversationId);
       });
