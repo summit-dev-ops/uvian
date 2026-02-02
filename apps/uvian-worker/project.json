@@ -84,7 +84,7 @@
     "start-worker": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "poetry run python apps/uvian_worker/worker.py",
+        "command": "poetry run python apps/uvian_worker/main.py",
         "cwd": "{projectRoot}"
       }
     }

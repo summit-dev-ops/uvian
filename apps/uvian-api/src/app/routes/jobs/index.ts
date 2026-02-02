@@ -15,24 +15,25 @@ export default async function (
   fastify: FastifyInstance,
   opts: FastifyPluginOptions
 ) {
-  // New endpoint to submit RunPod jobs
+  // New endpoint to submit jobs (Mocked Supabase Flow)
   fastify.post('/', async (request, reply) => {
-    const payload = request.body as {
-      type: 'chat' | 'completion' | 'embedding';
-      prompt?: string;
-      messages?: { role: string; content: string }[];
-      model?: string;
-      options?: Record<string, any>;
-    };
+    // 1. Validate payload (In real app, this matches DB schema)
+    const payload = request.body as any;
 
-    // Basic validation – ensure required fields per type
-    if (!payload.type) {
-      reply.code(400);
-      return { error: 'Missing job type' };
-    }
+    // 2. Mock DB Insertion
+    // In production: const { data, error } = await supabase.from('jobs').insert({...}).selectSingle();
+    const mockJobId = require('crypto').randomUUID();
+    console.log(
+      `[API] Mocked DB Insert: Job ID ${mockJobId}, Type: ${payload.type}`
+    );
 
-    const job = await queueService.addJob('main-queue', 'runpod-job', payload);
-    return { jobId: job.id, status: 'queued' };
+    // 3. Enqueue Job ID
+    // The worker will fetch the details from the DB (or use its mock fallback)
+    await queueService.addJob('main-queue', 'generic-job', {
+      jobId: mockJobId,
+    });
+
+    return { jobId: mockJobId, status: 'queued' };
   });
 
   // Streaming endpoint – SSE
