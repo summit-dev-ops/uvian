@@ -1,1 +1,1 @@
-export { SocketProvider } from "./socket-provider"
+export { SocketProvider, useSocket } from './socket-provider';

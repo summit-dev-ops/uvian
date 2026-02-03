@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin';
 import Redis from 'ioredis';
+import { chatService } from '../services/chat.service';
 
 export default fp(async (fastify) => {
   const redisConfig = {
@@ -26,12 +27,34 @@ export default fp(async (fastify) => {
 
     try {
       const payload = JSON.parse(message);
-      console.log(payload)
-      // Emit to the specific Socket.io room
-      fastify.io.to(conversationId).emit('new_message', {
-        ...payload,
-        conversationId,
-      });
+
+      // If the payload already follows the new_message structure, use it directly
+      if (payload.message) {
+        if (payload.isComplete) {
+          chatService
+            .upsertMessage(conversationId, {
+              id: payload.message.id,
+              content: payload.message.content,
+              role: payload.message.role,
+            })
+            .catch((err) => {
+              fastify.log.error(
+                `Failed to persist completed message: ${err.message}`
+              );
+            });
+        }
+
+        fastify.io.to(conversationId).emit('new_message', {
+          ...payload,
+          conversationId,
+        });
+      } else {
+        // Fallback for legacy messages or other formats (if any)
+        fastify.io.to(conversationId).emit('new_message', {
+          conversationId,
+          message: payload,
+        });
+      }
     } catch (error: any) {
       fastify.log.error(`Failed to parse Redis message: ${error.message}`);
     }

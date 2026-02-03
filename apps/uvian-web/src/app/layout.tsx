@@ -8,20 +8,22 @@ export const metadata = {
 
 import { SocketProvider } from '~/components/providers/socket';
 import { QueryProvider } from '~/components/providers/query';
+import { StoreProvider } from '~/components/providers/store/store-provider';
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-
   return (
     <html lang="en">
       <body>
         <QueryProvider>
-          <SocketProvider>{children}</SocketProvider>
+          <StoreProvider>
+            <SocketProvider>{children}</SocketProvider>
+          </StoreProvider>
         </QueryProvider>
       </body>
-    </html >
+    </html>
   );
 }

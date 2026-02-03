@@ -45,3 +45,9 @@ Standardized file naming is required for agent predictability.
 
 - Raw API data should never leak into components.
 - Always use the `apiToUi` transformer in the domain's `queries.ts`.
+
+### D. The "Structural Integrity" rule
+
+- **NEVER** move Domain Logic (API calls, store slices, canonical types) into a Feature directory.
+- Features are consumers; Domains are providers.
+- If a feature needs new business logic, adding it to `lib/domains` is the correct path.

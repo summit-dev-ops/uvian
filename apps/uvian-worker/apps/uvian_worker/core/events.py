@@ -20,7 +20,7 @@ class EventsClient:
 
     async def publish_token(self, channel: str, job_id: str, token: str, finished: bool = False, error: str = None):
         """
-        Publishes a token or finish signal to the specified channel.
+        Publishes a token or finish signal to the specified channel. (Legacy)
         """
         if not self.redis:
             await self.connect()
@@ -33,6 +33,30 @@ class EventsClient:
         if error:
             payload["error"] = error
             
+        await self.redis.publish(channel, json.dumps(payload))
+
+    async def publish_message(self, channel: str, conversation_id: str, message_id: str, content: str, role: str = "assistant", is_delta: bool = False, is_complete: bool = False):
+        """
+        Publishes a message or delta to the specified channel using the new new_message format.
+        """
+        if not self.redis:
+            await self.connect()
+
+        now = "2026-02-03T10:35:56Z" # Fallback or dynamic if possible, but let's keep it simple for now as the API might override it
+        
+        payload = {
+            "message": {
+                "id": message_id,
+                "conversationId": conversation_id,
+                "content": content,
+                "role": role,
+                "createdAt": now,
+                "updatedAt": now
+            },
+            "isDelta": is_delta,
+            "isComplete": is_complete
+        }
+        
         await self.redis.publish(channel, json.dumps(payload))
 
 events = EventsClient()

@@ -33,10 +33,10 @@ Standardize keys to ensure precise cache invalidation.
 
 ```typescript
 export const domainKeys = {
-  all: ["domain"] as const,
-  lists: () => [...domainKeys.all, "list"] as const,
+  all: ['domain'] as const,
+  lists: () => [...domainKeys.all, 'list'] as const,
   list: (filter: string) => [...domainKeys.lists(), { filter }] as const,
-  detail: (id: string) => [...domainKeys.all, "detail", id] as const,
+  detail: (id: string) => [...domainKeys.all, 'detail', id] as const,
 };
 ```
 
@@ -53,7 +53,7 @@ export const domainUtils = {
   apiToUi: (raw: NodeAPI): NodeUI => ({
     id: raw.id,
     title: raw.name,
-    syncStatus: "synced",
+    syncStatus: 'synced',
   }),
 };
 ```
@@ -65,11 +65,11 @@ Use `queryOptions` and implement optimistic updates.
 ```typescript
 // queries.ts
 export const domainQueries = {
-  list: (tenantId: string) =>
+  list: () =>
     queryOptions({
-      queryKey: domainKeys.list(tenantId),
+      queryKey: domainKeys.lists(),
       queryFn: async () => {
-        const { data } = await apiClient.get(`/api/${tenantId}/items`);
+        const { data } = await apiClient.get(`/api/items`);
         return data.map(domainUtils.apiToUi);
       },
     }),
@@ -81,21 +81,21 @@ export const domainQueries = {
 Use `BaseAction` for complex logic and `executeMutation` to bridge with the API.
 
 ```typescript
-import { BaseAction, executeMutation } from "~/lib/infrastructure";
+import { BaseAction, executeMutation } from '~/lib/infrastructure';
 
 export const domainActions = {
-  create: (tenantId: string): BaseAction<Payload, Promise<void>> => ({
-    id: "domain.create",
-    group: "domain",
-    variant: "info",
-    canPerform: (ctx, payload) => !!tenantId && payload.isValid(),
+  create: (): BaseAction<Payload, Promise<void>> => ({
+    id: 'domain.create',
+    group: 'domain',
+    variant: 'info',
+    canPerform: (ctx, payload) => payload.isValid(),
     perform: async (ctx, payload) => {
       await executeMutation(
         ctx.queryClient,
-        domainMutations.create(ctx.queryClient, tenantId),
-        payload,
+        domainMutations.create(ctx.queryClient),
+        payload
       );
-      ctx.router.push("/success");
+      ctx.router.push('/success');
     },
   }),
 };
@@ -104,9 +104,9 @@ export const domainActions = {
 ### 4. The Action Context Pattern (`actions/index.ts`)
 
 ```typescript
-import { QueryClient } from "@tanstack/react-query";
-import { StoreApi } from "zustand";
-import { AppState } from "~/lib/stores";
+import { QueryClient } from '@tanstack/react-query';
+import { StoreApi } from 'zustand';
+import { AppState } from '~/lib/stores';
 
 export type BaseActionContext = {
   queryClient: QueryClient;

@@ -26,19 +26,17 @@ Feature components must never call domain API clients or raw queries directly. T
 ### Feature Orchestrator Hook (`hooks/use-[feature].ts`)
 
 ```typescript
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   knowledgeQueries,
   knowledgeMutations,
-} from "~/lib/domains/knowledge/api";
-import { assetMutations } from "~/lib/domains/assets/api";
+} from '~/lib/domains/knowledge/api';
+import { assetMutations } from '~/lib/domains/assets/api';
 
 export function useSmartUpload() {
-  const { activeTenantId } = useSession(); // Infrastructure
-
   // 1. Compose domain-level hooks/queries
-  const { data: entities } = useQuery(knowledgeQueries.list(activeTenantId));
-  const upload = useMutation(assetMutations.upload(activeTenantId));
+  const { data: entities } = useQuery(knowledgeQueries.list());
+  const upload = useMutation(assetMutations.upload());
 
   const handleUpload = async (file: File, entityId: string) => {
     // 2. Sequence operations across multiple domains
@@ -75,5 +73,4 @@ export function FeatureBlock() {
 - ✅ **ABSTRACTION**: Components should only see the outcome and simplified methods provided by the orchestrator.
 - ✅ **LIBRARY FIRST**: If a calculation or fetch can be shared, it belongs in `lib/domains`, not in the feature.
 
-> [!IMPORTANT]
-> **Decoupling Rule**: UI is tied to a **Feature**, Logic is tied to a **Domain**. Do not lock your UI components into domain folders if they need to orchestrate multiple systems.
+> [!IMPORTANT] > **Decoupling Rule**: UI is tied to a **Feature**, Logic is tied to a **Domain**. Do not lock your UI components into domain folders if they need to orchestrate multiple systems.

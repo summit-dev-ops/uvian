@@ -32,12 +32,27 @@ class ChatExecutor(BaseExecutor):
         try:
             print(f"[{job_id}] Starting Chat Execution on channel {channel}...")
             async for token in chat_completion(messages):
-                await events.publish_token(channel, job_id, token)
+                # Using job_id as message_id for the assistant's response
+                await events.publish_message(
+                    channel, 
+                    conversation_id, 
+                    message_id=f"msg_{job_id}", 
+                    content=token, 
+                    is_delta=True
+                )
                 full_response.append(token)
             
-            await events.publish_token(channel, job_id, "", finished=True)
-            
             result_text = "".join(full_response)
+            
+            await events.publish_message(
+                channel, 
+                conversation_id, 
+                message_id=f"msg_{job_id}", 
+                content=result_text, 
+                is_delta=False, 
+                is_complete=True
+            )
+            
             return {"text": result_text}
 
         except Exception as e:

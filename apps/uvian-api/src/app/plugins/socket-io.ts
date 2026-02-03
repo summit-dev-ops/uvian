@@ -1,8 +1,19 @@
 import fp from 'fastify-plugin';
 import fastifySocketIO from 'fastify-socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import Redis from 'ioredis';
 
 export default fp(async (fastify) => {
+  const redisConfig = {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: Number(process.env.REDIS_PORT) || 6379,
+  };
+
+  const pubClient = new Redis(redisConfig);
+  const subClient = pubClient.duplicate();
+
   fastify.register(fastifySocketIO, {
+    adapter: createAdapter(pubClient, subClient),
     cors: {
       origin: '*',
       methods: ['GET', 'POST'],
@@ -15,8 +26,8 @@ export default fp(async (fastify) => {
     fastify.io.on('connection', (socket) => {
       fastify.log.info(`Socket connected: ${socket.id}`);
 
-      socket.on('join_conversation', (payload: {conversationId: string}) => {
-          const { conversationId } = payload;
+      socket.on('join_conversation', (payload: { conversationId: string }) => {
+        const { conversationId } = payload;
         fastify.log.info(`Socket ${socket.id} joining room: ${conversationId}`);
         socket.join(conversationId);
       });

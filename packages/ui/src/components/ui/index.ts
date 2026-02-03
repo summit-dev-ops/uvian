@@ -1,8 +1,14 @@
 export * from './button';
 export * from './card';
+export * from './avatar';
+export * from './badge';
+export * from './checkbox';
+export * from './dropdown-menu';
 export * from './input-group';
 export * from './input';
+export * from './scroll-area';
+export * from './separator';
+export * from './table';
 export * from './textarea';
-export * from './avatar';
-export * from './dialog';
- 
+export * from './scroll-area';
+export * from './separator';

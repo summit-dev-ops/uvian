@@ -16,7 +16,7 @@ class MockSupabaseClient:
             "type": "chat",
             "status": "queued",
             "input": {
-                "conversationId": "mock-conv-123",
+                "conversationId": "ef51096c-c692-4747-9281-b97227ba273d",
                 "messageId": str(uuid.uuid4()),
                 "messages": [{"role": "user", "content": "Hello, mocked world!"}]
             },
