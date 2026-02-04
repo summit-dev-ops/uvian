@@ -4,7 +4,7 @@ import signal
 from bullmq import Worker
 import json
 from core.config import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, QUEUE_NAME, WORKER_CONCURRENCY
-from core.db import db
+from repositories.jobs import job_repository
 from core.events import events
 from executors.chat_executor import ChatExecutor
 
@@ -31,7 +31,7 @@ async def process_job(job, token):
     print(f"[{job_id}] Worker picked up job. Fetching from DB...", flush=True)
     
     # 1. Fetch Job State
-    job_record = db.get_job(job_id)
+    job_record = job_repository.get_job(job_id)
     if not job_record:
         print(f"[{job_id}] Job not found in DB. Aborting.", flush=True)
         return {"error": "Job not found"}
@@ -40,7 +40,7 @@ async def process_job(job, token):
     # 2. Update Status -> Processing/
     print(job_record, flush= True)
     # Update job status to processing
-    db.update_job(job_id, {"status": "processing"})
+    job_repository.update_job(job_id, {"status": "processing"})
 
     job_type = job_record.get("type", "unknown")
     print(f"[{job_id}] Job type: {job_type}", flush=True)
@@ -49,7 +49,7 @@ async def process_job(job, token):
     if not executor:
         error_msg = f"No executor found for type: {job_type}"
         print(f"[{job_id}] {error_msg}", flush=True )
-        db.update_job(job_id, {"status": "failed", "output": {"error": error_msg}})
+        job_repository.update_job(job_id, {"status": "failed", "output": {"error": error_msg}})
         raise ValueError(error_msg)
 
     # 3. Execute
@@ -57,13 +57,13 @@ async def process_job(job, token):
         result = await executor.execute(job_record)
         
         # 4. Update Status -> Completed
-        db.update_job(job_id, {"status": "completed", "output": result})
+        job_repository.update_job(job_id, {"status": "completed", "output": result})
         print(f"[{job_id}] Job completed successfully." , flush=True)
         return result
 
     except Exception as e:
         print(f"[{job_id}] Job failed: {e}", flush=True)
-        db.update_job(job_id, {"status": "failed", "output": {"error": str(e)}})
+        job_repository.update_job(job_id, {"status": "failed", "output": {"error": str(e)}})
         raise e
 
 async def main():

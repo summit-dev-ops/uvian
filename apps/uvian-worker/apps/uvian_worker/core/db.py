@@ -1,35 +1,20 @@
-import uuid
+# Database repository interface - replaces MockSupabaseClient
+from clients.jobs import job_repository
+from clients.messages import message_repository
+from clients.conversations import conversation_repository
 
-class MockSupabaseClient:
-    def __init__(self):
-        # In-memory store for mocked jobs
-        self.jobs = {}
-
+# Legacy interface for backward compatibility during migration
+class DatabaseInterface:
+    """Legacy database interface for backward compatibility."""
+    
     def get_job(self, job_id: str):
-        """Mock fetching a job by ID."""
-        if job_id in self.jobs:
-            return self.jobs[job_id]
-        
-        # fallback for testing if ID not found (simulate a default chat job)
-        return {
-            "id": job_id,
-            "type": "chat",
-            "status": "queued",
-            "input": {
-                "conversationId": "ef51096c-c692-4747-9281-b97227ba273d",
-                "messageId": str(uuid.uuid4()),
-                "messages": [{"role": "user", "content": "Hello, mocked world!"}]
-            },
-            "output": None
-        }
-
+        return job_repository.get_job(job_id)
+    
     def update_job(self, job_id: str, updates: dict):
-        """Mock updating a job."""
-        if job_id not in self.jobs:
-            self.jobs[job_id] = {}
-        self.jobs[job_id].update(updates)
-        print(f"[MockDB] Updated Job {job_id}: {updates}", flush=True)
-        return self.jobs[job_id]
+        return job_repository.update_job(job_id, updates)
+    
+    def insert_message(self, message_data: dict):
+        return message_repository.insert_message(message_data)
 
-# Singleton instance
-db = MockSupabaseClient()
+# Re-export as 'db' to maintain compatibility with existing code
+db = DatabaseInterface()

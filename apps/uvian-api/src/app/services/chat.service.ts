@@ -1,3 +1,5 @@
+import { supabase } from './supabase.service';
+
 export interface Conversation {
   id: string;
   title: string;
@@ -17,34 +19,28 @@ export interface Message {
 export interface Membership {
   userId: string;
   conversationId: string;
-  role: any; // JSONB mocked as any
+  role: any;
   createdAt: string;
 }
 
 export class ChatService {
-  private conversations: Map<string, Conversation> = new Map();
-  private messages: Map<string, Message[]> = new Map();
-  private conversationMembers: Map<string, Membership[]> = new Map();
-
   async createConversation(data: {
     id: string;
     title: string;
-    userId?: string; // Mocking creator
+    userId?: string;
   }): Promise<Conversation> {
-    if (this.conversations.has(data.id)) {
-      throw new Error('Conversation with this ID already exists');
+    const { data: conversation, error } = await supabase
+      .from('conversations')
+      .insert({
+        id: data.id,
+        title: data.title,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create conversation: ${error.message}`);
     }
-
-    const now = new Date().toISOString();
-    const conversation: Conversation = {
-      id: data.id,
-      title: data.title,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    this.conversations.set(conversation.id, conversation);
-    this.messages.set(conversation.id, []);
 
     // Create initial admin membership if userId is provided
     if (data.userId) {
@@ -57,14 +53,30 @@ export class ChatService {
   }
 
   async getConversations(): Promise<Conversation[]> {
-    return Array.from(this.conversations.values()).sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch conversations: ${error.message}`);
+    }
+
+    return data || [];
   }
 
   async getConversation(id: string): Promise<Conversation | undefined> {
-    return this.conversations.get(id);
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw new Error(`Failed to fetch conversation: ${error.message}`);
+    }
+
+    return data || undefined;
   }
 
   async upsertMessage(
@@ -75,51 +87,42 @@ export class ChatService {
       role?: 'user' | 'assistant' | 'system';
     }
   ): Promise<Message> {
-    const conversation = this.conversations.get(conversationId);
-    if (!conversation) {
-      throw new Error('Conversation not found');
-    }
-
-    let conversationMessages = this.messages.get(conversationId) || [];
-    const existingIndex = conversationMessages.findIndex(
-      (m) => m.id === data.id
-    );
-    const now = new Date().toISOString();
-
-    if (existingIndex !== -1) {
-      // Update existing
-      const updatedMessage: Message = {
-        ...conversationMessages[existingIndex],
-        content: data.content,
-        updatedAt: now,
-      };
-      conversationMessages[existingIndex] = updatedMessage;
-    } else {
-      // Create new
-      const message: Message = {
+    const { data: message, error } = await supabase
+      .from('messages')
+      .insert({
         id: data.id,
-        conversationId: conversationId,
+        conversation_id: conversationId,
         content: data.content,
         role: data.role || 'user',
-        createdAt: now,
-        updatedAt: now,
-      };
-      conversationMessages.push(message);
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to upsert message: ${error.message}`);
     }
 
-    this.messages.set(conversationId, conversationMessages);
+    // Update conversation updated_at timestamp
+    await supabase
+      .from('conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', conversationId);
 
-    // Update conversation updatedAt
-    conversation.updatedAt = now;
-    this.conversations.set(conversationId, conversation);
-
-    return existingIndex !== -1
-      ? conversationMessages[existingIndex]
-      : conversationMessages[conversationMessages.length - 1];
+    return message;
   }
 
   async getMessages(conversationId: string): Promise<Message[]> {
-    return this.messages.get(conversationId) || [];
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch messages: ${error.message}`);
+    }
+
+    return data || [];
   }
 
   async updateMessage(
@@ -127,42 +130,46 @@ export class ChatService {
     messageId: string,
     data: { content: string }
   ): Promise<Message> {
-    const messages = this.messages.get(conversationId) || [];
-    const messageIndex = messages.findIndex((m) => m.id === messageId);
+    const { data: message, error } = await supabase
+      .from('messages')
+      .update({
+        content: data.content,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', messageId)
+      .select()
+      .single();
 
-    if (messageIndex === -1) {
-      throw new Error('Message not found');
+    if (error) {
+      throw new Error(`Failed to update message: ${error.message}`);
     }
 
-    const now = new Date().toISOString();
-    const updatedMessage: Message = {
-      ...messages[messageIndex],
-      content: data.content,
-      updatedAt: now,
-    };
-
-    messages[messageIndex] = updatedMessage;
-    this.messages.set(conversationId, messages);
-
-    // Also update conversation updatedAt
-    const conversation = this.conversations.get(conversationId);
-    if (conversation) {
-      conversation.updatedAt = now;
-      this.conversations.set(conversationId, conversation);
-    }
-
-    return updatedMessage;
+    return message;
   }
 
   async deleteConversation(id: string): Promise<void> {
-    this.conversations.delete(id);
-    this.messages.delete(id);
-    this.conversationMembers.delete(id);
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new Error(`Failed to delete conversation: ${error.message}`);
+    }
   }
 
   // Membership methods
   async getConversationMembers(conversationId: string): Promise<Membership[]> {
-    return this.conversationMembers.get(conversationId) || [];
+    const { data, error } = await supabase
+      .from('conversation_members')
+      .select('*')
+      .eq('conversation_id', conversationId);
+
+    if (error) {
+      throw new Error(`Failed to fetch members: ${error.message}`);
+    }
+
+    return data || [];
   }
 
   async inviteConversationMember(
@@ -170,22 +177,20 @@ export class ChatService {
     userId: string,
     role: any
   ): Promise<Membership> {
-    const members = this.conversationMembers.get(conversationId) || [];
-    const existing = members.find((m) => m.userId === userId);
+    const { data: membership, error } = await supabase
+      .from('conversation_members')
+      .insert({
+        user_id: userId,
+        conversation_id: conversationId,
+        role,
+      })
+      .select()
+      .single();
 
-    if (existing) {
-      throw new Error('User is already a member of this conversation');
+    if (error) {
+      throw new Error(`Failed to invite member: ${error.message}`);
     }
 
-    const membership: Membership = {
-      userId,
-      conversationId,
-      role,
-      createdAt: new Date().toISOString(),
-    };
-
-    members.push(membership);
-    this.conversationMembers.set(conversationId, members);
     return membership;
   }
 
@@ -193,14 +198,15 @@ export class ChatService {
     conversationId: string,
     userId: string
   ): Promise<void> {
-    const members = this.conversationMembers.get(conversationId) || [];
-    const newMembers = members.filter((m) => m.userId !== userId);
+    const { error } = await supabase
+      .from('conversation_members')
+      .delete()
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId);
 
-    if (members.length === newMembers.length) {
-      throw new Error('Member not found');
+    if (error) {
+      throw new Error(`Failed to remove member: ${error.message}`);
     }
-
-    this.conversationMembers.set(conversationId, newMembers);
   }
 
   async updateConversationMemberRole(
@@ -208,16 +214,19 @@ export class ChatService {
     userId: string,
     role: any
   ): Promise<Membership> {
-    const members = this.conversationMembers.get(conversationId) || [];
-    const memberIndex = members.findIndex((m) => m.userId === userId);
+    const { data: membership, error } = await supabase
+      .from('conversation_members')
+      .update({ role })
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .select()
+      .single();
 
-    if (memberIndex === -1) {
-      throw new Error('Member not found');
+    if (error) {
+      throw new Error(`Failed to update member role: ${error.message}`);
     }
 
-    members[memberIndex].role = role;
-    this.conversationMembers.set(conversationId, members);
-    return members[memberIndex];
+    return membership;
   }
 }
 
