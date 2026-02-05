@@ -17,7 +17,7 @@ export interface Message {
 }
 
 export interface Membership {
-  userId: string;
+  profileId: string;
   conversationId: string;
   role: any;
   createdAt: string;
@@ -27,7 +27,7 @@ export class ChatService {
   async createConversation(data: {
     id: string;
     title: string;
-    userId?: string;
+    profileId?: string;
   }): Promise<Conversation> {
     const { data: conversation, error } = await supabase
       .from('conversations')
@@ -42,9 +42,9 @@ export class ChatService {
       throw new Error(`Failed to create conversation: ${error.message}`);
     }
 
-    // Create initial admin membership if userId is provided
-    if (data.userId) {
-      await this.inviteConversationMember(conversation.id, data.userId, {
+    // Create initial admin membership if profileId is provided
+    if (data.profileId) {
+      await this.inviteConversationMember(conversation.id, data.profileId, {
         name: 'admin',
       });
     }
@@ -83,6 +83,7 @@ export class ChatService {
     conversationId: string,
     data: {
       id: string;
+      sender_id: string;
       content: string;
       role?: 'user' | 'assistant' | 'system';
     }
@@ -92,6 +93,7 @@ export class ChatService {
       .insert({
         id: data.id,
         conversation_id: conversationId,
+        sender_id: data.sender_id,
         content: data.content,
         role: data.role || 'user',
       })
@@ -174,13 +176,13 @@ export class ChatService {
 
   async inviteConversationMember(
     conversationId: string,
-    userId: string,
+    profileId: string,
     role: any
   ): Promise<Membership> {
     const { data: membership, error } = await supabase
       .from('conversation_members')
       .insert({
-        user_id: userId,
+        profile_id: profileId,
         conversation_id: conversationId,
         role,
       })
@@ -191,18 +193,23 @@ export class ChatService {
       throw new Error(`Failed to invite member: ${error.message}`);
     }
 
-    return membership;
+    return {
+      profileId: membership.profile_id,
+      conversationId: membership.conversation_id,
+      role: membership.role,
+      createdAt: membership.created_at,
+    };
   }
 
   async removeConversationMember(
     conversationId: string,
-    userId: string
+    profileId: string
   ): Promise<void> {
     const { error } = await supabase
       .from('conversation_members')
       .delete()
       .eq('conversation_id', conversationId)
-      .eq('user_id', userId);
+      .eq('profile_id', profileId);
 
     if (error) {
       throw new Error(`Failed to remove member: ${error.message}`);
@@ -211,14 +218,14 @@ export class ChatService {
 
   async updateConversationMemberRole(
     conversationId: string,
-    userId: string,
+    profileId: string,
     role: any
   ): Promise<Membership> {
     const { data: membership, error } = await supabase
       .from('conversation_members')
       .update({ role })
       .eq('conversation_id', conversationId)
-      .eq('user_id', userId)
+      .eq('profile_id', profileId)
       .select()
       .single();
 
@@ -226,7 +233,12 @@ export class ChatService {
       throw new Error(`Failed to update member role: ${error.message}`);
     }
 
-    return membership;
+    return {
+      profileId: membership.profile_id,
+      conversationId: membership.conversation_id,
+      role: membership.role,
+      createdAt: membership.created_at,
+    };
   }
 }
 

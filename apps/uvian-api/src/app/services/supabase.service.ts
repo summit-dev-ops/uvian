@@ -26,6 +26,7 @@ export type Database = {
         Row: {
           id: string;
           conversation_id: string;
+          sender_id: string;
           content: string;
           role: 'user' | 'assistant' | 'system';
           created_at: string;
@@ -34,19 +35,20 @@ export type Database = {
         Insert: {
           id?: string;
           conversation_id: string;
+          sender_id: string;
           content: string;
           role: 'user' | 'assistant' | 'system';
         };
       };
       conversation_members: {
         Row: {
-          user_id: string;
+          profile_id: string;
           conversation_id: string;
           role: any;
           created_at: string;
         };
         Insert: {
-          user_id: string;
+          profile_id: string;
           conversation_id: string;
           role: any;
         };

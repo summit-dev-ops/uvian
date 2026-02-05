@@ -10,5 +10,6 @@ export * from './scroll-area';
 export * from './separator';
 export * from './table';
 export * from './textarea';
-export * from './scroll-area';
-export * from './separator';
+export * from './label';
+export * from './field';
+export * from './input-otp';

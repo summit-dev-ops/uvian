@@ -9,6 +9,7 @@ export const metadata = {
 import { SocketProvider } from '~/components/providers/socket';
 import { QueryProvider } from '~/components/providers/query';
 import { StoreProvider } from '~/components/providers/store/store-provider';
+import { AuthProvider } from '~/lib/auth/auth-context';
 
 export default function RootLayout({
   children,
@@ -20,7 +21,9 @@ export default function RootLayout({
       <body>
         <QueryProvider>
           <StoreProvider>
-            <SocketProvider>{children}</SocketProvider>
+            <AuthProvider>
+              <SocketProvider>{children}</SocketProvider>
+            </AuthProvider>
           </StoreProvider>
         </QueryProvider>
       </body>

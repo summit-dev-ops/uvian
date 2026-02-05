@@ -3,7 +3,11 @@ import { chatService } from '../services/chat.service';
 
 export default async function (fastify: FastifyInstance) {
   fastify.post('/api/conversations', async (request, reply) => {
-    const data = request.body as { id: string; title: string; userId?: string };
+    const data = request.body as {
+      id: string;
+      title: string;
+      profileId?: string;
+    };
     try {
       const conversation = await chatService.createConversation(data);
       reply.code(201).send(conversation);
@@ -40,11 +44,14 @@ export default async function (fastify: FastifyInstance) {
     '/api/conversations/:conversationId/conversation-members/invite',
     async (request, reply) => {
       const { conversationId } = request.params as { conversationId: string };
-      const { userId, role } = request.body as { userId: string; role: any };
+      const { profileId, role } = request.body as {
+        profileId: string;
+        role: any;
+      };
       try {
         const membership = await chatService.inviteConversationMember(
           conversationId,
-          userId,
+          profileId,
           role
         );
         reply.code(201).send(membership);
@@ -55,14 +62,14 @@ export default async function (fastify: FastifyInstance) {
   );
 
   fastify.delete(
-    '/api/conversations/:conversationId/conversation-members/:userId',
+    '/api/conversations/:conversationId/conversation-members/:profileId',
     async (request, reply) => {
-      const { conversationId, userId } = request.params as {
+      const { conversationId, profileId } = request.params as {
         conversationId: string;
-        userId: string;
+        profileId: string;
       };
       try {
-        await chatService.removeConversationMember(conversationId, userId);
+        await chatService.removeConversationMember(conversationId, profileId);
         reply.code(204).send();
       } catch (error: any) {
         reply.code(400).send({ error: error.message });
@@ -71,17 +78,17 @@ export default async function (fastify: FastifyInstance) {
   );
 
   fastify.patch(
-    '/api/conversations/:conversationId/conversation-members/:userId/role',
+    '/api/conversations/:conversationId/conversation-members/:profileId/role',
     async (request, reply) => {
-      const { conversationId, userId } = request.params as {
+      const { conversationId, profileId } = request.params as {
         conversationId: string;
-        userId: string;
+        profileId: string;
       };
       const { role } = request.body as { role: any };
       try {
         const membership = await chatService.updateConversationMemberRole(
           conversationId,
-          userId,
+          profileId,
           role
         );
         reply.send(membership);
@@ -97,6 +104,7 @@ export default async function (fastify: FastifyInstance) {
       const { conversationId } = request.params as { conversationId: string };
       const data = request.body as {
         id: string;
+        sender_id: string;
         content: string;
         role?: string;
       };

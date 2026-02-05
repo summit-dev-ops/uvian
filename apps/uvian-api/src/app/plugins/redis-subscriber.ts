@@ -34,6 +34,7 @@ export default fp(async (fastify) => {
           chatService
             .upsertMessage(conversationId, {
               id: payload.message.id,
+              sender_id: payload.message.sender_id,
               content: payload.message.content,
               role: payload.message.role,
             })

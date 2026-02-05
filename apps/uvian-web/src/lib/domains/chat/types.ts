@@ -12,6 +12,7 @@
 export type MessageAPI = {
   id: string; // UUID
   conversationId: string; // UUID
+  senderId: string; // UUID - profile ID of sender
   content: string;
   role: 'user' | 'assistant' | 'system';
   createdAt: string; // ISO 8601
@@ -26,7 +27,7 @@ export type ConversationAPI = {
 };
 
 export type ConversationMemberAPI = {
-  userId: string;
+  profileId: string;
   conversationId: string;
   role: any;
   createdAt: string;
@@ -39,7 +40,7 @@ export type ConversationMemberAPI = {
 export type DataSyncStatus = 'synced' | 'pending' | 'error';
 
 export type ConversationMemberUI = {
-  userId: string;
+  profileId: string;
   conversationId: string;
   role: any;
   createdAt: Date;
@@ -49,6 +50,7 @@ export type ConversationMemberUI = {
 export type MessageUI = {
   id: string; // UUID
   conversationId: string; // UUID
+  senderId: string; // UUID - profile ID of sender
   content: string;
   role: 'user' | 'assistant' | 'system';
   createdAt: Date;

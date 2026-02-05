@@ -186,7 +186,9 @@ CREATE POLICY "Users can view conversations they are members of" ON conversation
         id IN (
             SELECT conversation_id
             FROM conversation_members
-            WHERE user_id = auth.uid()
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
         )
     );
 
@@ -202,7 +204,9 @@ CREATE POLICY "Users can update conversations they are members of" ON conversati
         id IN (
             SELECT conversation_id
             FROM conversation_members
-            WHERE user_id = auth.uid()
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
         )
     );
 
@@ -213,7 +217,9 @@ CREATE POLICY "Admins can delete conversations" ON conversations
         id IN (
             SELECT conversation_id
             FROM conversation_members
-            WHERE user_id = auth.uid()
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
     );
@@ -229,7 +235,9 @@ CREATE POLICY "Users can view messages in their conversations" ON messages
         conversation_id IN (
             SELECT conversation_id
             FROM conversation_members
-            WHERE user_id = auth.uid()
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
         )
     );
 
@@ -240,7 +248,9 @@ CREATE POLICY "Users can send messages in their conversations" ON messages
         conversation_id IN (
             SELECT conversation_id
             FROM conversation_members
-            WHERE user_id = auth.uid()
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
         )
     );
 
@@ -252,13 +262,17 @@ CREATE POLICY "Users can update their own messages" ON messages
         CASE
             WHEN role = 'user' THEN
                 -- Allow users to update their own user messages
-                TRUE -- You might want to add created_by field and check it here
+                sender_id IN (
+                    SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                )
             ELSE
                 -- For system/assistant messages, require admin role
                 conversation_id IN (
                     SELECT conversation_id
                     FROM conversation_members
-                    WHERE user_id = auth.uid()
+                    WHERE profile_id IN (
+                        SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                    )
                     AND (role->>'name' = 'admin' OR role = '"admin"')
                 )
         END
@@ -271,7 +285,9 @@ CREATE POLICY "Admins can delete messages" ON messages
         conversation_id IN (
             SELECT conversation_id
             FROM conversation_members
-            WHERE user_id = auth.uid()
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
     );
@@ -428,7 +444,7 @@ CREATE POLICY "System profile settings are readable" ON profile_settings
 CREATE VIEW conversations_with_metadata AS
 SELECT
     c.*,
-    COUNT(DISTINCT cm.user_id) as member_count,
+    COUNT(DISTINCT cm.profile_id) as member_count,
     COUNT(DISTINCT m.id) as message_count,
     (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_content,
     (SELECT role FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_role,

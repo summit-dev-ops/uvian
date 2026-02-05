@@ -42,7 +42,10 @@ export default fp(async (fastify) => {
   }
 
   // Helper function to check conversation membership
-  async function checkConversationAccess(profileId: string, conversationId: string): Promise<boolean> {
+  async function checkConversationAccess(
+    profileId: string,
+    conversationId: string
+  ): Promise<boolean> {
     try {
       const { data, error } = await supabase
         .from('conversation_members')
@@ -70,7 +73,7 @@ export default fp(async (fastify) => {
         }
 
         const user = await verifySocketToken(token);
-        
+
         // Get user's profile
         const profile = await profileService.getProfileByAuthUserId(user.id);
         if (!profile) {
@@ -89,39 +92,56 @@ export default fp(async (fastify) => {
           displayName: profile.displayName,
         };
 
-        fastify.log.info(`Authenticated socket connection: ${socket.id} (${profile.displayName})`);
+        fastify.log.info(
+          `Authenticated socket connection: ${socket.id} (${profile.displayName})`
+        );
         next();
       } catch (error: any) {
-        fastify.log.warn(`Socket authentication failed for ${socket.id}:`, error.message);
+        fastify.log.warn(
+          `Socket authentication failed for ${socket.id}:`,
+          error.message
+        );
         next(new Error('Authentication error: Invalid or expired token'));
       }
     });
 
     fastify.io.on('connection', (socket) => {
       const profile = (socket as any).profile;
-      
-      fastify.log.info(`Socket connected: ${socket.id} (${profile?.displayName})`);
 
-      socket.on('join_conversation', async (payload: { conversationId: string }) => {
-        try {
-          const { conversationId } = payload;
-          
-          // Verify user has access to this conversation
-          const hasAccess = await checkConversationAccess(profile.id, conversationId);
-          
-          if (!hasAccess) {
-            socket.emit('error', { message: 'Access denied to conversation' });
-            return;
+      fastify.log.info(
+        `Socket connected: ${socket.id} (${profile?.displayName})`
+      );
+
+      socket.on(
+        'join_conversation',
+        async (payload: { conversationId: string }) => {
+          try {
+            const { conversationId } = payload;
+
+            // Verify user has access to this conversation
+            const hasAccess = await checkConversationAccess(
+              profile.id,
+              conversationId
+            );
+
+            if (!hasAccess) {
+              socket.emit('error', {
+                message: 'Access denied to conversation',
+              });
+              return;
+            }
+
+            socket.join(conversationId);
+            fastify.log.info(
+              `Socket ${socket.id} joined room: ${conversationId}`
+            );
+
+            socket.emit('joined_conversation', { conversationId });
+          } catch (error: any) {
+            socket.emit('error', { message: 'Failed to join conversation' });
           }
-
-          socket.join(conversationId);
-          fastify.log.info(`Socket ${socket.id} joined room: ${conversationId}`);
-          
-          socket.emit('joined_conversation', { conversationId });
-        } catch (error: any) {
-          socket.emit('error', { message: 'Failed to join conversation' });
         }
-      });
+      );
 
       socket.on(
         'send_message',
@@ -130,10 +150,15 @@ export default fp(async (fastify) => {
             const { conversationId, text } = payload;
 
             // Verify user has access to this conversation
-            const hasAccess = await checkConversationAccess(profile.id, conversationId);
-            
+            const hasAccess = await checkConversationAccess(
+              profile.id,
+              conversationId
+            );
+
             if (!hasAccess) {
-              socket.emit('error', { message: 'Access denied to conversation' });
+              socket.emit('error', {
+                message: 'Access denied to conversation',
+              });
               return;
             }
 
@@ -152,9 +177,11 @@ export default fp(async (fastify) => {
             // Broadcast to everyone in the room (including sender)
             fastify.io.to(conversationId).emit('new_message', messagePayload);
 
-            fastify.log.info(`Message in ${conversationId} from ${profile.displayName}: ${text}`);
+            fastify.log.info(
+              `Message in ${conversationId} from ${profile.displayName}: ${text}`
+            );
 
-            // TODO: Persist to database using messages table with sender_id
+            // Messages are persisted via chatService.upsertMessage with sender_id
             // TODO: If this is an AI chat, trigger the job worker
           } catch (error: any) {
             socket.emit('error', { message: 'Failed to send message' });
@@ -169,7 +196,9 @@ export default fp(async (fastify) => {
       });
 
       socket.on('disconnect', () => {
-        fastify.log.info(`Socket disconnected: ${socket.id} (${profile?.displayName})`);
+        fastify.log.info(
+          `Socket disconnected: ${socket.id} (${profile?.displayName})`
+        );
       });
     });
   });

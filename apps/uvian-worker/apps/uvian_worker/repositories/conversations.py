@@ -75,7 +75,7 @@ class ConversationRepository:
     def remove_conversation_member(self, conversation_id: str, user_id: str) -> bool:
         """Remove a member from a conversation."""
         try:
-            result = supabase_client.client.table('conversation_members').delete().eq('conversation_id', conversation_id).eq('user_id', user_id).execute()
+            result = supabase_client.client.table('conversation_members').delete().eq('conversation_id', conversation_id).eq('profile_id', user_id).execute()
             print(f"[Supabase] Removed member {user_id} from conversation {conversation_id}", flush=True)
             return bool(result.data)
         except Exception as e:
