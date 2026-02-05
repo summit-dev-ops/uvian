@@ -11,12 +11,12 @@
 
 export type MessageAPI = {
   id: string; // UUID
-  conversationId: string; // UUID
-  senderId: string; // UUID - profile ID of sender
+  conversation_id: string; // UUID - database field name
+  sender_id: string; // UUID - profile ID of sender (database field name)
   content: string;
   role: 'user' | 'assistant' | 'system';
-  createdAt: string; // ISO 8601
-  updatedAt: string; // ISO 8601
+  created_at: string; // ISO 8601 (database field name)
+  updated_at: string; // ISO 8601 (database field name)
 };
 
 export type ConversationAPI = {

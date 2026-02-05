@@ -143,7 +143,8 @@ export const chatMutations = {
    */
   sendMessage: (
     queryClient: QueryClient,
-    conversationId: string
+    conversationId: string,
+    profileId?: string
   ): MutationOptions<
     MessageUI,
     Error,
@@ -155,6 +156,7 @@ export const chatMutations = {
         `/api/conversations/${payload.conversationId}/messages`,
         {
           id: payload.id,
+          sender_id: profileId, // Add the required sender_id field
           content: payload.content,
           role: payload.role || 'user',
         }
@@ -182,30 +184,14 @@ export const chatMutations = {
         createdAt: new Date(),
         syncStatus: 'pending',
         isStreaming: false,
-        senderId: 'current-user', // Temporary sender ID for optimistic update
+        senderId: profileId || 'current-user', // Use actual profile ID or fallback
       };
 
-      // Create placeholder assistant message for streaming
-      // Note: We generate a local ID for the placeholder, but the real ID will come from the socket/server
-      const placeholderAssistantMessage: MessageUI = {
-        id: crypto.randomUUID(),
-        conversationId: payload.conversationId,
-        content: '',
-        role: 'assistant',
-        createdAt: new Date(),
-        syncStatus: 'pending',
-        isStreaming: true,
-        tokens: [],
-        senderId: 'assistant', // Assistant sender ID for placeholder
-      };
-
-      // Update cache with both messages
+      // Update cache with only the user message
       queryClient.setQueryData<MessageUI[]>(
         chatKeys.messages(conversationId),
         (old) =>
-          old
-            ? [...old, optimisticUserMessage, placeholderAssistantMessage]
-            : [optimisticUserMessage, placeholderAssistantMessage]
+          old ? [...old, optimisticUserMessage] : [optimisticUserMessage]
       );
 
       return { previousMessages };

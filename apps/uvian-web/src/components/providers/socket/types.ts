@@ -9,7 +9,6 @@ export interface JoinConversationPayload {
 export interface SendMessagePayload {
   conversationId: string;
   text: string;
-  sender: string;
 }
 
 /**

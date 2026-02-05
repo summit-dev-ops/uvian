@@ -2,10 +2,11 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '~/components/providers/socket/socket-provider';
+import { userQueries } from '~/lib/domains/user/api/queries';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { chatUtils } from '~/lib/domains/chat/utils';
-import type { SocketMessageEvent } from '~/components/providers/socket/types';
+import type { MessageAPI } from '~/lib/domains/chat/types';
 
 export const useChat = (conversationId: string) => {
   const { socket, isConnected } = useSocket();
@@ -16,19 +17,35 @@ export const useChat = (conversationId: string) => {
     chatQueries.messages(conversationId)
   );
 
-  // 2. Mutation for sending messages
+  // 2. Fetch current user's profile
+  const { data: profile } = useQuery({
+    ...userQueries.profile(),
+    enabled: !!conversationId, // Only fetch profile if we have a conversation
+  });
+
+  // 3. Mutation for sending messages
   const { mutate: sendMessage, isPending: isSending } = useMutation(
-    chatMutations.sendMessage(queryClient, conversationId)
+    chatMutations.sendMessage(queryClient, conversationId, profile?.profileId)
   );
 
   // 3. Socket Event Listeners for Real-time Updates
   useEffect(() => {
     if (!socket || !isConnected) return;
 
-    const onNewMessage = (payload: SocketMessageEvent) => {
+    const onNewMessage = (payload: any) => {
       console.log('New message received:', payload);
-      // payload.message is MessageAPI
-      const messageUI = chatUtils.messageApiToUi(payload.message);
+      // Transform socket message to match MessageAPI format
+      const messageAPI: MessageAPI = {
+        id: payload.message.id,
+        conversation_id: payload.conversationId,
+        sender_id: payload.message.senderId || payload.message.sender_id,
+        content: payload.message.content,
+        role: payload.message.role,
+        created_at: payload.message.createdAt || payload.message.created_at,
+        updated_at: payload.message.updatedAt || payload.message.updated_at,
+      };
+
+      const messageUI = chatUtils.messageApiToUi(messageAPI);
       chatUtils.addMessageToCache(
         queryClient,
         payload.conversationId,

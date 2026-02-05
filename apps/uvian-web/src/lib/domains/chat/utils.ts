@@ -22,14 +22,14 @@ import { chatKeys } from './api/keys';
 export function messageApiToUi(raw: MessageAPI): MessageUI {
   return {
     id: raw.id,
-    conversationId: raw.conversationId,
+    conversationId: raw.conversation_id,
     content: raw.content,
     role: raw.role,
-    createdAt: new Date(raw.createdAt),
+    createdAt: new Date(raw.created_at),
     syncStatus: 'synced',
     isStreaming: false,
     tokens: [],
-    senderId: raw.senderId,
+    senderId: raw.sender_id,
   };
 }
 
