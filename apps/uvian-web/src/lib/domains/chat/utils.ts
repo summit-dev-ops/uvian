@@ -29,6 +29,7 @@ export function messageApiToUi(raw: MessageAPI): MessageUI {
     syncStatus: 'synced',
     isStreaming: false,
     tokens: [],
+    senderId: raw.senderId,
   };
 }
 
@@ -45,7 +46,7 @@ export function conversationMemberApiToUi(
   raw: ConversationMemberAPI
 ): ConversationMemberUI {
   return {
-    userId: raw.userId,
+    profileId: raw.profileId,
     conversationId: raw.conversationId,
     role: raw.role,
     createdAt: new Date(raw.createdAt),

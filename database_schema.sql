@@ -7,6 +7,34 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
+-- PROFILE TYPES
+-- ============================================================================
+CREATE TYPE profile_type AS ENUM ('human', 'agent', 'system', 'admin');
+
+-- ============================================================================
+-- PROFILES TABLE
+-- ============================================================================
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    -- Link to Supabase Auth. Nullable because Agents don't have logins.
+    auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    type profile_type NOT NULL DEFAULT 'human',
+    display_name TEXT NOT NULL,
+    avatar_url TEXT,
+    bio TEXT,
+    -- Agent specific config (e.g., Model ID, Temperature) - NULL for humans
+    agent_config JSONB,
+    -- Extensible public profile data
+    public_fields JSONB DEFAULT '{}',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    -- Ensure 1:1 mapping for humans, but allow multiple agents without auth
+    CONSTRAINT uniq_auth_user UNIQUE (auth_user_id) DEFERRABLE INITIALLY DEFERRED
+);
+
+
+-- ============================================================================
 -- CONVERSATIONS TABLE
 -- ============================================================================
 CREATE TABLE conversations (
@@ -77,33 +105,6 @@ CREATE INDEX idx_jobs_type ON jobs (type);
 CREATE INDEX idx_jobs_created_at ON jobs (created_at DESC);
 CREATE INDEX idx_jobs_input ON jobs USING GIN (input);
 CREATE INDEX idx_jobs_output ON jobs USING GIN (output);
-
--- ============================================================================
--- PROFILE TYPES
--- ============================================================================
-CREATE TYPE profile_type AS ENUM ('human', 'agent', 'system', 'admin');
-
--- ============================================================================
--- PROFILES TABLE
--- ============================================================================
-CREATE TABLE profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    -- Link to Supabase Auth. Nullable because Agents don't have logins.
-    auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    type profile_type NOT NULL DEFAULT 'human',
-    display_name TEXT NOT NULL,
-    avatar_url TEXT,
-    bio TEXT,
-    -- Agent specific config (e.g., Model ID, Temperature) - NULL for humans
-    agent_config JSONB,
-    -- Extensible public profile data
-    public_fields JSONB DEFAULT '{}',
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    -- Ensure 1:1 mapping for humans, but allow multiple agents without auth
-    CONSTRAINT uniq_auth_user UNIQUE (auth_user_id) DEFERRABLE INITIALLY DEFERRED
-);
 
 -- Indexes for profiles
 CREATE INDEX idx_profiles_type ON profiles (type);
@@ -450,13 +451,13 @@ SELECT
     (SELECT role FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_role,
     (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_at,
     CASE
-        WHEN cm.user_id IS NOT NULL THEN true
+        WHEN cm.profile_id IS NOT NULL THEN true
         ELSE false
     END as is_member
 FROM conversations c
 LEFT JOIN conversation_members cm ON c.id = cm.conversation_id
 LEFT JOIN messages m ON c.id = m.conversation_id
-GROUP BY c.id, cm.user_id;
+GROUP BY c.id, cm.profile_id;
 
 -- ============================================================================
 -- SAMPLE DATA (For Development)

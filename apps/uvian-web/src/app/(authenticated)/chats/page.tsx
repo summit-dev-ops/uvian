@@ -5,18 +5,26 @@ import Link from 'next/link';
 import { useConversations } from '~/components/features/chat';
 import { chatActions } from '~/lib/domains/chat/actions';
 import { useAction } from '~/lib/hooks/use-action';
+import { useProfile } from '~/components/features/user/hooks/use-profile';
 import { ScrollArea, Button } from '@org/ui';
 
 export default function ConversationsPage() {
   const { conversations, isLoading, error } = useConversations();
+  const { profile } = useProfile();
   const { perform: createConversation, isPending: isCreating } = useAction(
     chatActions.createConversation()
   );
 
   const handleStartChatting = () => {
+    if (!profile?.profileId) {
+      console.error('Cannot create conversation: no profile found');
+      return;
+    }
+
     createConversation({
       id: crypto.randomUUID(),
       title: 'New Conversation',
+      profileId: profile.profileId,
     });
   };
 

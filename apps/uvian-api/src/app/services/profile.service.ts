@@ -213,7 +213,7 @@ export class ProfileService {
       .select('*')
       .eq('auth_user_id', authUserId)
       .single();
-
+    console.log(error)
     if (error && error.code !== 'PGRST116') {
       throw new Error(`Failed to fetch profile: ${error.message}`);
     }

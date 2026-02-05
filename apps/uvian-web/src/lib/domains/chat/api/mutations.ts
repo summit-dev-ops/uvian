@@ -25,6 +25,7 @@ import type {
 export type CreateConversationPayload = {
   id: string; // Client-generated ID
   title: string;
+  profileId: string; // Current user's profile ID
 };
 
 export type SendMessagePayload = {
@@ -90,7 +91,7 @@ export const chatMutations = {
     mutationFn: async (payload) => {
       const { data } = await apiClient.post<ConversationAPI>(
         `/api/conversations`,
-        { id: payload.id, title: payload.title }
+        { id: payload.id, title: payload.title, profileId: payload.profileId }
       );
       return chatUtils.conversationApiToUi(data);
     },
@@ -181,6 +182,7 @@ export const chatMutations = {
         createdAt: new Date(),
         syncStatus: 'pending',
         isStreaming: false,
+        senderId: 'current-user', // Temporary sender ID for optimistic update
       };
 
       // Create placeholder assistant message for streaming
@@ -194,6 +196,7 @@ export const chatMutations = {
         syncStatus: 'pending',
         isStreaming: true,
         tokens: [],
+        senderId: 'assistant', // Assistant sender ID for placeholder
       };
 
       // Update cache with both messages

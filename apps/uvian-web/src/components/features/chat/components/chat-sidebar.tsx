@@ -1,15 +1,35 @@
-"use client"
+'use client';
 
 import React from 'react';
-import { Button, cn, ScrollArea, Separator } from "@org/ui";
-import { PlusCircle, MessageSquare, Settings, LogOut } from "lucide-react";
-
+import { Button, cn, ScrollArea, Separator } from '@org/ui';
+import { PlusCircle, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { chatActions } from '~/lib/domains/chat/actions';
+import { useAction } from '~/lib/hooks/use-action';
+import { useProfile } from '~/components/features/user/hooks/use-profile';
 
 interface ChatSidebarProps {
   className?: string;
 }
 
 export function ChatSidebar({ className }: ChatSidebarProps) {
+  const { profile } = useProfile();
+  const { perform: createConversation, isPending: isCreating } = useAction(
+    chatActions.createConversation()
+  );
+
+  const handleNewChat = () => {
+    if (!profile?.profileId) {
+      console.error('Cannot create conversation: no profile found');
+      return;
+    }
+
+    createConversation({
+      id: crypto.randomUUID(),
+      title: 'New Conversation',
+      profileId: profile.profileId,
+    });
+  };
+
   // Mock history for now
   const history = [
     { id: '1', title: 'Socket.IO Implementation', date: 'Today' },
@@ -18,11 +38,18 @@ export function ChatSidebar({ className }: ChatSidebarProps) {
   ];
 
   return (
-    <div className={cn("flex flex-col h-full bg-secondary/10 border-r", className)}>
+    <div
+      className={cn('flex flex-col h-full bg-secondary/10 border-r', className)}
+    >
       <div className="p-4">
-        <Button className="w-full justify-start gap-2 h-10 shadow-sm" variant="default">
+        <Button
+          className="w-full justify-start gap-2 h-10 shadow-sm"
+          variant="default"
+          onClick={handleNewChat}
+          disabled={isCreating}
+        >
           <PlusCircle className="h-4 w-4" />
-          New Chat
+          {isCreating ? 'Creating...' : 'New Chat'}
         </Button>
       </div>
 
@@ -52,11 +79,17 @@ export function ChatSidebar({ className }: ChatSidebarProps) {
 
       <div className="p-2 space-y-1">
         <Separator className="mb-2" />
-        <Button variant="ghost" className="w-full justify-start gap-2 h-9 text-xs px-2">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2 h-9 text-xs px-2"
+        >
           <Settings className="h-3.5 w-3.5" />
           Settings
         </Button>
-        <Button variant="ghost" className="w-full justify-start gap-2 h-9 text-xs px-2 text-destructive hover:text-destructive hover:bg-destructive/10">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-2 h-9 text-xs px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+        >
           <LogOut className="h-3.5 w-3.5" />
           Logout
         </Button>
