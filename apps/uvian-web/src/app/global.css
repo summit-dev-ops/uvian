@@ -68,6 +68,27 @@
   }
 }
 
+@layer utilities {
+  .border-subtle {
+    @apply border-border/40;
+  }
+  .border-interactive {
+    @apply border-primary/30 hover:border-primary/40 focus:border-primary/50;
+  }
+  .border-error {
+    @apply border-destructive/30 hover:border-destructive/40 focus:border-destructive/50;
+  }
+  .border-focus {
+    @apply focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 focus:outline-none;
+  }
+  .spinner-primary {
+    @apply animate-spin rounded-full border-2 border-primary/20 border-t-primary;
+  }
+  .spinner-subtle {
+    @apply animate-spin rounded-full border-2 border-current/30 border-t-current;
+  }
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,

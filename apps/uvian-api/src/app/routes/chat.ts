@@ -17,7 +17,12 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.get('/api/conversations', async (request, reply) => {
-    const conversations = await chatService.getConversations();
+    const userId = (request as any).user?.id;
+    if (!userId) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    const conversations = await chatService.getConversations(userId);
     reply.send(conversations);
   });
 

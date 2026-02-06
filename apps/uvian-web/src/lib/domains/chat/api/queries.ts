@@ -27,12 +27,12 @@ export const chatQueries = {
     queryOptions({
       queryKey: chatKeys.conversations(),
       queryFn: async () => {
-        const { data } = await apiClient.get<ConversationAPI[]>(
+        const { data: conversations } = await apiClient.get<ConversationAPI[]>(
           `/api/conversations`
         );
-        return data.map(chatUtils.conversationApiToUi);
+        return conversations.map(chatUtils.conversationApiToUi);
       },
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 2, // 2 minutes
     }),
 
   /**
@@ -60,7 +60,8 @@ export const chatQueries = {
         const { data } = await apiClient.get<MessageAPI[]>(
           `/api/conversations/${conversationId}/messages`
         );
-        return data.map(chatUtils.messageApiToUi);
+        // Ensure we always return an array, even if API returns null/undefined
+        return (data || []).map(chatUtils.messageApiToUi);
       },
       staleTime: 1000 * 60, // 1 minute
     }),

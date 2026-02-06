@@ -37,7 +37,8 @@ export function conversationApiToUi(raw: ConversationAPI): ConversationUI {
   return {
     id: raw.id,
     title: raw.title,
-    createdAt: new Date(raw.createdAt),
+    createdAt: new Date(raw.created_at),
+    updatedAt: new Date(raw.updated_at),
     syncStatus: 'synced',
   };
 }
@@ -46,10 +47,10 @@ export function conversationMemberApiToUi(
   raw: ConversationMemberAPI
 ): ConversationMemberUI {
   return {
-    profileId: raw.profileId,
-    conversationId: raw.conversationId,
+    profileId: raw.profile_id,
+    conversationId: raw.conversation_id,
     role: raw.role,
-    createdAt: new Date(raw.createdAt),
+    createdAt: new Date(raw.created_at),
     syncStatus: 'synced',
   };
 }

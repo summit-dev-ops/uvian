@@ -110,6 +110,7 @@ export const chatMutations = {
         id: payload.id,
         title: payload.title,
         createdAt: new Date(),
+        updatedAt: new Date(),
         syncStatus: 'pending',
       };
 

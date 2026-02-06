@@ -438,61 +438,6 @@ CREATE POLICY "System profile settings are readable" ON profile_settings
     );
 
 -- ============================================================================
--- HELPER VIEWS
--- ============================================================================
-
--- View to get conversations with member counts and last message
-CREATE VIEW conversations_with_metadata AS
-SELECT
-    c.*,
-    COUNT(DISTINCT cm.profile_id) as member_count,
-    COUNT(DISTINCT m.id) as message_count,
-    (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_content,
-    (SELECT role FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_role,
-    (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_at,
-    CASE
-        WHEN cm.profile_id IS NOT NULL THEN true
-        ELSE false
-    END as is_member
-FROM conversations c
-LEFT JOIN conversation_members cm ON c.id = cm.conversation_id
-LEFT JOIN messages m ON c.id = m.conversation_id
-GROUP BY c.id, cm.profile_id;
-
--- ============================================================================
--- SAMPLE DATA (For Development)
--- ============================================================================
-
--- Insert initial system profiles
-INSERT INTO profiles (id, type, display_name, is_active) VALUES
-    ('550e8400-e29b-41d4-a716-446655440000', 'system', 'System', true),
-    ('550e8400-e29b-41d4-a716-446655440001', 'admin', 'Administrator', true);
-
--- Insert a sample conversation
-INSERT INTO conversations (id, title) VALUES
-    ('550e8400-e29b-41d4-a716-446655440002', 'Welcome to Uvian');
-
--- Insert a sample message with system sender
-INSERT INTO messages (id, conversation_id, sender_id, content, role) VALUES
-    (
-        '550e8400-e29b-41d4-a716-446655440003',
-        '550e8400-e29b-41d4-a716-446655440002',
-        '550e8400-e29b-41d4-a716-446655440000',
-        'Welcome to Uvian! Your AI-powered chat platform.',
-        'system'
-    );
-
--- Insert a sample job
-INSERT INTO jobs (id, type, status, input, output) VALUES
-    (
-        '550e8400-e29b-41d4-a716-446655440004',
-        'chat',
-        'completed',
-        '{"conversationId": "550e8400-e29b-41d4-a716-446655440002", "messages": [{"role": "user", "content": "Hello!"}]}',
-        '{"text": "Hello! How can I help you today?"}'
-    );
-
--- ============================================================================
 -- COMMENTS
 -- ============================================================================
 
@@ -508,3 +453,18 @@ COMMENT ON COLUMN profiles.agent_config IS 'Agent-specific configuration (NULL f
 COMMENT ON COLUMN profiles.auth_user_id IS 'Link to Supabase Auth user (NULL for agents)';
 COMMENT ON COLUMN jobs.input IS 'Job input parameters as JSONB';
 COMMENT ON COLUMN jobs.output IS 'Job result data as JSONB';
+
+-- Adding performance indexes
+CREATE INDEX IF NOT EXISTS idx_conversation_members_profile_conversation 
+ON conversation_members (profile_id, conversation_id);
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_created 
+ON messages (conversation_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations (updated_at DESC);
+
+-- Grant necessary permissions
+GRANT SELECT ON conversations TO authenticated;
+GRANT SELECT ON messages TO authenticated;
+GRANT SELECT ON conversation_members TO authenticated;
+GRANT SELECT ON profiles TO authenticated;

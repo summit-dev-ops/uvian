@@ -24,7 +24,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border border-current border-t-transparent mx-auto mb-4" />
+          <div className="h-8 w-8 animate-spin rounded-full border-t-transparent border-current/40 mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>

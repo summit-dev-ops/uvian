@@ -5,6 +5,13 @@ export interface Conversation {
   title: string;
   createdAt: string;
   updatedAt: string;
+  // Added via frontend merge
+  lastMessage?: {
+    content: string;
+    role: 'user' | 'assistant' | 'system';
+    createdAt: string;
+  };
+  messageCount?: number;
 }
 
 export interface Message {
@@ -52,17 +59,55 @@ export class ChatService {
     return conversation;
   }
 
-  async getConversations(): Promise<Conversation[]> {
+  async getConversations(userId: string): Promise<Conversation[]> {
+    // Get user's profile ID
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      // Return empty array if no profile found (user might not be fully set up)
+      return [];
+    }
+
+    // First, get the conversation IDs the user is a member of
+    const { data: memberships, error: membershipError } = await supabase
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('profile_id', profile.id);
+
+    if (membershipError) {
+      throw new Error(
+        `Failed to fetch user memberships: ${membershipError.message}`
+      );
+    }
+
+    if (!memberships || memberships.length === 0) {
+      return []; // User is not a member of any conversations
+    }
+
+    const conversationIds = memberships.map((m) => m.conversation_id);
+
+    // Get conversations using RLS-protected query
     const { data, error } = await supabase
       .from('conversations')
-      .select('*')
+      .select('id, title, created_at, updated_at')
+      .in('id', conversationIds)
       .order('updated_at', { ascending: false });
 
     if (error) {
       throw new Error(`Failed to fetch conversations: ${error.message}`);
     }
 
-    return data || [];
+    // Transform to expected format
+    return (data || []).map((conv) => ({
+      id: conv.id,
+      title: conv.title,
+      createdAt: conv.created_at,
+      updatedAt: conv.updated_at,
+    }));
   }
 
   async getConversation(id: string): Promise<Conversation | undefined> {

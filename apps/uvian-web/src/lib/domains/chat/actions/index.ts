@@ -200,4 +200,93 @@ export const chatActions = {
       );
     },
   }),
+
+  // ============================================================================
+  // Bulk Operations (Static functions for Action Manager)
+  // ============================================================================
+
+  /**
+   * Remove multiple members from a conversation.
+   * Static function for bulk operations using the action manager.
+   */
+  bulkRemoveMembers: async (
+    profileIds: string[],
+    context: BaseActionContext,
+    conversationId: string
+  ) => {
+    const promises = profileIds.map(async (profileId) => {
+      await executeMutation(
+        context.queryClient,
+        chatMutations.removeConversationMember(context.queryClient),
+        { userId: profileId, conversationId }
+      );
+    });
+
+    await Promise.all(promises);
+  },
+
+  /**
+   * Update multiple member roles in a conversation.
+   * Static function for bulk operations using the action manager.
+   */
+  bulkUpdateMemberRole: async (
+    profileIds: string[],
+    newRole: string,
+    context: BaseActionContext,
+    conversationId: string
+  ) => {
+    const promises = profileIds.map(async (profileId) => {
+      await executeMutation(
+        context.queryClient,
+        chatMutations.updateConversationMemberRole(context.queryClient),
+        { userId: profileId, conversationId, role: newRole }
+      );
+    });
+
+    await Promise.all(promises);
+  },
+
+  /**
+   * Delete multiple conversations.
+   * Static function for bulk operations using the action manager.
+   */
+  bulkDeleteConversations: async (
+    conversationIds: string[],
+    context: BaseActionContext
+  ) => {
+    const promises = conversationIds.map(async (conversationId) => {
+      await executeMutation(
+        context.queryClient,
+        chatMutations.deleteConversation(context.queryClient, conversationId),
+        { conversationId }
+      );
+
+      // Clear cache for each conversation
+      const state = context.store.getState();
+      state.clearConversationCache(conversationId);
+    });
+
+    await Promise.all(promises);
+  },
+
+  /**
+   * Archive multiple conversations.
+   * Static function for bulk operations using the action manager.
+   */
+  bulkArchiveConversations: async (
+    conversationIds: string[],
+    context: BaseActionContext
+  ) => {
+    // Note: This would require an archive mutation in the API
+    const promises = conversationIds.map(async (conversationId) => {
+      // For now, using delete as a placeholder for archive
+      await executeMutation(
+        context.queryClient,
+        chatMutations.deleteConversation(context.queryClient, conversationId),
+        { conversationId }
+      );
+    });
+
+    await Promise.all(promises);
+  },
 };

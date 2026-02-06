@@ -3,23 +3,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
-import { useEffect, useState } from 'react';
-import { createClient } from '~/lib/supabase/client';
+import { userQueries } from '../../user';
 
 export const useConversationMembers = (conversationId: string) => {
   const queryClient = useQueryClient();
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const supabase = createClient();
 
-  // Fetch current user
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) {
-        setCurrentUserId(data.user.id);
-      }
-    });
-  }, [supabase]);
-
+  // 2. Fetch current user's profile
+  const { data: profile } = useQuery({
+    ...userQueries.profile(),
+    enabled: !!conversationId, // Only fetch profile if we have a conversation
+  });
+  
   // 1. Fetch members
   const { data: members, isLoading } = useQuery(
     chatQueries.conversationMembers(conversationId)
@@ -39,7 +33,7 @@ export const useConversationMembers = (conversationId: string) => {
   );
 
   // 3. Derived State
-  const currentUserMember = members?.find((m) => m.userId === currentUserId);
+  const currentUserMember = members?.find((m) => m.profileId === profile?.profileId);
   const isAdmin =
     currentUserMember?.role?.name === 'admin' ||
     currentUserMember?.role === 'admin';
@@ -55,7 +49,7 @@ export const useConversationMembers = (conversationId: string) => {
     isInviting,
     isRemoving,
     isUpdatingRole,
-    currentUserId,
+    currentProfileId: profile?.profileId,
     isAdmin,
   };
 };

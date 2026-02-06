@@ -125,7 +125,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
       <div className={cn('space-y-6', className)}>
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-4">
-            <div className="h-8 w-8 animate-spin rounded-full border border-primary/30 border-t-primary mx-auto" />
+            <div className="h-8 w-8 animate-spin rounded-full border-t-primary border-primary/30 mx-auto" />
             <p className="text-sm text-muted-foreground">
               {hasProfile ? 'Updating profile...' : 'Creating profile...'}
             </p>
@@ -169,7 +169,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <Card className="p-4 border-destructive/50 bg-destructive/5">
+        <Card className="p-4 border-destructive/30 bg-destructive/5">
           <div className="flex items-start space-x-2">
             <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
             <div>
@@ -199,7 +199,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
                 displayName={displayName}
                 size="lg"
                 showBorder={true}
-                borderColor="border-primary/20"
+                borderColor="border-primary/30"
               />
               {showAvatarUrlField && (
                 <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary flex items-center justify-center">
@@ -238,8 +238,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
                     handleInputChange('displayName', e.target.value)
                   }
                   className={cn(
-                    !formData.displayName?.trim() &&
-                      'border-destructive focus:border-destructive'
+                    !formData.displayName?.trim() && 'focus:border-destructive'
                   )}
                 />
                 {!formData.displayName.trim() && (
@@ -308,7 +307,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
           </Button>
           <Button type="submit" disabled={!canSubmit} className="min-w-24">
             {isSubmitting ? (
-              <div className="h-4 w-4 animate-spin rounded-full border border-current border-t-transparent" />
+              <div className="h-4 w-4 animate-spin rounded-full border-t-transparent border-current/40" />
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />

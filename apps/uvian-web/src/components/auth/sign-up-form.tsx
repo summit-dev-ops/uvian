@@ -106,7 +106,7 @@ export default function SignUpForm() {
         <CardContent>
           <form id="sign-up-form" onSubmit={form.handleSubmit(onSubmit)}>
             {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-md flex items-center space-x-2 mb-4">
+              <div className="p-3 text-sm text-destructive bg-destructive/5 border-destructive/30 rounded-md flex items-center space-x-2 mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </div>
@@ -209,7 +209,7 @@ export default function SignUpForm() {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <div className="h-4 w-4 animate-spin rounded-full border border-current border-t-transparent mr-2" />
+                <div className="h-4 w-4 animate-spin rounded-full border-t-transparent border-current/40 mr-2" />
               ) : (
                 <UserPlus className="h-4 w-4 mr-2" />
               )}

@@ -20,17 +20,17 @@ export type MessageAPI = {
 };
 
 export type ConversationAPI = {
-  id: string; // UUID
+  id: string;
   title: string;
-  createdAt: string; // ISO 8601
-  updatedAt: string; // ISO 8601
+  created_at: string; // ISO 8601 (from backend service)
+  updated_at: string; // ISO 8601 (from backend service)
 };
 
 export type ConversationMemberAPI = {
-  profileId: string;
-  conversationId: string;
+  profile_id: string;
+  conversation_id: string;
   role: any;
-  createdAt: string;
+  created_at: string;
 };
 
 // ============================================================================
@@ -63,6 +63,7 @@ export type ConversationUI = {
   id: string; // UUID
   title: string;
   createdAt: Date;
+  updatedAt: Date;
   syncStatus: DataSyncStatus;
   lastMessage?: MessageUI;
 };
@@ -105,3 +106,12 @@ export type SocketConversationUpdateEvent = {
   conversationId: string; // UUID
   title?: string;
 };
+
+// ============================================================================
+// Preview Data Types
+// ============================================================================
+
+export interface PreviewData {
+  conversationId: string;
+  lastMessage: MessageUI | null;
+}

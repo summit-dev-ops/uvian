@@ -79,7 +79,7 @@ export default function ProfileEditPage() {
         <div className="container mx-auto p-6 max-w-4xl">
           <div className="flex items-center justify-center py-12">
             <div className="text-center space-y-4">
-              <div className="h-8 w-8 animate-spin rounded-full border border-primary/30 border-t-primary mx-auto" />
+              <div className="h-8 w-8 animate-spin rounded-full border-t-primary border-primary/30 mx-auto" />
               <p className="text-sm text-muted-foreground">
                 Loading profile editor...
               </p>

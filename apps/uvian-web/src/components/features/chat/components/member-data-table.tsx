@@ -36,8 +36,8 @@ import { ConversationMemberUI } from '~/lib/domains/chat/types';
 interface MemberDataTableProps {
   data: ConversationMemberUI[];
   isAdmin: boolean;
-  onRemove: (userId: string) => void;
-  onUpdateRole: (userId: string, role: string) => void;
+  onRemove: (profileId: string) => void;
+  onUpdateRole: (profileId: string, role: string) => void;
 }
 
 export function MemberDataTable({
@@ -78,20 +78,20 @@ export function MemberDataTable({
       enableHiding: false,
     },
     {
-      accessorKey: 'userId',
+      accessorKey: 'profileId',
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
-            User ID
+            Profile ID
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         );
       },
       cell: ({ row }) => (
-        <div className="lowercase">{row.getValue('userId')}</div>
+        <div className="lowercase">{row.getValue('profileId')}</div>
       ),
     },
     {
@@ -131,26 +131,26 @@ export function MemberDataTable({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(member.userId)}
+                onClick={() => navigator.clipboard.writeText(member.profileId)}
               >
-                Copy user ID
+                Copy profile ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {isAdmin && (
                 <>
                   <DropdownMenuItem
-                    onClick={() => onUpdateRole(member.userId, 'admin')}
+                    onClick={() => onUpdateRole(member.profileId, 'admin')}
                   >
                     Make Admin
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => onUpdateRole(member.userId, 'member')}
+                    onClick={() => onUpdateRole(member.profileId, 'member')}
                   >
                     Make Member
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive"
-                    onClick={() => onRemove(member.userId)}
+                    onClick={() => onRemove(member.profileId)}
                   >
                     Remove from conversation
                   </DropdownMenuItem>

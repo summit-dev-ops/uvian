@@ -76,7 +76,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   size = 'md',
   className,
   showBorder = false,
-  borderColor = 'border-border',
+  borderColor = 'border-primary/30',
   fallbackText,
   loading = false,
   onImageError,
@@ -124,7 +124,7 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
           />
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-muted">
-              <div className="h-1/2 w-1/2 animate-spin rounded-full border border-primary/30 border-t-primary" />
+              <div className="h-1/2 w-1/2 animate-spin rounded-full border-t-primary border-primary/30" />
             </div>
           )}
         </>

@@ -45,7 +45,7 @@ export function ChatInput({
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-transparent pt-12 pb-6 px-4">
       <div className="max-w-3xl mx-auto relative group">
-        <InputGroup className="bg-background border rounded-2xl shadow-lg ring-1 ring-black/5 overflow-hidden focus-within:ring-primary/20 focus-within:border-primary transition-all has-[>textarea]:h-auto flex-col">
+        <InputGroup className="bg-background rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden focus:ring-primary/20 focus:border-primary/40 transition-all has-[>textarea]:h-auto flex-col">
           <InputGroupTextarea
             ref={textareaRef}
             rows={1}

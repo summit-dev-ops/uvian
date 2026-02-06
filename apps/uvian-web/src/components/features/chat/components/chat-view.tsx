@@ -76,14 +76,15 @@ export function ChatView({ conversationId }: { conversationId: string }) {
             </div>
           ) : (
             <div className="flex flex-col w-full">
-              {messages?.map((msg) => (
-                <MessageRow
-                  key={msg.id}
-                  message={msg}
-                  onCopy={() => {}} // Could add a toast here later
-                />
-              ))}
-              {messages?.length === 0 && !isLoading && (
+              {Array.isArray(messages) &&
+                messages.map((msg) => (
+                  <MessageRow
+                    key={msg.id}
+                    message={msg}
+                    onCopy={() => {}} // Could add a toast here later
+                  />
+                ))}
+              {(!messages || messages.length === 0) && !isLoading && (
                 <div className="flex-1 flex flex-col items-center justify-center pt-24 space-y-4 px-4 text-center">
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl">✨</span>

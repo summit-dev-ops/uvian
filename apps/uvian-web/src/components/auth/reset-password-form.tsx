@@ -109,7 +109,7 @@ export default function ResetPasswordForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-md">
+              <div className="p-3 text-sm text-destructive bg-destructive/5 border-destructive/30 rounded-md">
                 {error}
               </div>
             )}

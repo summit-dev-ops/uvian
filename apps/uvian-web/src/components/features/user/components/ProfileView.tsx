@@ -175,7 +175,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           displayName={displayName}
           size="xl"
           showBorder={true}
-          borderColor="border-primary/20"
+          borderColor="border-primary/30"
         />
         <div className="flex-1 space-y-3">
           <div>
