@@ -1,5 +1,5 @@
 import React from 'react';
-import './global.css';
+import './styles.css';
 
 export const metadata = {
   title: 'Welcome to web',
@@ -10,6 +10,7 @@ import { SocketProvider } from '~/components/providers/socket';
 import { QueryProvider } from '~/components/providers/query';
 import { StoreProvider } from '~/components/providers/store/store-provider';
 import { AuthProvider } from '~/lib/auth/auth-context';
+import { ThemeProvider } from '~/components/providers/theme';
 
 export default function RootLayout({
   children,
@@ -17,15 +18,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <QueryProvider>
-          <StoreProvider>
-            <AuthProvider>
-              <SocketProvider>{children}</SocketProvider>
-            </AuthProvider>
-          </StoreProvider>
-        </QueryProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            <StoreProvider>
+              <AuthProvider>
+                <SocketProvider>{children}</SocketProvider>
+              </AuthProvider>
+            </StoreProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

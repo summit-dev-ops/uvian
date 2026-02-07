@@ -132,7 +132,7 @@ export const useProfileEdit = () => {
     if (
       draft.avatarUrl &&
       !draft.avatarUrl.match(
-        /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/
+        /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_.~#?&//=]*)$/
       )
     ) {
       errors.push('Avatar URL must be a valid URL');

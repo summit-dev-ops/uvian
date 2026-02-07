@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { useConversationPreviews } from '~/components/features/chat/hooks/use-conversation-previews';
-import { useAuth } from '~/lib/auth/auth-context';
 
 import type { PreviewData } from '~/lib/domains/chat/types';
 import { useProfile } from '~/components/features/user';
@@ -22,7 +21,7 @@ interface ConversationWithPreview {
 }
 
 export default function ConversationsPage() {
-  const { profile } = useProfile()
+  const { profile } = useProfile();
   const queryClient = useQueryClient();
 
   // Fetch conversations
@@ -80,21 +79,8 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden flex-col">
-      <header className="h-14 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-        <div className="flex items-center space-x-2">
-          <h1 className="text-lg font-semibold">Conversations</h1>
-        </div>
-        <button
-          onClick={handleStartChatting}
-          disabled={isCreating}
-          className="px-3 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          {isCreating ? 'Creating...' : 'New Chat'}
-        </button>
-      </header>
-
-      <div className="flex-1 p-6 overflow-auto">
+    <div className="flex-1 min-h-0 overflow-auto">
+      <div className="p-6">
         <div className="max-w-4xl mx-auto space-y-4">
           {isLoading ? (
             <div className="space-y-4">

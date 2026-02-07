@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "apps/uvian-web/tailwind.config.js",
-    "css": "apps/uvian-web/src/app/global.css",
+    "css": "apps/uvian-web/src/app/globals.css",
     "baseColor": "slate",
     "cssVariables": true,
     "prefix": ""

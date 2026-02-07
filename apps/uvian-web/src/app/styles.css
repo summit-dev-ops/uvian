@@ -1,0 +1,13 @@
+@import "../../../../packages/ui/src/globals.css";
+@source "../../src/**/*.{ts,tsx,js,jsx}";
+@source "../../../../packages/ui/src/**/*.{ts,tsx,js,jsx}"
+
+.no-scrollbar::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

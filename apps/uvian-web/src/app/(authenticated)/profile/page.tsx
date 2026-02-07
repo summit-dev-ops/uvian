@@ -1,42 +1,23 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ProfileView } from '~/components/features/user/components/ProfileView';
 import { ProfileEditor } from '~/components/features/user/components/ProfileEditor';
 import { useProfile } from '~/components/features/user/hooks/use-profile';
 import { useProfileEdit } from '~/components/features/user/hooks/use-profile-edit';
 import { Button, Card } from '@org/ui';
-import { Edit3, ArrowLeft, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { profile, isLoadingProfile, profileError, hasProfile } = useProfile();
+  const { isLoadingProfile, profileError, hasProfile } = useProfile();
 
-  const {
-    isEditingProfile,
-    startEditingProfile,
-    stopEditingProfile,
-    loadCurrentDataIntoDrafts,
-  } = useProfileEdit();
+  const { isEditingProfile, stopEditingProfile } = useProfileEdit();
 
   // Handle navigation back to previous page
   const handleBack = () => {
     router.back();
-  };
-
-  // Handle edit mode toggle
-  const handleStartEditing = () => {
-    if (profile) {
-      loadCurrentDataIntoDrafts({
-        displayName: profile.displayName,
-        avatarUrl: profile.avatarUrl,
-        bio: profile.bio,
-        publicFields: profile.publicFields,
-      });
-    }
-    startEditingProfile();
   };
 
   // Handle successful save
@@ -45,7 +26,7 @@ export default function ProfilePage() {
     // Could show a success toast here
   };
 
-  // Handle cancel
+  // Handle cancel editing
   const handleCancel = () => {
     stopEditingProfile();
   };
@@ -53,16 +34,7 @@ export default function ProfilePage() {
   // Loading state while checking authentication
   if (isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="h-14 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center space-x-4">
-            <Button onClick={handleBack} variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-lg font-semibold">Profile</h1>
-          </div>
-        </header>
+      <div className="flex-1 min-h-0 overflow-auto">
         <div className="container mx-auto p-6 max-w-4xl">
           <div className="space-y-6">
             <div className="flex items-center space-x-4">
@@ -88,7 +60,7 @@ export default function ProfilePage() {
   // Error state (authentication issue)
   if (profileError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center">
         <div className="text-center space-y-6 max-w-md mx-auto p-6">
           <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
             <Settings className="h-8 w-8 text-destructive" />
@@ -113,36 +85,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="h-14 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-        <div className="flex items-center space-x-4">
-          <Button onClick={handleBack} variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-lg font-semibold">
-            {isEditingProfile ? 'Edit Profile' : 'Profile'}
-          </h1>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {hasProfile && !isEditingProfile && (
-            <Button onClick={handleStartEditing} size="sm">
-              <Edit3 className="h-4 w-4 mr-2" />
-              Edit Profile
-            </Button>
-          )}
-          <Link href="/settings">
-            <Button variant="ghost" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-          </Link>
-        </div>
-      </header>
-
-      {/* Content */}
+    <div className="flex-1 min-h-0 overflow-auto">
       <div className="container mx-auto p-6 max-w-4xl">
         {isEditingProfile ? (
           <ProfileEditor

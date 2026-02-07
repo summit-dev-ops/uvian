@@ -233,7 +233,7 @@ export function ActionToolbar<TItem, TParams = any>({
             name={groupName}
             actions={groupedActions[groupName]}
             isLoading={isLoading}
-            onAction={onAction || (() => {})}
+            onAction={onAction || (() => undefined)}
             layout={layout}
           />
         ))}
@@ -251,7 +251,7 @@ export function ActionToolbar<TItem, TParams = any>({
             name={groupName}
             actions={groupedActions[groupName]}
             isLoading={isLoading}
-            onAction={onAction || (() => {})}
+            onAction={onAction || (() => undefined)}
             layout={layout}
           />
         ))}

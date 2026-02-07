@@ -111,112 +111,110 @@ export default function HomePage() {
 
   // User is authenticated
   return (
-    <div className="min-h-screen bg-muted/50">
-      <div className="container mx-auto py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
+    <div className="container mx-auto py-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Welcome Home</h1>
+            <p className="text-muted-foreground">
+              You're successfully authenticated
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+
+        {/* User Info Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <User className="h-5 w-5 mr-2" />
+              Account Information
+            </CardTitle>
+            <CardDescription>
+              You're successfully authenticated and can access all features
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Email</p>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+              </div>
+            </div>
             <div>
-              <h1 className="text-3xl font-bold">Welcome Home</h1>
-              <p className="text-muted-foreground">
-                You're successfully authenticated
+              <p className="text-sm font-medium">Status</p>
+              <p className="text-sm text-green-600 font-medium">
+                ✓ Authenticated
               </p>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* User Info Card */}
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <User className="h-5 w-5 mr-2" />
-                Account Information
+                <MessageCircle className="h-5 w-5 mr-2" />
+                Conversations
               </CardTitle>
               <CardDescription>
-                You're successfully authenticated and can access all features
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Status</p>
-                <p className="text-sm text-green-600 font-medium">
-                  ✓ Authenticated
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MessageCircle className="h-5 w-5 mr-2" />
-                  Conversations
-                </CardTitle>
-                <CardDescription>
-                  Start chatting and managing your conversations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/chats">
-                  <Button variant="outline" className="w-full">
-                    View Conversations
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Settings</CardTitle>
-                <CardDescription>
-                  Manage your account and profile preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/profile">
-                  <Button variant="outline" className="w-full">
-                    Edit Profile
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Getting Started */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Getting Started</CardTitle>
-              <CardDescription>
-                Here are some things you can do next
+                Start chatting and managing your conversations
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  • Create your first conversation to start chatting
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  • Update your profile information
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  • Explore the chat features and tools
-                </p>
-              </div>
+              <Link href="/chats">
+                <Button variant="outline" className="w-full">
+                  View Conversations
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Settings</CardTitle>
+              <CardDescription>
+                Manage your account and profile preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/profile">
+                <Button variant="outline" className="w-full">
+                  Edit Profile
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
+
+        {/* Getting Started */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Getting Started</CardTitle>
+            <CardDescription>
+              Here are some things you can do next
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                • Create your first conversation to start chatting
+              </p>
+              <p className="text-sm text-muted-foreground">
+                • Update your profile information
+              </p>
+              <p className="text-sm text-muted-foreground">
+                • Explore the chat features and tools
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+
 import { useRouter } from 'next/navigation';
 import { ProfileEditor } from '~/components/features/user/components/ProfileEditor';
 import { useProfile } from '~/components/features/user/hooks/use-profile';
@@ -64,18 +64,7 @@ export default function ProfileEditPage() {
   // Loading state
   if (isLoadingProfile) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="h-14 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center space-x-4">
-            <Button onClick={handleBack} variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-lg font-semibold">
-              {hasProfile ? 'Edit Profile' : 'Create Profile'}
-            </h1>
-          </div>
-        </header>
+      <div className="flex-1 min-h-0 overflow-auto">
         <div className="container mx-auto p-6 max-w-4xl">
           <div className="flex items-center justify-center py-12">
             <div className="text-center space-y-4">
@@ -93,7 +82,7 @@ export default function ProfileEditPage() {
   // Error state
   if (profileError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center">
         <div className="text-center space-y-6 max-w-md mx-auto p-6">
           <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
             <User className="h-8 w-8 text-destructive" />
@@ -119,30 +108,14 @@ export default function ProfileEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="h-14 border-b flex items-center justify-between px-6 bg-background/50 backdrop-blur-md sticky top-0 z-10">
-        <div className="flex items-center space-x-4">
+    <div className="flex-1 min-h-0 overflow-auto">
+      <div className="container mx-auto p-6 max-w-4xl">
+        <div className="mb-6">
           <Button onClick={handleBack} variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            Back to Profile
           </Button>
-          <h1 className="text-lg font-semibold">
-            {hasProfile ? 'Edit Profile' : 'Create Profile'}
-          </h1>
         </div>
-
-        <div className="flex items-center space-x-3">
-          <Link href="/profile">
-            <Button variant="ghost" size="sm">
-              View Profile
-            </Button>
-          </Link>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="container mx-auto p-6 max-w-4xl">
         <ProfileEditor
           onSave={handleSave}
           onCancel={handleCancel}

@@ -13,3 +13,8 @@ export * from './textarea';
 export * from './label';
 export * from './field';
 export * from './input-otp';
+export * from './sidebar';
+export * from './breadcrumb';
+export * from './skeleton';
+export * from './sheet';
+export * from './tooltip';

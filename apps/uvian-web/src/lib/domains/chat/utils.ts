@@ -123,7 +123,7 @@ export function addMessageToCache(
   queryClient: QueryClient,
   conversationId: string,
   message: MessageUI,
-  isDelta: boolean = false
+  isDelta = false
 ): void {
   queryClient.setQueryData<MessageUI[]>(
     chatKeys.messages(conversationId),

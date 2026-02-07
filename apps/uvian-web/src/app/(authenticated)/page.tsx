@@ -1,25 +1,34 @@
-'use client'
+'use client';
 
-import { useAuth } from '~/lib/auth/auth-context'
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@org/ui'
-import { LogOut, User, Mail } from 'lucide-react'
+import { useAuth } from '~/lib/auth/auth-context';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@org/ui';
+import { LogOut, User, Mail } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
-    await signOut()
-  }
+    await signOut();
+  };
 
   return (
-    <div className="min-h-screen bg-muted/50">
-      <div className="container mx-auto py-8">
+    <div className="flex-1 min-h-0 overflow-auto">
+      <div className="container mx-auto py-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">Dashboard</h1>
-              <p className="text-muted-foreground">Welcome back to your account</p>
+              <p className="text-muted-foreground">
+                Welcome back to your account
+              </p>
             </div>
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />
@@ -48,7 +57,9 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm font-medium">User ID</p>
-                <p className="text-sm text-muted-foreground font-mono">{user?.id}</p>
+                <p className="text-sm text-muted-foreground font-mono">
+                  {user?.id}
+                </p>
               </div>
               <div>
                 <p className="text-sm font-medium">Email Verified</p>
@@ -92,5 +103,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

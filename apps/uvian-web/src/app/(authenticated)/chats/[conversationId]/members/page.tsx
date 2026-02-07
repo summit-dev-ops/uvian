@@ -2,8 +2,8 @@
 
 import React, { Suspense, use, useState } from 'react';
 import { useConversationMembers } from '~/components/features/chat/hooks/use-conversation-members';
-import { createArraySelectionState } from '~/components/shared/utils/create-selection-state';
-import { ActionManagerProvider } from '~/components/shared/hocs/with-action-manager';
+import { createArraySelectionState } from '~/components/shared/actions/utils/create-selection-state';
+import { ActionManagerProvider } from '~/components/shared/actions/hocs/with-action-manager';
 import { chatActions } from '~/lib/domains/chat/actions';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@org/ui';
 import Link from 'next/link';
@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { ConversationMemberUI } from '~/lib/domains/chat/types';
-import type { ActionConfig } from '~/components/shared/types/action-manager';
+import type { ActionConfig } from '~/components/shared/actions/types/action-manager';
 
 export default function ConversationMembersPage({
   params,
@@ -171,51 +171,52 @@ export default function ConversationMembersPage({
   // Action manager is handled by ActionManagerProvider component
 
   return (
-    <div className="container mx-auto py-10 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/chats/${conversationId}`}>
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Back to Chat
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Conversation Members
-          </h1>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Member List</CardTitle>
-            {/* Selection info */}
-            {selectionState.hasSelection && (
-              <div className="text-sm text-muted-foreground">
-                {selectionState.selectionCount} member(s) selected
-              </div>
-            )}
+    <div className="flex-1 min-h-0 overflow-auto">
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/chats/${conversationId}`}>
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to Chat
+              </Link>
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Conversation Members
+            </h1>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<div>Loading members...</div>}>
-            {isLoading ? (
-              <div className="h-24 flex items-center justify-center">
-                Loading members...
-              </div>
-            ) : (
-              <ActionManagerProvider
-                selectionState={selectionState}
-                actionConfig={actionConfig}
-                params={actionParams}
-                showToolbar={true}
-                toolbarProps={{
-                  className: 'mb-4',
-                  layout: 'horizontal',
-                }}
-              >
-                {/* 
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Member List</CardTitle>
+              {/* Selection info */}
+              {selectionState.hasSelection && (
+                <div className="text-sm text-muted-foreground">
+                  {selectionState.selectionCount} member(s) selected
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Suspense fallback={<div>Loading members...</div>}>
+              {isLoading ? (
+                <div className="h-24 flex items-center justify-center">
+                  Loading members...
+                </div>
+              ) : (
+                <ActionManagerProvider
+                  selectionState={selectionState}
+                  actionConfig={actionConfig}
+                  params={actionParams}
+                  showToolbar={true}
+                  toolbarProps={{
+                    className: 'mb-4',
+                    layout: 'horizontal',
+                  }}
+                >
+                  {/* 
                   Note: The current MemberDataTable manages its own selection state internally.
                   For a full integration, we would either:
                   1. Modify the table to expose selection state, or
@@ -224,19 +225,20 @@ export default function ConversationMembersPage({
                   For now, we'll show a simplified member list with checkboxes
                   that integrates with our action manager.
                 */}
-                <MemberListWithSelection
-                  members={members || []}
-                  selectedMemberIds={selectedMemberIds}
-                  onSelectionChange={setSelectedMemberIds}
-                  isAdmin={isAdmin}
-                  onRemoveMember={removeMember}
-                  onUpdateMemberRole={updateRole}
-                />
-              </ActionManagerProvider>
-            )}
-          </Suspense>
-        </CardContent>
-      </Card>
+                  <MemberListWithSelection
+                    members={members || []}
+                    selectedMemberIds={selectedMemberIds}
+                    onSelectionChange={setSelectedMemberIds}
+                    isAdmin={isAdmin}
+                    onRemoveMember={removeMember}
+                    onUpdateMemberRole={updateRole}
+                  />
+                </ActionManagerProvider>
+              )}
+            </Suspense>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
