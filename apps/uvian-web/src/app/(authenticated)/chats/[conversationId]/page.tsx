@@ -1,5 +1,11 @@
 import React from 'react';
+import { ChatPageBreadcrumb } from '~/components/features/chat/components/chat-breadcrumbs';
 import { ChatView } from '~/components/features/chat/components/chat-view';
+import {
+  PageContainer,
+  PageContent,
+  PageHeader,
+} from '~/components/shared/navigation/ui/page-container';
 
 export default async function ChatPage({
   params,
@@ -9,6 +15,16 @@ export default async function ChatPage({
   const { conversationId } = await params;
 
   return (
-    <ChatView conversationId={conversationId} />
+    <PageContainer
+      size={'full'}
+      className="flex flex-1 flex-col min-h-0 relative"
+    >
+      <PageHeader>
+        <ChatPageBreadcrumb />
+      </PageHeader>
+      <PageContent className="flex flex-1 flex-col min-h-0 relative">
+        <ChatView conversationId={conversationId} />
+      </PageContent>
+    </PageContainer>
   );
 }

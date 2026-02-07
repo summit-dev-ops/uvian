@@ -6,17 +6,15 @@ import { createArraySelectionState } from '~/components/shared/actions/utils/cre
 import { ActionManagerProvider } from '~/components/shared/actions/hocs/with-action-manager';
 import { chatActions } from '~/lib/domains/chat/actions';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@org/ui';
-import Link from 'next/link';
-import {
-  ChevronLeft,
-  UserPlus,
-  Edit,
-  Shield,
-  UserX,
-  Trash2,
-} from 'lucide-react';
+import { UserPlus, Edit, Shield, UserX, Trash2 } from 'lucide-react';
 import type { ConversationMemberUI } from '~/lib/domains/chat/types';
 import type { ActionConfig } from '~/components/shared/actions/types/action-manager';
+import {
+  PageContainer,
+  PageContent,
+  PageHeader,
+} from '~/components/shared/navigation/ui/page-container';
+import { MembersPageBreadcrumb } from '~/components/features/chat/components/chat-breadcrumbs';
 
 export default function ConversationMembersPage({
   params,
@@ -171,22 +169,15 @@ export default function ConversationMembersPage({
   // Action manager is handled by ActionManagerProvider component
 
   return (
-    <div className="flex-1 min-h-0 overflow-auto">
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={`/chats/${conversationId}`}>
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Back to Chat
-              </Link>
-            </Button>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Conversation Members
-            </h1>
-          </div>
-        </div>
-
+    <PageContainer
+      size={'full'}
+      className="flex flex-1 flex-col min-h-0 relative"
+    >
+      <PageHeader>
+        <MembersPageBreadcrumb conversationId={conversationId} />
+      </PageHeader>
+      <PageContent>
+        <h1 className="text-2xl font-semibold">Conversation Members</h1>
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -238,8 +229,8 @@ export default function ConversationMembersPage({
             </Suspense>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </PageContent>
+    </PageContainer>
   );
 }
 
