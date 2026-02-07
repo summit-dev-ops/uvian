@@ -4,16 +4,6 @@
   "sourceRoot": "packages/ui/src",
   "projectType": "library",
   "targets": {
-    "build": {
-      "executor": "@nx/js:package",
-      "outputs": ["{options.outputPath}"],
-      "options": {
-        "outputPath": "dist/packages/ui",
-        "tsConfig": "packages/ui/tsconfig.lib.json",
-        "project": "packages/ui/package.json",
-        "entryFile": "packages/ui/src/index.ts"
-      }
-    }
   },
   "tags": []
 }
