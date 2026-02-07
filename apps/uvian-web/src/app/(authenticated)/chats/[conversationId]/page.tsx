@@ -1,6 +1,6 @@
 import React from 'react';
-import { ChatPageBreadcrumb } from '~/components/features/chat/components/chat-breadcrumbs';
-import { ChatView } from '~/components/features/chat/components/chat-view';
+import { ChatPageBreadcrumb } from '~/components/features/chat/components/chat-breadcrumb';
+import { ChatView } from '~/components/features/chat/components/views/chat-view';
 import {
   PageContainer,
   PageContent,
@@ -20,7 +20,7 @@ export default async function ChatPage({
       className="flex flex-1 flex-col min-h-0 relative"
     >
       <PageHeader>
-        <ChatPageBreadcrumb />
+        <ChatPageBreadcrumb conversationId={conversationId} />
       </PageHeader>
       <PageContent className="flex flex-1 flex-col min-h-0 relative">
         <ChatView conversationId={conversationId} />

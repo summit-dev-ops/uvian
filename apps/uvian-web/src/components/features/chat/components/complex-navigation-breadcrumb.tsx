@@ -20,60 +20,6 @@ import {
 } from '@org/ui';
 
 /**
- * Simple breadcrumb for main chat page
- * Shows: Chats > Chat
- */
-export function ChatPageBreadcrumb() {
-  return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/chats">Chats</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>Chat</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
-}
-
-/**
- * Simple breadcrumb for conversation members page
- * Shows: Chats > Chat > Members
- */
-export function MembersPageBreadcrumb({
-  conversationId,
-}: {
-  conversationId: string;
-}) {
-  return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/chats">Chats</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href={`/chats/${conversationId}`}>Chat</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>Members</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
-}
-
-/**
  * Example breadcrumb with ellipsis dropdown for complex navigation scenarios
  * This demonstrates the DynamicBreadcrumb pattern when needed
  */

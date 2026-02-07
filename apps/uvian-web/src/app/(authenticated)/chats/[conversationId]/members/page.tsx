@@ -14,7 +14,7 @@ import {
   PageContent,
   PageHeader,
 } from '~/components/shared/navigation/ui/page-container';
-import { MembersPageBreadcrumb } from '~/components/features/chat/components/chat-breadcrumbs';
+import { MembersPageBreadcrumb } from '~/components/features/chat/components/members-breadcrumb';
 
 export default function ConversationMembersPage({
   params,
