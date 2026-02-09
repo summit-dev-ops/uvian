@@ -3,6 +3,7 @@ export * from './card';
 export * from './avatar';
 export * from './badge';
 export * from './checkbox';
+export * from './dialog'
 export * from './dropdown-menu';
 export * from './input-group';
 export * from './input';
