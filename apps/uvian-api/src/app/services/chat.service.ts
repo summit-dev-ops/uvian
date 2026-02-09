@@ -3,6 +3,7 @@ import { supabase } from './supabase.service';
 export interface Conversation {
   id: string;
   title: string;
+  space_id?: string;
   createdAt: string;
   updatedAt: string;
   // Added via frontend merge
@@ -35,12 +36,27 @@ export class ChatService {
     id: string;
     title: string;
     profileId?: string;
+    space_id?: string;
   }): Promise<Conversation> {
+    // Validate space_id if provided
+    if (data.space_id) {
+      const { data: space, error: spaceError } = await supabase
+        .from('spaces')
+        .select('id, name')
+        .eq('id', data.space_id)
+        .single();
+
+      if (spaceError || !space) {
+        throw new Error('Space not found');
+      }
+    }
+
     const { data: conversation, error } = await supabase
       .from('conversations')
       .insert({
         id: data.id,
         title: data.title,
+        space_id: data.space_id,
       })
       .select()
       .single();
@@ -93,7 +109,7 @@ export class ChatService {
     // Get conversations using RLS-protected query
     const { data, error } = await supabase
       .from('conversations')
-      .select('id, title, created_at, updated_at')
+      .select('id, title, space_id, created_at, updated_at')
       .in('id', conversationIds)
       .order('updated_at', { ascending: false });
 
@@ -105,6 +121,54 @@ export class ChatService {
     return (data || []).map((conv) => ({
       id: conv.id,
       title: conv.title,
+      space_id: conv.space_id,
+      createdAt: conv.created_at,
+      updatedAt: conv.updated_at,
+    }));
+  }
+
+  async getConversationsInSpace(
+    spaceId: string,
+    userId: string
+  ): Promise<Conversation[]> {
+    // Verify user has access to this space
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('auth_user_id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error('User profile not found');
+    }
+
+    // Check if user is a member of the space
+    const { data: membership, error: membershipError } = await supabase
+      .from('space_members')
+      .select('profile_id')
+      .eq('space_id', spaceId)
+      .eq('profile_id', profile.id)
+      .single();
+
+    if (membershipError || !membership) {
+      throw new Error('User is not a member of this space');
+    }
+
+    // Get conversations in this space
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('id, title, space_id, created_at, updated_at')
+      .eq('space_id', spaceId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch space conversations: ${error.message}`);
+    }
+
+    return (data || []).map((conv) => ({
+      id: conv.id,
+      title: conv.title,
+      space_id: conv.space_id,
       createdAt: conv.created_at,
       updatedAt: conv.updated_at,
     }));

@@ -164,6 +164,11 @@ CREATE TRIGGER update_profile_settings_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_spaces_updated_at
+    BEFORE UPDATE ON spaces
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
@@ -462,6 +467,260 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation_created
 ON messages (conversation_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations (updated_at DESC);
+
+-- ============================================================================
+-- SPACES FEATURE TABLES
+-- ============================================================================
+
+-- ============================================================================
+-- SPACES TABLE
+-- ============================================================================
+CREATE TABLE spaces (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    description TEXT,
+    avatar_url TEXT,
+    created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    settings JSONB DEFAULT '{}',
+    is_private BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================================================
+-- SPACE MEMBERS TABLE
+-- ============================================================================
+CREATE TABLE space_members (
+    space_id UUID NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    role JSONB DEFAULT '{"name": "member"}', -- Flexible role structure
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (space_id, profile_id)
+);
+
+-- ============================================================================
+-- EXTEND CONVERSATIONS TABLE FOR SPACES
+-- ============================================================================
+ALTER TABLE conversations ADD COLUMN space_id UUID REFERENCES spaces(id) ON DELETE SET NULL;
+
+-- ============================================================================
+-- INDEXES FOR SPACES
+-- ============================================================================
+CREATE INDEX idx_spaces_created_by ON spaces (created_by);
+CREATE INDEX idx_spaces_is_private ON spaces (is_private);
+CREATE INDEX idx_space_members_space_id ON space_members (space_id);
+CREATE INDEX idx_space_members_profile_id ON space_members (profile_id);
+CREATE INDEX idx_space_members_role ON space_members USING GIN (role);
+CREATE INDEX idx_conversations_space_id ON conversations (space_id);
+
+-- ============================================================================
+-- SPACE RLS POLICIES
+-- ============================================================================
+
+-- Enable RLS on spaces tables
+ALTER TABLE spaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE space_members ENABLE ROW LEVEL SECURITY;
+
+-- Space visibility policies
+CREATE POLICY "Users can view spaces they are members of" ON spaces
+    FOR SELECT
+    USING (
+        id IN (
+            SELECT space_id
+            FROM space_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+        )
+        OR is_private = FALSE -- Public spaces are visible to all authenticated users
+    );
+
+-- Users can create spaces
+CREATE POLICY "Users can create spaces" ON spaces
+    FOR INSERT
+    WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Space owners can update their spaces
+CREATE POLICY "Space owners can update spaces" ON spaces
+    FOR UPDATE
+    USING (
+        created_by IN (
+            SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+        )
+    );
+
+-- Space owners can delete their spaces
+CREATE POLICY "Space owners can delete spaces" ON spaces
+    FOR DELETE
+    USING (
+        created_by IN (
+            SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+        )
+    );
+
+-- ============================================================================
+-- SPACE MEMBERS RLS POLICIES
+-- ============================================================================
+
+-- Users can view members of spaces they belong to
+CREATE POLICY "Users can view space members" ON space_members
+    FOR SELECT
+    USING (
+        space_id IN (
+            SELECT space_id
+            FROM space_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+        )
+    );
+
+-- Space admins can invite members
+CREATE POLICY "Space admins can invite members" ON space_members
+    FOR INSERT
+    WITH CHECK (
+        space_id IN (
+            SELECT space_id
+            FROM space_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+            AND (role->>'name' = 'admin' OR role = '"admin"')
+        )
+    );
+
+-- Space admins can update member roles
+CREATE POLICY "Space admins can update member roles" ON space_members
+    FOR UPDATE
+    USING (
+        space_id IN (
+            SELECT space_id
+            FROM space_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+            AND (role->>'name' = 'admin' OR role = '"admin"')
+        )
+    );
+
+-- Space admins and users can remove members
+CREATE POLICY "Space admins and self can remove members" ON space_members
+    FOR DELETE
+    USING (
+        -- Admin can remove anyone
+        space_id IN (
+            SELECT space_id
+            FROM space_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+            AND (role->>'name' = 'admin' OR role = '"admin"')
+        )
+        OR
+        -- Users can remove themselves
+        profile_id IN (
+            SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+        )
+    );
+
+-- ============================================================================
+-- UPDATE CONVERSATION POLICIES FOR SPACES
+-- ============================================================================
+
+-- Users can view conversations in spaces they're members of
+DROP POLICY IF EXISTS "Users can view conversations they are members of" ON conversations;
+
+CREATE POLICY "Users can view conversations they are members of" ON conversations
+    FOR SELECT
+    USING (
+        id IN (
+            SELECT conversation_id
+            FROM conversation_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+        )
+        OR
+        -- Also allow access through space membership
+        space_id IN (
+            SELECT space_id
+            FROM space_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+        )
+    );
+
+-- Users can create conversations in spaces they're members of
+CREATE POLICY "Users can create conversations in spaces" ON conversations
+    FOR INSERT
+    WITH CHECK (
+        auth.uid() IS NOT NULL AND (
+            space_id IS NULL OR
+            space_id IN (
+                SELECT space_id
+                FROM space_members
+                WHERE profile_id IN (
+                    SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                )
+            )
+        )
+    );
+
+-- Users can update conversations they're members of
+DROP POLICY IF EXISTS "Users can update conversations they are members of" ON conversations;
+
+CREATE POLICY "Users can update conversations they are members of" ON conversations
+    FOR UPDATE
+    USING (
+        id IN (
+            SELECT conversation_id
+            FROM conversation_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+        )
+        OR
+        -- Also allow access through space membership for space admins
+        space_id IN (
+            SELECT space_id
+            FROM space_members
+            WHERE profile_id IN (
+                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            )
+            AND (role->>'name' = 'admin' OR role = '"admin"')
+        )
+    );
+
+-- ============================================================================
+-- ADDITIONAL PERFORMANCE INDEXES
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_space_members_space_profile
+ON space_members (space_id, profile_id);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_space_created
+ON conversations (space_id, created_at DESC);
+
+-- ============================================================================
+-- GRANT PERMISSIONS FOR SPACES
+-- ============================================================================
+GRANT SELECT ON spaces TO authenticated;
+GRANT SELECT ON space_members TO authenticated;
+
+-- Grant additional permissions for space creators and members
+GRANT ALL ON spaces TO authenticated;
+GRANT ALL ON space_members TO authenticated;
+
+-- ============================================================================
+-- COMMENTS FOR SPACES TABLES
+-- ============================================================================
+COMMENT ON TABLE spaces IS 'Spaces are organizational containers for conversations and people assets';
+COMMENT ON TABLE space_members IS 'Profile membership and roles in spaces';
+COMMENT ON COLUMN spaces.settings IS 'Space-specific configuration as JSONB';
+COMMENT ON COLUMN spaces.is_private IS 'Whether the space is private or public';
+COMMENT ON COLUMN spaces.avatar_url IS 'Optional avatar/image for the space';
+COMMENT ON COLUMN conversation_members.inherited_from_space IS 'Whether membership was inherited from space membership';
+COMMENT ON COLUMN space_members.role IS 'Flexible role structure stored as JSONB (e.g., {"name": "admin"} or {"name": "member", "permissions": []})';
 
 -- Grant necessary permissions
 GRANT SELECT ON conversations TO authenticated;

@@ -3,6 +3,8 @@ import { redisConnection } from '../clients/redis';
 import { queueService } from '../services/queue.service';
 import { userService } from '../services/user.service';
 import { supabase } from '../services/supabase.service';
+import { chatService } from '../services/chat.service';
+import { spacesService } from '../services/spaces.service';
 
 export {};
 
@@ -13,6 +15,8 @@ declare module 'fastify' {
     queueService: typeof queueService;
     userService: typeof userService;
     supabase: typeof supabase;
+    chatService: typeof chatService;
+    spacesService: typeof spacesService;
     authenticate: (request: any, reply: any) => Promise<void>;
     authenticateOptional: (request: any, reply: any) => Promise<void>;
   }
