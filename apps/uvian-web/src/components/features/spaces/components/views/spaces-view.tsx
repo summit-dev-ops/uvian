@@ -1,12 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Plus, Settings, Users, MessageSquare } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
-import { Button, Card, CardContent, Skeleton } from '@org/ui';
+import { Button, Card, CardContent, ScrollArea, Skeleton } from '@org/ui';
 import type { SpaceUI } from '~/lib/domains/spaces/types';
 
 export function SpacesView() {
@@ -54,7 +53,7 @@ export function SpacesView() {
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-auto">
+    <ScrollArea className='flex-1'>
       <div className="p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Header with stats */}
@@ -151,8 +150,7 @@ export function SpacesView() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </div></ScrollArea>
   );
 }
 
@@ -192,11 +190,10 @@ function SpaceCard({ space }: SpaceCardProps) {
                 </div>
                 <div className="flex items-center gap-1">
                   <span
-                    className={`inline-block h-2 w-2 rounded-full ${
-                      space.userRole === 'admin'
+                    className={`inline-block h-2 w-2 rounded-full ${space.userRole === 'admin'
                         ? 'bg-green-500'
                         : 'bg-blue-500'
-                    }`}
+                      }`}
                   />
                   <span className="capitalize">
                     {space.userRole || 'member'}
@@ -207,7 +204,7 @@ function SpaceCard({ space }: SpaceCardProps) {
 
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

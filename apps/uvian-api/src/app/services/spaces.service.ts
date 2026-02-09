@@ -26,6 +26,7 @@ export class SpacesService {
     const { data: space, error: spaceError } = await supabase
       .from('spaces')
       .insert({
+        id: data.id,
         name: data.name,
         description: data.description,
         avatar_url: data.avatar_url,

@@ -4,7 +4,9 @@ import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn, Separator, SidebarTrigger } from '@org/ui';
+import { Button, cn, Separator, SidebarTrigger } from '@org/ui';
+import { ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 // ============================================================================
 // PAGE CONTAINER
@@ -111,11 +113,24 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
     },
     ref
   ) => {
+    
+    const router = useRouter()
+    const handleBack = () => {
+      router.back();
+    };
+
     const Comp = asChild ? Slot : 'div';
     return (
       <header className="flex h-(--header-height) shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
         <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
           <SidebarTrigger className="-ml-1" />
+          <Separator
+            orientation="vertical"
+            className="mx-2 data-[orientation=vertical]:h-4"
+          />
+          <Button variant="ghost" size="icon" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <Separator
             orientation="vertical"
             className="mx-2 data-[orientation=vertical]:h-4"

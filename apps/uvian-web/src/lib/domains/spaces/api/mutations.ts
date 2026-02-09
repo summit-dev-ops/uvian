@@ -21,6 +21,7 @@ import type {
 // ============================================================================
 
 export type CreateSpacePayload = {
+  id?: string;
   name: string;
   description?: string;
   avatar_url?: string;
@@ -82,7 +83,14 @@ export const spacesMutations = {
     CreateSpaceContext
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.post<SpaceAPI>('/api/spaces', payload);
+      const payloadWithId = {
+        ...payload,
+        id: payload.id || crypto.randomUUID(),
+      };
+      const { data } = await apiClient.post<SpaceAPI>(
+        '/api/spaces',
+        payloadWithId
+      );
       return spacesUtils.spaceApiToUi(data);
     },
 
@@ -95,9 +103,12 @@ export const spacesMutations = {
         spacesKeys.list()
       );
 
-      // Optimistically update
+      // Generate UUID for optimistic update (consistent with server)
+      const spaceId = payload.id || crypto.randomUUID();
+
+      // Optimistically update with real UUID
       const optimisticSpace: SpaceUI = {
-        id: `temp-${Date.now()}`, // Temporary ID
+        id: spaceId,
         name: payload.name,
         description: payload.description,
         avatarUrl: payload.avatar_url,

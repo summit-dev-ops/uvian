@@ -35,17 +35,22 @@ export const spacesActions = {
     },
 
     perform: async (ctx: BaseActionContext, payload: CreateSpacePayload) => {
+      // Generate UUID if not provided
+      const payloadWithId = {
+        ...payload,
+        id: payload.id || crypto.randomUUID(),
+      };
+
       // Execute the mutation
       const newSpace = await executeMutation(
         ctx.queryClient,
         spacesMutations.createSpace(ctx.queryClient),
-        payload
+        payloadWithId
       );
 
       // Set as active space
-      const state = ctx.store.getState();
       if (newSpace) {
-        state.spaces.setActiveSpace(newSpace.id);
+        ctx.store.getState().setActiveSpace(newSpace.id);
       }
 
       // Navigate to the new space
@@ -62,9 +67,8 @@ export const spacesActions = {
     variant: 'info',
 
     canPerform: (ctx, payload) => {
-      const space = ctx.store
-        .getState()
-        .spaces.spaces.find((s) => s.id === payload.id);
+      const state = ctx.store.getState();
+      const space = state.spaces.find((s) => s.id === payload.id);
       return !!payload.id && !!space && space.userRole === 'admin';
     },
 
@@ -89,16 +93,15 @@ export const spacesActions = {
     variant: 'destructive',
 
     canPerform: (ctx, payload) => {
-      const space = ctx.store
-        .getState()
-        .spaces.spaces.find((s) => s.id === payload.spaceId);
+      const state = ctx.store.getState();
+      const space = state.spaces.find((s) => s.id === payload.spaceId);
       return !!payload.spaceId && space?.userRole === 'admin';
     },
 
     perform: async (ctx: BaseActionContext, payload: { spaceId: string }) => {
       // Check if this is the active space
       const state = ctx.store.getState();
-      const isActive = state.spaces.activeSpaceId === payload.spaceId;
+      const isActive = state.activeSpaceId === payload.spaceId;
 
       // Execute the mutation
       await executeMutation(
@@ -109,7 +112,7 @@ export const spacesActions = {
 
       // If it was active, navigate away
       if (isActive) {
-        state.spaces.setActiveSpace(null);
+        state.setActiveSpace(null);
         ctx.router.push('/spaces');
       }
     },
@@ -129,7 +132,7 @@ export const spacesActions = {
     canPerform: (ctx, payload) => {
       const space = ctx.store
         .getState()
-        .spaces.spaces.find((s) => s.id === payload.spaceId);
+        .spaces.find((s) => s.id === payload.spaceId);
       return (
         !!payload.profileId && !!payload.spaceId && space?.userRole === 'admin'
       );
@@ -161,7 +164,7 @@ export const spacesActions = {
     canPerform: (ctx, payload) => {
       const space = ctx.store
         .getState()
-        .spaces.spaces.find((s) => s.id === payload.spaceId);
+        .spaces.find((s) => s.id === payload.spaceId);
       return (
         !!payload.profileId && !!payload.spaceId && space?.userRole === 'admin'
       );
@@ -193,7 +196,7 @@ export const spacesActions = {
     canPerform: (ctx, payload) => {
       const space = ctx.store
         .getState()
-        .spaces.spaces.find((s) => s.id === payload.spaceId);
+        .spaces.find((s) => s.id === payload.spaceId);
       return (
         !!payload.profileId && !!payload.spaceId && space?.userRole === 'admin'
       );
@@ -224,9 +227,7 @@ export const spacesActions = {
     variant: 'destructive',
 
     canPerform: (ctx) => {
-      const space = ctx.store
-        .getState()
-        .spaces.spaces.find((s) => s.id === spaceId);
+      const space = ctx.store.getState().spaces.find((s) => s.id === spaceId);
       return !!space && space.userRole === 'member' && !!currentUserId;
     },
 
@@ -239,8 +240,8 @@ export const spacesActions = {
 
       // If it was active space, navigate away
       const state = ctx.store.getState();
-      if (state.spaces.activeSpaceId === spaceId) {
-        state.spaces.setActiveSpace(null);
+      if (state.activeSpaceId === spaceId) {
+        state.setActiveSpace(null);
         ctx.router.push('/spaces');
       }
     },
@@ -259,9 +260,7 @@ export const spacesActions = {
     variant: 'info',
 
     canPerform: (ctx) => {
-      const space = ctx.store
-        .getState()
-        .spaces.spaces.find((s) => s.id === spaceId);
+      const space = ctx.store.getState().spaces.find((s) => s.id === spaceId);
       return !!space && !space.userRole && !!currentUserId; // Not already a member
     },
 
@@ -336,7 +335,7 @@ export const spacesActions = {
 
       // Clear cache for each space
       const state = context.store.getState();
-      state.spaces.removeSpace(spaceId);
+      state.removeSpace(spaceId);
     });
 
     await Promise.all(promises);

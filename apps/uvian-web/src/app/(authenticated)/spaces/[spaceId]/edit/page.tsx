@@ -13,7 +13,6 @@ export default async function SpaceEditPage({
   params: Promise<{ spaceId: string }>;
 }) {
   const { spaceId } = await params;
-
   return (
     <PageContainer className="flex flex-1 flex-col min-h-0 relative">
       <PageHeader>

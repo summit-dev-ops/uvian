@@ -18,6 +18,7 @@ import {
   Textarea,
   Checkbox,
   Skeleton,
+  ScrollArea,
 } from '@org/ui';
 
 interface SpaceEditViewProps {
@@ -51,11 +52,11 @@ export function SpaceEditView({ spaceId }: SpaceEditViewProps) {
 
   // Mutations
   const { mutate: updateSpace, isPending: isUpdating } = useMutation(
-    spacesMutations.updateSpace(queryClient),
+    spacesMutations.updateSpace(queryClient)
   );
 
   const { mutate: deleteSpace, isPending: isDeleting } = useMutation(
-    spacesMutations.deleteSpace(queryClient),
+    spacesMutations.deleteSpace(queryClient)
   );
 
   // Check if current user is admin
@@ -78,7 +79,7 @@ export function SpaceEditView({ spaceId }: SpaceEditViewProps) {
   const handleDelete = () => {
     if (
       confirm(
-        'Are you sure you want to delete this space? This action cannot be undone.',
+        'Are you sure you want to delete this space? This action cannot be undone.'
       )
     ) {
       deleteSpace({ spaceId });
@@ -137,12 +138,9 @@ export function SpaceEditView({ spaceId }: SpaceEditViewProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 relative">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
         <div>
           <h1 className="text-2xl font-semibold">Edit Space</h1>
           <p className="text-muted-foreground">
@@ -151,112 +149,118 @@ export function SpaceEditView({ spaceId }: SpaceEditViewProps) {
         </div>
       </div>
 
-      {/* Edit form */}
-      <div className="max-w-2xl space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Space Settings</CardTitle>
-            <CardDescription>
-              Update the basic information about your space
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Space Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter space name"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your space (optional)"
-                rows={4}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-3">
-                <Checkbox
-                  checked={isPrivate}
-                  onCheckedChange={(checked) => setIsPrivate(!!checked)}
-                />
-                <span>Make this space private</span>
-              </Label>
-              <p className="text-xs text-muted-foreground ml-6">
-                Private spaces are only visible to invited members
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Actions */}
-        <div className="flex items-center gap-3">
-          <Button onClick={handleSave} disabled={isUpdating || !name.trim()}>
-            <Save className="h-4 w-4 mr-2" />
-            {isUpdating ? 'Saving...' : 'Save Changes'}
-          </Button>
-          <Button variant="outline" onClick={handleBack} disabled={isUpdating}>
-            Cancel
-          </Button>
-        </div>
-
-        {/* Danger zone */}
-        {isAdmin && (
-          <Card className="border-destructive/20">
+      {/* Scrollable content */}
+      <ScrollArea className="flex-1">
+        <div className="max-w-2xl space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardTitle>Space Settings</CardTitle>
               <CardDescription>
-                Once you delete a space, there is no going back. This will
-                permanently delete the space and all associated conversations.
+                Update the basic information about your space
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={isDeleting}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {isDeleting ? 'Deleting...' : 'Delete Space'}
-              </Button>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Space Name *</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter space name"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe your space (optional)"
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-3">
+                  <Checkbox
+                    checked={isPrivate}
+                    onCheckedChange={(checked) => setIsPrivate(!!checked)}
+                  />
+                  <span>Make this space private</span>
+                </Label>
+                <p className="text-xs text-muted-foreground ml-6">
+                  Private spaces are only visible to invited members
+                </p>
+              </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Current space info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Space Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Created:</span>
-              <span>{new Date(space.createdAt).toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Members:</span>
-              <span>{space.memberCount || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Conversations:</span>
-              <span>{space.conversationCount || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Your role:</span>
-              <span className="capitalize">{space.userRole || 'member'}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <Button onClick={handleSave} disabled={isUpdating || !name.trim()}>
+              <Save className="h-4 w-4 mr-2" />
+              {isUpdating ? 'Saving...' : 'Save Changes'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+          </div>
+
+          {/* Danger zone */}
+          {isAdmin && (
+            <Card className="border-destructive/20">
+              <CardHeader>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>
+                  Once you delete a space, there is no going back. This will
+                  permanently delete the space and all associated conversations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isDeleting ? 'Deleting...' : 'Delete Space'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Current space info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Current Space Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Created:</span>
+                <span>{new Date(space.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Members:</span>
+                <span>{space.memberCount || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Conversations:</span>
+                <span>{space.conversationCount || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Your role:</span>
+                <span className="capitalize">{space.userRole || 'member'}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

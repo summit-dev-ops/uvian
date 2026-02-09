@@ -29,6 +29,7 @@ export interface SpaceMember {
 }
 
 export interface CreateSpaceRequest {
+  id?: string;
   name: string;
   description?: string;
   avatar_url?: string;

@@ -4,8 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Settings, Users, MessageSquare, Calendar, Plus } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import { Button, Card, CardContent, Badge, Skeleton } from '@org/ui';
-import type { SpaceUI } from '~/lib/domains/spaces/types';
+import { Button, Card, CardContent, Badge, Skeleton, ScrollArea } from '@org/ui';
 
 interface SpaceViewProps {
   spaceId: string;
@@ -77,7 +76,7 @@ export function SpaceView({ spaceId }: SpaceViewProps) {
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-auto">
+    <ScrollArea className="flex-1">
       <div className="p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Space header */}
@@ -116,7 +115,7 @@ export function SpaceView({ spaceId }: SpaceViewProps) {
               </Button>
             </div>
           </div>
-
+          
           {/* Quick stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-6">
@@ -329,6 +328,6 @@ export function SpaceView({ spaceId }: SpaceViewProps) {
           </div>
         </div>
       </div>
-    </div>
+    </ScrollArea>
   );
 }

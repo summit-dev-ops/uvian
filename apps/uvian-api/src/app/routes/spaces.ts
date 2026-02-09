@@ -11,6 +11,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
     }
 
     const data = request.body as {
+      id?: string;
       name: string;
       description?: string;
       avatar_url?: string;
@@ -162,13 +163,13 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const membership = await spacesService.inviteSpaceMember(
           spaceId,
           profile_id,
-          role || { name: 'member' },
+          role || { name: 'member' }
         );
         reply.code(201).send(membership);
       } catch (error: any) {
         reply.code(400).send({ error: error.message });
       }
-    },
+    }
   );
 
   // Remove space member
@@ -191,7 +192,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: error.message });
       }
-    },
+    }
   );
 
   // Update space member role
@@ -213,13 +214,13 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const membership = await spacesService.updateSpaceMemberRole(
           spaceId,
           profileId,
-          role,
+          role
         );
         reply.send(membership);
       } catch (error: any) {
         reply.code(400).send({ error: error.message });
       }
-    },
+    }
   );
 
   // Get space conversations
