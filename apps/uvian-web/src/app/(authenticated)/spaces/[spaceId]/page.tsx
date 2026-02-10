@@ -1,11 +1,15 @@
+
 import React from 'react';
-import { SpacePageBreadcrumb } from '~/components/features/spaces/components/breadcrumbs/space-page-breadcrumb';
-import { SpaceView } from '~/components/features/spaces/components/views/space-view';
 import {
   PageContainer,
   PageContent,
   PageHeader,
 } from '~/components/shared/navigation/ui/page-container';
+import { PageActions } from '~/components/shared/page-header/page-actions';
+import { PageModals } from '~/components/shared/page-actions/page-modals';
+import { SpaceOverviewPageActionProvider, SpaceOverviewPageActions } from '~/components/features/spaces/components/pages/actions';
+import { SpacePageBreadcrumb } from '~/components/features/spaces/components/pages/breadcrumbs';
+import { SpaceInterface } from '~/components/features/spaces/components/interfaces/space-interface';
 
 export default async function SpacePage({
   params,
@@ -15,16 +19,22 @@ export default async function SpacePage({
   const { spaceId } = await params;
 
   return (
-    <PageContainer
-      size={'full'}
-      className="flex flex-1 flex-col min-h-0 relative"
-    >
-      <PageHeader>
-        <SpacePageBreadcrumb spaceId={spaceId} />
-      </PageHeader>
-      <PageContent className="flex flex-1 flex-col min-h-0 relative">
-        <SpaceView spaceId={spaceId} />
-      </PageContent>
-    </PageContainer>
+    <SpaceOverviewPageActionProvider spaceId={spaceId}>
+      <PageContainer
+        size={'full'}
+        className="flex flex-1 flex-col min-h-0 relative"
+      >
+        <PageHeader className="flex flex-row flex-1 items-center justify-between">
+          <SpacePageBreadcrumb spaceId={spaceId} />
+          <PageActions>
+            <SpaceOverviewPageActions />
+          </PageActions>
+        </PageHeader>
+        <PageContent className="flex flex-1 flex-col min-h-0 relative">
+          <SpaceInterface spaceId={spaceId} />
+        </PageContent>
+        <PageModals />
+      </PageContainer>
+    </SpaceOverviewPageActionProvider>
   );
 }

@@ -1,9 +1,5 @@
 
 import React from 'react';
-import { ConversationsPageBreadcrumb } from '~/components/features/chat/components/conversations-breadcrumb';
-import { ConversationsListPageActions } from '~/components/features/chat/components/headers/conversations-list-page-actions';
-import { ConversationsListPageActionProvider } from '~/components/features/chat/components/headers/conversations-list-page-action-provider';
-import { ConversationsView } from '~/components/features/chat/components/views/conversations-view';
 import {
   PageContainer,
   PageContent,
@@ -11,6 +7,9 @@ import {
 } from '~/components/shared/navigation/ui/page-container';
 import { PageActions } from '~/components/shared/page-header/page-actions';
 import { PageModals } from '~/components/shared/page-actions/page-modals';
+import { ConversationsListPageActionProvider, ConversationsListPageActions } from '~/components/features/chat/components/pages/actions';
+import { ConversationsPageBreadcrumb } from '~/components/features/chat/components/pages/breadcrumbs';
+import { ConversationsListInterface } from '~/components/features/chat/components/interfaces/conversations-list-interface';
 
 export default async function ConversationsPage({
   params,
@@ -32,7 +31,7 @@ export default async function ConversationsPage({
           </PageActions>
         </PageHeader>
         <PageContent className="flex flex-1 flex-col min-h-0 relative">
-          <ConversationsView />
+          <ConversationsListInterface />
         </PageContent>
         <PageModals />
       </PageContainer>

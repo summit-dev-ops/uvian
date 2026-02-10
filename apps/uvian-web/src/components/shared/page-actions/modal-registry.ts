@@ -2,6 +2,8 @@ import type { ComponentType } from 'react';
 import { ConfirmModal } from '../../modals/confirm-modal';
 import { ExportModal } from '../../modals/export-modal';
 import { CreateConversationModal } from '../../modals/create-conversation-modal';
+import { CreateSpaceModal } from '../../modals/create-space-modal';
+import { InviteMembersModal } from '../../modals/invite-members-modal';
 
 // Modal Registration Interface
 export interface ModalRegistration {
@@ -38,6 +40,17 @@ export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
     id: 'create-conversation',
     Component: CreateConversationModal,
   },
+  'create-space': {
+    id: 'create-space',
+    Component: CreateSpaceModal,
+  },
+  'invite-members': {
+    id: 'invite-members',
+    Component: InviteMembersModal,
+    defaultProps: {
+      defaultRole: 'member',
+    },
+  },
 };
 
 // Modal IDs as constants for type safety
@@ -46,6 +59,8 @@ export const MODAL_IDS = {
   CONFIRM_LEAVE: 'confirm-leave',
   EXPORT_CHAT: 'export-chat',
   CREATE_CONVERSATION: 'create-conversation',
+  CREATE_SPACE: 'create-space',
+  INVITE_MEMBERS: 'invite-members',
 } as const;
 
 // Modal state interface

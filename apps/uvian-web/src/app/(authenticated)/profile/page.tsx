@@ -1,27 +1,38 @@
+'use client';
+
 import React from 'react';
-import { ProfilePageBreadcrumb } from '~/components/features/user/components/profile-breadcrumb';
-import { ProfileView } from '~/components/features/user/components/views/profile-view';
 import {
   PageContainer,
   PageContent,
   PageHeader,
 } from '~/components/shared/navigation/ui/page-container';
+import { PageActions } from '~/components/shared/page-header/page-actions';
+import { PageModals } from '~/components/shared/page-actions/page-modals';
+import { ProfilePageActionProvider, ProfilePageActions } from '~/components/features/user/components/pages/actions';
+import { ProfilePageBreadcrumb } from '~/components/features/user/components/pages/breadcrumbs';
+import { ProfileInterface } from '~/components/features/user/components/interfaces/profile-interface';
 
-export default async function ProfilePage({
+export default function ProfilePage({
   params,
 }: {
   params: Promise<Record<string, never>>;
 }) {
-  await params;
+  // No params to unwrap for the profile page
 
   return (
-    <PageContainer className="flex flex-1 flex-col min-h-0 relative">
-      <PageHeader>
-        <ProfilePageBreadcrumb />
-      </PageHeader>
-      <PageContent className="flex flex-1 flex-col min-h-0 relative">
-        <ProfileView />
-      </PageContent>
-    </PageContainer>
+    <ProfilePageActionProvider>
+      <PageContainer className="flex flex-1 flex-col min-h-0 relative">
+        <PageHeader className="flex flex-row flex-1 items-center justify-between">
+          <ProfilePageBreadcrumb />
+          <PageActions>
+            <ProfilePageActions />
+          </PageActions>
+        </PageHeader>
+        <PageContent className="flex flex-1 flex-col min-h-0 relative">
+          <ProfileInterface />
+        </PageContent>
+        <PageModals />
+      </PageContainer>
+    </ProfilePageActionProvider>
   );
 }

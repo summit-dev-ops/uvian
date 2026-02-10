@@ -33,11 +33,11 @@ export const useConversationMembers = (conversationId: string) => {
   );
 
   // 3. Derived State
-  const currentUserMember = members?.find((m) => m.profileId === profile?.profileId);
+  const currentUserMember = members?.find((m) => m.profileId === profile?.profileId)
   const isAdmin =
     currentUserMember?.role?.name === 'admin' ||
     currentUserMember?.role === 'admin';
-
+  console.log(isAdmin)
   return {
     members,
     isLoading,

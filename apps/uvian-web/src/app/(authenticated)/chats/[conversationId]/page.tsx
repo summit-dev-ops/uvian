@@ -1,9 +1,5 @@
 
-import React, { use } from 'react';
-import { ChatPageBreadcrumb } from '~/components/features/chat/components/chat-breadcrumb';
-import { ChatPageActions } from '~/components/features/chat/components/headers/chat-page-actions';
-import { ChatPageActionProvider } from '~/components/features/chat/components/headers/chat-page-action-provider';
-import { ChatView } from '~/components/features/chat/components/views/chat-view';
+import React from 'react';
 import {
   PageContainer,
   PageContent,
@@ -11,6 +7,9 @@ import {
 } from '~/components/shared/navigation/ui/page-container';
 import { PageActions } from '~/components/shared/page-header/page-actions';
 import { PageModals } from '~/components/shared/page-actions/page-modals';
+import { ChatPageActionProvider, ChatPageActions } from '~/components/features/chat/components/pages/actions';
+import { ChatPageBreadcrumb } from '~/components/features/chat/components/pages/breadcrumbs';
+import { ChatInterface } from '~/components/features/chat/components/interfaces/chat-interface';
 
 export default async function ChatPage({
   params,
@@ -32,7 +31,7 @@ export default async function ChatPage({
           </PageActions>
         </PageHeader>
         <PageContent className="flex flex-1 flex-col min-h-0 relative">
-          <ChatView conversationId={conversationId} />
+          <ChatInterface conversationId={conversationId} />
         </PageContent>
         <PageModals />
       </PageContainer>

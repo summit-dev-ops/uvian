@@ -4,13 +4,12 @@
  * Reusable React components for user profile management.
  */
 
-export { ProfileView, CompactProfileView } from './components/ProfileView';
-export { ProfileEditor, InlineProfileEditor } from './components/ProfileEditor';
+export { ProfileView, CompactProfileView } from './components/profile-view';
 export {
   ProfileAvatar,
   ProfileAvatarWithFallback,
   SimpleProfileAvatar,
-} from './components/ProfileAvatar';
+} from './components/profile-avatar';
 
 /**
  * User Feature Hooks
@@ -19,7 +18,6 @@ export {
  */
 
 export { useProfile } from './hooks/use-profile';
-export { useProfileEdit } from './hooks/use-profile-edit';
 
 /**
  * User Domain Types (Re-exported for convenience)

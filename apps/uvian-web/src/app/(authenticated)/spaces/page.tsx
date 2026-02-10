@@ -1,30 +1,39 @@
+
 import React from 'react';
-import { SpacesPageBreadcrumb } from '~/components/features/spaces/components/breadcrumbs/spaces-page-breadcrumb';
-import { SpacesView } from '~/components/features/spaces/components/views/spaces-view';
+import { SpacesListInterface } from '~/components/features/spaces/components/interfaces/spaces-list-interface';
 import {
   PageContainer,
   PageContent,
   PageHeader,
 } from '~/components/shared/navigation/ui/page-container';
+import { PageActions } from '~/components/shared/page-header/page-actions';
+import { PageModals } from '~/components/shared/page-actions/page-modals';
+import { SpacesPageBreadcrumb } from '~/components/features/spaces/components/pages/breadcrumbs';
+import { SpacesListPageActionProvider, SpacesListPageActions } from '~/components/features/spaces/components/pages/actions';
 
 export default async function SpacesPage({
   params,
 }: {
   params: Promise<Record<string, never>>;
 }) {
-  await params;
 
   return (
-    <PageContainer
-      size={'full'}
-      className="flex flex-1 flex-col min-h-0 relative"
-    >
-      <PageHeader>
-        <SpacesPageBreadcrumb />
-      </PageHeader>
-      <PageContent className="flex flex-1 flex-col min-h-0 relative">
-        <SpacesView />
-      </PageContent>
-    </PageContainer>
+    <SpacesListPageActionProvider>
+      <PageContainer
+        size={'full'}
+        className="flex flex-1 flex-col min-h-0 relative"
+      >
+        <PageHeader className="flex flex-row flex-1 items-center justify-between">
+          <SpacesPageBreadcrumb />
+          <PageActions>
+            <SpacesListPageActions />
+          </PageActions>
+        </PageHeader>
+        <PageContent className="flex flex-1 flex-col min-h-0 relative">
+          <SpacesListInterface />
+        </PageContent>
+        <PageModals />
+      </PageContainer>
+    </SpacesListPageActionProvider>
   );
 }

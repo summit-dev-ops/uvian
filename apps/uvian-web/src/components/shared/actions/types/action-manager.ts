@@ -61,6 +61,7 @@ export interface ActionToolbarProps<TItem, TParams = any> {
   isLoading?: boolean;
   className?: string;
   layout?: 'horizontal' | 'vertical' | 'dropdown';
+  children?: React.ReactNode;
 }
 
 /**

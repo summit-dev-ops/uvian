@@ -209,6 +209,8 @@ function ActionGroup<TItem, TParams = any>({
 
 /**
  * Main ActionToolbar component that renders groups of actions
+ * Always reserves space to prevent layout shift when actions appear/disappear
+ * Supports children on left side for titles, descriptions, etc.
  */
 export function ActionToolbar<TItem, TParams = any>({
   groupedActions,
@@ -216,45 +218,70 @@ export function ActionToolbar<TItem, TParams = any>({
   isLoading = false,
   className,
   layout = 'horizontal',
+  children,
 }: ActionToolbarProps<TItem, TParams>) {
   const groupNames = Object.keys(groupedActions);
-
-  if (groupNames.length === 0) {
-    return null;
-  }
+  const hasActions = groupNames.length > 0;
 
   // For vertical layout, stack groups vertically
   if (layout === 'vertical') {
     return (
-      <div className={cn('flex flex-col space-y-2', className)}>
-        {groupNames.map((groupName) => (
-          <ActionGroup
-            key={groupName}
-            name={groupName}
-            actions={groupedActions[groupName]}
-            isLoading={isLoading}
-            onAction={onAction || (() => undefined)}
-            layout={layout}
-          />
-        ))}
+      <div
+        className={cn(
+          'flex flex-col',
+          hasActions ? 'space-y-2' : '',
+          className
+        )}
+      >
+        {hasActions &&
+          groupNames.map((groupName) => (
+            <ActionGroup
+              key={groupName}
+              name={groupName}
+              actions={groupedActions[groupName]}
+              isLoading={isLoading}
+              onAction={onAction || (() => undefined)}
+              layout={layout}
+            />
+          ))}
+        {!hasActions && (
+          <div className="h-10 flex items-center">
+            {/* Reserved space for consistent layout */}
+          </div>
+        )}
       </div>
     );
   }
 
-  // Default horizontal layout
+  // Default horizontal layout - children left, actions right
   return (
-    <div className={cn('flex items-center justify-between', className)}>
+    <div
+      className={cn(
+        'flex items-center justify-between min-h-[2.5rem]',
+        className
+      )}
+    >
+      {/* Left side - children content (collapses on small screens) */}
+      <div className="flex-1 min-w-0 md:block hidden">{children}</div>
+
+      {/* Right side - actions (always visible) */}
       <div className="flex items-center space-x-4">
-        {groupNames.map((groupName) => (
-          <ActionGroup
-            key={groupName}
-            name={groupName}
-            actions={groupedActions[groupName]}
-            isLoading={isLoading}
-            onAction={onAction || (() => undefined)}
-            layout={layout}
-          />
-        ))}
+        {hasActions ? (
+          groupNames.map((groupName) => (
+            <ActionGroup
+              key={groupName}
+              name={groupName}
+              actions={groupedActions[groupName]}
+              isLoading={isLoading}
+              onAction={onAction || (() => undefined)}
+              layout={layout}
+            />
+          ))
+        ) : (
+          <div className="h-8 flex items-center">
+            {/* Reserved space for consistent layout - matches ActionButton height */}
+          </div>
+        )}
       </div>
     </div>
   );
