@@ -2,124 +2,99 @@
 
 import * as React from 'react';
 import { LogOut, Download, Trash2, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { DropdownMenuItem, DropdownMenuSeparator } from '@org/ui';
-import { ConfirmModal, ExportModal } from '../../../../modals';
-import { useConversationMembers } from '../../hooks/use-conversation-members';
-import { useProfile } from '../../../user';
+import { usePageActionContext } from '../../../../shared/page-actions/page-action-context';
+import { MODAL_IDS } from '../../../../shared/page-actions/page-action-context';
 
-interface ChatPageActionsProps {
-  conversationId: string;
-}
+const CHAT_ACTION_IDS = {
+  LEAVE_CONVERSATION: 'leave-conversation',
+  DELETE_CONVERSATION: 'delete-conversation',
+  EXPORT_CHAT: 'export-chat',
+  SHOW_MEMBERS: 'show-members',
+} as const;
 
 /**
  * Chat page-specific actions component
- * Injects chat-specific actions into the PageActions dropdown
+ * Now uses PageActionContext for all business logic and modal management
+ * This is a pure UI component that focuses only on rendering
  */
-export function ChatPageActions({ conversationId }: ChatPageActionsProps) {
-  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
-  const [showExportModal, setShowExportModal] = React.useState(false);
+export function ChatPageActions() {
+  const context = usePageActionContext();
 
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const { profile } = useProfile();
-  const { isAdmin, removeMember } = useConversationMembers(conversationId);
+  const handleLeave = React.useCallback(async () => {
+    // Open confirmation modal for leaving conversation
+    context.openModal(MODAL_IDS.CONFIRM_LEAVE);
+  }, [context]);
 
-  // Proper mutation for deleting conversations (replaces direct API call)
-  const { mutate: deleteConversation, isPending: isDeleting } = useMutation(
-    chatMutations.deleteConversation(queryClient, conversationId)
-  );
+  const handleExport = React.useCallback(async () => {
+    // Open export modal
+    context.openModal(MODAL_IDS.EXPORT_CHAT);
+  }, [context]);
 
-  const handleLeave = async () => {
-    if (!profile?.profileId) return;
+  const handleDelete = React.useCallback(async () => {
+    // Open confirmation modal for deleting conversation
+    context.openModal(MODAL_IDS.CONFIRM_DELETE);
+  }, [context]);
 
-    try {
-      await removeMember(profile.profileId);
-      router.push('/chats');
-    } catch (error) {
-      console.error('Failed to leave conversation:', error);
-      throw error; // Re-throw to be handled by modal
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!isAdmin) {
-      alert('Only administrators can delete conversations.');
-      return;
-    }
-
-    try {
-      // Use proper mutation instead of direct API call
-      await deleteConversation({ conversationId });
-      router.push('/chats');
-    } catch (error) {
-      console.error('Failed to delete conversation:', error);
-      throw error; // Let modal handle the error
-    }
-  };
+  const handleShowMembers = React.useCallback(async () => {
+    // Execute the action that navigates to members page
+    await context.executeAction(CHAT_ACTION_IDS.SHOW_MEMBERS);
+  }, [context]);
 
   return (
     <>
       {/* Chat-specific actions */}
-      <DropdownMenuItem onClick={handleLeave} className="cursor-pointer">
+      <DropdownMenuItem
+        onClick={handleLeave}
+        className="cursor-pointer"
+        disabled={context.isActionExecuting(CHAT_ACTION_IDS.LEAVE_CONVERSATION)}
+      >
         <LogOut className="mr-2 h-4 w-4" />
-        <span>Leave Conversation</span>
+        <span>
+          {context.isActionExecuting(CHAT_ACTION_IDS.LEAVE_CONVERSATION)
+            ? 'Leaving...'
+            : 'Leave Conversation'}
+        </span>
       </DropdownMenuItem>
 
       <DropdownMenuItem
-        onClick={() => setShowExportModal(true)}
+        onClick={handleExport}
         className="cursor-pointer"
+        disabled={context.isActionExecuting(CHAT_ACTION_IDS.EXPORT_CHAT)}
       >
         <Download className="mr-2 h-4 w-4" />
         <span>Export Chat</span>
       </DropdownMenuItem>
 
       {/* Admin-only actions */}
-      {isAdmin && (
+      {context.getModalProps(MODAL_IDS.CONFIRM_DELETE)?.isAdmin && (
         <>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => router.push(`/chats/${conversationId}/members`)}
+            onClick={handleShowMembers}
             className="cursor-pointer"
+            disabled={context.isActionExecuting(CHAT_ACTION_IDS.SHOW_MEMBERS)}
           >
             <Users className="mr-2 h-4 w-4" />
             <span>Manage Members</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            onClick={() => setShowDeleteModal(true)}
+            onClick={handleDelete}
             className="cursor-pointer text-destructive"
+            disabled={context.isActionExecuting(
+              CHAT_ACTION_IDS.DELETE_CONVERSATION
+            )}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            <span>Delete Conversation</span>
-            {isDeleting && (
-              <span className="ml-2 text-xs text-muted-foreground">
-                Deleting...
-              </span>
-            )}
+            <span>
+              {context.isActionExecuting(CHAT_ACTION_IDS.DELETE_CONVERSATION)
+                ? 'Deleting...'
+                : 'Delete Conversation'}
+            </span>
           </DropdownMenuItem>
         </>
       )}
-
-      {/* Modals */}
-      <ConfirmModal
-        open={showDeleteModal}
-        onOpenChange={setShowDeleteModal}
-        title="Delete Conversation"
-        description="This action cannot be undone. All messages will be permanently deleted."
-        confirmText="Delete"
-        variant="destructive"
-        isLoading={isDeleting}
-        onConfirm={handleDelete}
-      />
-
-      <ExportModal
-        open={showExportModal}
-        onOpenChange={setShowExportModal}
-        conversationId={conversationId}
-      />
     </>
   );
 }
