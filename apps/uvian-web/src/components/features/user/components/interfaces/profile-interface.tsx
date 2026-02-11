@@ -2,11 +2,14 @@
 
 import React from 'react';
 import { ProfileView } from '../profile-view';
-import { useProfile } from '../../hooks/use-profile';
 import { ScrollArea } from '@org/ui';
+import { useQuery } from '@tanstack/react-query';
+import { userQueries } from '~/lib/domains/user/api';
 
-export function ProfileInterface() {
-  const { isLoadingProfile, profileError } = useProfile();
+export function ProfileInterface({ profileId }: { profileId?: string }) {
+
+  const { isLoading: isLoadingProfile, error: profileError } = useQuery(userQueries.profile(profileId));
+
 
   // Loading state while checking authentication
   if (isLoadingProfile) {
@@ -56,6 +59,7 @@ export function ProfileInterface() {
   return (
     <ScrollArea className="flex-1">
       <ProfileView
+        profileId={profileId}
         className='p-4'
         showEditButton={true}
         showSettingsButton={true}

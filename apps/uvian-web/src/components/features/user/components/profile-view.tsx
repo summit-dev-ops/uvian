@@ -2,16 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useProfile } from '../hooks/use-profile';
 import { ProfileAvatar } from './profile-avatar';
 import { Button, Card } from '@org/ui';
 import { Calendar, Settings, Edit3, User, Globe, Hash } from 'lucide-react';
 import { cn } from '@org/ui';
+import { userQueries } from '~/lib/domains/user/api';
+import { useQuery } from '@tanstack/react-query';
 
 /**
  * Props for the ProfileView component
  */
 interface ProfileViewProps {
+  profileId?: string;
   showEditButton?: boolean;
   showSettingsButton?: boolean;
   compact?: boolean;
@@ -56,15 +58,16 @@ function formatPublicFields(
  * Shows profile information with edit capabilities
  */
 export const ProfileView: React.FC<ProfileViewProps> = ({
+  profileId,
   showEditButton = true,
   showSettingsButton = true,
   compact = false,
   className,
 }) => {
-  const { profile, isLoadingProfile, profileError, hasProfile } = useProfile();
+  const { data: profile, isLoading, error } = useQuery(userQueries.profile(profileId));
 
   // Handle loading state
-  if (isLoadingProfile) {
+  if (isLoading) {
     return (
       <div className={cn('space-y-6', className)}>
         <div className="flex items-center space-x-4">
@@ -84,7 +87,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   }
 
   // Handle error state
-  if (profileError) {
+  if (error) {
     return (
       <div className={cn('text-center space-y-4', className)}>
         <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
@@ -93,7 +96,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div>
           <h2 className="text-lg font-semibold">Error loading profile</h2>
           <p className="text-sm text-muted-foreground">
-            {profileError.message ||
+            {error.message ||
               'Something went wrong loading your profile'}
           </p>
         </div>
@@ -109,7 +112,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   }
 
   // Handle no profile state (new user)
-  if (!hasProfile || !profile) {
+  if (!profile) {
     return (
       <div className={cn('text-center space-y-6', className)}>
         <div className="space-y-4">
@@ -127,7 +130,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <Button
           className="mx-auto"
         >
-          <Link href={"/profile/edit"}>
+          <Link href={`/profiles/${profileId}/edit`}>
             <Edit3 className="h-4 w-4 mr-2" />
             Create Profile
           </Link>
@@ -189,7 +192,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 variant="outline"
                 size="sm"
               >
-                <Link href={"/profile/edit"}>
+                <Link href={`/profiles/${profileId}/edit`}>
                   <Edit3 className="h-4 w-4 mr-2" />
                   Edit Profile
                 </Link>

@@ -15,5 +15,4 @@ export const userKeys = {
     profileId
       ? ([...userKeys.all, 'settings', profileId] as const)
       : ([...userKeys.all, 'settings'] as const),
-  agentProfiles: () => [...userKeys.all, 'agentProfiles'] as const,
 };

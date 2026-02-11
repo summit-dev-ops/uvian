@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
-import { useProfile } from '~/components/features/user';
+import { userQueries } from '~/lib/domains/user/api/queries';
 import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+
 
 export interface ConversationsListPageActionContextType {
   // Pre-defined action IDs for type safety
@@ -31,7 +32,7 @@ export function ConversationsListPageActionProvider({
   onSuccess,
 }: ConversationsListPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const { profile } = useProfile();
+  const { data: profile } = useQuery(userQueries.profile());
 
   // Mutation for creating conversations with success/error handling
   const { mutate: createConversation, isPending: isCreating } = useMutation(

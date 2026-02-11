@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { SettingsForm } from './forms/settings-form';
-import { useProfile } from '../hooks/use-profile';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { userMutations, userQueries } from '~/lib/domains/user/api';
 
 // Optimized prop interface
 interface SettingsEditorProps {
@@ -22,7 +23,9 @@ export const SettingsEditor: React.FC<SettingsEditorProps> = ({
   hasUnsavedChanges = false,
   className,
 }) => {
-  const { settings, handleUpdateSettings, isUpdatingSettings } = useProfile();
+  const queryClient = useQueryClient()
+  const { data: settings } = useQuery(userQueries.settings());
+  const {mutate: handleUpdateSettings, isPending: isUpdatingSettings } = useMutation(userMutations.updateSettings(queryClient))
 
   // Transform settings data to match SettingsForm interface
   const formInitialData = {

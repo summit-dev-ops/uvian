@@ -36,17 +36,14 @@ export type InviteMemberData = z.infer<typeof inviteSchema>;
 export type InviteMembersFormData = z.infer<typeof inviteMembersSchema>;
 
 export interface InviteMembersFormProps {
-  // Optional initial data
   initialData?: {
     invites?: InviteMemberData[];
     bulkEmails?: string;
   };
 
-  // Required callbacks
   onSubmit: (data: InviteMembersFormData) => void | Promise<void>;
   onCancel?: () => void;
 
-  // Optional props
   isLoading?: boolean;
   defaultRole?: 'admin' | 'member';
   showCancel?: boolean;
@@ -54,7 +51,7 @@ export interface InviteMembersFormProps {
 }
 
 /**
- * InviteMembersForm - Pure form component for inviting members to spaces
+ * InviteMembersForm - Pure form component for inviting members to the app
  * Supports both individual invitations and bulk email import
  * Reusable across modals, pages, and inline editing contexts
  */

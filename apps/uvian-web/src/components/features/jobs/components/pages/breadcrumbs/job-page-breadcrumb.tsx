@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { jobQueries } from '~/lib/domains/jobs/api/queries';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,15 +12,14 @@ import {
   BreadcrumbSeparator,
   Skeleton,
 } from '@org/ui';
-import { useQuery } from '@tanstack/react-query';
-import { userQueries } from '~/lib/domains/user/api';
 
 /**
- * Simple breadcrumb for main profile page
- * Shows: Home > Profile
+ * Breadcrumb for job detail page
+ * Shows: Home > Jobs > [Job ID]
  */
-export function ProfilePageBreadcrumb({profileId}:{profileId:string}) {
-  const {data, isLoading} = useQuery(userQueries.profile(profileId))
+export function JobDetailPageBreadcrumb({ jobId }: { jobId: string }) {
+  const { isLoading } = useQuery(jobQueries.detail(jobId));
+
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -29,15 +30,19 @@ export function ProfilePageBreadcrumb({profileId}:{profileId:string}) {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbPage>Profiles</BreadcrumbPage>
+          <BreadcrumbLink asChild>
+            <Link href="/jobs">Jobs</Link>
+          </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbPage>
             {isLoading ? (
-              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
             ) : (
-              <Link href={`/profiles/${data?.profileId}`}>{data?.displayName || 'Profile'}</Link>
+              <span className="font-mono text-sm">
+                Job {jobId.substring(0, 8)}...
+              </span>
             )}
           </BreadcrumbPage>
         </BreadcrumbItem>

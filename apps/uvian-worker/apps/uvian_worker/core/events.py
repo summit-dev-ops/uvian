@@ -35,7 +35,7 @@ class EventsClient:
             
         await self.redis.publish(channel, json.dumps(payload))
 
-    async def publish_message(self, channel: str, conversation_id: str, message_id: str, content: str, role: str = "assistant", is_delta: bool = False, is_complete: bool = False):
+    async def publish_message(self, channel: str, conversation_id: str, sender_id:str, message_id: str, content: str, role: str = "assistant", is_delta: bool = False, is_complete: bool = False):
         """
         Publishes a message or delta to the specified channel using the new new_message format.
         """
@@ -48,6 +48,7 @@ class EventsClient:
             "message": {
                 "id": message_id,
                 "conversationId": conversation_id,
+                "senderId": sender_id,
                 "content": content,
                 "role": role,
                 "createdAt": now,

@@ -50,34 +50,4 @@ export const userQueries = {
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 
-  /**
-   * Fetch agent profiles (for humans).
-   */
-  agentProfiles: () =>
-    queryOptions({
-      queryKey: userKeys.agentProfiles(),
-      queryFn: async () => {
-        const { data } = await apiClient.get<ProfileAPI[]>(
-          `/api/profiles/agents`
-        );
-        return data.map((profile) => userUtils.profileApiToUi(profile));
-      },
-      staleTime: 1000 * 60 * 5, // 5 minutes
-    }),
-
-  /**
-   * Legacy method for backward compatibility.
-   * Use profile(profileId) instead.
-   */
-  publicProfile: (profileId: string) =>
-    queryOptions({
-      queryKey: userKeys.profile(profileId),
-      queryFn: async () => {
-        const { data } = await apiClient.get<ProfileAPI>(
-          `/api/profiles/${profileId}`
-        );
-        return userUtils.publicProfileApiToUi(data);
-      },
-      staleTime: 1000 * 60 * 5, // 5 minutes
-    }),
 };

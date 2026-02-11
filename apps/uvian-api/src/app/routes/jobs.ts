@@ -1,42 +1,319 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { queueService } from '../services/queue.service';
-import { supabase } from '../services/supabase.service';
+import {
+  jobService,
+  type JobFilters,
+  type PaginationOptions,
+} from '../services/job.service';
 
 export default async function (
   fastify: FastifyInstance,
   opts: FastifyPluginOptions
 ) {
-  // New endpoint to submit jobs (Mocked Supabase Flow)
-  fastify.post('/', async (request, reply) => {
-    // 1. Validate payload (In real app, this matches DB schema)
-    const payload = request.body as any;
+  // Submit new job
+  fastify.post('/api/jobs', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['type', 'input'],
+        properties: {
+          type: { type: 'string' },
+          input: { type: 'object' },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            jobId: { type: 'string' },
+            status: { type: 'string' },
+          },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const payload = request.body as { type: string; input: any };
 
-    // 2. Real DB Insertion
-    const jobId = require('crypto').randomUUID();
-    const { error } = await supabase
-      .from('jobs')
-      .insert({
+      // Create job in database
+      const jobId = require('crypto').randomUUID();
+      await jobService.createJob({
         id: jobId,
         type: payload.type,
-        status: 'queued',
-        input: payload.input || {},
-      })
-      .select()
-      .single();
+        input: payload.input,
+      });
 
-    if (error) {
-      console.error('Database insert error:', error);
-      throw new Error(`Failed to create job: ${error.message}`);
-    }
+      // Add to queue
+      await queueService.addJob('main-queue', payload.type || 'generic-job', {
+        jobId: jobId,
+      });
 
-    console.log(`[API] Real DB Insert: Job ID ${jobId}, Type: ${payload.type}`);
+      reply.code(201).send({ jobId, status: 'queued' });
+    },
+  });
 
-    // 3. Enqueue Job ID
-    // The worker will fetch the details from the DB
-    await queueService.addJob('main-queue', payload.type || 'generic-job', {
-      jobId: jobId,
-    });
+  // List jobs with filtering and pagination
+  fastify.get('/api/jobs', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          status: { type: 'string' },
+          type: { type: 'string' },
+          dateFrom: { type: 'string' },
+          dateTo: { type: 'string' },
+          page: { type: 'integer', minimum: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 100 },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            jobs: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  type: { type: 'string' },
+                  status: { type: 'string' },
+                  input: { type: 'object' },
+                  output: { anyOf: [{ type: 'object' }, { type: 'null' }] },
+                  error_message: {
+                    anyOf: [{ type: 'string' }, { type: 'null' }],
+                  },
+                  created_at: { type: 'string' },
+                  updated_at: { type: 'string' },
+                  started_at: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  completed_at: {
+                    anyOf: [{ type: 'string' }, { type: 'null' }],
+                  },
+                },
+              },
+            },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
+            hasMore: { type: 'boolean' },
+          },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const query = request.query as JobFilters & PaginationOptions;
 
-    return { jobId: jobId, status: 'queued' };
+      const page = query.page || 1;
+      const limit = query.limit || 20;
+
+      const result = await jobService.listJobs(
+        {
+          status: query.status,
+          type: query.type,
+          dateFrom: query.dateFrom,
+          dateTo: query.dateTo,
+        },
+        { page, limit }
+      );
+
+      reply.send(result);
+    },
+  });
+
+  // Get job details
+  fastify.get('/api/jobs/:id', {
+    schema: {
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string' },
+            status: { type: 'string' },
+            input: { type: 'object' },
+            output: { anyOf: [{ type: 'object' }, { type: 'null' }] },
+            error_message: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            created_at: { type: 'string' },
+            updated_at: { type: 'string' },
+            started_at: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            completed_at: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          },
+        },
+        404: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      try {
+        const job = await jobService.getJob(id);
+        reply.send(job);
+      } catch (error) {
+        reply.code(404).send({ error: 'Job not found' });
+      }
+    },
+  });
+
+  // Cancel job
+  fastify.patch('/api/jobs/:id/cancel', {
+    schema: {
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string' },
+            status: { type: 'string' },
+            updated_at: { type: 'string' },
+            completed_at: { type: 'string' },
+          },
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+        404: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      try {
+        const job = await jobService.cancelJob(id);
+        reply.send(job);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('Cannot cancel')) {
+          reply.code(400).send({ error: error.message });
+        } else {
+          reply.code(404).send({ error: 'Job not found' });
+        }
+      }
+    },
+  });
+
+  // Retry job
+  fastify.patch('/api/jobs/:id/retry', {
+    schema: {
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string' },
+            status: { type: 'string' },
+            error_message: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            updated_at: { type: 'string' },
+            started_at: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            completed_at: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          },
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+        404: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      try {
+        const job = await jobService.retryJob(id);
+
+        // Re-add to queue for processing
+        await queueService.addJob('main-queue', job.type, {
+          jobId: id,
+        });
+
+        reply.send(job);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('Cannot retry')) {
+          reply.code(400).send({ error: error.message });
+        } else {
+          reply.code(404).send({ error: 'Job not found' });
+        }
+      }
+    },
+  });
+
+  // Delete job
+  fastify.delete('/api/jobs/:id', {
+    schema: {
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+        },
+        required: ['id'],
+      },
+      response: {
+        204: { type: 'null' },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+        404: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      try {
+        await jobService.deleteJob(id);
+        reply.code(204).send();
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('Cannot delete')) {
+          reply.code(400).send({ error: error.message });
+        } else {
+          reply.code(404).send({ error: 'Job not found' });
+        }
+      }
+    },
   });
 }

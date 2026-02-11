@@ -3,26 +3,28 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ProfileEditor } from '../profile-editor';
-import { useProfile } from '../../hooks/use-profile';
 import { Button, ScrollArea } from '@org/ui';
+import { useQuery } from '@tanstack/react-query';
+import { userQueries } from '~/lib/domains/user/api';
 
-export function ProfileEditInterface() {
+export function ProfileEditInterface({profileId}: {profileId?:string}) {
   const router = useRouter();
-  const { isLoadingProfile, profileError } = useProfile();
+  const { isLoading: isLoadingProfile, error: profileError } = useQuery(userQueries.profile(profileId));
+
 
   // Handle navigation back to profile page
   const handleBack = () => {
-    router.push('/profile');
+    router.push(`/profiles/${profileId}`);
   };
 
   // Handle successful save
   const handleSave = () => {
-    router.push('/profile');
+    router.push(`/profiles/${profileId}`);
   };
 
   // Handle cancel
   const handleCancel = () => {
-    router.push('/profile');
+    router.push(`/profiles/${profileId}`);
   };
 
   // Loading state
@@ -74,6 +76,7 @@ export function ProfileEditInterface() {
   return (
     <ScrollArea className="flex-1">
       <ProfileEditor
+        profileId={profileId}
         className='p-2'
         onSave={handleSave}
         onCancel={handleCancel}

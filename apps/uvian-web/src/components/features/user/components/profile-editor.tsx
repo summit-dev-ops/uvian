@@ -2,11 +2,13 @@
 
 import React from 'react';
 import { ProfileForm } from './forms/profile-form';
-import { useProfile } from '../hooks/use-profile';
 import type { ProfileDraft } from '~/lib/domains/user/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { userMutations, userQueries } from '~/lib/domains/user/api';
 
 // Optimized prop interface
 interface ProfileEditorProps {
+  profileId?:string,
   // Callbacks
   onSave?: () => void;
   onCancel?: () => void;
@@ -24,23 +26,21 @@ interface ProfileEditorProps {
  * Separates data fetching/mutation logic from form rendering
  */
 export const ProfileEditor: React.FC<ProfileEditorProps> = ({
+  profileId,
   onSave,
   onCancel,
   initialData,
   showAvatarUrlField = true,
   className,
 }) => {
-  const {
-    profile,
-    hasProfile,
-    handleUpdateProfile,
-    handleCreateProfile,
-    isUpdatingProfile,
-    isCreatingProfile,
-  } = useProfile();
+  const queryClient = useQueryClient()
+  const { data: profile } = useQuery(userQueries.profile(profileId));
+  const {mutate: handleUpdateProfile, isPending: isUpdatingProfile } = useMutation(userMutations.updateProfile(queryClient))
+  const {mutate: handleCreateProfile, isPending: isCreatingProfile } = useMutation(userMutations.createProfile(queryClient))
+
 
   // Determine mode based on existing profile
-  const mode = hasProfile ? 'edit' : 'create';
+  const mode = !!profile ? "edit" : "create"
 
   // Merge profile data with initialData for form
   const formInitialData = {
@@ -58,7 +58,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
   }) => {
     try {
       // Determine whether to update or create based on existing profile
-      if (hasProfile) {
+      if (!!profile) {
         await handleUpdateProfile(formData);
       } else {
         await handleCreateProfile(formData);

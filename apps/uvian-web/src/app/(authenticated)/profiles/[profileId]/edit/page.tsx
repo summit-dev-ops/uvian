@@ -7,20 +7,21 @@ import {
   PageHeader,
 } from '~/components/shared/navigation/ui/page-container';
 
-export default async function ProfileEditPage({
+
+export default async function ProfilePage({
   params,
 }: {
-  params: Promise<Record<string, never>>;
+  params: Promise<{ profileId: string }>;
 }) {
-  await params;
+  const { profileId } = await params;
 
   return (
     <PageContainer className="flex flex-1 flex-col min-h-0 relative">
       <PageHeader className="flex flex-row flex-1 items-center justify-between">
-        <ProfileEditPageBreadcrumb />
+        <ProfileEditPageBreadcrumb profileId={profileId}/>
       </PageHeader>
       <PageContent className="flex flex-1 flex-col min-h-0 relative">
-        <ProfileEditInterface />
+        <ProfileEditInterface profileId={profileId}/>
       </PageContent>
     </PageContainer>
   );

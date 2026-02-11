@@ -3,6 +3,7 @@ from core.events import events
 from clients.runpod import chat_completion
 from repositories.messages import message_repository
 from repositories.conversations import conversation_repository
+import uuid
 
 class ChatExecutor(BaseExecutor):
     async def execute(self, job_data: dict):
@@ -12,8 +13,8 @@ class ChatExecutor(BaseExecutor):
         
         # Fetch minimal parameters from job input
         conversation_id = inputs.get("conversationId")
-        message_id = inputs.get("messageId")
-        
+        sender_id = inputs.get("agentProfileId")
+
         if not conversation_id:
             raise ValueError("conversationId is required in job input")
         
@@ -22,27 +23,26 @@ class ChatExecutor(BaseExecutor):
         if not conversation:
             raise ValueError(f"Conversation {conversation_id} not found")
         
+        sender_id = inputs.get("agentProfileId")
+        if not sender_id:
+            raise ValueError("agentProfileId is required in job input")
+
         # Fetch messages from database for this conversation
         messages = message_repository.get_messages(conversation_id)
         
         # Set up streaming channel
         channel = f"conversation:{conversation_id}:messages"
         
-        # Optional system prompt from job input
-        system_prompt = inputs.get("systemPrompt")
-        
         full_response = []
         
+        message_id = str(uuid.uuid7())
+
         try:
             print(f"[{job_id}] Fetched conversation '{conversation['title']}' with {len(messages)} messages", flush=True)
             print(f"[{job_id}] Starting Chat Execution on channel {channel}...", flush=True)
             
             # Prepare messages for AI (convert to expected format)
             ai_messages = []
-            
-            # Add system prompt if provided
-            if system_prompt:
-                ai_messages.append({"role": "system", "content": system_prompt})
             
             # Add existing conversation messages
             for msg in messages:
@@ -52,12 +52,11 @@ class ChatExecutor(BaseExecutor):
                 })
             
             async for token in chat_completion(ai_messages):
-                # Use messageId from job input, fallback to job_id
-                msg_id = message_id or f"msg_{job_id}"
                 await events.publish_message(
                     channel, 
                     conversation_id, 
-                    message_id=msg_id, 
+                    sender_id,
+                    message_id,
                     content=token, 
                     is_delta=True
                 )
@@ -66,27 +65,25 @@ class ChatExecutor(BaseExecutor):
             result_text = "".join(full_response)
             
             # Send final completion message
-            msg_id = message_id or f"msg_{job_id}"
             await events.publish_message(
                 channel, 
                 conversation_id, 
-                message_id=msg_id, 
+                sender_id,
+                message_id,
                 content=result_text, 
                 is_delta=False, 
                 is_complete=True
             )
             
-            # Insert the final assistant message into the database
-            import uuid
-            new_message_id = msg_id
             message_repository.insert_message({
-                "id": new_message_id,
+                "id": message_id,
+                "sender_id" : sender_id,
                 "conversation_id": conversation_id,
                 "content": result_text,
                 "role": "assistant"
             })
             
-            return {"text": result_text, "conversationId": conversation_id}
+            return {"text": result_text, "conversationId": conversation_id, "messageId": message_id}
 
         except Exception as e:
             print(f"[{job_id}] Chat Execution Failed: {e}")

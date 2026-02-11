@@ -1,4 +1,3 @@
-'use client';
 
 import React from 'react';
 import {
@@ -12,24 +11,24 @@ import { ProfilePageActionProvider, ProfilePageActions } from '~/components/feat
 import { ProfilePageBreadcrumb } from '~/components/features/user/components/pages/breadcrumbs';
 import { ProfileInterface } from '~/components/features/user/components/interfaces/profile-interface';
 
-export default function ProfilePage({
+export default async function ProfilePage({
   params,
 }: {
-  params: Promise<Record<string, never>>;
+  params: Promise<{ profileId: string }>;
 }) {
-  // No params to unwrap for the profile page
+  const { profileId } = await params;
 
   return (
-    <ProfilePageActionProvider>
+    <ProfilePageActionProvider profileId={profileId}>
       <PageContainer className="flex flex-1 flex-col min-h-0 relative">
         <PageHeader className="flex flex-row flex-1 items-center justify-between">
-          <ProfilePageBreadcrumb />
+          <ProfilePageBreadcrumb profileId={profileId} />
           <PageActions>
-            <ProfilePageActions />
+            <ProfilePageActions/>
           </PageActions>
         </PageHeader>
         <PageContent className="flex flex-1 flex-col min-h-0 relative">
-          <ProfileInterface />
+          <ProfileInterface profileId={profileId}/>
         </PageContent>
         <PageModals />
       </PageContainer>

@@ -3,12 +3,13 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { SettingsEditor } from '../settings-editor';
-import { useProfile } from '../../hooks/use-profile';
 import { ScrollArea } from '@org/ui';
+import { userQueries } from '~/lib/domains/user/api';
+import { useQuery } from '@tanstack/react-query';
 
 export function SettingsInterface() {
   const router = useRouter();
-  const { isLoadingSettings, settingsError } = useProfile();
+  const { isLoading: isLoadingSettings, error: settingsError } = useQuery(userQueries.settings());
 
   // Handle navigation back to previous page
   const handleBack = () => {

@@ -176,21 +176,6 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Settings</CardTitle>
-              <CardDescription>
-                Manage your account and profile preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/profile">
-                <Button variant="outline" className="w-full">
-                  Edit Profile
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Getting Started */}

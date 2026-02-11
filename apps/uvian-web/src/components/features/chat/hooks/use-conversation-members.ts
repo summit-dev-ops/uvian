@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
-import { userQueries } from '../../user';
+import { userQueries } from '~/lib/domains/user/api';
 
 export const useConversationMembers = (conversationId: string) => {
   const queryClient = useQueryClient();

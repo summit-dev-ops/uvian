@@ -3,16 +3,16 @@
 import * as React from 'react';
 import { LogOut, Trash2, Download, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { useConversationMembers } from '../../../hooks/use-conversation-members';
-import { useProfile } from '../../../../user';
 
 import {
   PageActionProvider,
   type ActionRegistrationType,
   MODAL_IDS,
 } from '../../../../../shared/page-actions/page-action-context';
+import { userQueries } from '~/lib/domains/user/api';
 
 export interface ChatPageActionContextType {
   conversationId: string;
@@ -46,7 +46,7 @@ export function ChatPageActionProvider({
 }: ChatPageActionProviderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { profile } = useProfile();
+  const { data: profile } = useQuery(userQueries.profile());
   const { isAdmin, removeMember } = useConversationMembers(conversationId);
 
   // Mutation for deleting conversations
@@ -56,7 +56,7 @@ export function ChatPageActionProvider({
 
   // Action handlers - these are the business logic that was in the original component
   const handleLeave = React.useCallback(async () => {
-    if (!profile?.profileId) {
+    if (!profile) {
       throw new Error('Profile not found');
     }
 

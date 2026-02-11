@@ -15,6 +15,7 @@ export interface ProfilePageActionContextType {
 }
 
 interface ProfilePageActionProviderProps {
+  profileId: string,
   children: React.ReactNode;
   onError?: (error: Error, actionId: string) => void;
   onSuccess?: (actionId: string) => void;
@@ -28,6 +29,7 @@ const PROFILE_ACTION_IDS = {
 } as const;
 
 export function ProfilePageActionProvider({
+  profileId,
   children,
   onError,
   onSuccess,
@@ -38,7 +40,7 @@ export function ProfilePageActionProvider({
   const handleEditProfile = React.useCallback(async () => {
     try {
       // Start editing profile - this will show the editor interface
-      router.push('/profile/edit');
+      router.push(`/profiles/${profileId}/edit`);
     } catch (error) {
       console.error('Failed to start editing profile:', error);
       throw error;
@@ -61,7 +63,7 @@ export function ProfilePageActionProvider({
     try {
       if (navigator.share && typeof window !== 'undefined') {
         await navigator.share({
-          title: 'My Profile',
+          title: 'Profile',
           url: window.location.href,
         });
       } else {

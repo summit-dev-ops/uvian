@@ -8,8 +8,8 @@ import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { useConversationPreviews } from '~/components/features/chat/hooks/use-conversation-previews';
 
 import type { PreviewData } from '~/lib/domains/chat/types';
-import { useProfile } from '~/components/features/user';
 import { ScrollArea } from '@org/ui';
+import { userQueries } from '~/lib/domains/user/api';
 
 interface ConversationWithPreview {
   id: string;
@@ -22,8 +22,8 @@ interface ConversationWithPreview {
 }
 
 export function ConversationsListInterface() {
-  const { profile } = useProfile();
   const queryClient = useQueryClient();
+  const { data: profile } = useQuery(userQueries.profile());
 
   // Fetch conversations
   const {
