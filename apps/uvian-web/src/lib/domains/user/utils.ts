@@ -5,7 +5,14 @@
  * All transformers are unified - profiles are profiles regardless of ownership.
  */
 
-import type { ProfileAPI, ProfileUI, SettingsAPI, SettingsUI } from './types';
+import type {
+  ProfileAPI,
+  ProfileUI,
+  SettingsAPI,
+  SettingsUI,
+  UserSearchResults,
+  ProfileSearchResponseAPI,
+} from './types';
 
 // ============================================================================
 // Transformers (API → UI)
@@ -47,8 +54,28 @@ export function publicProfileApiToUi(raw: ProfileAPI): ProfileUI {
 // Exported Utilities Object
 // ============================================================================
 
+export function searchResultsApiToUi(
+  raw: ProfileSearchResponseAPI
+): UserSearchResults {
+  return {
+    profiles: raw.profiles.map(profileApiToUi),
+    pagination: {
+      total: raw.total,
+      page: raw.page,
+      limit: raw.limit,
+      hasMore: raw.hasMore,
+    },
+    filters: {
+      query: raw.query,
+      sortBy: raw.sortBy,
+      searchFields: raw.searchFields,
+    },
+  };
+}
+
 export const userUtils = {
   profileApiToUi,
   settingsApiToUi,
   publicProfileApiToUi,
+  searchResultsApiToUi,
 };

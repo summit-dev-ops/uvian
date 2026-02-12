@@ -5,6 +5,8 @@
  * Profiles and settings queries are unified - they work for any userId.
  */
 
+import type { UserSearchParams } from '../types';
+
 export const userKeys = {
   all: ['user'] as const,
   profile: (profileId?: string) =>
@@ -15,4 +17,8 @@ export const userKeys = {
     profileId
       ? ([...userKeys.all, 'settings', profileId] as const)
       : ([...userKeys.all, 'settings'] as const),
+  search: (params?: UserSearchParams) =>
+    params
+      ? ([...userKeys.all, 'search', params] as const)
+      : ([...userKeys.all, 'search'] as const),
 };

@@ -5,7 +5,7 @@ import { UserPlus } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { MODAL_IDS, usePageActionContext } from '~/components/shared/page-actions/page-action-context';
 const MEMBERS_ACTION_IDS = {
-  INVITE_MEMBERS: 'invite-members',
+  INVITE_PROFILES: 'invite-profiles',
 } as const;
 
 /**
@@ -17,7 +17,7 @@ export function SpaceMembersPageActions() {
 
   const handleInviteMembers = React.useCallback(async () => {
     // Open the invite members modal
-    context.openModal(MODAL_IDS.INVITE_MEMBERS);
+    context.openModal(MODAL_IDS.INVITE_PROFILES);
   }, [context]);
 
   return (
@@ -25,7 +25,7 @@ export function SpaceMembersPageActions() {
       <DropdownMenuItem
         onClick={handleInviteMembers}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(MEMBERS_ACTION_IDS.INVITE_MEMBERS)}
+        disabled={context.isActionExecuting(MEMBERS_ACTION_IDS.INVITE_PROFILES)}
       >
         <UserPlus className="mr-2 h-4 w-4" />
         <span>Invite Members</span>

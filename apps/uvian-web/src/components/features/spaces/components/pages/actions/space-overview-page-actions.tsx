@@ -7,7 +7,7 @@ import { MODAL_IDS } from '~/components/shared/page-actions/modal-registry';
 import { usePageActionContext } from '~/components/shared/page-actions/page-action-context';
 const SPACE_ACTION_IDS = {
   EDIT_SPACE: 'edit-space',
-  INVITE_MEMBERS: 'invite-members',
+  INVITE_PROFILES: 'invite-profiles',
   MANAGE_MEMBERS: 'manage-members',
   DELETE_SPACE: 'delete-space',
 } as const;
@@ -51,7 +51,7 @@ export function SpaceOverviewPageActions() {
       <DropdownMenuItem
         onClick={handleInviteMembers}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(SPACE_ACTION_IDS.INVITE_MEMBERS)}
+        disabled={context.isActionExecuting(SPACE_ACTION_IDS.INVITE_PROFILES)}
       >
         <Users className="mr-2 h-4 w-4" />
         <span>Invite Members</span>

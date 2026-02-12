@@ -94,3 +94,43 @@ export type UserSliceState = {
 // Legacy aliases for backward compatibility during migration
 export type UserProfileDraft = ProfileDraft;
 export type UserSettingsDraft = SettingsDraft;
+
+// ============================================================================
+// Search Types (User Discovery)
+// ============================================================================
+
+export type UserSearchParams = {
+  query?: string;
+  type?: ('human' | 'agent')[];
+  sortBy?: 'relevance' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+};
+
+export type UserSearchResults = {
+  profiles: ProfileUI[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+  filters: {
+    query: string;
+    sortBy: 'relevance' | 'createdAt';
+    searchFields: string[];
+  };
+};
+
+// API response type for search endpoint
+export type ProfileSearchResponseAPI = {
+  profiles: ProfileAPI[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  sortBy: 'relevance' | 'createdAt';
+  query: string;
+  searchFields: string[];
+};

@@ -13,7 +13,7 @@ const CHAT_ACTION_IDS = {
   DELETE_CONVERSATION: 'delete-conversation',
   EXPORT_CHAT: 'export-chat',
   SHOW_MEMBERS: 'show-members',
-  INVITE_MEMBER: 'invite-member',
+  INVITE_PROFILES: 'invite-profiles',
 } as const;
 
 /**
@@ -46,7 +46,7 @@ export function ChatPageActions() {
 
   const handleInviteMember = React.useCallback(async () => {
     // Open invite member modal
-    context.openModal(MODAL_IDS.INVITE_MEMBERS);
+    context.openModal(MODAL_IDS.INVITE_PROFILES);
   }, [context]);
 
   return (
@@ -78,7 +78,7 @@ export function ChatPageActions() {
       <DropdownMenuItem
         onClick={handleInviteMember}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(CHAT_ACTION_IDS.INVITE_MEMBER)}
+        disabled={context.isActionExecuting(CHAT_ACTION_IDS.INVITE_PROFILES)}
       >
         <Users className="mr-2 h-4 w-4" />
         <span>Invite Member</span>

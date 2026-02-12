@@ -10,7 +10,7 @@ import {
 
 export interface ChatMembersPageActionContextType {
   conversationId: string;
-  readonly ACTION_INVITE_MEMBER: 'invite-member';
+  readonly ACTION_INVITE_PROFILE: 'invite-profile';
 }
 
 interface ChatMembersPageActionProviderProps {
@@ -21,7 +21,7 @@ interface ChatMembersPageActionProviderProps {
 }
 
 const MEMBERS_ACTION_IDS = {
-  INVITE_MEMBER: 'invite-member',
+  INVITE_PROFILES: 'invite-profiles',
 } as const;
 
 export function ChatMembersPageActionProvider({
@@ -42,8 +42,8 @@ export function ChatMembersPageActionProvider({
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
-      id: MEMBERS_ACTION_IDS.INVITE_MEMBER,
-      label: 'Invite Member',
+      id: MEMBERS_ACTION_IDS.INVITE_PROFILES,
+      label: 'Invite',
       icon: UserPlus,
       handler: handleInviteMember,
     },
@@ -71,7 +71,7 @@ export function ChatMembersPageActionProvider({
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
       initialModalState={{
-        [MODAL_IDS.INVITE_MEMBERS]: {
+        [MODAL_IDS.INVITE_PROFILES]: {
           isOpen: false,
           props: {
             // PageModals will add open and onOpenChange

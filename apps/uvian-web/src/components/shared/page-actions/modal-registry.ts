@@ -4,6 +4,7 @@ import { ExportModal } from '../../modals/export-modal';
 import { CreateConversationModal } from '../../modals/create-conversation-modal';
 import { CreateSpaceModal } from '../../modals/create-space-modal';
 import { InviteMembersModal } from '../../modals/invite-members-modal';
+import { InviteProfileModal } from '~/components/modals';
 
 // Modal Registration Interface
 export interface ModalRegistration {
@@ -51,6 +52,13 @@ export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
       defaultRole: 'member',
     },
   },
+  'invite-profiles': {
+    id: 'invite-profiles',
+    Component: InviteProfileModal,
+    defaultProps: {
+      defaulrole: 'member'
+    }
+  }
 };
 
 // Modal IDs as constants for type safety
@@ -61,6 +69,7 @@ export const MODAL_IDS = {
   CREATE_CONVERSATION: 'create-conversation',
   CREATE_SPACE: 'create-space',
   INVITE_MEMBERS: 'invite-members',
+  INVITE_PROFILES: 'invite-profiles',
 } as const;
 
 // Modal state interface

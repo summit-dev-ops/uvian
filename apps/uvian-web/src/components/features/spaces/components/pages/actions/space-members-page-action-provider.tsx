@@ -8,7 +8,7 @@ import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/compone
 export interface SpaceMembersPageActionContextType {
   spaceId: string;
   // Pre-defined action IDs for type safety
-  readonly ACTION_INVITE_MEMBERS: 'invite-members';
+  readonly ACTION_INVITE_PROFILES: 'invite-profiles';
 }
 
 interface SpaceMembersPageActionProviderProps {
@@ -19,7 +19,7 @@ interface SpaceMembersPageActionProviderProps {
 }
 
 const MEMBERS_ACTION_IDS = {
-  INVITE_MEMBERS: 'invite-members',
+  INVITE_PROFILES: 'invite-profiles',
 } as const;
 
 export function SpaceMembersPageActionProvider({
@@ -37,8 +37,8 @@ export function SpaceMembersPageActionProvider({
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
-      id: MEMBERS_ACTION_IDS.INVITE_MEMBERS,
-      label: 'Invite Members',
+      id: MEMBERS_ACTION_IDS.INVITE_PROFILES,
+      label: 'Invite',
       icon: UserPlus,
       handler: handleInviteMembers,
     },
@@ -66,10 +66,9 @@ export function SpaceMembersPageActionProvider({
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
       initialModalState={{
-        [MODAL_IDS.INVITE_MEMBERS]: {
+        [MODAL_IDS.INVITE_PROFILES]: {
           isOpen: false,
           props: {
-            // PageModals will add open and onOpenChange
           },
         },
       }}

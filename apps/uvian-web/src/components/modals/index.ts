@@ -1,3 +1,5 @@
+export { InviteProfileModal, type InviteProfileModalProps } from './invite-profile-modal';
+
 export { ConfirmModal, type ConfirmModalProps } from './confirm-modal';
 export { ExportModal, type ExportModalProps } from './export-modal';
 export {

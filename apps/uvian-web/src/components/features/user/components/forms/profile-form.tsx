@@ -4,15 +4,10 @@ import * as React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, Camera, X } from 'lucide-react';
+import { User, X } from 'lucide-react';
 
 import {
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Textarea,
 } from '@org/ui';
 import {

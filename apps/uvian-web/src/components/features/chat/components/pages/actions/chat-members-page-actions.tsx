@@ -16,7 +16,7 @@ export function ChatMembersPageActions() {
   const context = usePageActionContext();
 
   const handleInviteMember = React.useCallback(async () => {
-    context.openModal(MODAL_IDS.INVITE_MEMBERS);
+    context.openModal(MODAL_IDS.INVITE_PROFILES);
   }, [context]);
 
   return (

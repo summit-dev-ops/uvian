@@ -12,7 +12,7 @@ export interface SpaceOverviewPageActionContextType {
   spaceId: string;
   // Pre-defined action IDs for type safety
   readonly ACTION_EDIT_SPACE: 'edit-space';
-  readonly ACTION_INVITE_MEMBERS: 'invite-members';
+  readonly ACTION_INVITE_PROFILES: 'invite-profiles';
   readonly ACTION_MANAGE_MEMBERS: 'manage-members';
   readonly ACTION_DELETE_SPACE: 'delete-space';
 }
@@ -26,7 +26,7 @@ interface SpaceOverviewPageActionProviderProps {
 
 const SPACE_ACTION_IDS = {
   EDIT_SPACE: 'edit-space',
-  INVITE_MEMBERS: 'invite-members',
+  INVITE_PROFILES: 'invite-profiles',
   MANAGE_MEMBERS: 'manage-members',
   DELETE_SPACE: 'delete-space',
 } as const;
@@ -91,8 +91,8 @@ export function SpaceOverviewPageActionProvider({
       handler: handleEditSpace,
     },
     {
-      id: SPACE_ACTION_IDS.INVITE_MEMBERS,
-      label: 'Invite Members',
+      id: SPACE_ACTION_IDS.INVITE_PROFILES,
+      label: 'Invite',
       icon: Users,
       handler: handleInviteMembers,
     },
@@ -134,7 +134,7 @@ export function SpaceOverviewPageActionProvider({
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
       initialModalState={{
-        [MODAL_IDS.INVITE_MEMBERS]: {
+        [MODAL_IDS.INVITE_PROFILES]: {
           isOpen: false,
           props: {
             // PageModals will add open and onOpenChange
