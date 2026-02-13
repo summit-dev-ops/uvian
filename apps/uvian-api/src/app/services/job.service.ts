@@ -1,45 +1,21 @@
-import { supabase } from './supabase.service';
-
-export interface Job {
-  id: string;
-  type: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
-  input: Record<string, any>;
-  output: Record<string, any> | null;
-  error_message: string | null;
-  created_at: string;
-  updated_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-}
-
-export interface JobFilters {
-  status?: Job['status'];
-  type?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}
-
-export interface PaginationOptions {
-  page: number;
-  limit: number;
-}
-
-export interface JobListResponse {
-  jobs: Job[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-}
+import { SupabaseClient } from '@supabase/supabase-js';
+import {
+  Job,
+  JobFilters,
+  JobListResponse,
+  PaginationOptions,
+} from '../types/job.types';
 
 export class JobService {
-  async createJob(data: {
-    id: string;
-    type: string;
-    input: Record<string, any>;
-  }): Promise<Job> {
-    const { data: job, error } = await supabase
+  async createJob(
+    supabaseClient: SupabaseClient,
+    data: {
+      id: string;
+      type: string;
+      input: Record<string, any>;
+    }
+  ): Promise<Job> {
+    const { data: job, error } = await supabaseClient
       .from('jobs')
       .insert({
         id: data.id,
@@ -60,10 +36,11 @@ export class JobService {
   }
 
   async listJobs(
+    supabaseClient: SupabaseClient,
     filters: JobFilters = {},
     pagination: PaginationOptions = { page: 1, limit: 20 }
   ): Promise<JobListResponse> {
-    let query = supabase.from('jobs').select('*', { count: 'exact' });
+    let query = supabaseClient.from('jobs').select('*', { count: 'exact' });
 
     // Apply filters
     if (filters.status) {
@@ -108,8 +85,8 @@ export class JobService {
     };
   }
 
-  async getJob(id: string): Promise<Job> {
-    const { data: job, error } = await supabase
+  async getJob(supabaseClient: SupabaseClient, id: string): Promise<Job> {
+    const { data: job, error } = await supabaseClient
       .from('jobs')
       .select('*')
       .eq('id', id)
@@ -122,15 +99,15 @@ export class JobService {
     return job;
   }
 
-  async cancelJob(id: string): Promise<Job> {
+  async cancelJob(supabaseClient: SupabaseClient, id: string): Promise<Job> {
     // Check if job can be cancelled
-    const job = await this.getJob(id);
+    const job = await this.getJob(supabaseClient, id);
     if (['completed', 'failed', 'cancelled'].includes(job.status)) {
       throw new Error(`Cannot cancel job with status: ${job.status}`);
     }
 
     // Update job status
-    const { data: updatedJob, error } = await supabase
+    const { data: updatedJob, error } = await supabaseClient
       .from('jobs')
       .update({
         status: 'cancelled',
@@ -147,15 +124,15 @@ export class JobService {
     return updatedJob;
   }
 
-  async retryJob(id: string): Promise<Job> {
+  async retryJob(supabaseClient: SupabaseClient, id: string): Promise<Job> {
     // Check if job can be retried
-    const job = await this.getJob(id);
+    const job = await this.getJob(supabaseClient, id);
     if (!['failed', 'cancelled'].includes(job.status)) {
       throw new Error(`Cannot retry job with status: ${job.status}`);
     }
 
     // Update job status back to queued
-    const { data: updatedJob, error } = await supabase
+    const { data: updatedJob, error } = await supabaseClient
       .from('jobs')
       .update({
         status: 'queued',
@@ -176,15 +153,15 @@ export class JobService {
     return updatedJob;
   }
 
-  async deleteJob(id: string): Promise<void> {
+  async deleteJob(supabaseClient: SupabaseClient, id: string): Promise<void> {
     // Check if job can be deleted
-    const job = await this.getJob(id);
+    const job = await this.getJob(supabaseClient, id);
     if (job.status === 'processing') {
       throw new Error(`Cannot delete job with status: ${job.status}`);
     }
 
     // Delete job
-    const { error } = await supabase.from('jobs').delete().eq('id', id);
+    const { error } = await supabaseClient.from('jobs').delete().eq('id', id);
 
     if (error) {
       throw new Error(`Failed to delete job: ${error.message}`);
@@ -192,6 +169,7 @@ export class JobService {
   }
 
   async updateJobStatus(
+    supabaseClient: SupabaseClient,
     id: string,
     status: Job['status'],
     errorMessage?: string
@@ -214,7 +192,7 @@ export class JobService {
       updates.error_message = errorMessage;
     }
 
-    const { data: updatedJob, error } = await supabase
+    const { data: updatedJob, error } = await supabaseClient
       .from('jobs')
       .update(updates)
       .eq('id', id)
@@ -228,8 +206,12 @@ export class JobService {
     return updatedJob;
   }
 
-  async getJobMetrics(dateFrom?: string, dateTo?: string) {
-    let query = supabase.from('jobs').select('status, created_at');
+  async getJobMetrics(
+    supabaseClient: SupabaseClient,
+    dateFrom?: string,
+    dateTo?: string
+  ) {
+    let query = supabaseClient.from('jobs').select('status, created_at');
 
     if (dateFrom) {
       query = query.gte('created_at', dateFrom);

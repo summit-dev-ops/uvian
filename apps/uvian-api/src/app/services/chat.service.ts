@@ -1,57 +1,56 @@
-import { supabase } from './supabase.service';
-
-export interface Conversation {
-  id: string;
-  title: string;
-  space_id?: string;
-  createdAt: string;
-  updatedAt: string;
-  // Added via frontend merge
-  lastMessage?: {
-    content: string;
-    role: 'user' | 'assistant' | 'system';
-    createdAt: string;
-  };
-  messageCount?: number;
-}
-
-export interface Message {
-  id: string;
-  conversationId: string;
-  content: string;
-  role: 'user' | 'assistant' | 'system';
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Membership {
-  profileId: string;
-  conversationId: string;
-  role: any;
-  createdAt: string;
-}
+import { adminSupabase } from '../clients/supabase.client';
+import { SupabaseClient } from '@supabase/supabase-js';
+import {
+  Conversation,
+  ConversationMembership,
+  ConversationMembershipRole,
+  Message,
+} from '../types/chat.types';
 
 export class ChatService {
-  async createConversation(data: {
-    id: string;
-    title: string;
-    profileId?: string;
-    space_id?: string;
-  }): Promise<Conversation> {
-    // Validate space_id if provided
+  /**
+   * Helper: Get user's role in a conversation to check write permissions
+   */
+  private async getUserRoleInConversation(
+    userClient: SupabaseClient,
+    conversationId: string,
+    profileId: string
+  ): Promise<ConversationMembershipRole['name'] | null> {
+    const { data, error } = await userClient
+      .from('conversation_members')
+      .select('role')
+      .eq('conversation_id', conversationId)
+      .eq('profile_id', profileId)
+      .single();
+
+    if (error || !data) return null;
+    return (data.role as ConversationMembershipRole).name;
+  }
+
+  async createConversation(
+    userClient: SupabaseClient,
+    data: {
+      id?: string;
+      title: string;
+      profileId: string; // The profile creating the chat
+      space_id?: string;
+    }
+  ): Promise<Conversation> {
+    // 1. App Logic: Verify space access if space_id provided
     if (data.space_id) {
-      const { data: space, error: spaceError } = await supabase
-        .from('spaces')
-        .select('id, name')
-        .eq('id', data.space_id)
+      const { data: spaceMem } = await userClient
+        .from('space_members')
+        .select('space_id')
+        .eq('space_id', data.space_id)
+        .eq('profile_id', data.profileId)
         .single();
 
-      if (spaceError || !space) {
-        throw new Error('Space not found');
-      }
+      if (!spaceMem)
+        throw new Error('Unauthorized: You are not a member of this space');
     }
 
-    const { data: conversation, error } = await supabase
+    // 2. Create via Admin Client (RLS is SELECT only)
+    const { data: conversation, error } = await adminSupabase
       .from('conversations')
       .insert({
         id: data.id,
@@ -61,143 +60,114 @@ export class ChatService {
       .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to create conversation: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
 
-    // Create initial admin membership if profileId is provided
-    if (data.profileId) {
-      await this.inviteConversationMember(conversation.id, data.profileId, {
-        name: 'admin',
-      });
-    }
+    // 3. Add creator as 'owner'
+    await adminSupabase.from('conversation_members').insert({
+      profile_id: data.profileId,
+      conversation_id: conversation.id,
+      role: { name: 'owner' },
+    });
 
-    return conversation;
+    return {
+      id: conversation.id,
+      title: conversation.title,
+      space_id: conversation.space_id,
+      createdAt: conversation.created_at,
+      updatedAt: conversation.updated_at,
+    };
   }
 
-  async getConversations(userId: string): Promise<Conversation[]> {
-    // Get user's profile ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('auth_user_id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      // Return empty array if no profile found (user might not be fully set up)
-      return [];
-    }
-
-    // First, get the conversation IDs the user is a member of
-    const { data: memberships, error: membershipError } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('profile_id', profile.id);
-
-    if (membershipError) {
-      throw new Error(
-        `Failed to fetch user memberships: ${membershipError.message}`
-      );
-    }
-
-    if (!memberships || memberships.length === 0) {
-      return []; // User is not a member of any conversations
-    }
-
-    const conversationIds = memberships.map((m) => m.conversation_id);
-
-    // Get conversations using RLS-protected query
-    const { data, error } = await supabase
+  async getConversations(userClient: SupabaseClient): Promise<Conversation[]> {
+    // RLS handles visibility (Space members or Direct members see the rows)
+    const { data, error } = await userClient
       .from('conversations')
-      .select('id, title, space_id, created_at, updated_at')
-      .in('id', conversationIds)
+      .select(
+        `
+        *,
+        messages(count)
+      `
+      )
       .order('updated_at', { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch conversations: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
 
-    // Transform to expected format
-    return (data || []).map((conv) => ({
+    return (data || []).map((conv: any) => ({
       id: conv.id,
       title: conv.title,
       space_id: conv.space_id,
       createdAt: conv.created_at,
       updatedAt: conv.updated_at,
+      messageCount: conv.messages?.[0]?.count || 0,
     }));
   }
 
   async getConversationsInSpace(
-    spaceId: string,
-    userId: string
+    userClient: SupabaseClient,
+    spaceId: string
   ): Promise<Conversation[]> {
-    // Verify user has access to this space
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('auth_user_id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      throw new Error('User profile not found');
-    }
-
-    // Check if user is a member of the space
-    const { data: membership, error: membershipError } = await supabase
-      .from('space_members')
-      .select('profile_id')
-      .eq('space_id', spaceId)
-      .eq('profile_id', profile.id)
-      .single();
-
-    if (membershipError || !membership) {
-      throw new Error('User is not a member of this space');
-    }
-
-    // Get conversations in this space
-    const { data, error } = await supabase
+    // RLS ensures the user can only see rows if they are in the space
+    const { data, error } = await userClient
       .from('conversations')
-      .select('id, title, space_id, created_at, updated_at')
+      .select('*, messages(count)')
       .eq('space_id', spaceId)
       .order('updated_at', { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch space conversations: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
 
-    return (data || []).map((conv) => ({
+    return (data || []).map((conv: any) => ({
       id: conv.id,
       title: conv.title,
       space_id: conv.space_id,
       createdAt: conv.created_at,
       updatedAt: conv.updated_at,
+      messageCount: conv.messages?.[0]?.count || 0,
     }));
   }
 
-  async getConversation(id: string): Promise<Conversation | undefined> {
-    const { data, error } = await supabase
+  async getConversation(
+    userClient: SupabaseClient,
+    id: string
+  ): Promise<Conversation | undefined> {
+    const { data, error } = await userClient
       .from('conversations')
-      .select('*')
+      .select('*, messages(count)')
       .eq('id', id)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw new Error(`Failed to fetch conversation: ${error.message}`);
-    }
+    if (error) return undefined;
 
-    return data || undefined;
+    return {
+      id: data.id,
+      title: data.title,
+      space_id: data.space_id,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      messageCount: data.messages?.[0]?.count || 0,
+    };
   }
 
   async upsertMessage(
+    userClient: SupabaseClient,
     conversationId: string,
     data: {
-      id: string;
+      id?: string;
       sender_id: string;
       content: string;
       role?: 'user' | 'assistant' | 'system';
     }
   ): Promise<Message> {
-    const { data: message, error } = await supabase
+    // 1. App Logic: Verify access to conversation (RLS check via Select)
+    const { data: access } = await userClient
+      .from('conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .single();
+
+    if (!access) throw new Error('Unauthorized or Conversation not found');
+
+    // 2. Insert via Admin Client
+    const { data: message, error } = await adminSupabase
       .from('messages')
       .insert({
         id: data.id,
@@ -209,98 +179,188 @@ export class ChatService {
       .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to upsert message: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
 
-    // Update conversation updated_at timestamp
-    await supabase
+    // 3. Update convo timestamp (Admin Client)
+    await adminSupabase
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', conversationId);
 
-    return message;
+    return {
+      id: message.id,
+      conversationId: message.conversation_id,
+      content: message.content,
+      role: message.role,
+      createdAt: message.created_at,
+      updatedAt: message.updated_at,
+    };
   }
 
-  async getMessages(conversationId: string): Promise<Message[]> {
-    const { data, error } = await supabase
+  async getMessages(
+    userClient: SupabaseClient,
+    conversationId: string
+  ): Promise<Message[]> {
+    const { data, error } = await userClient
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch messages: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
 
-    return data || [];
+    return (data || []).map((m: any) => ({
+      id: m.id,
+      conversationId: m.conversation_id,
+      content: m.content,
+      role: m.role,
+      createdAt: m.created_at,
+      updatedAt: m.updated_at,
+    }));
   }
 
   async updateMessage(
+    userClient: SupabaseClient,
     conversationId: string,
     messageId: string,
-    data: { content: string }
+    profileId: string,
+    content: string
   ): Promise<Message> {
-    const { data: message, error } = await supabase
+    // 1. App Logic: Verify sender is original sender OR an admin
+    const { data: msg } = await userClient
       .from('messages')
-      .update({
-        content: data.content,
-        updated_at: new Date().toISOString(),
-      })
+      .select('sender_id')
+      .eq('id', messageId)
+      .single();
+
+    const userRole = await this.getUserRoleInConversation(
+      userClient,
+      conversationId,
+      profileId
+    );
+    const isOwner = msg?.sender_id === profileId;
+    const isAdmin = userRole === 'admin' || userRole === 'owner';
+
+    if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+    const { data: updated, error } = await adminSupabase
+      .from('messages')
+      .update({ content, updated_at: new Date().toISOString() })
       .eq('id', messageId)
       .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to update message: ${error.message}`);
-    }
-
-    return message;
+    if (error) throw new Error(error.message);
+    return {
+      id: updated.id,
+      conversationId: updated.conversation_id,
+      content: updated.content,
+      role: updated.role,
+      createdAt: updated.created_at,
+      updatedAt: updated.updated_at,
+    };
   }
 
-  async deleteConversation(id: string): Promise<void> {
-    const { error } = await supabase
+  async deleteConversation(
+    userClient: SupabaseClient,
+    id: string,
+    profileId: string
+  ): Promise<void> {
+    const role = await this.getUserRoleInConversation(
+      userClient,
+      id,
+      profileId
+    );
+    if (role !== 'owner')
+      throw new Error('Only owners can delete conversations');
+
+    const { error } = await adminSupabase
       .from('conversations')
       .delete()
       .eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to delete conversation: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
   }
 
-  // Membership methods
-  async getConversationMembers(conversationId: string): Promise<Membership[]> {
-    const { data, error } = await supabase
+  async getConversationMembers(
+    userClient: SupabaseClient,
+    conversationId: string
+  ): Promise<ConversationMembership[]> {
+    const { data, error } = await userClient
       .from('conversation_members')
       .select('*')
       .eq('conversation_id', conversationId);
 
-    if (error) {
-      throw new Error(`Failed to fetch members: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
 
-    return data || [];
+    return (data || []).map((m: any) => ({
+      profileId: m.profile_id,
+      conversationId: m.conversation_id,
+      role: m.role,
+      createdAt: m.created_at,
+    }));
   }
 
   async inviteConversationMember(
+    userClient: SupabaseClient,
     conversationId: string,
-    profileId: string,
-    role: any
-  ): Promise<Membership> {
-    const { data: membership, error } = await supabase
+    updaterProfileId: string,
+    targetProfileId: string,
+    role: ConversationMembershipRole
+  ): Promise<ConversationMembership> {
+    const updaterRole = await this.getUserRoleInConversation(
+      userClient,
+      conversationId,
+      updaterProfileId
+    );
+    if (updaterRole !== 'admin' && updaterRole !== 'owner') {
+      throw new Error('Unauthorized: Insufficient permissions');
+    }
+
+    const { data: membership, error } = await adminSupabase
       .from('conversation_members')
       .insert({
-        profile_id: profileId,
+        profile_id: targetProfileId,
         conversation_id: conversationId,
         role,
       })
       .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to invite member: ${error.message}`);
+    if (error) throw new Error(error.message);
+
+    return {
+      profileId: membership.profile_id,
+      conversationId: membership.conversation_id,
+      role: membership.role,
+      createdAt: membership.created_at,
+    };
+  }
+  async updateConversationMember(
+    userClient: SupabaseClient,
+    conversationId: string,
+    updaterProfileId: string,
+    targetProfileId: string,
+    role: ConversationMembershipRole
+  ): Promise<ConversationMembership> {
+    const updaterRole = await this.getUserRoleInConversation(
+      userClient,
+      conversationId,
+      updaterProfileId
+    );
+
+    if (updaterRole !== 'admin' && updaterRole !== 'owner') {
+      throw new Error('Unauthorized: Insufficient permissions');
     }
+
+    const { data: membership, error } = await adminSupabase
+      .from('conversation_members')
+      .update({ role })
+      .eq('conversation_id', conversationId)
+      .eq('profile_id', targetProfileId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
 
     return {
       profileId: membership.profile_id,
@@ -311,43 +371,29 @@ export class ChatService {
   }
 
   async removeConversationMember(
+    userClient: SupabaseClient,
     conversationId: string,
-    profileId: string
+    updaterProfileId: string,
+    targetProfileId: string
   ): Promise<void> {
-    const { error } = await supabase
+    const isSelf = updaterProfileId === targetProfileId;
+    const updaterRole = await this.getUserRoleInConversation(
+      userClient,
+      conversationId,
+      updaterProfileId
+    );
+
+    if (!isSelf && updaterRole !== 'admin' && updaterRole !== 'owner') {
+      throw new Error('Unauthorized');
+    }
+
+    const { error } = await adminSupabase
       .from('conversation_members')
       .delete()
       .eq('conversation_id', conversationId)
-      .eq('profile_id', profileId);
+      .eq('profile_id', targetProfileId);
 
-    if (error) {
-      throw new Error(`Failed to remove member: ${error.message}`);
-    }
-  }
-
-  async updateConversationMemberRole(
-    conversationId: string,
-    profileId: string,
-    role: any
-  ): Promise<Membership> {
-    const { data: membership, error } = await supabase
-      .from('conversation_members')
-      .update({ role })
-      .eq('conversation_id', conversationId)
-      .eq('profile_id', profileId)
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to update member role: ${error.message}`);
-    }
-
-    return {
-      profileId: membership.profile_id,
-      conversationId: membership.conversation_id,
-      role: membership.role,
-      createdAt: membership.created_at,
-    };
+    if (error) throw new Error(error.message);
   }
 }
 

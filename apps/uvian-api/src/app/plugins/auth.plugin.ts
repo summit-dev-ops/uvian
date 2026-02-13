@@ -1,44 +1,30 @@
 import fp from 'fastify-plugin';
-import { supabase } from '../services/supabase.service';
+import { createAnonClient, createUserClient } from '../clients/supabase.client';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 declare module 'fastify' {
   interface FastifyRequest {
+    // We add the RLS-safe client to the request
+    supabase: SupabaseClient;
     user?: {
       id: string;
       email?: string;
       user_metadata?: any;
     };
   }
+
+  interface FastifyInstance {
+    // Add schema validation options for type providers
+    addSchema(schema: any): FastifyInstance;
+  }
 }
 
 export default fp(async (fastify) => {
-  // Helper function to extract JWT token from Authorization header
   function extractToken(authHeader: string | undefined): string | null {
-    if (!authHeader) {
-      return null;
-    }
-
+    if (!authHeader) return null;
     const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      return null;
-    }
-
+    if (parts.length !== 2 || parts[0] !== 'Bearer') return null;
     return parts[1];
-  }
-
-  // Helper function to verify JWT token using Supabase
-  async function verifyToken(token: string): Promise<any> {
-    try {
-      const { data, error } = await supabase.auth.getUser(token);
-
-      if (error) {
-        throw error;
-      }
-
-      return data.user;
-    } catch (error) {
-      throw new Error('Invalid token');
-    }
   }
 
   // Authentication middleware
@@ -53,9 +39,22 @@ export default fp(async (fastify) => {
         });
       }
 
-      const user = await verifyToken(token);
+      // 1. Create the RLS-enabled client immediately
+      const scopedClient = createUserClient(token);
 
-      // Attach user to request object
+      // 2. Verify the token by asking Supabase for the User
+      // We use the scoped client to do this. If the token is invalid, this fails.
+      const {
+        data: { user },
+        error,
+      } = await scopedClient.auth.getUser();
+
+      if (error || !user) {
+        throw new Error('Invalid token');
+      }
+
+      // 3. Attach both the User and the Client to the request
+      request.supabase = scopedClient;
       request.user = {
         id: user.id,
         email: user.email,
@@ -70,30 +69,42 @@ export default fp(async (fastify) => {
     }
   });
 
-  // Optional authentication (for public endpoints that can work with or without auth)
+  // Optional authentication
   fastify.decorate('authenticateOptional', async (request: any, reply: any) => {
     try {
       const token = extractToken(request.headers.authorization);
 
       if (token) {
-        const user = await verifyToken(token);
-        request.user = {
-          id: user.id,
-          email: user.email,
-          user_metadata: user.user_metadata,
-        };
+        // Attempt to create authenticated context
+        const scopedClient = createUserClient(token);
+        const {
+          data: { user },
+          error,
+        } = await scopedClient.auth.getUser();
+
+        if (!error && user) {
+          request.supabase = scopedClient;
+          request.user = {
+            id: user.id,
+            email: user.email,
+            user_metadata: user.user_metadata,
+          };
+          return; // Success, exit
+        }
       }
-      // If no token, user remains undefined - this is fine for optional auth
+
+      // Fallback: No token or invalid token
+      // We attach an anonymous client so services don't crash when calling request.supabase
+      request.supabase = createAnonClient();
+      // request.user remains undefined
     } catch (error: any) {
-      // For optional auth, we don't fail - just log and continue
-      fastify.log.warn('Optional auth failed:', error);
-      // user remains undefined, which is fine
+      // Fallback for errors
+      request.supabase = createAnonClient();
     }
   });
 
-  // Pre-handler hook to automatically authenticate all routes starting with /api/
+  // Pre-handler hook (Logic remains mostly the same)
   fastify.addHook('preHandler', async (request: any, reply: any) => {
-    // Skip authentication for non-API routes and root endpoints
     if (
       !request.url.startsWith('/api/') ||
       request.url === '/api/health' ||
@@ -102,18 +113,16 @@ export default fp(async (fastify) => {
       return;
     }
 
-    // Skip authentication for specific public endpoints if needed
-    // Add any public API endpoints here
-    const publicEndpoints: string[] = [
-      // Example: '/api/public/stats'
-    ];
-
+    const publicEndpoints: string[] = []; // Add public endpoints here
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       request.url.startsWith(endpoint)
     );
 
     if (!isPublicEndpoint) {
       await (fastify as any).authenticate(request, reply);
+    } else {
+      // Ensure public endpoints still get an anonymous client
+      await (fastify as any).authenticateOptional(request, reply);
     }
   });
 });

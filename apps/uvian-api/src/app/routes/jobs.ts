@@ -1,10 +1,8 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { queueService } from '../services/queue.service';
-import {
-  jobService,
-  type JobFilters,
-  type PaginationOptions,
-} from '../services/job.service';
+import { jobService } from '../services/job.service';
+import { userService } from '../services/user.service';
+import { JobFilters, PaginationOptions } from '../types/job.types';
 
 export default async function (
   fastify: FastifyInstance,
@@ -32,11 +30,16 @@ export default async function (
       },
     },
     handler: async (request, reply) => {
+      const userId = await userService.getCurrentUserFromRequest(request);
+      if (!userId) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+
       const payload = request.body as { type: string; input: any };
 
       // Create job in database
       const jobId = require('crypto').randomUUID();
-      await jobService.createJob({
+      await jobService.createJob(request.supabase, {
         id: jobId,
         type: payload.type,
         input: payload.input,
@@ -100,12 +103,18 @@ export default async function (
       },
     },
     handler: async (request, reply) => {
+      const userId = await userService.getCurrentUserFromRequest(request);
+      if (!userId) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+
       const query = request.query as JobFilters & PaginationOptions;
 
       const page = query.page || 1;
       const limit = query.limit || 20;
 
       const result = await jobService.listJobs(
+        request.supabase,
         {
           status: query.status,
           type: query.type,
@@ -154,10 +163,15 @@ export default async function (
       },
     },
     handler: async (request, reply) => {
+      const userId = await userService.getCurrentUserFromRequest(request);
+      if (!userId) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+
       const { id } = request.params as { id: string };
 
       try {
-        const job = await jobService.getJob(id);
+        const job = await jobService.getJob(request.supabase, id);
         reply.send(job);
       } catch (error) {
         reply.code(404).send({ error: 'Job not found' });
@@ -201,10 +215,15 @@ export default async function (
       },
     },
     handler: async (request, reply) => {
+      const userId = await userService.getCurrentUserFromRequest(request);
+      if (!userId) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+
       const { id } = request.params as { id: string };
 
       try {
-        const job = await jobService.cancelJob(id);
+        const job = await jobService.cancelJob(request.supabase, id);
         reply.send(job);
       } catch (error) {
         if (error instanceof Error && error.message.includes('Cannot cancel')) {
@@ -254,10 +273,15 @@ export default async function (
       },
     },
     handler: async (request, reply) => {
+      const userId = await userService.getCurrentUserFromRequest(request);
+      if (!userId) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+
       const { id } = request.params as { id: string };
 
       try {
-        const job = await jobService.retryJob(id);
+        const job = await jobService.retryJob(request.supabase, id);
 
         // Re-add to queue for processing
         await queueService.addJob('main-queue', job.type, {
@@ -302,10 +326,15 @@ export default async function (
       },
     },
     handler: async (request, reply) => {
+      const userId = await userService.getCurrentUserFromRequest(request);
+      if (!userId) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+
       const { id } = request.params as { id: string };
 
       try {
-        await jobService.deleteJob(id);
+        await jobService.deleteJob(request.supabase, id);
         reply.code(204).send();
       } catch (error) {
         if (error instanceof Error && error.message.includes('Cannot delete')) {

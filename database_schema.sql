@@ -17,7 +17,7 @@ CREATE TYPE profile_type AS ENUM ('human', 'agent', 'system', 'admin');
 CREATE TABLE profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     -- Link to Supabase Auth. Nullable because Agents don't have logins.
-    auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     type profile_type NOT NULL DEFAULT 'human',
     display_name TEXT NOT NULL,
     avatar_url TEXT,
@@ -30,7 +30,7 @@ CREATE TABLE profiles (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     -- Ensure 1:1 mapping for humans, but allow multiple agents without auth
-    CONSTRAINT uniq_auth_user UNIQUE (auth_user_id) DEFERRABLE INITIALLY DEFERRED
+    CONSTRAINT uniq_auth_user UNIQUE (user_id) DEFERRABLE INITIALLY DEFERRED
 );
 
 
@@ -110,20 +110,20 @@ CREATE INDEX idx_jobs_output ON jobs USING GIN (output);
 CREATE INDEX idx_profiles_type ON profiles (type);
 CREATE INDEX idx_profiles_display_name ON profiles (display_name);
 CREATE INDEX idx_profiles_public_fields ON profiles USING GIN (public_fields);
-CREATE INDEX idx_profiles_auth_user_id ON profiles (auth_user_id) WHERE auth_user_id IS NOT NULL;
+CREATE INDEX idx_profiles_user_id ON profiles (user_id) WHERE user_id IS NOT NULL;
 
 -- ============================================================================
 -- PROFILE SETTINGS TABLE
 -- ============================================================================
-CREATE TABLE profile_settings (
-    profile_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
-    settings JSONB DEFAULT '{}', -- Flexible profile settings data
+CREATE TABLE settings (
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    settings JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Indexes for profile_settings
-CREATE INDEX idx_profile_settings_public_fields ON profile_settings USING GIN (settings);
+-- Indexes for settings
+CREATE INDEX idx_settings_public_fields ON settings USING GIN (settings);
 
 -- ============================================================================
 -- TRIGGERS FOR UPDATED_AT AUTOMATION
@@ -193,7 +193,7 @@ CREATE POLICY "Users can view conversations they are members of" ON conversation
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
     );
@@ -211,7 +211,7 @@ CREATE POLICY "Users can update conversations they are members of" ON conversati
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
     );
@@ -224,7 +224,7 @@ CREATE POLICY "Admins can delete conversations" ON conversations
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
@@ -242,7 +242,7 @@ CREATE POLICY "Users can view messages in their conversations" ON messages
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
     );
@@ -255,7 +255,7 @@ CREATE POLICY "Users can send messages in their conversations" ON messages
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
     );
@@ -269,7 +269,7 @@ CREATE POLICY "Users can update their own messages" ON messages
             WHEN role = 'user' THEN
                 -- Allow users to update their own user messages
                 sender_id IN (
-                    SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                    SELECT id FROM profiles WHERE user_id = auth.uid()
                 )
             ELSE
                 -- For system/assistant messages, require admin role
@@ -277,7 +277,7 @@ CREATE POLICY "Users can update their own messages" ON messages
                     SELECT conversation_id
                     FROM conversation_members
                     WHERE profile_id IN (
-                        SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                        SELECT id FROM profiles WHERE user_id = auth.uid()
                     )
                     AND (role->>'name' = 'admin' OR role = '"admin"')
                 )
@@ -292,7 +292,7 @@ CREATE POLICY "Admins can delete messages" ON messages
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
@@ -310,7 +310,7 @@ CREATE POLICY "Users can view conversation members" ON conversation_members
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
     );
@@ -323,7 +323,7 @@ CREATE POLICY "Admins can invite members" ON conversation_members
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
@@ -337,7 +337,7 @@ CREATE POLICY "Admins can update member roles" ON conversation_members
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
@@ -352,14 +352,14 @@ CREATE POLICY "Admins and self can remove members" ON conversation_members
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
         OR
         -- Users can remove themselves
         profile_id IN (
-            SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            SELECT id FROM profiles WHERE user_id = auth.uid()
         )
     );
 
@@ -393,12 +393,12 @@ CREATE POLICY "System profiles are readable by authenticated users" ON profiles
 -- Humans can manage their own profile
 CREATE POLICY "Humans can manage their own profile" ON profiles
     FOR ALL
-    USING (auth_user_id = auth.uid());
+    USING (user_id = auth.uid());
 
 -- System/Admin profiles are readable by authenticated users
 CREATE POLICY "System/Admin profiles are readable by authenticated users" ON profiles
     FOR SELECT
-    USING (type IN ('system', 'admin') OR auth_user_id = auth.uid());
+    USING (type IN ('system', 'admin') OR user_id = auth.uid());
 
 -- Admins can manage all profiles
 CREATE POLICY "Admins can manage all profiles" ON profiles
@@ -406,7 +406,7 @@ CREATE POLICY "Admins can manage all profiles" ON profiles
     USING (
         EXISTS (
             SELECT 1 FROM profiles p 
-            WHERE p.auth_user_id = auth.uid() 
+            WHERE p.user_id = auth.uid() 
             AND p.type = 'admin'
         )
     );
@@ -415,7 +415,7 @@ CREATE POLICY "Admins can manage all profiles" ON profiles
 CREATE POLICY "Humans can manage agent profiles" ON profiles
     FOR ALL
     USING (
-        type = 'agent' AND auth_user_id IS NOT NULL
+        type = 'agent' AND user_id IS NOT NULL
     );
 
 -- ============================================================================
@@ -428,7 +428,7 @@ CREATE POLICY "Profile owners can manage their settings" ON profile_settings
     USING (
         profile_id IN (
             SELECT id FROM profiles 
-            WHERE auth_user_id = auth.uid()
+            WHERE user_id = auth.uid()
         )
     );
 
@@ -455,7 +455,7 @@ COMMENT ON TABLE jobs IS 'Background job queue for async processing';
 COMMENT ON COLUMN conversation_members.role IS 'Flexible role structure stored as JSONB (e.g., {"name": "admin"} or {"name": "member", "permissions": []})';
 COMMENT ON COLUMN profiles.type IS 'Type of profile: human, agent, system, or admin';
 COMMENT ON COLUMN profiles.agent_config IS 'Agent-specific configuration (NULL for humans)';
-COMMENT ON COLUMN profiles.auth_user_id IS 'Link to Supabase Auth user (NULL for agents)';
+COMMENT ON COLUMN profiles.user_id IS 'Link to Supabase Auth user (NULL for agents)';
 COMMENT ON COLUMN jobs.input IS 'Job input parameters as JSONB';
 COMMENT ON COLUMN jobs.output IS 'Job result data as JSONB';
 
@@ -529,7 +529,7 @@ CREATE POLICY "Users can view spaces they are members of" ON spaces
             SELECT space_id
             FROM space_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
         OR is_private = FALSE -- Public spaces are visible to all authenticated users
@@ -545,7 +545,7 @@ CREATE POLICY "Space owners can update spaces" ON spaces
     FOR UPDATE
     USING (
         created_by IN (
-            SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            SELECT id FROM profiles WHERE user_id = auth.uid()
         )
     );
 
@@ -554,7 +554,7 @@ CREATE POLICY "Space owners can delete spaces" ON spaces
     FOR DELETE
     USING (
         created_by IN (
-            SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            SELECT id FROM profiles WHERE user_id = auth.uid()
         )
     );
 
@@ -570,7 +570,7 @@ CREATE POLICY "Users can view space members" ON space_members
             SELECT space_id
             FROM space_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
     );
@@ -583,7 +583,7 @@ CREATE POLICY "Space admins can invite members" ON space_members
             SELECT space_id
             FROM space_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
@@ -597,7 +597,7 @@ CREATE POLICY "Space admins can update member roles" ON space_members
             SELECT space_id
             FROM space_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
@@ -612,14 +612,14 @@ CREATE POLICY "Space admins and self can remove members" ON space_members
             SELECT space_id
             FROM space_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )
         OR
         -- Users can remove themselves
         profile_id IN (
-            SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+            SELECT id FROM profiles WHERE user_id = auth.uid()
         )
     );
 
@@ -637,7 +637,7 @@ CREATE POLICY "Users can view conversations they are members of" ON conversation
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
         OR
@@ -646,7 +646,7 @@ CREATE POLICY "Users can view conversations they are members of" ON conversation
             SELECT space_id
             FROM space_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
     );
@@ -661,7 +661,7 @@ CREATE POLICY "Users can create conversations in spaces" ON conversations
                 SELECT space_id
                 FROM space_members
                 WHERE profile_id IN (
-                    SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                    SELECT id FROM profiles WHERE user_id = auth.uid()
                 )
             )
         )
@@ -677,7 +677,7 @@ CREATE POLICY "Users can update conversations they are members of" ON conversati
             SELECT conversation_id
             FROM conversation_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
         )
         OR
@@ -686,7 +686,7 @@ CREATE POLICY "Users can update conversations they are members of" ON conversati
             SELECT space_id
             FROM space_members
             WHERE profile_id IN (
-                SELECT id FROM profiles WHERE auth_user_id = auth.uid()
+                SELECT id FROM profiles WHERE user_id = auth.uid()
             )
             AND (role->>'name' = 'admin' OR role = '"admin"')
         )

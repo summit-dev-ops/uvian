@@ -1,168 +1,330 @@
 import { FastifyInstance } from 'fastify';
 import { spacesService } from '../services/spaces.service';
-import { chatService } from '../services/chat.service';
+import { profileService } from '../services/profile.service';
+import {
+  CreateSpaceRequest,
+  SpaceMemberRole,
+  UpdateSpaceMemberRoleRequest,
+  UpdateSpaceRequest,
+} from '../types/spaces.types';
 
 export default async function spacesRoutes(fastify: FastifyInstance) {
   // Create a new space
-  fastify.post('/api/spaces', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
+  fastify.post<{ Body: CreateSpaceRequest }>(
+    '/api/spaces',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string', minLength: 1 },
+            description: { type: 'string' },
+            avatar_url: { type: 'string' },
+            settings: { type: 'object' },
+            is_private: { type: 'boolean' },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
 
-    const data = request.body as {
-      id?: string;
-      name: string;
-      description?: string;
-      avatar_url?: string;
-      settings?: Record<string, any>;
-      is_private?: boolean;
-    };
+        const data = request.body;
 
-    try {
-      const space = await spacesService.createSpace(userId, data);
-      reply.code(201).send(space);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+        const space = await spacesService.createSpace(
+          request.supabase,
+          authProfileId,
+          data
+        );
+        reply.code(201).send(space);
+      } catch (error: any) {
+        reply.code(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get user's spaces
-  fastify.get('/api/spaces', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
+  fastify.get(
+    '/api/spaces',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
+        const spaces = await spacesService.getSpaces(
+          request.supabase,
+          authProfileId
+        );
+        reply.send(spaces);
+      } catch (error: any) {
+        reply.code(400).send({ error: error.message });
+      }
     }
-
-    try {
-      const spaces = await spacesService.getSpaces(userId);
-      reply.send(spaces);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
-    }
-  });
+  );
 
   // Get space stats
-  fastify.get('/api/spaces/stats', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
+  fastify.get(
+    '/api/spaces/stats',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
+        const stats = await spacesService.getSpaceStats(
+          request.supabase,
+          authProfileId
+        );
+        reply.send(stats);
+      } catch (error: any) {
+        reply.code(400).send({ error: error.message });
+      }
     }
-
-    try {
-      const stats = await spacesService.getSpaceStats(userId);
-      reply.send(stats);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
-    }
-  });
+  );
 
   // Get specific space
-  fastify.get('/api/spaces/:spaceId', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const { spaceId } = request.params as { spaceId: string };
-
-    try {
-      const space = await spacesService.getSpace(spaceId, userId);
-      if (!space) {
-        reply.code(404).send({ error: 'Space not found' });
-        return;
+  fastify.get<{ Params: { spaceId: string } }>(
+    '/api/spaces/:spaceId',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['spaceId'],
+          properties: {
+            spaceId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { spaceId } = request.params;
+        const space = await spacesService.getSpace(request.supabase, spaceId);
+        if (!space) {
+          reply.code(404).send({ error: 'Space not found' });
+          return;
+        }
+        reply.send(space);
+      } catch (error: any) {
+        reply.code(400).send({ error: error.message });
       }
-      reply.send(space);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
     }
-  });
+  );
 
   // Update space
-  fastify.patch('/api/spaces/:spaceId', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
+  fastify.patch<{ Params: { spaceId: string }; Body: UpdateSpaceRequest }>(
+    '/api/spaces/:spaceId',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['spaceId'],
+          properties: {
+            spaceId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', minLength: 1 },
+            description: { type: 'string' },
+            avatar_url: { type: 'string' },
+            settings: { type: 'object' },
+            is_private: { type: 'boolean' },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
+        const { spaceId } = request.params;
+        const data = request.body;
 
-    const { spaceId } = request.params as { spaceId: string };
-    const data = request.body as {
-      name?: string;
-      description?: string;
-      avatar_url?: string;
-      settings?: Record<string, any>;
-      is_private?: boolean;
-    };
-
-    try {
-      const space = await spacesService.updateSpace(spaceId, userId, data);
-      reply.send(space);
-    } catch (error: any) {
-      if (error.message === 'User profile not found') {
-        reply.code(401).send({ error: error.message });
-      } else {
-        reply.code(400).send({ error: error.message });
+        const space = await spacesService.updateSpace(
+          request.supabase,
+          spaceId,
+          authProfileId,
+          data
+        );
+        reply.send(space);
+      } catch (error: any) {
+        if (error.message === 'User profile not found') {
+          reply.code(401).send({ error: error.message });
+        } else {
+          reply.code(400).send({ error: error.message });
+        }
       }
     }
-  });
+  );
 
   // Delete space
-  fastify.delete('/api/spaces/:spaceId', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
+  fastify.delete<{ Params: { spaceId: string } }>(
+    '/api/spaces/:spaceId',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['spaceId'],
+          properties: {
+            spaceId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
+        const { spaceId } = request.params;
+
+        await spacesService.deleteSpace(
+          request.supabase,
+          spaceId,
+          authProfileId
+        );
+        reply.code(204).send();
+      } catch (error: any) {
+        if (error.message === 'User profile not found') {
+          reply.code(401).send({ error: error.message });
+        } else {
+          reply.code(400).send({ error: error.message });
+        }
+      }
     }
+  );
 
-    const { spaceId } = request.params as { spaceId: string };
-
-    try {
-      await spacesService.deleteSpace(spaceId, userId);
-      reply.code(204).send();
-    } catch (error: any) {
-      if (error.message === 'User profile not found') {
-        reply.code(401).send({ error: error.message });
-      } else {
+  // Get space members
+  fastify.get<{ Params: { spaceId: string } }>(
+    '/api/spaces/:spaceId/members',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['spaceId'],
+          properties: {
+            spaceId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { spaceId } = request.params;
+        const members = await spacesService.getSpaceMembers(
+          request.supabase,
+          spaceId
+        );
+        reply.send(members);
+      } catch (error: any) {
         reply.code(400).send({ error: error.message });
       }
     }
-  });
-
-  // Get space members
-  fastify.get('/api/spaces/:spaceId/members', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const { spaceId } = request.params as { spaceId: string };
-
-    try {
-      const members = await spacesService.getSpaceMembers(spaceId);
-      reply.send(members);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
-    }
-  });
+  );
 
   // Invite space member
   fastify.post(
     '/api/spaces/:spaceId/members/invite',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['spaceId'],
+          properties: {
+            spaceId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          required: ['profileId'],
+          properties: {
+            profile_id: { type: 'string' },
+            role: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', enum: ['admin', 'member', 'owner'] },
+              },
+              required: ['name'],
+              additionalProperties: false,
+            },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
     async (request, reply) => {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.code(401).send({ error: 'Unauthorized' });
-      }
-
-      const { spaceId } = request.params as { spaceId: string };
-      const { profile_id, role } = request.body as {
-        profile_id: string;
-        role?: any;
-      };
-
       try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
+        const { spaceId } = request.params as { spaceId: string };
+        const { profileId, role } = request.body as {
+          profileId: string;
+          role: SpaceMemberRole;
+        };
         const membership = await spacesService.inviteSpaceMember(
+          request.supabase,
           spaceId,
-          profile_id,
+          authProfileId,
+          profileId,
           role || { name: 'member' }
         );
         reply.code(201).send(membership);
@@ -173,21 +335,44 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Remove space member
-  fastify.delete(
+  fastify.delete<{ Params: { spaceId: string; profileId: string } }>(
     '/api/spaces/:spaceId/members/:profileId',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['spaceId', 'profileId'],
+          properties: {
+            spaceId: { type: 'string' },
+            profileId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
     async (request, reply) => {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.code(401).send({ error: 'Unauthorized' });
-      }
-
-      const { spaceId, profileId } = request.params as {
-        spaceId: string;
-        profileId: string;
-      };
-
       try {
-        await spacesService.removeSpaceMember(spaceId, profileId);
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
+        const { spaceId, profileId: targetProfileId } = request.params as {
+          spaceId: string;
+          profileId: string;
+        };
+
+        await spacesService.removeSpaceMember(
+          request.supabase,
+          spaceId,
+          authProfileId,
+          targetProfileId
+        );
         reply.code(204).send();
       } catch (error: any) {
         reply.code(400).send({ error: error.message });
@@ -196,24 +381,62 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Update space member role
-  fastify.patch(
+  fastify.patch<{
+    Params: { spaceId: string; profileId: string };
+    Body: UpdateSpaceMemberRoleRequest;
+  }>(
     '/api/spaces/:spaceId/members/:profileId/role',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['spaceId', 'profileId'],
+          properties: {
+            spaceId: { type: 'string' },
+            profileId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          required: ['role'],
+          properties: {
+            role: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', enum: ['admin', 'member', 'owner'] },
+              },
+              required: ['name'],
+              additionalProperties: false,
+            },
+          },
+          additionalProperties: false,
+        },
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
     async (request, reply) => {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.code(401).send({ error: 'Unauthorized' });
-      }
-
-      const { spaceId, profileId } = request.params as {
-        spaceId: string;
-        profileId: string;
-      };
-      const { role } = request.body as { role: any };
-
       try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
+        const { spaceId, profileId: targetProfileId } = request.params as {
+          spaceId: string;
+          profileId: string;
+        };
+        const { role } = request.body;
+
         const membership = await spacesService.updateSpaceMemberRole(
+          request.supabase,
           spaceId,
-          profileId,
+          authProfileId,
+          targetProfileId,
           role
         );
         reply.send(membership);
@@ -222,58 +445,4 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
       }
     }
   );
-
-  // Get space conversations
-  fastify.get('/api/spaces/:spaceId/conversations', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const { spaceId } = request.params as { spaceId: string };
-
-    try {
-      const conversations = await spacesService.getSpaceConversations(spaceId);
-      reply.send(conversations);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
-    }
-  });
-
-  // Create conversation in space
-  fastify.post('/api/spaces/:spaceId/conversations', async (request, reply) => {
-    const userId = (request as any).user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const { spaceId } = request.params as { spaceId: string };
-    const data = request.body as {
-      id: string;
-      title: string;
-      profileId?: string;
-    };
-
-    try {
-      // First create the conversation using the existing chat service
-      const conversation = await chatService.createConversation({
-        ...data,
-        space_id: spaceId, // Pass space_id to the chat service
-      });
-
-      // Emit socket event for real-time updates
-      fastify.io.to(`space:${spaceId}`).emit('space_conversation_created', {
-        spaceId,
-        conversation,
-      });
-
-      reply.code(201).send(conversation);
-    } catch (error: any) {
-      if (error.message === 'Space not found') {
-        reply.code(404).send({ error: error.message });
-      } else {
-        reply.code(400).send({ error: error.message });
-      }
-    }
-  });
 }
