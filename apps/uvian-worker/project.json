@@ -70,20 +70,6 @@
     "serve": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "poetry run python apps/uvian_worker/hello.py",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "dev": {
-      "executor": "@nxlv/python:run-commands",
-      "options": {
-        "command": "poetry run python apps/uvian_worker/hello.py",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "start-worker": {
-      "executor": "@nxlv/python:run-commands",
-      "options": {
         "command": "poetry run python apps/uvian_worker/main.py",
         "cwd": "{projectRoot}"
       }
