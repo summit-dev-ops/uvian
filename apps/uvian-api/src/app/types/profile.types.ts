@@ -1,9 +1,8 @@
-
 export type ProfileType = 'human' | 'agent' | 'system' | 'admin';
 
 export interface Profile {
   id: string;
-  authUserId?: string | null;
+  userId?: string | null;
   type: ProfileType;
   displayName: string;
   avatarUrl?: string | null;
@@ -15,7 +14,7 @@ export interface Profile {
   updatedAt: string;
 }
 
-export interface CreateProfileData {
+export interface CreateProfilePayload {
   displayName: string;
   avatarUrl?: string | null;
   bio?: string | null;
@@ -24,7 +23,7 @@ export interface CreateProfileData {
   type?: ProfileType;
 }
 
-export interface UpdateProfileData {
+export interface UpdateProfilePayload {
   displayName?: string;
   avatarUrl?: string | null;
   bio?: string | null;
@@ -41,7 +40,7 @@ export interface SearchableField {
 
 export interface ProfileSearchFilters {
   query?: string;
-  type?: ('human' | 'agent')[];
+  type?: string[];
   sortBy?: 'relevance' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
   page?: number;
@@ -63,4 +62,54 @@ export interface RelevanceScore {
   profileId: string;
   score: number;
   matchedFields: string[];
+}
+
+// Request types for Fastify routes
+export interface CreateProfileRequest {
+  Body: CreateProfilePayload;
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface UpdateProfileRequest {
+  Params: {
+    profileId: string;
+  };
+  Body: UpdateProfilePayload;
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface DeleteProfileRequest {
+  Params: {
+    profileId: string;
+  };
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface GetProfileRequest {
+  Params: {
+    profileId: string;
+  };
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface SearchProfilesRequest {
+  Querystring: {
+    query?: string;
+    type?: string | string[];
+    sortBy?: 'relevance' | 'createdAt';
+    sortOrder?: 'asc' | 'desc';
+    page?: string;
+    limit?: string;
+  };
+  Headers: {
+    profileId: string;
+  };
 }

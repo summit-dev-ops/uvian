@@ -15,6 +15,7 @@ import type {
   RemoveSpaceMemberPayload,
   UpdateSpaceMemberRolePayload,
 } from '../api';
+import { SpaceMemberRole } from '../types';
 
 // ============================================================================
 // Actions
@@ -87,7 +88,7 @@ export const spacesActions = {
    */
   deleteSpace: (
     spaceId: string
-  ): BaseAction<{ spaceId: string }, Promise<void>> => ({
+  ): BaseAction<{ authProfileId: string; spaceId: string }, Promise<void>> => ({
     id: 'spaces.deleteSpace',
     group: 'spaces',
     variant: 'destructive',
@@ -98,7 +99,10 @@ export const spacesActions = {
       return !!payload.spaceId && space?.userRole === 'admin';
     },
 
-    perform: async (ctx: BaseActionContext, payload: { spaceId: string }) => {
+    perform: async (
+      ctx: BaseActionContext,
+      payload: { authProfileId: string; spaceId: string }
+    ) => {
       // Check if this is the active space
       const state = ctx.store.getState();
       const isActive = state.activeSpaceId === payload.spaceId;
@@ -134,7 +138,9 @@ export const spacesActions = {
         .getState()
         .spaces.find((s) => s.id === payload.spaceId);
       return (
-        !!payload.profileId && !!payload.spaceId && space?.userRole === 'admin'
+        !!payload.targetMemberProfileId &&
+        !!payload.spaceId &&
+        space?.userRole === 'admin'
       );
     },
 
@@ -166,7 +172,9 @@ export const spacesActions = {
         .getState()
         .spaces.find((s) => s.id === payload.spaceId);
       return (
-        !!payload.profileId && !!payload.spaceId && space?.userRole === 'admin'
+        !!payload.targetMemberProfileId &&
+        !!payload.spaceId &&
+        space?.userRole === 'admin'
       );
     },
 
@@ -198,7 +206,9 @@ export const spacesActions = {
         .getState()
         .spaces.find((s) => s.id === payload.spaceId);
       return (
-        !!payload.profileId && !!payload.spaceId && space?.userRole === 'admin'
+        !!payload.targetMemberProfileId &&
+        !!payload.spaceId &&
+        space?.userRole === 'admin'
       );
     },
 
@@ -220,7 +230,7 @@ export const spacesActions = {
    */
   leaveSpace: (
     spaceId: string,
-    currentUserId: string
+    authProfileId: string
   ): BaseAction<void, Promise<void>> => ({
     id: 'spaces.leaveSpace',
     group: 'spaces',
@@ -228,14 +238,14 @@ export const spacesActions = {
 
     canPerform: (ctx) => {
       const space = ctx.store.getState().spaces.find((s) => s.id === spaceId);
-      return !!space && space.userRole === 'member' && !!currentUserId;
+      return !!space && space.userRole === 'member' && !!authProfileId;
     },
 
     perform: async (ctx: BaseActionContext) => {
       await executeMutation(
         ctx.queryClient,
         spacesMutations.removeSpaceMember(ctx.queryClient),
-        { spaceId, profileId: currentUserId }
+        { spaceId, authProfileId, targetMemberProfileId: authProfileId }
       );
 
       // If it was active space, navigate away
@@ -253,7 +263,7 @@ export const spacesActions = {
    */
   joinSpace: (
     spaceId: string,
-    currentUserId: string
+    authProfileId: string
   ): BaseAction<void, Promise<void>> => ({
     id: 'spaces.joinSpace',
     group: 'spaces',
@@ -261,14 +271,19 @@ export const spacesActions = {
 
     canPerform: (ctx) => {
       const space = ctx.store.getState().spaces.find((s) => s.id === spaceId);
-      return !!space && !space.userRole && !!currentUserId; // Not already a member
+      return !!space && !space.userRole && !!authProfileId; // Not already a member
     },
 
     perform: async (ctx: BaseActionContext) => {
       await executeMutation(
         ctx.queryClient,
         spacesMutations.inviteSpaceMember(ctx.queryClient),
-        { spaceId, profileId: currentUserId, role: { name: 'member' } }
+        {
+          authProfileId,
+          spaceId,
+          targetMemberProfileId: authProfileId,
+          role: { name: 'member' },
+        }
       );
 
       // Refresh spaces list to get updated membership
@@ -285,15 +300,16 @@ export const spacesActions = {
    * Static function for bulk operations using the action manager.
    */
   bulkRemoveMembers: async (
-    profileIds: string[],
+    authProfileId: string,
+    targetMemberProfileId: string[],
     context: BaseActionContext,
     spaceId: string
   ) => {
-    const promises = profileIds.map(async (profileId) => {
+    const promises = targetMemberProfileId.map(async (profileId) => {
       await executeMutation(
         context.queryClient,
         spacesMutations.removeSpaceMember(context.queryClient),
-        { spaceId, profileId }
+        { spaceId, authProfileId, targetMemberProfileId: profileId }
       );
     });
 
@@ -305,16 +321,22 @@ export const spacesActions = {
    * Static function for bulk operations using the action manager.
    */
   bulkUpdateMemberRole: async (
-    profileIds: string[],
-    newRole: any,
+    authProfileId: string,
+    targetMemberProfileIds: string[],
+    newRole: SpaceMemberRole['name'],
     context: BaseActionContext,
     spaceId: string
   ) => {
-    const promises = profileIds.map(async (profileId) => {
+    const promises = targetMemberProfileIds.map(async (profileId) => {
       await executeMutation(
         context.queryClient,
         spacesMutations.updateSpaceMemberRole(context.queryClient),
-        { spaceId, profileId, role: newRole }
+        {
+          authProfileId,
+          spaceId,
+          targetMemberProfileId: profileId,
+          role: { name: newRole },
+        }
       );
     });
 
@@ -325,12 +347,16 @@ export const spacesActions = {
    * Delete multiple spaces.
    * Static function for bulk operations using the action manager.
    */
-  bulkDeleteSpaces: async (spaceIds: string[], context: BaseActionContext) => {
+  bulkDeleteSpaces: async (
+    authProfileId: string,
+    spaceIds: string[],
+    context: BaseActionContext
+  ) => {
     const promises = spaceIds.map(async (spaceId) => {
       await executeMutation(
         context.queryClient,
         spacesMutations.deleteSpace(context.queryClient),
-        { spaceId }
+        { authProfileId, spaceId }
       );
 
       // Clear cache for each space

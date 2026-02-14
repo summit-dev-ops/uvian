@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { LogOut, Trash2, Download, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { useConversationMembers } from '../../../hooks/use-conversation-members';
 
@@ -12,7 +12,8 @@ import {
   type ActionRegistrationType,
   MODAL_IDS,
 } from '../../../../../shared/page-actions/page-action-context';
-import { userQueries } from '~/lib/domains/user/api';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
+
 
 export interface ChatPageActionContextType {
   conversationId: string;
@@ -46,28 +47,24 @@ export function ChatPageActionProvider({
 }: ChatPageActionProviderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: profile } = useQuery(userQueries.profile());
+  const { activeProfileId } = useUserSessionStore();
   const { isAdmin, removeMember } = useConversationMembers(conversationId);
 
   // Mutation for deleting conversations
   const { mutate: deleteConversation, isPending: isDeleting } = useMutation(
-    chatMutations.deleteConversation(queryClient, conversationId)
+    chatMutations.deleteConversation(queryClient)
   );
 
   // Action handlers - these are the business logic that was in the original component
   const handleLeave = React.useCallback(async () => {
-    if (!profile) {
-      throw new Error('Profile not found');
-    }
-
     try {
-      await removeMember(profile.profileId);
+      await removeMember(activeProfileId);
       router.push('/chats');
     } catch (error) {
       console.error('Failed to leave conversation:', error);
       throw error;
     }
-  }, [profile?.profileId, removeMember, router]);
+  }, [activeProfileId, removeMember, router]);
 
   const handleDelete = React.useCallback(async () => {
     if (!isAdmin) {
@@ -75,13 +72,16 @@ export function ChatPageActionProvider({
     }
 
     try {
-      await deleteConversation({ conversationId });
+      await deleteConversation({
+        authProfileId: activeProfileId,
+        conversationId,
+      });
       router.push('/chats');
     } catch (error) {
       console.error('Failed to delete conversation:', error);
       throw error;
     }
-  }, [isAdmin, deleteConversation, conversationId, router]);
+  }, [isAdmin, deleteConversation, activeProfileId, conversationId, router]);
 
   const handleExport = React.useCallback(async () => {
     // Export action opens the export modal - actual export happens in the modal

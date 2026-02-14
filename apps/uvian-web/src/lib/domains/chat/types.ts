@@ -5,47 +5,19 @@
  * All IDs (message and conversation) are UUIDs (v4).
  */
 
-// ============================================================================
-// API Types (Raw data from REST endpoints)
-// ============================================================================
-
-export type MessageAPI = {
-  id: string; // UUID
-  conversation_id: string; // UUID - database field name
-  sender_id: string; // UUID - profile ID of sender (database field name)
-  content: string;
-  role: 'user' | 'assistant' | 'system';
-  created_at: string; // ISO 8601 (database field name)
-  updated_at: string; // ISO 8601 (database field name)
-};
-
-export type ConversationAPI = {
-  id: string;
-  title: string;
-  created_at: string; // ISO 8601 (from backend service)
-  updated_at: string; // ISO 8601 (from backend service)
-};
-
-export type ConversationMemberAPI = {
-  profile_id: string;
-  conversation_id: string;
-  role: any;
-  created_at: string;
-};
-
-// ============================================================================
-// UI Types (Transformed for UI consumption)
-// ============================================================================
-
 export type DataSyncStatus = 'synced' | 'pending' | 'error';
 
 export type ConversationMemberUI = {
   profileId: string;
   conversationId: string;
-  role: any;
-  createdAt: Date;
+  role: ConversationMemberRole;
+  createdAt: string;
   syncStatus: DataSyncStatus;
 };
+
+export type ConversationMemberRole = {
+  name: "owner" | 'admin' | 'member';
+}
 
 export type MessageUI = {
   id: string; // UUID
@@ -53,7 +25,7 @@ export type MessageUI = {
   senderId: string; // UUID - profile ID of sender
   content: string;
   role: 'user' | 'assistant' | 'system';
-  createdAt: Date;
+  createdAt: string;
   syncStatus: DataSyncStatus;
   isStreaming?: boolean; // True if message is receiving tokens
   tokens?: string[]; // Array of tokens for streaming messages
@@ -62,8 +34,8 @@ export type MessageUI = {
 export type ConversationUI = {
   id: string; // UUID
   title: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   syncStatus: DataSyncStatus;
   lastMessage?: MessageUI;
 };
@@ -90,7 +62,7 @@ export type ConversationCacheEntry = {
 
 export type SocketMessageEvent = {
   conversationId: string; // UUID
-  message: MessageAPI;
+  message: MessageUI;
   isDelta?: boolean;
   isComplete?: boolean;
 };

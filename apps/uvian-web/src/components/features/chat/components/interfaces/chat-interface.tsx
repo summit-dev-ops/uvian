@@ -7,8 +7,10 @@ import { useSocket } from '~/components/providers/socket/socket-provider';
 import { MessageRow } from '../message-row';
 import { ChatInput } from '../chat-input';
 import { ScrollArea } from '@org/ui';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 export function ChatInterface({ conversationId }: { conversationId: string }) {
+  const { activeProfileId } = useUserSessionStore();
   const { socket, isConnected } = useSocket();
   const { messages, sendMessage, isLoading } = useChat(conversationId);
   const { messageDraft, setMessageDraft } = useChatStore(conversationId);
@@ -37,6 +39,7 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
     if (!messageDraft.trim() || !isConnected) return;
 
     sendMessage({
+      authProfileId: activeProfileId,
       id: crypto.randomUUID(),
       conversationId: conversationId,
       content: messageDraft,

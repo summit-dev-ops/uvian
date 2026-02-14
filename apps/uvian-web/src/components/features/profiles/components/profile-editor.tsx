@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { ProfileForm } from './forms/profile-form';
-import type { ProfileDraft } from '~/lib/domains/user/types';
+import type { ProfileDraft } from '~/lib/domains/profile/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { userMutations, userQueries } from '~/lib/domains/user/api';
+import { profileMutations, profileQueries } from '~/lib/domains/profile/api';
 
 // Optimized prop interface
 interface ProfileEditorProps {
-  profileId?:string,
+  profileId?: string;
   // Callbacks
   onSave?: () => void;
   onCancel?: () => void;
@@ -33,14 +33,14 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
   showAvatarUrlField = true,
   className,
 }) => {
-  const queryClient = useQueryClient()
-  const { data: profile } = useQuery(userQueries.profile(profileId));
-  const {mutate: handleUpdateProfile, isPending: isUpdatingProfile } = useMutation(userMutations.updateProfile(queryClient))
-  const {mutate: handleCreateProfile, isPending: isCreatingProfile } = useMutation(userMutations.createProfile(queryClient))
+  const queryClient = useQueryClient();
+  const { data: profile } = useQuery(profileQueries.profile(profileId));
+  const { mutate: handleUpdateProfile, isPending: isUpdatingProfile } =
+    useMutation(profileMutations.updateProfile(queryClient));
+  const { mutate: handleCreateProfile, isPending: isCreatingProfile } =
+    useMutation(profileMutations.createProfile(queryClient));
 
-
-  // Determine mode based on existing profile
-  const mode = !!profile ? "edit" : "create"
+  const mode = profile ? 'edit' : 'create';
 
   // Merge profile data with initialData for form
   const formInitialData = {
@@ -58,8 +58,8 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({
   }) => {
     try {
       // Determine whether to update or create based on existing profile
-      if (!!profile) {
-        await handleUpdateProfile(formData);
+      if (profile && profileId) {
+        await handleUpdateProfile({ profileId, ...formData });
       } else {
         await handleCreateProfile(formData);
       }

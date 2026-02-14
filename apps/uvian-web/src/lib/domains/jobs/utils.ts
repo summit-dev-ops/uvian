@@ -4,31 +4,7 @@
  * Transformers and utility functions for job management.
  */
 
-import type { JobAPI, JobUI, JobStatus, JobStatusInfo } from './types';
-
-// ============================================================================
-// API ↔ UI Transformers
-// ============================================================================
-
-/**
- * Transform JobAPI (snake_case) to JobUI (camelCase).
- */
-export function jobApiToUi(job: JobAPI): JobUI {
-  return {
-    id: job.id,
-    type: job.type,
-    status: job.status,
-    input: job.input,
-    output: job.output,
-    errorMessage: job.error_message,
-    createdAt: new Date(job.created_at),
-    updatedAt: new Date(job.updated_at),
-    startedAt: job.started_at ? new Date(job.started_at) : null,
-    completedAt: job.completed_at ? new Date(job.completed_at) : null,
-    duration: calculateJobDuration(job) ?? undefined,
-    syncStatus: 'synced' as const,
-  };
-}
+import type { JobUI, JobStatus, JobStatusInfo } from './types';
 
 // ============================================================================
 // Duration Calculations
@@ -37,16 +13,12 @@ export function jobApiToUi(job: JobAPI): JobUI {
 /**
  * Calculate job duration in milliseconds.
  */
-export function calculateJobDuration(job: JobAPI | JobUI): number | null {
-  const createdAt =
-    'created_at' in job ? new Date(job.created_at) : job.createdAt;
-  const completedAt =
-    'completed_at' in job ? job.completed_at : job.completedAt;
+export function calculateJobDuration(job: JobUI | JobUI): number | null {
+  const createdAt = new Date(job.createdAt)
 
-  if (completedAt) {
-    const completed =
-      typeof completedAt === 'string' ? new Date(completedAt) : completedAt;
-    return completed.getTime() - createdAt.getTime();
+  if (job.completedAt) {
+    const completedAt = new Date(job.completedAt)
+    return completedAt.getTime() - createdAt.getTime();
   }
 
   // For ongoing jobs, return time since creation
@@ -182,7 +154,6 @@ export function getRelativeTime(date: Date): string {
 // ============================================================================
 
 export const jobUtils = {
-  jobApiToUi,
   calculateJobDuration,
   getJobStatusInfo,
   canCancelJob,

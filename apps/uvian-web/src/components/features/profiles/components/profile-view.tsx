@@ -6,7 +6,7 @@ import { ProfileAvatar } from './profile-avatar';
 import { Button, Card } from '@org/ui';
 import { Calendar, Settings, Edit3, User, Globe, Hash } from 'lucide-react';
 import { cn } from '@org/ui';
-import { userQueries } from '~/lib/domains/user/api';
+import { profileQueries } from '~/lib/domains/profile/api';
 import { useQuery } from '@tanstack/react-query';
 
 /**
@@ -64,7 +64,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   compact = false,
   className,
 }) => {
-  const { data: profile, isLoading, error } = useQuery(userQueries.profile(profileId));
+  const { data: profile, isLoading, error } = useQuery(profileQueries.profile(profileId));
 
   // Handle loading state
   if (isLoading) {

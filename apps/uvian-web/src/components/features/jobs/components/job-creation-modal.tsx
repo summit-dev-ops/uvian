@@ -16,6 +16,7 @@ import { Label } from '@org/ui';
 import { Textarea } from '@org/ui';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { jobMutations } from '~/lib/domains/jobs/api/mutations';
+import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface JobCreationModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export function JobCreationModal({
     type: '',
     input: '',
   });
+  const {activeProfileId} = useUserSessionStore()
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [isValidating, setIsValidating] = React.useState(false);
 
@@ -125,6 +127,7 @@ export function JobCreationModal({
       // Create job
       createJob(
         {
+          authProfileId: activeProfileId,
           type: formData.type,
           input: inputData,
         },

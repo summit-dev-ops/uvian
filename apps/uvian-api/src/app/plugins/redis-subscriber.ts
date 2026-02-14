@@ -1,6 +1,5 @@
 import fp from 'fastify-plugin';
 import Redis from 'ioredis';
-import { chatService } from '../services/chat.service';
 
 export default fp(async (fastify) => {
   const redisConfig = {
@@ -30,21 +29,6 @@ export default fp(async (fastify) => {
 
       // If the payload already follows the new_message structure, use it directly
       if (payload.message) {
-        if (payload.isComplete) {
-          chatService
-            .upsertMessage(conversationId, {
-              id: payload.message.id,
-              sender_id: payload.message.sender_id,
-              content: payload.message.content,
-              role: payload.message.role,
-            })
-            .catch((err) => {
-              fastify.log.error(
-                `Failed to persist completed message: ${err.message}`
-              );
-            });
-        }
-
         fastify.io.to(conversationId).emit('new_message', {
           ...payload,
           conversationId,

@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@org/ui';
-import { UserSearchInterface } from '../features/user/components/interfaces/user-search-interface';
+import { ProfileSearchInterface } from '../features/profiles/components/interfaces/profile-search-interface';
 
 export type InviteProfileData = {
   role: 'admin' | 'member';
@@ -41,13 +41,11 @@ export function InviteProfileModal({
             Invite to your space
           </DialogTitle>
           <DialogDescription>
-            Just search for the name of the profile you are interested in adding to this space.
+            Just search for the name of the profile you are interested in adding
+            to this space.
           </DialogDescription>
         </DialogHeader>
-        <UserSearchInterface
-
-
-        />
+        <ProfileSearchInterface />
       </DialogContent>
     </Dialog>
   );

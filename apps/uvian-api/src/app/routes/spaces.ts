@@ -3,14 +3,20 @@ import { spacesService } from '../services/spaces.service';
 import { profileService } from '../services/profile.service';
 import {
   CreateSpaceRequest,
-  SpaceMemberRole,
+  DeleteSpaceRequest,
+  GetSpaceMembersRequest,
+  GetSpaceRequest,
+  GetSpaceStatsRequest,
+  GetSpacesRequest,
+  InviteSpaceMemberRequest,
+  RemoveSpaceMemberRequest,
   UpdateSpaceMemberRoleRequest,
   UpdateSpaceRequest,
 } from '../types/spaces.types';
 
 export default async function spacesRoutes(fastify: FastifyInstance) {
   // Create a new space
-  fastify.post<{ Body: CreateSpaceRequest }>(
+  fastify.post<CreateSpaceRequest>(
     '/api/spaces',
     {
       preHandler: [fastify.authenticate],
@@ -57,9 +63,19 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Get user's spaces
-  fastify.get(
+  fastify.get<GetSpacesRequest>(
     '/api/spaces',
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       try {
         const authProfileId = await profileService.getCurrentProfileFromRequest(
@@ -77,9 +93,19 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Get space stats
-  fastify.get(
+  fastify.get<GetSpaceStatsRequest>(
     '/api/spaces/stats',
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       try {
         const authProfileId = await profileService.getCurrentProfileFromRequest(
@@ -97,7 +123,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Get specific space
-  fastify.get<{ Params: { spaceId: string } }>(
+  fastify.get<GetSpaceRequest>(
     '/api/spaces/:spaceId',
     {
       preHandler: [fastify.authenticate],
@@ -134,7 +160,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Update space
-  fastify.patch<{ Params: { spaceId: string }; Body: UpdateSpaceRequest }>(
+  fastify.patch<UpdateSpaceRequest>(
     '/api/spaces/:spaceId',
     {
       preHandler: [fastify.authenticate],
@@ -167,7 +193,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try {
+      try { 
         const authProfileId = await profileService.getCurrentProfileFromRequest(
           request
         );
@@ -192,7 +218,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Delete space
-  fastify.delete<{ Params: { spaceId: string } }>(
+  fastify.delete<DeleteSpaceRequest>(
     '/api/spaces/:spaceId',
     {
       preHandler: [fastify.authenticate],
@@ -237,7 +263,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Get space members
-  fastify.get<{ Params: { spaceId: string } }>(
+  fastify.get<GetSpaceMembersRequest>(
     '/api/spaces/:spaceId/members',
     {
       preHandler: [fastify.authenticate],
@@ -273,7 +299,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Invite space member
-  fastify.post(
+  fastify.post<InviteSpaceMemberRequest>(
     '/api/spaces/:spaceId/members/invite',
     {
       preHandler: [fastify.authenticate],
@@ -315,11 +341,8 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const authProfileId = await profileService.getCurrentProfileFromRequest(
           request
         );
-        const { spaceId } = request.params as { spaceId: string };
-        const { profileId, role } = request.body as {
-          profileId: string;
-          role: SpaceMemberRole;
-        };
+        const { spaceId } = request.params;
+        const { profileId, role } = request.body;
         const membership = await spacesService.inviteSpaceMember(
           request.supabase,
           spaceId,
@@ -335,7 +358,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Remove space member
-  fastify.delete<{ Params: { spaceId: string; profileId: string } }>(
+  fastify.delete<RemoveSpaceMemberRequest>(
     '/api/spaces/:spaceId/members/:profileId',
     {
       preHandler: [fastify.authenticate],
@@ -362,11 +385,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const authProfileId = await profileService.getCurrentProfileFromRequest(
           request
         );
-        const { spaceId, profileId: targetProfileId } = request.params as {
-          spaceId: string;
-          profileId: string;
-        };
-
+        const { spaceId, profileId: targetProfileId } = request.params;
         await spacesService.removeSpaceMember(
           request.supabase,
           spaceId,
@@ -381,10 +400,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
   );
 
   // Update space member role
-  fastify.patch<{
-    Params: { spaceId: string; profileId: string };
-    Body: UpdateSpaceMemberRoleRequest;
-  }>(
+  fastify.patch<UpdateSpaceMemberRoleRequest>(
     '/api/spaces/:spaceId/members/:profileId/role',
     {
       preHandler: [fastify.authenticate],
@@ -426,10 +442,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const authProfileId = await profileService.getCurrentProfileFromRequest(
           request
         );
-        const { spaceId, profileId: targetProfileId } = request.params as {
-          spaceId: string;
-          profileId: string;
-        };
+        const { spaceId, profileId: targetProfileId } = request.params;
         const { role } = request.body;
 
         const membership = await spacesService.updateSpaceMemberRole(

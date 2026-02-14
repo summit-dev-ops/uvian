@@ -16,21 +16,23 @@ import {
 import { useSpaceMemberActions } from '../../hooks/use-space-member-actions';
 import { createArraySelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionManagerProvider } from '~/components/shared/actions/hocs/with-action-manager';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface SpaceMembersInterfaceProps {
   spaceId: string;
 }
 
 export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
+  const { activeProfileId } = useUserSessionStore();
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
   // Fetch space and members
-  const { data: space } = useQuery(spacesQueries.space(spaceId));
+  const { data: space } = useQuery(spacesQueries.space(activeProfileId, spaceId));
   const {
     data: members,
     isLoading,
     error,
-  } = useQuery(spacesQueries.spaceMembers(spaceId));
+  } = useQuery(spacesQueries.spaceMembers(activeProfileId, spaceId));
 
   // Check if current user is admin
   const isAdmin = space?.userRole === 'admin';

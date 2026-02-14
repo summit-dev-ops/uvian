@@ -6,14 +6,15 @@ import { Settings, Users, MessageSquare } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
 import { Button, Card, CardContent, ScrollArea, Skeleton } from '@org/ui';
 import type { SpaceUI } from '~/lib/domains/spaces/types';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 export function SpacesListInterface() {
-
+  const { activeProfileId } = useUserSessionStore();
   // Fetch spaces
-  const { data: spaces, isLoading, error } = useQuery(spacesQueries.spaces());
+  const { data: spaces, isLoading, error } = useQuery(spacesQueries.spaces(activeProfileId));
 
   // Fetch space stats
-  const { data: stats } = useQuery(spacesQueries.spaceStats());
+  const { data: stats } = useQuery(spacesQueries.spaceStats(activeProfileId));
 
   if (error) {
     return (

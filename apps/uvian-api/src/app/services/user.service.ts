@@ -12,12 +12,12 @@ export class UserService {
   // Settings CRUD operations
   async getSettings(
     supabaseClient: SupabaseClient,
-    user_id: string
+    userId: string
   ): Promise<UserSettings | undefined> {
     const { data, error } = await supabaseClient
       .from('settings')
       .select('*')
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -30,7 +30,7 @@ export class UserService {
 
     // Transform database format to interface format
     return {
-      user_id: data.user_id,
+      userId: data.user_id,
       settings: data.settings,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
@@ -39,13 +39,13 @@ export class UserService {
 
   async createSettings(
     supabaseClient: SupabaseClient,
-    user_id: string,
+    userId: string,
     settings: Record<string, any> = {}
   ): Promise<UserSettings> {
     const { data: settingsRecord, error } = await supabaseClient
       .from('settings')
       .insert({
-        user_id: user_id,
+        user_id: userId,
         settings: settings,
       })
       .select()
@@ -57,7 +57,7 @@ export class UserService {
 
     // Transform database format to interface format
     return {
-      user_id: settingsRecord.user_id,
+      userId: settingsRecord.user_id,
       settings: settingsRecord.settings,
       createdAt: settingsRecord.created_at,
       updatedAt: settingsRecord.updated_at,
@@ -66,13 +66,13 @@ export class UserService {
 
   async updateSettings(
     supabaseClient: SupabaseClient,
-    user_id: string,
+    userId: string,
     settings: Record<string, any>
   ): Promise<UserSettings> {
-    const existingSettings = await this.getSettings(supabaseClient, user_id);
+    const existingSettings = await this.getSettings(supabaseClient, userId);
 
     if (!existingSettings) {
-      return this.createSettings(supabaseClient, user_id, settings);
+      return this.createSettings(supabaseClient, userId, settings);
     }
 
     const mergedSettings = {
@@ -85,7 +85,7 @@ export class UserService {
       .update({
         settings: mergedSettings,
       })
-      .eq('user_id', user_id)
+      .eq('user_id', userId)
       .select()
       .single();
 
@@ -95,7 +95,7 @@ export class UserService {
 
     // Transform database format to interface format
     return {
-      user_id: settingsRecord.user_id,
+      userId: settingsRecord.user_id,
       settings: settingsRecord.settings,
       createdAt: settingsRecord.created_at,
       updatedAt: settingsRecord.updated_at,
@@ -104,12 +104,12 @@ export class UserService {
 
   async deleteSettings(
     supabaseClient: SupabaseClient,
-    user_id: string
+    userId: string
   ): Promise<void> {
     const { error } = await supabaseClient
       .from('settings')
       .delete()
-      .eq('user_id', user_id);
+      .eq('user_id', userId);
 
     if (error) {
       throw new Error(`Failed to delete settings: ${error.message}`);

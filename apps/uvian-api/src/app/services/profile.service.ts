@@ -1,12 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import {
-  CreateProfileData,
+  CreateProfilePayload,
   Profile,
   ProfileSearchFilters,
   ProfileSearchResponse,
   SearchableField,
-  UpdateProfileData,
-} from '../types/profile.typs';
+  UpdateProfilePayload,
+} from '../types/profile.types';
 import { adminSupabase } from '../clients/supabase.client';
 
 // Search configuration - easily extensible
@@ -22,17 +22,16 @@ const SEARCH_CONFIG = {
 
 export class ProfileService {
   async getCurrentProfileFromRequest(request: any): Promise<string> {
-    if (!request.headers || !request.headers.profileId) {
+    if (!request.headers || !request.headers['x-profile-id']) {
       throw new Error('No profileId provided');
     }
-    return request.headers.profileId;
+    return request.headers['x-profile-id'];
   }
 
   // Profile CRUD operations
   async getProfile(
     supabaseClient: SupabaseClient,
-    profileId: string,
-    userId?: string
+    profileId: string
   ): Promise<Profile | undefined> {
     const { data, error } = await supabaseClient
       .from('profiles')
@@ -51,7 +50,7 @@ export class ProfileService {
     // Transform database format to interface format
     return {
       id: data.id,
-      authUserId: data.auth_user_id,
+      userId: data.user_id,
       type: data.type,
       displayName: data.display_name,
       avatarUrl: data.avatar_url,
@@ -66,12 +65,12 @@ export class ProfileService {
 
   async getProfileByAuthUserId(
     supabaseClient: SupabaseClient,
-    authUserId: string
+    userId: string
   ): Promise<Profile | undefined> {
     const { data, error } = await supabaseClient
       .from('profiles')
       .select('*')
-      .eq('auth_user_id', authUserId)
+      .eq('user_id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -85,7 +84,7 @@ export class ProfileService {
     // Transform database format to interface format
     return {
       id: data.id,
-      authUserId: data.auth_user_id,
+      userId: data.user_id,
       type: data.type,
       displayName: data.display_name,
       avatarUrl: data.avatar_url,
@@ -98,11 +97,45 @@ export class ProfileService {
     };
   }
 
+  async getProfilesByAuthUserId(
+    supabaseClient: SupabaseClient,
+    userId: string
+  ): Promise<Profile[]> {
+    const { data, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error && error.code !== 'PGRST116') {
+      throw new Error(`Failed to fetch profiles: ${error.message}`);
+    }
+
+    if (!data) {
+      return [];
+    }
+
+    // Transform database format to interface format
+    return data.map((profile) => ({
+      id: profile.id,
+      userId: profile.user_id,
+      type: profile.type,
+      displayName: profile.display_name,
+      avatarUrl: profile.avatar_url,
+      bio: profile.bio,
+      agentConfig: profile.agent_config,
+      publicFields: profile.public_fields,
+      isActive: profile.is_active,
+      createdAt: profile.created_at,
+      updatedAt: profile.updated_at,
+    }));
+  }
+
   async createProfile(
     supabaseClient: SupabaseClient,
     profileId: string,
     userId: string,
-    data: CreateProfileData
+    data: CreateProfilePayload
   ): Promise<Profile> {
     // Validate required fields
     if (!data.displayName || data.displayName.trim().length === 0) {
@@ -111,7 +144,7 @@ export class ProfileService {
 
     const profileData = {
       id: profileId,
-      auth_user_id: userId,
+      user_id: userId,
       type: data.type || 'human',
       display_name: data.displayName.trim(),
       avatar_url: data.avatarUrl || null,
@@ -133,7 +166,7 @@ export class ProfileService {
     // Transform database format to interface format
     return {
       id: profile.id,
-      authUserId: profile.auth_user_id,
+      userId: profile.user_id,
       type: profile.type,
       displayName: profile.display_name,
       avatarUrl: profile.avatar_url,
@@ -150,7 +183,7 @@ export class ProfileService {
     supabaseClient: SupabaseClient,
     profileId: string,
     userId: string,
-    data: UpdateProfileData
+    data: UpdateProfilePayload
   ): Promise<Profile> {
     const updateData: any = {};
 
@@ -189,7 +222,7 @@ export class ProfileService {
       .from('profiles')
       .update(updateData)
       .eq('id', profileId)
-      .eq('auth_user_id', userId)
+      .eq('user_id', userId)
       .select()
       .single();
 
@@ -200,7 +233,7 @@ export class ProfileService {
     // Transform database format to interface format
     return {
       id: profile.id,
-      authUserId: profile.auth_user_id,
+      userId: profile.user_id,
       type: profile.type,
       displayName: profile.display_name,
       avatarUrl: profile.avatar_url,
@@ -221,7 +254,7 @@ export class ProfileService {
     const { error } = await supabaseClient
       .from('profiles')
       .delete()
-      .eq('auth_user_id', userId)
+      .eq('user_id', userId)
       .eq('id', profileId);
 
     if (error) {
@@ -252,7 +285,7 @@ export class ProfileService {
         .from('profiles')
         .select('id')
         .eq('id', profileId)
-        .eq('auth_user_id', userId)
+        .eq('user_id', userId)
         .single();
 
       return !error && !!data;
@@ -318,7 +351,7 @@ export class ProfileService {
     // Transform database results to Profile interface
     let profiles: Profile[] = data.map((profile) => ({
       id: profile.id,
-      authUserId: profile.auth_user_id || undefined,
+      userId: profile.user_id || undefined,
       type: profile.type,
       displayName: profile.display_name,
       avatarUrl: profile.avatar_url,

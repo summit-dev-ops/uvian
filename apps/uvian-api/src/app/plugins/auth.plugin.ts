@@ -38,12 +38,9 @@ export default fp(async (fastify) => {
           message: 'No authorization token provided',
         });
       }
-
       // 1. Create the RLS-enabled client immediately
       const scopedClient = createUserClient(token);
 
-      // 2. Verify the token by asking Supabase for the User
-      // We use the scoped client to do this. If the token is invalid, this fails.
       const {
         data: { user },
         error,

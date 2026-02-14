@@ -7,38 +7,24 @@
  */
 
 import type { StateCreator } from 'zustand';
-import type { ProfileDraft, SettingsDraft } from '../types';
+import type { SettingsDraft } from '../types';
 
 // ============================================================================
 // Slice State
 // ============================================================================
 
 export interface UserSlice {
+  activeProfileId?: string;
   // State
-  profileDraft: ProfileDraft;
   settingsDraft: SettingsDraft;
-  isEditingProfile: boolean;
   isEditingSettings: boolean;
 
+  setActiveProfile: (newProfileId: string) => void;
   // Actions
-  setProfileDraft: (draft: ProfileDraft) => void;
   setSettingsDraft: (draft: SettingsDraft) => void;
-  clearProfileDraft: () => void;
   clearSettingsDraft: () => void;
-  setIsEditingProfile: (isEditing: boolean) => void;
   setIsEditingSettings: (isEditing: boolean) => void;
 }
-
-// ============================================================================
-// Default Values
-// ============================================================================
-
-const DEFAULT_PROFILE_DRAFT: ProfileDraft = {
-  displayName: '',
-  avatarUrl: null,
-  bio: null,
-  publicFields: {},
-};
 
 const DEFAULT_SETTINGS_DRAFT: SettingsDraft = {};
 
@@ -47,31 +33,21 @@ const DEFAULT_SETTINGS_DRAFT: SettingsDraft = {};
 // ============================================================================
 
 export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
-  // Initial state
-  profileDraft: DEFAULT_PROFILE_DRAFT,
-  settingsDraft: DEFAULT_SETTINGS_DRAFT,
-  isEditingProfile: false,
-  isEditingSettings: false,
-
+  activeProfileId: "d0e1041b-f911-45e5-b542-cfb4f7f29a10",
   // Actions
-  setProfileDraft: (draft) => {
-    set({ profileDraft: draft });
+  setActiveProfile: (newProfileId) => {
+    set({ activeProfileId: newProfileId });
   },
+  // Initial state
+  settingsDraft: DEFAULT_SETTINGS_DRAFT,
+  isEditingSettings: false,
 
   setSettingsDraft: (draft) => {
     set({ settingsDraft: draft });
   },
 
-  clearProfileDraft: () => {
-    set({ profileDraft: DEFAULT_PROFILE_DRAFT });
-  },
-
   clearSettingsDraft: () => {
     set({ settingsDraft: DEFAULT_SETTINGS_DRAFT });
-  },
-
-  setIsEditingProfile: (isEditing) => {
-    set({ isEditingProfile: isEditing });
   },
 
   setIsEditingSettings: (isEditing) => {

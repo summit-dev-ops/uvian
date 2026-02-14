@@ -3,20 +3,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
-import { userQueries } from '~/lib/domains/user/api';
+import { useUserSessionStore } from '../../user/hooks/use-user-store';
+import { ConversationMemberRole } from '~/lib/domains/chat/types';
 
 export const useConversationMembers = (conversationId: string) => {
+  const { activeProfileId } = useUserSessionStore();
   const queryClient = useQueryClient();
 
-  // 2. Fetch current user's profile
-  const { data: profile } = useQuery({
-    ...userQueries.profile(),
-    enabled: !!conversationId, // Only fetch profile if we have a conversation
-  });
-  
   // 1. Fetch members
   const { data: members, isLoading } = useQuery(
-    chatQueries.conversationMembers(conversationId)
+    chatQueries.conversationMembers(activeProfileId, conversationId)
   );
 
   // 2. Mutations
@@ -33,23 +29,40 @@ export const useConversationMembers = (conversationId: string) => {
   );
 
   // 3. Derived State
-  const currentUserMember = members?.find((m) => m.profileId === profile?.profileId)
-  const isAdmin =
-    currentUserMember?.role?.name === 'admin' ||
-    currentUserMember?.role === 'admin';
-  console.log(isAdmin)
+  const currentUserMember = members?.find(
+    (m) => m.profileId === activeProfileId
+  );
+  const isAdmin = currentUserMember?.role?.name === 'admin';
   return {
     members,
     isLoading,
-    inviteMember: (userId: string, role: any) =>
-      inviteMember({ conversationId, userId, role }),
-    removeMember: (userId: string) => removeMember({ conversationId, userId }),
-    updateRole: (userId: string, role: any) =>
-      updateRole({ conversationId, userId, role }),
+    inviteMember: (
+      targetMemberProfileId: string,
+      role: ConversationMemberRole
+    ) =>
+      inviteMember({
+        conversationId,
+        authProfileId: activeProfileId,
+        targetMemberProfileId,
+        role,
+      }),
+    removeMember: (targetMemberProfileId: string) =>
+      removeMember({
+        conversationId,
+        authProfileId: activeProfileId,
+        targetMemberProfileId,
+      }),
+    updateRole: (targetMemberProfileId: string, role: ConversationMemberRole) =>
+      updateRole({
+        conversationId,
+        targetMemberProfileId,
+        authProfileId: activeProfileId,
+        role,
+      }),
     isInviting,
     isRemoving,
     isUpdatingRole,
-    currentProfileId: profile?.profileId,
+    currentProfileId: activeProfileId,
     isAdmin,
   };
 };

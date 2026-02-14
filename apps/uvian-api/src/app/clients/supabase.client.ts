@@ -12,10 +12,9 @@ export function createAnonClient() {
   });
 }
 
-export const createUserClient = (req: any) => {
-  const authHeader = req.headers.authorization;
+export const createUserClient = (token: string) => {
   return createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } },
+    global: { headers: { Authorization: `Bearer ${token}` } },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -84,7 +83,7 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          auth_user_id: string | null;
+          userId: string | null;
           type: 'human' | 'agent' | 'system' | 'admin';
           display_name: string;
           avatar_url: string | null;
@@ -97,7 +96,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          auth_user_id?: string | null;
+          userId?: string | null;
           type?: 'human' | 'agent' | 'system' | 'admin';
           display_name: string;
           avatar_url?: string | null;

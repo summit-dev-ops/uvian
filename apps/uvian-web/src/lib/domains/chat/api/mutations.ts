@@ -8,14 +8,11 @@
 import { MutationOptions, QueryClient } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { chatKeys } from './keys';
-import { chatUtils } from '../utils';
 import type {
-  ConversationAPI,
   ConversationUI,
-  MessageAPI,
   MessageUI,
-  ConversationMemberAPI,
   ConversationMemberUI,
+  ConversationMemberRole,
 } from '../types';
 
 // ============================================================================
@@ -23,12 +20,13 @@ import type {
 // ============================================================================
 
 export type CreateConversationPayload = {
+  authProfileId: string;
   id: string; // Client-generated ID
   title: string;
-  profileId: string; // Current user's profile ID
 };
 
 export type SendMessagePayload = {
+  authProfileId: string;
   id: string; // Client-generated ID
   conversationId: string;
   content: string;
@@ -36,24 +34,28 @@ export type SendMessagePayload = {
 };
 
 export type DeleteConversationPayload = {
+  authProfileId: string;
   conversationId: string;
 };
 
 export type InviteConversationMemberPayload = {
+  authProfileId: string;
   conversationId: string;
-  userId: string;
-  role: any;
+  targetMemberProfileId: string;
+  role: ConversationMemberRole;
 };
 
 export type RemoveConversationMemberPayload = {
+  authProfileId: string;
   conversationId: string;
-  userId: string;
+  targetMemberProfileId: string;
 };
 
 export type UpdateConversationMemberRolePayload = {
+  authProfileId: string;
   conversationId: string;
-  userId: string;
-  role: any;
+  targetMemberProfileId: string;
+  role: ConversationMemberRole;
 };
 
 // ============================================================================
@@ -89,20 +91,27 @@ export const chatMutations = {
     CreateConversationContext
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.post<ConversationAPI>(
+      const { data } = await apiClient.post<ConversationUI>(
         `/api/conversations`,
-        { id: payload.id, title: payload.title, profileId: payload.profileId }
+        {
+          id: payload.id,
+          title: payload.title,
+          profileId: payload.authProfileId,
+        },
+        { headers: { "x-profile-id": payload.authProfileId } }
       );
-      return chatUtils.conversationApiToUi(data);
+      return data;
     },
 
     onMutate: async (payload) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: chatKeys.conversations() });
+      await queryClient.cancelQueries({
+        queryKey: chatKeys.conversations(payload.authProfileId),
+      });
 
       // Snapshot previous value
       const previousConversations = queryClient.getQueryData<ConversationUI[]>(
-        chatKeys.conversations()
+        chatKeys.conversations(payload.authProfileId)
       );
 
       // Optimistically update
@@ -115,7 +124,7 @@ export const chatMutations = {
       };
 
       queryClient.setQueryData<ConversationUI[]>(
-        chatKeys.conversations(),
+        chatKeys.conversations(payload.authProfileId),
         (old) =>
           old ? [...old, optimisticConversation] : [optimisticConversation]
       );
@@ -127,15 +136,17 @@ export const chatMutations = {
       // Rollback on error
       if (context?.previousConversations) {
         queryClient.setQueryData(
-          chatKeys.conversations(),
+          chatKeys.conversations(_payload.authProfileId),
           context.previousConversations
         );
       }
     },
 
-    onSuccess: () => {
+    onSuccess: (_, payload) => {
       // Invalidate to refetch with server data
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(payload.authProfileId),
+      });
     },
   }),
 
@@ -143,9 +154,7 @@ export const chatMutations = {
    * Send a message in a conversation.
    */
   sendMessage: (
-    queryClient: QueryClient,
-    conversationId: string,
-    profileId?: string
+    queryClient: QueryClient
   ): MutationOptions<
     MessageUI,
     Error,
@@ -153,27 +162,33 @@ export const chatMutations = {
     SendMessageContext
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.post<MessageAPI>(
+      const { data } = await apiClient.post<MessageUI>(
         `/api/conversations/${payload.conversationId}/messages`,
         {
           id: payload.id,
-          sender_id: profileId, // Add the required sender_id field
+          senderId: payload.authProfileId,
           content: payload.content,
           role: payload.role || 'user',
+        },
+        {
+          headers: { "x-profile-id": payload.authProfileId },
         }
       );
-      return chatUtils.messageApiToUi(data);
+      return data;
     },
 
     onMutate: async (payload) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: chatKeys.messages(conversationId),
+        queryKey: chatKeys.messages(
+          payload.authProfileId,
+          payload.conversationId
+        ),
       });
 
       // Snapshot previous messages
       const previousMessages = queryClient.getQueryData<MessageUI[]>(
-        chatKeys.messages(conversationId)
+        chatKeys.messages(payload.authProfileId, payload.conversationId)
       );
 
       // Create optimistic user message
@@ -185,12 +200,12 @@ export const chatMutations = {
         createdAt: new Date(),
         syncStatus: 'pending',
         isStreaming: false,
-        senderId: profileId || 'current-user', // Use actual profile ID or fallback
+        senderId: payload.authProfileId || 'current-user', // Use actual profile ID or fallback
       };
 
       // Update cache with only the user message
       queryClient.setQueryData<MessageUI[]>(
-        chatKeys.messages(conversationId),
+        chatKeys.messages(payload.authProfileId, payload.conversationId),
         (old) =>
           old ? [...old, optimisticUserMessage] : [optimisticUserMessage]
       );
@@ -202,16 +217,19 @@ export const chatMutations = {
       // Rollback on error
       if (context?.previousMessages) {
         queryClient.setQueryData(
-          chatKeys.messages(conversationId),
+          chatKeys.messages(_payload.authProfileId, _payload.conversationId),
           context.previousMessages
         );
       }
     },
 
-    onSuccess: () => {
+    onSuccess: (_, _payload) => {
       // Invalidate to refetch with server data
       queryClient.invalidateQueries({
-        queryKey: chatKeys.messages(conversationId),
+        queryKey: chatKeys.messages(
+          _payload.authProfileId,
+          _payload.conversationId
+        ),
       });
     },
   }),
@@ -220,8 +238,7 @@ export const chatMutations = {
    * Delete a conversation.
    */
   deleteConversation: (
-    queryClient: QueryClient,
-    conversationId: string
+    queryClient: QueryClient
   ): MutationOptions<
     void,
     Error,
@@ -229,21 +246,25 @@ export const chatMutations = {
     DeleteConversationContext
   > => ({
     mutationFn: async (payload) => {
-      await apiClient.delete(`/api/conversations/${payload.conversationId}`);
+      await apiClient.delete(`/api/conversations/${payload.conversationId}`, {
+        headers: { "x-profile-id": payload.authProfileId },
+      });
     },
 
     onMutate: async (payload) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: chatKeys.conversations() });
+      await queryClient.cancelQueries({
+        queryKey: chatKeys.conversations(payload.authProfileId),
+      });
 
       // Snapshot previous conversations
       const previousConversations = queryClient.getQueryData<ConversationUI[]>(
-        chatKeys.conversations()
+        chatKeys.conversations(payload.authProfileId)
       );
 
       // Optimistically remove from list
       queryClient.setQueryData<ConversationUI[]>(
-        chatKeys.conversations(),
+        chatKeys.conversations(payload.authProfileId),
         (old) => old?.filter((conv) => conv.id !== payload.conversationId) || []
       );
 
@@ -254,21 +275,29 @@ export const chatMutations = {
       // Rollback on error
       if (context?.previousConversations) {
         queryClient.setQueryData(
-          chatKeys.conversations(),
+          chatKeys.conversations(_payload.authProfileId),
           context.previousConversations
         );
       }
     },
 
-    onSuccess: () => {
+    onSuccess: (_, payload) => {
       // Invalidate conversations list
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations() });
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(payload.authProfileId),
+      });
       // Remove conversation-specific caches
       queryClient.removeQueries({
-        queryKey: chatKeys.conversation(conversationId),
+        queryKey: chatKeys.conversation(
+          payload.authProfileId,
+          payload.conversationId
+        ),
       });
       queryClient.removeQueries({
-        queryKey: chatKeys.messages(conversationId),
+        queryKey: chatKeys.messages(
+          payload.authProfileId,
+          payload.conversationId
+        ),
       });
     },
   }),
@@ -284,15 +313,19 @@ export const chatMutations = {
     InviteConversationMemberPayload
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.post<ConversationMemberAPI>(
+      const { data } = await apiClient.post<ConversationMemberUI>(
         `/api/conversations/${payload.conversationId}/conversation-members/invite`,
-        { userId: payload.userId, role: payload.role }
+        { profileId: payload.targetMemberProfileId, role: payload.role },
+        { headers: { "x-profile-id": payload.authProfileId } }
       );
-      return chatUtils.conversationMemberApiToUi(data);
+      return data;
     },
     onSuccess: (_, payload) => {
       queryClient.invalidateQueries({
-        queryKey: chatKeys.conversationMembers(payload.conversationId),
+        queryKey: chatKeys.conversationMembers(
+          payload.authProfileId,
+          payload.conversationId
+        ),
       });
     },
   }),
@@ -305,12 +338,16 @@ export const chatMutations = {
   ): MutationOptions<void, Error, RemoveConversationMemberPayload> => ({
     mutationFn: async (payload) => {
       await apiClient.delete(
-        `/api/conversations/${payload.conversationId}/conversation-members/${payload.userId}`
+        `/api/conversations/${payload.conversationId}/conversation-members/${payload.targetMemberProfileId}`,
+        { headers: { "x-profile-id": payload.authProfileId } }
       );
     },
     onSuccess: (_, payload) => {
       queryClient.invalidateQueries({
-        queryKey: chatKeys.conversationMembers(payload.conversationId),
+        queryKey: chatKeys.conversationMembers(
+          payload.authProfileId,
+          payload.conversationId
+        ),
       });
     },
   }),
@@ -326,15 +363,19 @@ export const chatMutations = {
     UpdateConversationMemberRolePayload
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.patch<ConversationMemberAPI>(
-        `/api/conversations/${payload.conversationId}/conversation-members/${payload.userId}/role`,
-        { role: payload.role }
+      const { data } = await apiClient.patch<ConversationMemberUI>(
+        `/api/conversations/${payload.conversationId}/conversation-members/${payload.targetMemberProfileId}/role`,
+        { role: payload.role },
+        { headers: { "x-profile-id": payload.authProfileId } }
       );
-      return chatUtils.conversationMemberApiToUi(data);
+      return data;
     },
     onSuccess: (_, payload) => {
       queryClient.invalidateQueries({
-        queryKey: chatKeys.conversationMembers(payload.conversationId),
+        queryKey: chatKeys.conversationMembers(
+          payload.authProfileId,
+          payload.conversationId
+        ),
       });
     },
   }),

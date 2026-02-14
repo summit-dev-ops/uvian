@@ -4,11 +4,11 @@ import React from 'react';
 import { ProfileView } from '../profile-view';
 import { ScrollArea } from '@org/ui';
 import { useQuery } from '@tanstack/react-query';
-import { userQueries } from '~/lib/domains/user/api';
+import { profileQueries } from '~/lib/domains/profile/api';
 
 export function ProfileInterface({ profileId }: { profileId?: string }) {
 
-  const { isLoading: isLoadingProfile, error: profileError } = useQuery(userQueries.profile(profileId));
+  const { isLoading: isLoadingProfile, error: profileError } = useQuery(profileQueries.profile(profileId));
 
 
   // Loading state while checking authentication

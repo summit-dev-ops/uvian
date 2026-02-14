@@ -4,6 +4,7 @@ import {
   Conversation,
   ConversationMembership,
   ConversationMembershipRole,
+  CreateMessagePayload,
   Message,
 } from '../types/chat.types';
 
@@ -72,7 +73,7 @@ export class ChatService {
     return {
       id: conversation.id,
       title: conversation.title,
-      space_id: conversation.space_id,
+      spaceId: conversation.space_id,
       createdAt: conversation.created_at,
       updatedAt: conversation.updated_at,
     };
@@ -92,10 +93,10 @@ export class ChatService {
 
     if (error) throw new Error(error.message);
 
-    return (data || []).map((conv: any) => ({
+    return (data || []).map((conv) => ({
       id: conv.id,
       title: conv.title,
-      space_id: conv.space_id,
+      spaceId: conv.space_id,
       createdAt: conv.created_at,
       updatedAt: conv.updated_at,
       messageCount: conv.messages?.[0]?.count || 0,
@@ -115,10 +116,10 @@ export class ChatService {
 
     if (error) throw new Error(error.message);
 
-    return (data || []).map((conv: any) => ({
+    return (data || []).map((conv) => ({
       id: conv.id,
       title: conv.title,
-      space_id: conv.space_id,
+      spaceId: conv.space_id,
       createdAt: conv.created_at,
       updatedAt: conv.updated_at,
       messageCount: conv.messages?.[0]?.count || 0,
@@ -140,7 +141,7 @@ export class ChatService {
     return {
       id: data.id,
       title: data.title,
-      space_id: data.space_id,
+      spaceId: data.space_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       messageCount: data.messages?.[0]?.count || 0,
@@ -150,12 +151,7 @@ export class ChatService {
   async upsertMessage(
     userClient: SupabaseClient,
     conversationId: string,
-    data: {
-      id?: string;
-      sender_id: string;
-      content: string;
-      role?: 'user' | 'assistant' | 'system';
-    }
+    data: CreateMessagePayload
   ): Promise<Message> {
     // 1. App Logic: Verify access to conversation (RLS check via Select)
     const { data: access } = await userClient
@@ -172,7 +168,7 @@ export class ChatService {
       .insert({
         id: data.id,
         conversation_id: conversationId,
-        sender_id: data.sender_id,
+        sender_id: data.senderId,
         content: data.content,
         role: data.role || 'user',
       })
@@ -209,7 +205,7 @@ export class ChatService {
 
     if (error) throw new Error(error.message);
 
-    return (data || []).map((m: any) => ({
+    return (data || []).map((m) => ({
       id: m.id,
       conversationId: m.conversation_id,
       content: m.content,
@@ -292,7 +288,7 @@ export class ChatService {
 
     if (error) throw new Error(error.message);
 
-    return (data || []).map((m: any) => ({
+    return (data || []).map((m) => ({
       profileId: m.profile_id,
       conversationId: m.conversation_id,
       role: m.role,

@@ -18,7 +18,7 @@ import {
   FieldLabel,
   Input,
 } from '@org/ui';
-import type { ProfileDraft } from '~/lib/domains/user/types';
+import type { ProfileDraft } from '~/lib/domains/profile/types';
 
 // Profile schema with Zod validation
 const profileSchema = z.object({

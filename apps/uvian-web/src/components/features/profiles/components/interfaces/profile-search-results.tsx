@@ -1,23 +1,16 @@
 'use client';
 
-/**
- * User Search Results Interface Component
- *
- * Displays search results with loading states and pagination.
- * Follows established patterns from the user domain.
- */
-
 import * as React from 'react';
 import { ChevronDown, Loader2, User, Bot } from 'lucide-react';
 
 import { Button } from '@org/ui';
 import { Badge } from '@org/ui';
 import { Avatar, AvatarFallback, AvatarImage } from '@org/ui';
-import type { UserSearchResults, ProfileUI } from '~/lib/domains/user/types';
+import type { ProfileSearchResults, ProfileUI } from '~/lib/domains/profile/types';
 
-export interface UserSearchResultsProps {
+export interface ProfileSearchResultsProps {
   // Search results data
-  data: UserSearchResults;
+  data: ProfileSearchResults;
 
   // Loading states
   isLoading?: boolean;
@@ -38,7 +31,7 @@ export interface UserSearchResultsProps {
   className?: string;
 }
 
-export function UserSearchResults({
+export function ProfileSearchResults({
   data,
   isLoading = false,
   isLoadingMore = false,
@@ -47,7 +40,7 @@ export function UserSearchResults({
   onProfileSelect,
   renderProfileItem = defaultProfileItem,
   className,
-}: UserSearchResultsProps) {
+}: ProfileSearchResultsProps) {
   if (isLoading) {
     return <UserSearchResultsSkeleton />;
   }
@@ -77,7 +70,7 @@ export function UserSearchResults({
       <div className="space-y-3">
         {data.profiles.map((profile) => (
           <div
-            key={profile.profileId}
+            key={profile.id}
             className="cursor-pointer"
             onClick={() => onProfileSelect?.(profile)}
           >

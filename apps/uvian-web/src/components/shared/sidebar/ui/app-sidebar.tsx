@@ -12,12 +12,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@org/ui';
-import { VersionSwitcher } from './version-switcher';
+import { ProfileSwitcher } from './profile-switcher';
 import { SearchForm } from './search-form';
 
 // This is sample data.
 const data = {
-  versions: ['1.0.1', '1.1.0-alpha', '2.0.0-beta1'],
   navMain: [
     {
       title: 'Getting Started',
@@ -151,10 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <VersionSwitcher
-          versions={data.versions}
-          defaultVersion={data.versions[0]}
-        />
+        <ProfileSwitcher />
         <SearchForm />
       </SidebarHeader>
       <SidebarContent>

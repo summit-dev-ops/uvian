@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
 import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 
 export interface SpaceOverviewPageActionContextType {
@@ -39,6 +40,7 @@ export function SpaceOverviewPageActionProvider({
 }: SpaceOverviewPageActionProviderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { activeProfileId } = useUserSessionStore();
 
   // Mutation for deleting spaces
   const { mutate: deleteSpace, isPending: isDeleting } = useMutation(
@@ -74,7 +76,7 @@ export function SpaceOverviewPageActionProvider({
   // Handler for deleting space
   const handleDeleteSpace = React.useCallback(async () => {
     try {
-      await deleteSpace({ spaceId });
+      await deleteSpace({authProfileId:activeProfileId, spaceId });
       router.push('/spaces');
     } catch (error) {
       console.error('Failed to delete space:', error);

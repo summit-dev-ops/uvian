@@ -26,7 +26,7 @@ export function ChatMembersInterface({
           data={members || []}
           isAdmin={isAdmin}
           onRemove={removeMember}
-          onUpdateRole={updateRole}
+          onUpdateRole={(profileId, role)=>updateRole(profileId, {name: role})}
         />
       )}
     </ScrollArea>

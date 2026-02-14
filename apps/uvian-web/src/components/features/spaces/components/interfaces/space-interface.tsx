@@ -4,24 +4,31 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Settings, Users, MessageSquare, Calendar, Plus } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import { Button, Card, CardContent, Badge, Skeleton, ScrollArea } from '@org/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  Badge,
+  Skeleton,
+  ScrollArea,
+} from '@org/ui';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface SpaceInterfaceProps {
   spaceId: string;
 }
 
 export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
+  const { activeProfileId } = useUserSessionStore();
   const {
     data: space,
     isLoading,
     error,
-  } = useQuery(spacesQueries.space(spaceId));
+  } = useQuery(spacesQueries.space(activeProfileId, spaceId));
 
-  const { data: conversations } = useQuery(
-    spacesQueries.spaceConversations(spaceId),
+  const { data: members } = useQuery(
+    spacesQueries.spaceMembers(activeProfileId, spaceId)
   );
-
-  const { data: members } = useQuery(spacesQueries.spaceMembers(spaceId));
 
   if (error) {
     return (
@@ -194,58 +201,6 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
                 View all
               </Link>
             </div>
-
-            {conversations?.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="flex flex-col items-center justify-center space-y-4 text-center">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <MessageSquare className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">No conversations yet</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Start a conversation to get the conversation flowing.
-                    </p>
-                  </div>
-                  <Button asChild>
-                    <Link href="/chats">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Start Conversation
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-3">
-                {conversations?.map((conversation) => (
-                  <Link
-                    key={conversation.id}
-                    href={`/chats/${conversation.id}`}
-                  >
-                    <Card className="hover:bg-accent/50 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium">
-                              {conversation.title}
-                            </h3>
-                            <p className="text-sm text-muted-foreground line-clamp-1">
-                              {conversation.last_message?.content ||
-                                'No messages yet'}
-                            </p>
-                          </div>
-                          <div className="text-right text-sm text-muted-foreground">
-                            {new Date(
-                              conversation.updated_at,
-                            ).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Recent members */}
@@ -311,10 +266,11 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
                           className="capitalize"
                         >
                           <span
-                            className={`inline-block h-2 w-2 rounded-full mr-2 ${member.role?.name === 'admin'
+                            className={`inline-block h-2 w-2 rounded-full mr-2 ${
+                              member.role?.name === 'admin'
                                 ? 'bg-green-500'
                                 : 'bg-blue-500'
-                              }`}
+                            }`}
                           />
                           {member.role?.name || 'member'}
                         </Badge>

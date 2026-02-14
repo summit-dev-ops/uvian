@@ -6,6 +6,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
 import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 
 export interface SpacesListPageActionContextType {
@@ -33,6 +34,7 @@ export function SpacesListPageActionProvider({
   onSuccess,
 }: SpacesListPageActionProviderProps) {
   const queryClient = useQueryClient();
+  const { activeProfileId } = useUserSessionStore();
 
   // Mutation for creating spaces with success/error handling
   const { mutate: createSpace, isPending: isCreating } = useMutation(
@@ -49,10 +51,11 @@ export function SpacesListPageActionProvider({
       try {
         // Use the mutation which includes optimistic updates and navigation
         createSpace({
+          authProfileId: activeProfileId,
           id: crypto.randomUUID(),
           name: data.name,
           description: data.description,
-          is_private: data.isPrivate,
+          isPrivate: data.isPrivate,
         });
       } catch (error) {
         console.error('Failed to create space:', error);
@@ -66,10 +69,10 @@ export function SpacesListPageActionProvider({
   const handleRefreshSpaces = React.useCallback(async () => {
     // Standard React Query approach - invalidate spaces queries
     queryClient.invalidateQueries({
-      queryKey: spacesQueries.spaces().queryKey,
+      queryKey: spacesQueries.spaces(activeProfileId).queryKey,
     });
     queryClient.invalidateQueries({
-      queryKey: spacesQueries.spaceStats().queryKey,
+      queryKey: spacesQueries.spaceStats(activeProfileId).queryKey,
     });
   }, [queryClient]);
 

@@ -2,53 +2,53 @@ export interface Space {
   id: string;
   name: string;
   description?: string;
-  avatar_url?: string;
-  created_by: string;
+  avatarUrl?: string;
+  createdBy: string;
   settings: SpaceSettings;
-  is_private: boolean;
-  created_at: string;
-  updated_at: string;
-  member_count?: number;
-  conversation_count?: number;
-  user_role?: string;
+  isPrivate: boolean;
+  createdAt: string;
+  updatedAt: string;
+  memberCount?: number;
+  conversationCount?: number;
+  userRole?: string;
 }
 
 export interface SpaceMember {
-  space_id: string;
-  profile_id: string;
+  spaceId: string;
+  profileId: string;
   role: SpaceMemberRole;
-  joined_at: string;
+  joinedAt: string;
 }
 
 export interface SpaceMemberRole {
-  name: "admin" | 'member' | 'owner';
+  name: 'admin' | 'member' | 'owner';
 }
 
-export type SpaceSettings = Record<string, any>
+export type SpaceSettings = Record<string, any>;
 
-export interface CreateSpaceRequest {
+export interface CreateSpacePayload {
   id?: string;
   name: string;
   description?: string;
-  avatar_url?: string;
-  settings?: Record<string, any>;
-  is_private?: boolean;
+  avatarUrl?: string;
+  settings?: SpaceSettings;
+  isPrivate?: boolean;
 }
 
-export interface UpdateSpaceRequest {
+export interface UpdateSpacePayload {
   name?: string;
   description?: string;
-  avatar_url?: string;
-  settings?: Record<string, any>;
-  is_private?: boolean;
+  avatarUrl?: string;
+  settings?: SpaceSettings;
+  isPrivate?: boolean;
 }
 
-export interface InviteSpaceMemberRequest {
-  profile_id: string;
+export interface InviteSpaceMemberPayload {
+  profileId: string;
   role?: SpaceMemberRole;
 }
 
-export interface UpdateSpaceMemberRoleRequest {
+export interface UpdateSpaceMemberRolePayload {
   role: SpaceMemberRole;
 }
 
@@ -56,11 +56,97 @@ export interface SpaceWithMembers extends Space {
   members: SpaceMember[];
 }
 
-
 export interface SpaceStats {
-  total_spaces: number;
-  owned_spaces: number;
-  member_spaces: number;
-  total_members: number;
-  total_conversations: number;
+  totalSpaces: number;
+  ownedSpaces: number;
+  memberSpaces: number;
+  totalMembers: number;
+  totalConversations: number;
+}
+
+export interface CreateSpaceRequest {
+  Body: CreateSpacePayload;
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface GetSpacesRequest {
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface GetSpaceStatsRequest {
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface GetSpaceRequest {
+  Params: {
+    spaceId: string;
+  };
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface UpdateSpaceRequest {
+  Params: {
+    spaceId: string;
+  };
+  Body: UpdateSpacePayload;
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface DeleteSpaceRequest {
+  Params: {
+    spaceId: string;
+  };
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface GetSpaceMembersRequest {
+  Params: {
+    spaceId: string;
+  };
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface InviteSpaceMemberRequest {
+  Params: {
+    spaceId: string;
+  };
+  Body: InviteSpaceMemberPayload;
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface RemoveSpaceMemberRequest {
+  Params: {
+    spaceId: string;
+    profileId: string;
+  };
+  Headers: {
+    profileId: string;
+  };
+}
+
+export interface UpdateSpaceMemberRoleRequest {
+  Params: {
+    spaceId: string;
+    profileId: string;
+  };
+  Body: UpdateSpaceMemberRolePayload;
+  Headers: {
+    profileId: string;
+  };
 }

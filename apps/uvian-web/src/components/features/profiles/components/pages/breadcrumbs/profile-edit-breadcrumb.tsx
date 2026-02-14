@@ -11,14 +11,20 @@ import {
   Skeleton,
 } from '@org/ui';
 import { useQuery } from '@tanstack/react-query';
-import { userQueries } from '~/lib/domains/user/api';
+import { profileQueries } from '~/lib/domains/profile/api/queries';
 
 /**
  * Simple breadcrumb for profile edit page
  * Shows: Home > Profile > Edit
  */
-export function ProfileEditPageBreadcrumb({profileId} :{profileId?:string}) {
-  const {data, isLoading} = useQuery(userQueries.profile(profileId))
+export function ProfileEditPageBreadcrumb({
+  profileId,
+}: {
+  profileId?: string;
+}) {
+  const { data: profile, isLoading } = useQuery(
+    profileQueries.profile(profileId)
+  );
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -27,12 +33,15 @@ export function ProfileEditPageBreadcrumb({profileId} :{profileId?:string}) {
             <Link href="/">Home</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        <BreadcrumbSeparator /><BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
           <BreadcrumbPage>
             {isLoading ? (
               <Skeleton className="h-4 w-24" />
             ) : (
-              <Link href={`/profiles/${data?.profileId}`}>{data?.displayName || 'Profile'}</Link>
+              <Link href={`/profiles/${profile?.profileId}`}>
+                {profile?.displayName || 'Profile'}
+              </Link>
             )}
           </BreadcrumbPage>
         </BreadcrumbItem>

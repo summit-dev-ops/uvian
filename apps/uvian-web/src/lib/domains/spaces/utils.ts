@@ -5,47 +5,8 @@
  */
 
 import { QueryClient } from '@tanstack/react-query';
-import type { SpaceAPI, SpaceUI, SpaceMemberAPI, SpaceMemberUI } from './types';
+import type { SpaceUI, SpaceMemberUI } from './types';
 import { spacesKeys } from './api/keys';
-
-// ============================================================================
-// Transformers (API → UI)
-// ============================================================================
-
-export function spaceApiToUi(raw: SpaceAPI): SpaceUI {
-  return {
-    id: raw.id,
-    name: raw.name,
-    description: raw.description,
-    avatarUrl: raw.avatar_url,
-    createdBy: raw.created_by,
-    settings: raw.settings,
-    isPrivate: raw.is_private,
-    createdAt: new Date(raw.created_at),
-    updatedAt: new Date(raw.updated_at),
-    memberCount: raw.member_count,
-    conversationCount: raw.conversation_count,
-    userRole: raw.user_role,
-    syncStatus: 'synced',
-  };
-}
-
-export function spaceMemberApiToUi(raw: SpaceMemberAPI): SpaceMemberUI {
-  return {
-    spaceId: raw.space_id,
-    profileId: raw.profile_id,
-    role: raw.role,
-    joinedAt: new Date(raw.joined_at),
-    profile: raw.profile
-      ? {
-          id: raw.profile.id,
-          displayName: raw.profile.display_name,
-          avatarUrl: raw.profile.avatar_url,
-          type: raw.profile.type,
-        }
-      : undefined,
-  };
-}
 
 // ============================================================================
 // Cache Update Utilities
@@ -56,22 +17,26 @@ export function spaceMemberApiToUi(raw: SpaceMemberAPI): SpaceMemberUI {
  */
 export function addSpaceToCache(
   queryClient: QueryClient,
+  authProfileId: string,
   space: SpaceUI
 ): void {
-  queryClient.setQueryData<SpaceUI[]>(spacesKeys.list(), (oldSpaces) => {
-    if (!oldSpaces) return [space];
+  queryClient.setQueryData<SpaceUI[]>(
+    spacesKeys.list(authProfileId),
+    (oldSpaces) => {
+      if (!oldSpaces) return [space];
 
-    // Check if space already exists
-    const existingIndex = oldSpaces.findIndex((s) => s.id === space.id);
+      // Check if space already exists
+      const existingIndex = oldSpaces.findIndex((s) => s.id === space.id);
 
-    if (existingIndex !== -1) {
-      // Update existing space
-      return oldSpaces.map((s, idx) => (idx === existingIndex ? space : s));
+      if (existingIndex !== -1) {
+        // Update existing space
+        return oldSpaces.map((s, idx) => (idx === existingIndex ? space : s));
+      }
+
+      // Add new space to the beginning
+      return [space, ...oldSpaces];
     }
-
-    // Add new space to the beginning
-    return [space, ...oldSpaces];
-  });
+  );
 }
 
 /**
@@ -79,22 +44,26 @@ export function addSpaceToCache(
  */
 export function updateSpaceInCache(
   queryClient: QueryClient,
+  authProfileId: string,
   updatedSpace: SpaceUI
 ): void {
   // Update specific space detail cache
   queryClient.setQueryData<SpaceUI>(
-    spacesKeys.detail(updatedSpace.id),
+    spacesKeys.detail(authProfileId, updatedSpace.id),
     updatedSpace
   );
 
   // Update in spaces list cache
-  queryClient.setQueryData<SpaceUI[]>(spacesKeys.list(), (oldSpaces) => {
-    if (!oldSpaces) return [updatedSpace];
+  queryClient.setQueryData<SpaceUI[]>(
+    spacesKeys.list(authProfileId),
+    (oldSpaces) => {
+      if (!oldSpaces) return [updatedSpace];
 
-    return oldSpaces.map((space) =>
-      space.id === updatedSpace.id ? updatedSpace : space
-    );
-  });
+      return oldSpaces.map((space) =>
+        space.id === updatedSpace.id ? updatedSpace : space
+      );
+    }
+  );
 }
 
 /**
@@ -102,23 +71,24 @@ export function updateSpaceInCache(
  */
 export function removeSpaceFromCache(
   queryClient: QueryClient,
+  authProfileId: string,
   spaceId: string
 ): void {
   // Remove from spaces list cache
   queryClient.setQueryData<SpaceUI[]>(
-    spacesKeys.list(),
+    spacesKeys.list(authProfileId),
     (oldSpaces) => oldSpaces?.filter((space) => space.id !== spaceId) || []
   );
 
   // Remove specific space cache
   queryClient.removeQueries({
-    queryKey: spacesKeys.detail(spaceId),
+    queryKey: spacesKeys.detail(authProfileId, spaceId),
   });
   queryClient.removeQueries({
-    queryKey: spacesKeys.members(spaceId),
+    queryKey: spacesKeys.members(authProfileId, spaceId),
   });
   queryClient.removeQueries({
-    queryKey: spacesKeys.conversations(spaceId),
+    queryKey: spacesKeys.conversations(authProfileId, spaceId),
   });
 }
 
@@ -127,11 +97,12 @@ export function removeSpaceFromCache(
  */
 export function updateMemberInCache(
   queryClient: QueryClient,
+  authProfileId: string,
   spaceId: string,
   updatedMember: SpaceMemberUI
 ): void {
   queryClient.setQueryData<SpaceMemberUI[]>(
-    spacesKeys.members(spaceId),
+    spacesKeys.members(authProfileId, spaceId),
     (oldMembers) => {
       if (!oldMembers) return [updatedMember];
 
@@ -147,11 +118,12 @@ export function updateMemberInCache(
  */
 export function removeMemberFromCache(
   queryClient: QueryClient,
+  authProfileId: string,
   spaceId: string,
   profileId: string
 ): void {
   queryClient.setQueryData<SpaceMemberUI[]>(
-    spacesKeys.members(spaceId),
+    spacesKeys.members(authProfileId, spaceId),
     (oldMembers) =>
       oldMembers?.filter((member) => member.profileId !== profileId) || []
   );
@@ -162,11 +134,12 @@ export function removeMemberFromCache(
  */
 export function addMemberToCache(
   queryClient: QueryClient,
+  authProfileId: string,
   spaceId: string,
   newMember: SpaceMemberUI
 ): void {
   queryClient.setQueryData<SpaceMemberUI[]>(
-    spacesKeys.members(spaceId),
+    spacesKeys.members(authProfileId, spaceId),
     (oldMembers) => {
       if (!oldMembers) return [newMember];
 
@@ -193,9 +166,10 @@ export function addMemberToCache(
  */
 export function updateSpaceStatsCache(
   queryClient: QueryClient,
+  authProfileId: string,
   stats: any
 ): void {
-  queryClient.setQueryData(spacesKeys.stats(), stats);
+  queryClient.setQueryData(spacesKeys.stats(authProfileId), stats);
 }
 
 // ============================================================================
@@ -203,8 +177,6 @@ export function updateSpaceStatsCache(
 // ============================================================================
 
 export const spacesUtils = {
-  spaceApiToUi,
-  spaceMemberApiToUi,
   addSpaceToCache,
   updateSpaceInCache,
   removeSpaceFromCache,

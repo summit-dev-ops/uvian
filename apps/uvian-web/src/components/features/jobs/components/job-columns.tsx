@@ -274,7 +274,7 @@ export function createJobColumns(
         );
       },
       cell: ({ row }) => {
-        const date = row.getValue('createdAt') as Date;
+        const date = new Date(row.getValue('createdAt'));
         return (
           <div className="text-sm">
             <div>{date.toLocaleDateString()}</div>

@@ -9,7 +9,7 @@ import { useConversationPreviews } from '~/components/features/chat/hooks/use-co
 
 import type { PreviewData } from '~/lib/domains/chat/types';
 import { ScrollArea } from '@org/ui';
-import { userQueries } from '~/lib/domains/user/api';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface ConversationWithPreview {
   id: string;
@@ -23,14 +23,14 @@ interface ConversationWithPreview {
 
 export function ConversationsListInterface() {
   const queryClient = useQueryClient();
-  const { data: profile } = useQuery(userQueries.profile());
+  const { activeProfileId } = useUserSessionStore();
 
   // Fetch conversations
   const {
     data: conversations,
     isLoading,
     error,
-  } = useQuery(chatQueries.conversations());
+  } = useQuery(chatQueries.conversations(activeProfileId));
 
   // Fetch latest message previews using useQueries
   const { previews } = useConversationPreviews(conversations || []);
@@ -58,12 +58,12 @@ export function ConversationsListInterface() {
 
   const handleStartChatting = () => {
     const title = prompt('Enter conversation title:')?.trim();
-    if (!title || !profile?.profileId) return;
+    if (!title || !activeProfileId) return;
 
     createConversation({
       id: crypto.randomUUID(),
       title,
-      profileId: profile.profileId,
+      authProfileId: activeProfileId,
     });
   };
 

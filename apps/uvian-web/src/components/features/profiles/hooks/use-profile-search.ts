@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { userQueries } from '~/lib/domains/user/api/queries';
-import type { UserSearchParams } from '~/lib/domains/user/types';
+import { profileQueries } from '~/lib/domains/profile/api/queries';
+import type { ProfileSearchParams } from '~/lib/domains/profile/types';
 
-export function useUserSearch(params: UserSearchParams = {}) {
+export function useProfileSearch(params: ProfileSearchParams = {}) {
   const query = useQuery({
-    ...userQueries.searchProfiles(params),
+    ...profileQueries.searchProfiles(params),
     enabled: Boolean(params.query?.trim()),
   });
   return {

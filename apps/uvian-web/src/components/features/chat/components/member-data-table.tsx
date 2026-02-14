@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@org/ui';
-import { ConversationMemberUI } from '~/lib/domains/chat/types';
+import { ConversationMemberRole, ConversationMemberUI } from '~/lib/domains/chat/types';
 import { useActionManager } from '~/components/shared/actions/hooks/use-action-manager';
 import { createTableSelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionToolbar } from '~/components/shared/actions/ui/action-toolbar';
@@ -36,7 +36,7 @@ interface MemberDataTableProps {
   data: ConversationMemberUI[];
   isAdmin: boolean;
   onRemove: (profileId: string) => void;
-  onUpdateRole: (profileId: string, role: string) => void;
+  onUpdateRole: (profileId: string, role: ConversationMemberRole["name"]) => void;
 }
 
 export function MemberDataTable({
@@ -203,7 +203,7 @@ export function MemberDataTable({
       accessorKey: 'createdAt',
       header: 'Joined',
       cell: ({ row }) => {
-        const date = row.getValue('createdAt') as Date;
+        const date = new Date(row.getValue('createdAt'))
         return <div>{date.toLocaleDateString()}</div>;
       },
     },

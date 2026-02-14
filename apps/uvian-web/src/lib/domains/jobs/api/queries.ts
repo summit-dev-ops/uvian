@@ -9,7 +9,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { jobKeys } from './keys';
 import { jobUtils } from '../utils';
-import type { JobAPI, JobListResponseAPI, JobFilters } from '../types';
+import type { JobFilters, JobListResponseUI, JobUI } from '../types';
 
 // ============================================================================
 // Query Options
@@ -19,11 +19,11 @@ export const jobQueries = {
   /**
    * Fetch jobs with filtering and pagination.
    */
-  list: (filters: JobFilters = {}) =>
+  list: (filters: JobFilters) =>
     queryOptions({
-      queryKey: jobKeys.list(filters),
+      queryKey: jobKeys.list(filters.authProfileId, filters),
       queryFn: async () => {
-        const { data } = await apiClient.get<JobListResponseAPI>('/api/jobs', {
+        const { data } = await apiClient.get<JobListResponseUI>('/api/jobs', {
           params: {
             status: filters.status,
             type: filters.type,
@@ -32,13 +32,12 @@ export const jobQueries = {
             page: filters.page || 1,
             limit: filters.limit || 20,
           },
+          headers: { 'x-profile-id': filters.authProfileId },
         });
 
-        return {
-          ...data,
-          jobs: data.jobs.map(jobUtils.jobApiToUi),
-        };
+        return data;
       },
+      enabled: !!filters.authProfileId,
       staleTime: 1000 * 30, // 30 seconds
       refetchOnWindowFocus: true,
     }),
@@ -46,66 +45,75 @@ export const jobQueries = {
   /**
    * Fetch a single job by ID.
    */
-  detail: (id: string) =>
+  detail: (authProfileId: string | undefined, jobId: string) =>
     queryOptions({
-      queryKey: jobKeys.detail(id),
+      queryKey: jobKeys.detail(authProfileId, jobId),
       queryFn: async () => {
-        const { data } = await apiClient.get<JobAPI>(`/api/jobs/${id}`);
-        return jobUtils.jobApiToUi(data);
+        const { data } = await apiClient.get<JobUI>(`/api/jobs/${jobId}`, {
+          headers: { 'x-profile-id': authProfileId },
+        });
+        return data;
       },
+      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 2, // 2 minutes
     }),
 
   /**
    * Fetch jobs by status.
    */
-  byStatus: (status: string) =>
+  byStatus: (authProfileId: string | undefined, status: string) =>
     queryOptions({
-      queryKey: jobKeys.byStatus(status),
+      queryKey: jobKeys.byStatus(authProfileId, status),
       queryFn: async () => {
-        const { data } = await apiClient.get<JobListResponseAPI>('/api/jobs', {
+        const { data } = await apiClient.get<JobListResponseUI>('/api/jobs', {
           params: { status },
+          headers: { 'x-profile-id': authProfileId },
         });
-        return {
-          ...data,
-          jobs: data.jobs.map(jobUtils.jobApiToUi),
-        };
+        return data;
       },
+      enabled: !!authProfileId,
       staleTime: 1000 * 30, // 30 seconds
     }),
 
   /**
    * Fetch jobs by type.
    */
-  byType: (type: string) =>
+  byType: (authProfileId: string | undefined, type: string) =>
     queryOptions({
-      queryKey: jobKeys.byType(type),
+      queryKey: jobKeys.byType(authProfileId, type),
       queryFn: async () => {
-        const { data } = await apiClient.get<JobListResponseAPI>('/api/jobs', {
+        const { data } = await apiClient.get<JobListResponseUI>('/api/jobs', {
           params: { type },
+          headers: { 'x-profile-id': authProfileId },
         });
-        return {
-          ...data,
-          jobs: data.jobs.map(jobUtils.jobApiToUi),
-        };
+        return data;
       },
+      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 2, // 2 minutes
     }),
 
   /**
    * Fetch job metrics.
    */
-  metrics: (dateFrom?: string, dateTo?: string) =>
+  metrics: (
+    authProfileId: string | undefined,
+    dateFrom?: string,
+    dateTo?: string
+  ) =>
     queryOptions({
-      queryKey: jobKeys.metricsByDate(dateFrom, dateTo),
+      queryKey: jobKeys.metricsByDate(authProfileId, dateFrom, dateTo),
       queryFn: async () => {
         const params: any = {};
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
 
-        const { data } = await apiClient.get('/api/jobs/metrics', { params });
+        const { data } = await apiClient.get('/api/jobs/metrics', {
+          params,
+          headers: { 'x-profile-id': authProfileId },
+        });
         return data;
       },
+      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 };

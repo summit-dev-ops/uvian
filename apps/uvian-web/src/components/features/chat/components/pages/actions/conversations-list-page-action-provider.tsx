@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
-import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
-import { userQueries } from '~/lib/domains/user/api/queries';
 import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
+
 
 
 export interface ConversationsListPageActionContextType {
@@ -32,7 +33,7 @@ export function ConversationsListPageActionProvider({
   onSuccess,
 }: ConversationsListPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const { data: profile } = useQuery(userQueries.profile());
+  const {activeProfileId} = useUserSessionStore()
 
   // Mutation for creating conversations with success/error handling
   const { mutate: createConversation, isPending: isCreating } = useMutation(
@@ -42,16 +43,12 @@ export function ConversationsListPageActionProvider({
   // Handler for creating a new conversation - called by the modal
   const handleConversationCreation = React.useCallback(
     async (title: string) => {
-      if (!profile?.profileId) {
-        throw new Error('Profile not found');
-      }
-
       try {
         // Use the mutation which includes optimistic updates and navigation
         const newConversation = await createConversation({
           id: crypto.randomUUID(),
           title,
-          profileId: profile.profileId,
+          authProfileId: activeProfileId,
         });
 
         // Return the new conversation data for navigation
@@ -61,16 +58,16 @@ export function ConversationsListPageActionProvider({
         throw error;
       }
     },
-    [profile?.profileId, createConversation]
+    [activeProfileId, createConversation]
   );
 
   // Handler for refresh action
   const handleRefreshConversations = React.useCallback(async () => {
     // Standard React Query approach - invalidate conversations query
     queryClient.invalidateQueries({
-      queryKey: chatQueries.conversations().queryKey,
+      queryKey: chatQueries.conversations(activeProfileId).queryKey,
     });
-  }, [queryClient]);
+  }, [queryClient, activeProfileId]);
 
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [

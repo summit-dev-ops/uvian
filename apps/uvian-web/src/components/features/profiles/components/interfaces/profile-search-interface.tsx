@@ -8,22 +8,19 @@
  */
 
 import * as React from 'react';
-import { UserSearchResults as UserSearchResultsComponent } from './user-search-results';
-import { useUserSearch } from '../../hooks/use-user-search';
+import { ProfileSearchResults as ProfileSearchResultsComponent } from './profile-search-results';
+import { useProfileSearch } from '../../hooks/use-profile-search';
 import type {
-  UserSearchParams,
+  ProfileSearchParams,
   ProfileUI,
-  UserSearchResults,
-} from '~/lib/domains/user/types';
+  ProfileSearchResults,
+} from '~/lib/domains/profile/types';
 import useDebounce from '~/components/shared/hooks/use-debounce';
-import { Button, InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput
-} from '@org/ui';
-import { SearchIcon, X } from 'lucide-react';
+import { Button } from '@org/ui';
 
-
-export interface UserSearchInterfaceProps {
+export interface ProfileSearchInterfaceProps {
   // Initial search parameters
-  initialParams?: UserSearchParams;
+  initialParams?: ProfileSearchParams;
 
   // UI configuration
   showTypeFilter?: boolean;
@@ -32,8 +29,8 @@ export interface UserSearchInterfaceProps {
 
   // Callbacks
   onProfileSelect?: (profile: ProfileUI) => void;
-  onSearchStart?: (params: UserSearchParams) => void;
-  onSearchComplete?: (results: UserSearchResults) => void;
+  onSearchStart?: (params: ProfileSearchParams) => void;
+  onSearchComplete?: (results: ProfileSearchResults) => void;
 
   // Styling
   className?: string;
@@ -41,50 +38,45 @@ export interface UserSearchInterfaceProps {
   resultsClassName?: string;
 }
 
-export function UserSearchInterface({
+export function ProfileSearchInterface({
   showTypeFilter = false,
   onProfileSelect,
   className,
   searchFieldClassName,
   resultsClassName,
-}: UserSearchInterfaceProps) {
+}: ProfileSearchInterfaceProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedType, setSelectedType] = React.useState<
     'human' | 'agent' | 'all'
   >('all');
 
-  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const searchParams = React.useMemo((): UserSearchParams => {
+  const searchParams = React.useMemo((): ProfileSearchParams => {
     return {
       query: debouncedSearchQuery,
-      type: selectedType === 'all' ? ["agent", "human"] : [selectedType]
-    }
-  }, [debouncedSearchQuery, selectedType])
+      type: selectedType === 'all' ? ['agent', 'human'] : [selectedType],
+    };
+  }, [debouncedSearchQuery, selectedType]);
 
-  const { data, isLoading, error, isSearching } = useUserSearch(searchParams)
+  const { data, isLoading, error, isSearching } = useProfileSearch(searchParams);
 
   return (
     <div className={`no-scrollbar space-y-6 h-[50vh] ${className || ''}`}>
       <div className={searchFieldClassName}>
-        
+        <input
+          type="text"
+          placeholder="Search profiles..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md"
+        />
       </div>
       {showTypeFilter && (
         <div className="flex gap-2">
-          <Button
-            onClick={() => setSelectedType('all')}
-          >
-            All Types
-          </Button>
-          <Button
-            onClick={() => setSelectedType('human')}
-          >
-            Humans
-          </Button>
-          <Button
-            onClick={() => setSelectedType('agent')}>
-            Agent
-          </Button>
+          <Button onClick={() => setSelectedType('all')}>All Types</Button>
+          <Button onClick={() => setSelectedType('human')}>Humans</Button>
+          <Button onClick={() => setSelectedType('agent')}>Agent</Button>
         </div>
       )}
       <div className="no-scrollbar -mx-4 overflow-y-auto px-4">
@@ -108,7 +100,7 @@ export function UserSearchInterface({
 
         {/* Results */}
         {data && searchQuery && (
-          <UserSearchResultsComponent
+          <ProfileSearchResultsComponent
             data={data}
             isLoading={isLoading}
             isLoadingMore={isSearching}
@@ -118,7 +110,7 @@ export function UserSearchInterface({
         )}
         {/* Results */}
         {data && searchQuery && (
-          <UserSearchResultsComponent
+          <ProfileSearchResultsComponent
             data={data}
             isLoading={isLoading}
             isLoadingMore={isSearching}

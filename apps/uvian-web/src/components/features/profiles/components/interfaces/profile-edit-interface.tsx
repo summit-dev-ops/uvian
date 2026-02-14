@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { ProfileEditor } from '../profile-editor';
 import { Button, ScrollArea } from '@org/ui';
 import { useQuery } from '@tanstack/react-query';
-import { userQueries } from '~/lib/domains/user/api';
+import { profileQueries } from '~/lib/domains/profile/api';
 
 export function ProfileEditInterface({profileId}: {profileId?:string}) {
   const router = useRouter();
-  const { isLoading: isLoadingProfile, error: profileError } = useQuery(userQueries.profile(profileId));
+  const { isLoading: isLoadingProfile, error: profileError } = useQuery(profileQueries.profile(profileId));
 
 
   // Handle navigation back to profile page

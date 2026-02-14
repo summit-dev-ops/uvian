@@ -17,7 +17,7 @@ declare module 'fastify' {
     supabase: typeof supabase;
     chatService: typeof chatService;
     spacesService: typeof spacesService;
-    authenticate: (request: any, reply: any) => Promise<void>;
-    authenticateOptional: (request: any, reply: any) => Promise<void>;
+    authenticate: (request, reply) => Promise<void>;
+    authenticateOptional: (request, reply) => Promise<void>;
   }
 }

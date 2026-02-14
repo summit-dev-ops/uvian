@@ -12,13 +12,15 @@ import {
   BreadcrumbSeparator,
   Skeleton,
 } from '@org/ui';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 /**
  * Breadcrumb for job detail page
  * Shows: Home > Jobs > [Job ID]
  */
 export function JobDetailPageBreadcrumb({ jobId }: { jobId: string }) {
-  const { isLoading } = useQuery(jobQueries.detail(jobId));
+  const {activeProfileId} = useUserSessionStore()
+  const { isLoading } = useQuery(jobQueries.detail(activeProfileId, jobId));
 
   return (
     <Breadcrumb>

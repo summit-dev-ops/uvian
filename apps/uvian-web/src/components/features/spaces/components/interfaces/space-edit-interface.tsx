@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { act } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
@@ -17,6 +17,7 @@ import {
   ScrollArea,
 } from '@org/ui';
 import { SpaceEditor } from '../space-editor';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface SpaceEditInterfaceProps {
   spaceId: string;
@@ -25,13 +26,14 @@ interface SpaceEditInterfaceProps {
 export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { activeProfileId } = useUserSessionStore();
 
   // Fetch space data
   const {
     data: space,
     isLoading,
     error,
-  } = useQuery(spacesQueries.space(spaceId));
+  } = useQuery(spacesQueries.space(activeProfileId, spaceId));
 
   // Mutations
   const { mutate: updateSpace, isPending: isUpdating } = useMutation(
@@ -50,12 +52,15 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
     description?: string;
     isPrivate: boolean;
   }) => {
-    updateSpace({
-      id: spaceId,
-      name: data.name.trim(),
-      description: data.description?.trim() || undefined,
-      is_private: data.isPrivate,
-    });
+    if (activeProfileId) {
+      updateSpace({
+        authProfileId: activeProfileId,
+        id: spaceId,
+        name: data.name.trim(),
+        description: data.description?.trim() || undefined,
+        isPrivate: data.isPrivate,
+      });
+    }
   };
 
   const handleDelete = () => {
@@ -64,7 +69,10 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
         'Are you sure you want to delete this space? This action cannot be undone.'
       )
     ) {
-      deleteSpace({ spaceId });
+      if (activeProfileId) {
+        deleteSpace({ authProfileId: activeProfileId, spaceId });
+      }
+
       router.push('/spaces');
     }
   };
@@ -131,7 +139,7 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
       </div>
 
       <SpaceEditor
-        className='p-2'
+        className="p-2"
         data={{
           name: space?.name || '',
           description: space?.description || '',

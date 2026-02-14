@@ -1,15 +1,21 @@
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { queueService } from '../services/queue.service';
 import { jobService } from '../services/job.service';
 import { userService } from '../services/user.service';
-import { JobFilters, PaginationOptions } from '../types/job.types';
+import {
+  CancelJobRequest,
+  CreateJobRequest,
+  DeleteJobRequest,
+  GetJobRequest,
+  GetJobsRequest,
+  JobFilters,
+  PaginationOptions,
+  RetryJobRequest,
+} from '../types/job.types';
 
-export default async function (
-  fastify: FastifyInstance,
-  opts: FastifyPluginOptions
-) {
-  // Submit new job
-  fastify.post('/api/jobs', {
+export default async function (fastify: FastifyInstance) {
+  fastify.post<CreateJobRequest>('/api/jobs', {
+    preHandler: [fastify.authenticate],
     schema: {
       body: {
         type: 'object',
@@ -55,7 +61,8 @@ export default async function (
   });
 
   // List jobs with filtering and pagination
-  fastify.get('/api/jobs', {
+  fastify.get<GetJobsRequest>('/api/jobs', {
+    preHandler: [fastify.authenticate],
     schema: {
       querystring: {
         type: 'object',
@@ -129,7 +136,8 @@ export default async function (
   });
 
   // Get job details
-  fastify.get('/api/jobs/:id', {
+  fastify.get<GetJobRequest>('/api/jobs/:id', {
+    preHandler: [fastify.authenticate],
     schema: {
       params: {
         type: 'object',
@@ -180,7 +188,8 @@ export default async function (
   });
 
   // Cancel job
-  fastify.patch('/api/jobs/:id/cancel', {
+  fastify.patch<CancelJobRequest>('/api/jobs/:id/cancel', {
+    preHandler: [fastify.authenticate],
     schema: {
       params: {
         type: 'object',
@@ -236,7 +245,8 @@ export default async function (
   });
 
   // Retry job
-  fastify.patch('/api/jobs/:id/retry', {
+  fastify.patch<RetryJobRequest>('/api/jobs/:id/retry', {
+    preHandler: [fastify.authenticate],
     schema: {
       params: {
         type: 'object',
@@ -300,7 +310,8 @@ export default async function (
   });
 
   // Delete job
-  fastify.delete('/api/jobs/:id', {
+  fastify.delete<DeleteJobRequest>('/api/jobs/:id', {
+    preHandler: [fastify.authenticate],
     schema: {
       params: {
         type: 'object',

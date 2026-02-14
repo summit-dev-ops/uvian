@@ -46,6 +46,7 @@ import {
   canDeleteJob,
 } from '~/lib/domains/jobs/utils';
 import type { JobUI, JobStatus } from '~/lib/domains/jobs/types';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 // ============================================================================
 // Status Display Component
@@ -78,7 +79,6 @@ function JobStatusBadge({ status }: { status: JobStatus }) {
 
 function JobDuration({ job }: { job: JobUI }) {
   const [now, setNow] = React.useState(Date.now());
-
   React.useEffect(() => {
     if (job.status === 'processing') {
       const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -88,9 +88,8 @@ function JobDuration({ job }: { job: JobUI }) {
   }, [job.status]);
 
   const duration = React.useMemo(() => {
-    const created = job.createdAt.getTime();
-    const endTime =
-      job.completedAt?.getTime() || (job.status === 'processing' ? now : null);
+    const created = new Date(job.createdAt).getTime();
+    const endTime = job?.completedAt && new Date(job?.completedAt).getTime()
     return endTime ? endTime - created : null;
   }, [job.createdAt, job.completedAt, job.status, now]);
 
@@ -168,7 +167,8 @@ interface JobDetailViewProps {
 }
 
 export function JobInterface({ jobId }: JobDetailViewProps) {
-  const { data: job, isLoading, error } = useQuery(jobQueries.detail(jobId));
+  const {activeProfileId} = useUserSessionStore()
+  const { data: job, isLoading, error } = useQuery(jobQueries.detail(activeProfileId,jobId));
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -179,9 +179,9 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
 
   // Action handlers
   const handleBack = () => router.push('/jobs');
-  const handleCancel = () => cancelJobMutation.mutate({ jobId });
-  const handleRetry = () => retryJobMutation.mutate({ jobId });
-  const handleDelete = () => deleteJobMutation.mutate({ jobId });
+  const handleCancel = () => cancelJobMutation.mutate({ authProfileId: activeProfileId, jobId });
+  const handleRetry = () => retryJobMutation.mutate({authProfileId: activeProfileId, jobId });
+  const handleDelete = () => deleteJobMutation.mutate({ authProfileId: activeProfileId,jobId });
 
   // Loading state
   if (isLoading) {

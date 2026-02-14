@@ -6,54 +6,9 @@
 
 import { QueryClient } from '@tanstack/react-query';
 import type {
-  MessageAPI,
   MessageUI,
-  ConversationAPI,
-  ConversationUI,
-  ConversationMemberAPI,
-  ConversationMemberUI,
 } from './types';
 import { chatKeys } from './api/keys';
-
-// ============================================================================
-// Transformers (API → UI)
-// ============================================================================
-
-export function messageApiToUi(raw: MessageAPI): MessageUI {
-  return {
-    id: raw.id,
-    conversationId: raw.conversation_id,
-    content: raw.content,
-    role: raw.role,
-    createdAt: new Date(raw.created_at),
-    syncStatus: 'synced',
-    isStreaming: false,
-    tokens: [],
-    senderId: raw.sender_id,
-  };
-}
-
-export function conversationApiToUi(raw: ConversationAPI): ConversationUI {
-  return {
-    id: raw.id,
-    title: raw.title,
-    createdAt: new Date(raw.created_at),
-    updatedAt: new Date(raw.updated_at),
-    syncStatus: 'synced',
-  };
-}
-
-export function conversationMemberApiToUi(
-  raw: ConversationMemberAPI
-): ConversationMemberUI {
-  return {
-    profileId: raw.profile_id,
-    conversationId: raw.conversation_id,
-    role: raw.role,
-    createdAt: new Date(raw.created_at),
-    syncStatus: 'synced',
-  };
-}
 
 // ============================================================================
 // Cache Update Utilities
@@ -64,12 +19,13 @@ export function conversationMemberApiToUi(
  */
 export function appendTokenToCache(
   queryClient: QueryClient,
+  profileId:string,
   conversationId: string,
   messageId: string,
   token: string
 ): void {
   queryClient.setQueryData<MessageUI[]>(
-    chatKeys.messages(conversationId),
+    chatKeys.messages(profileId, conversationId),
     (oldMessages) => {
       if (!oldMessages) return oldMessages;
 
@@ -94,11 +50,12 @@ export function appendTokenToCache(
  */
 export function finalizeStreamingMessage(
   queryClient: QueryClient,
+  profileId: string,
   conversationId: string,
   messageId: string
 ): void {
   queryClient.setQueryData<MessageUI[]>(
-    chatKeys.messages(conversationId),
+    chatKeys.messages(profileId, conversationId),
     (oldMessages) => {
       if (!oldMessages) return oldMessages;
 
@@ -121,12 +78,13 @@ export function finalizeStreamingMessage(
  */
 export function addMessageToCache(
   queryClient: QueryClient,
+  profileId:string,
   conversationId: string,
   message: MessageUI,
   isDelta = false
 ): void {
   queryClient.setQueryData<MessageUI[]>(
-    chatKeys.messages(conversationId),
+    chatKeys.messages(profileId, conversationId),
     (oldMessages) => {
       if (!oldMessages) return [message];
 
@@ -164,9 +122,6 @@ export function addMessageToCache(
 // ============================================================================
 
 export const chatUtils = {
-  messageApiToUi,
-  conversationApiToUi,
-  conversationMemberApiToUi,
   appendTokenToCache,
   finalizeStreamingMessage,
   addMessageToCache,

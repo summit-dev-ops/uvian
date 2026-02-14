@@ -4,6 +4,7 @@ import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { jobQueries } from '~/lib/domains/jobs/api/queries';
 import type { JobFilters } from '~/lib/domains/jobs/types';
+import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface UseJobCreationReturn {
   // Modal state
@@ -29,6 +30,7 @@ export function useJobCreation({
   filters,
   onCreated,
 }: UseJobCreationProps): UseJobCreationReturn {
+  const {activeProfileId} = useUserSessionStore()
   const queryClient = useQueryClient();
 
   // Modal state
@@ -48,7 +50,7 @@ export function useJobCreation({
   const handleSuccess = React.useCallback(() => {
     // Invalidate job queries to refresh data
     queryClient.invalidateQueries({
-      queryKey: jobQueries.list(filters).queryKey,
+      queryKey: jobQueries.list({authProfileId: activeProfileId, ...filters}).queryKey,
     });
     queryClient.invalidateQueries({ queryKey: ['jobs'] });
 
@@ -57,7 +59,7 @@ export function useJobCreation({
 
     // Close modal
     closeModal();
-  }, [queryClient, filters, onCreated, closeModal]);
+  }, [queryClient,activeProfileId, filters, onCreated, closeModal]);
 
   return {
     // Modal state

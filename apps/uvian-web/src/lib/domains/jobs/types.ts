@@ -5,38 +5,15 @@
  * All job IDs are UUIDs (v4).
  */
 
-// ============================================================================
-// API Types (Raw data from REST endpoints)
-// ============================================================================
-
-export type JobAPI = {
-  id: string; // UUID
-  type: string; // Job type (chat, task, etc.)
-  status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
-  input: Record<string, any>; // Job input data
-  output: Record<string, any> | null; // Job output data
-  error_message: string | null; // Error message if job failed
-  created_at: string; // ISO 8601
-  updated_at: string; // ISO 8601
-  started_at: string | null; // ISO 8601 - when job started processing
-  completed_at: string | null; // ISO 8601 - when job completed/failed
-};
-
-export type JobListResponseAPI = {
-  jobs: JobAPI[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-};
-
 export type CreateJobPayload = {
+  authProfileId: string | undefined
   type: string;
   input: Record<string, any>;
 };
 
 export type JobFilters = {
-  status?: JobAPI['status'];
+  authProfileId: string | undefined
+  status?: JobStatus;
   type?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -76,10 +53,10 @@ export type JobUI = {
   input: Record<string, any>;
   output: Record<string, any> | null;
   errorMessage: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  startedAt: Date | null;
-  completedAt: Date | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
   duration?: number; // Calculated duration in milliseconds
   syncStatus: DataSyncStatus;
 };
@@ -95,8 +72,8 @@ export type JobListResponseUI = {
 export type JobFiltersUI = {
   status?: JobStatus;
   type?: string;
-  dateFrom?: Date | null;
-  dateTo?: Date | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
   page?: number;
   limit?: number;
 };

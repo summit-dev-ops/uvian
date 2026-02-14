@@ -8,13 +8,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { spacesKeys } from './keys';
-import { spacesUtils } from '../utils';
-import type {
-  SpaceAPI,
-  SpaceMemberAPI,
-  SpaceStats,
-  SpaceConversation,
-} from '../types';
+import type { SpaceMemberUI, SpaceStats, SpaceUI } from '../types';
 
 // ============================================================================
 // Query Options
@@ -24,71 +18,66 @@ export const spacesQueries = {
   /**
    * Fetch all spaces the user has access to.
    */
-  spaces: () =>
+  spaces: (authProfileId: string | undefined) =>
     queryOptions({
-      queryKey: spacesKeys.list(),
+      queryKey: spacesKeys.list(authProfileId),
       queryFn: async () => {
-        const { data: spaces } = await apiClient.get<SpaceAPI[]>('/api/spaces');
-        return spaces.map(spacesUtils.spaceApiToUi);
+        const { data } = await apiClient.get<SpaceUI[]>('/api/spaces', {
+          headers: { "x-profile-id": authProfileId },
+        });
+        return data;
       },
+      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 
   /**
    * Fetch a single space by ID.
    */
-  space: (spaceId: string) =>
+  space: (authProfileId: string | undefined, spaceId?: string) =>
     queryOptions({
-      queryKey: spacesKeys.detail(spaceId),
+      queryKey: spacesKeys.detail(authProfileId, spaceId),
       queryFn: async () => {
-        const { data } = await apiClient.get<SpaceAPI>(
-          `/api/spaces/${spaceId}`
+        const { data } = await apiClient.get<SpaceUI>(
+          `/api/spaces/${spaceId}`,
+          { headers: { "x-profile-id": authProfileId } }
         );
-        return spacesUtils.spaceApiToUi(data);
+        return data;
       },
+      enabled: !!authProfileId && !!spaceId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 
   /**
    * Fetch all members of a space.
    */
-  spaceMembers: (spaceId: string) =>
+  spaceMembers: (authProfileId: string | undefined, spaceId?: string) =>
     queryOptions({
-      queryKey: spacesKeys.members(spaceId),
+      queryKey: spacesKeys.members(authProfileId, spaceId),
       queryFn: async () => {
-        const { data } = await apiClient.get<SpaceMemberAPI[]>(
-          `/api/spaces/${spaceId}/members`
-        );
-        return data.map(spacesUtils.spaceMemberApiToUi);
-      },
-      staleTime: 1000 * 60 * 2, // 2 minutes
-    }),
-
-  /**
-   * Fetch all conversations in a space.
-   */
-  spaceConversations: (spaceId: string) =>
-    queryOptions({
-      queryKey: spacesKeys.conversations(spaceId),
-      queryFn: async () => {
-        const { data } = await apiClient.get<SpaceConversation[]>(
-          `/api/spaces/${spaceId}/conversations`
+        const { data } = await apiClient.get<SpaceMemberUI[]>(
+          `/api/spaces/${spaceId}/members`,
+          { headers: { "x-profile-id": authProfileId } }
         );
         return data;
       },
+      enabled: !!authProfileId && !!spaceId,
       staleTime: 1000 * 60 * 2, // 2 minutes
     }),
 
   /**
    * Fetch space statistics.
    */
-  spaceStats: () =>
+  spaceStats: (authProfileId: string) =>
     queryOptions({
-      queryKey: spacesKeys.stats(),
+      queryKey: spacesKeys.stats(authProfileId),
       queryFn: async () => {
-        const { data } = await apiClient.get<SpaceStats>('/api/spaces/stats');
+        const { data } = await apiClient.get<SpaceStats>('/api/spaces/stats', {
+          headers: { "x-profile-id": authProfileId },
+        });
         return data;
       },
+      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 10, // 10 minutes
     }),
 };
