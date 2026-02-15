@@ -15,131 +15,78 @@ import {
 import { ProfileSwitcher } from './profile-switcher';
 import { SearchForm } from './search-form';
 
-// This is sample data.
+// Navigation data for actual app routes
 const data = {
   navMain: [
     {
-      title: 'Getting Started',
-      url: '#',
+      title: 'Chats',
+      url: '/chats',
       items: [
         {
-          title: 'Installation',
-          url: '#',
-        },
-        {
-          title: 'Project Structure',
-          url: '#',
+          title: 'All Conversations',
+          url: '/chats',
         },
       ],
     },
     {
-      title: 'Building Your Application',
-      url: '#',
+      title: 'Support',
+      url: '/support',
       items: [
         {
-          title: 'Routing',
-          url: '#',
+          title: 'Help Center',
+          url: '/support',
         },
         {
-          title: 'Data Fetching',
-          url: '#',
-          isActive: true,
+          title: 'FAQ',
+          url: '/support/faq',
         },
         {
-          title: 'Rendering',
-          url: '#',
+          title: 'Search Topics',
+          url: '/support/search',
         },
         {
-          title: 'Caching',
-          url: '#',
-        },
-        {
-          title: 'Styling',
-          url: '#',
-        },
-        {
-          title: 'Optimizing',
-          url: '#',
-        },
-        {
-          title: 'Configuring',
-          url: '#',
-        },
-        {
-          title: 'Testing',
-          url: '#',
-        },
-        {
-          title: 'Authentication',
-          url: '#',
-        },
-        {
-          title: 'Deploying',
-          url: '#',
-        },
-        {
-          title: 'Upgrading',
-          url: '#',
-        },
-        {
-          title: 'Examples',
-          url: '#',
+          title: 'Contact Support',
+          url: '/support/contact',
         },
       ],
     },
     {
-      title: 'API Reference',
-      url: '#',
+      title: 'Jobs',
+      url: '/jobs',
       items: [
         {
-          title: 'Components',
-          url: '#',
-        },
-        {
-          title: 'File Conventions',
-          url: '#',
-        },
-        {
-          title: 'Functions',
-          url: '#',
-        },
-        {
-          title: 'next.config.js Options',
-          url: '#',
-        },
-        {
-          title: 'CLI',
-          url: '#',
-        },
-        {
-          title: 'Edge Runtime',
-          url: '#',
+          title: 'All Jobs',
+          url: '/jobs',
         },
       ],
     },
     {
-      title: 'Architecture',
-      url: '#',
+      title: 'Spaces',
+      url: '/spaces',
       items: [
         {
-          title: 'Accessibility',
-          url: '#',
+          title: 'All Spaces',
+          url: '/spaces',
         },
+      ],
+    },
+    {
+      title: 'Profiles',
+      url: '/profiles',
+      items: [
         {
-          title: 'Fast Refresh',
-          url: '#',
+          title: 'My Profile',
+          url: '/profiles',
         },
+      ],
+    },
+    {
+      title: 'Settings',
+      url: '/settings',
+      items: [
         {
-          title: 'Next.js Compiler',
-          url: '#',
-        },
-        {
-          title: 'Supported Browsers',
-          url: '#',
-        },
-        {
-          title: 'Turbopack',
-          url: '#',
+          title: 'Account Settings',
+          url: '/settings',
         },
       ],
     },

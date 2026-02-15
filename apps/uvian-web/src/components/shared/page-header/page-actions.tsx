@@ -59,9 +59,9 @@ export function PageActions({ children, className }: PageActionsProps) {
   };
 
   const handleHelp = () => {
-    const helpUrl = `${window.location.origin}/help?page=${encodeURIComponent(
-      window.location.pathname
-    )}`;
+    const helpUrl = `${
+      window.location.origin
+    }/support?from=${encodeURIComponent(window.location.pathname)}`;
     window.open(helpUrl, '_blank');
   };
 
@@ -74,7 +74,11 @@ export function PageActions({ children, className }: PageActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className={cn('gap-0', className)}>
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn('gap-0', className)}
+        >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
