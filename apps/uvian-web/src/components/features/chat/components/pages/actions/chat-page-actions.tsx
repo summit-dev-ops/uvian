@@ -6,7 +6,7 @@ import { DropdownMenuItem, DropdownMenuSeparator } from '@org/ui';
 import {
   MODAL_IDS,
   usePageActionContext,
-} from '~/components/shared/page-actions/page-action-context';
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 const CHAT_ACTION_IDS = {
   LEAVE_CONVERSATION: 'leave-conversation',

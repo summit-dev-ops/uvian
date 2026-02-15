@@ -1,9 +1,9 @@
 import type { ComponentType } from 'react';
-import { ConfirmModal } from '../../modals/confirm-modal';
-import { ExportModal } from '../../modals/export-modal';
-import { CreateConversationModal } from '../../modals/create-conversation-modal';
-import { CreateSpaceModal } from '../../modals/create-space-modal';
-import { InviteMembersModal } from '../../modals/invite-members-modal';
+import { ConfirmModal } from '../../../../modals/confirm-modal';
+import { ExportModal } from '../../../../modals/export-modal';
+import { CreateConversationModal } from '../../../../modals/create-conversation-modal';
+import { CreateSpaceModal } from '../../../../modals/create-space-modal';
+import { InviteMembersModal } from '../../../../modals/invite-members-modal';
 import { InviteProfileModal } from '~/components/modals';
 
 // Modal Registration Interface

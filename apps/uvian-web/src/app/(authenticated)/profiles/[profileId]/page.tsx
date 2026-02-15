@@ -3,7 +3,7 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
-} from '~/components/shared/navigation/ui/page-container';
+} from '~/components/shared/ui/pages/page-container';
 import { ProfilePageActionProvider } from '~/components/features/profiles/components/pages/actions/profile-page-action-provider';
 import { ProfilePageBreadcrumb } from '~/components/features/profiles/components/pages/breadcrumbs/profile-breadcrumb';
 import { ProfileInterface } from '~/components/features/profiles/components/interfaces/profile-interface';

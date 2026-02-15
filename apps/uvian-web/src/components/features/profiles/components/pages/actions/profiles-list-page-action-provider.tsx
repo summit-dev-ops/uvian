@@ -5,7 +5,7 @@ import { Plus, RefreshCw, Filter, Search } from 'lucide-react';
 import {
   ActionRegistrationType,
   PageActionProvider,
-} from '~/components/shared/page-actions/page-action-context';
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 interface ProfilesListPageActionProviderProps {
   children: React.ReactNode;

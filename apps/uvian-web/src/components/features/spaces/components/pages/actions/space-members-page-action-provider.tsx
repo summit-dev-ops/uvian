@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { UserPlus } from 'lucide-react';
-import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 
 export interface SpaceMembersPageActionContextType {

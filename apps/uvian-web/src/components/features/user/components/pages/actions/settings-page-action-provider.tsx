@@ -5,7 +5,7 @@ import { RotateCcw, Download, Upload } from 'lucide-react';
 import {
   ActionRegistrationType,
   PageActionProvider,
-} from '~/components/shared/page-actions/page-action-context';
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 export interface SettingsPageActionContextType {
   readonly ACTION_RESET_SETTINGS: 'reset-settings';

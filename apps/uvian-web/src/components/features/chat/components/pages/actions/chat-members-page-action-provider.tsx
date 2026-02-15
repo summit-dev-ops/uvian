@@ -6,7 +6,7 @@ import {
   ActionRegistrationType,
   MODAL_IDS,
   PageActionProvider,
-} from '~/components/shared/page-actions/page-action-context';
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 export interface ChatMembersPageActionContextType {
   conversationId: string;

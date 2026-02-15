@@ -25,7 +25,7 @@ export const useChat = (conversationId: string) => {
   // 3. Socket Event Listeners for Real-time Updates
   useEffect(() => {
     if (!socket || !isConnected) return;
-
+    
     const onNewMessage = (payload: any) => {
       console.log('New message received:', payload);
       chatUtils.addMessageToCache(

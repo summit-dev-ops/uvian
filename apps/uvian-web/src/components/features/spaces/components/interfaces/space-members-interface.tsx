@@ -4,15 +4,9 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { UserPlus } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import {
-  Button,
-  Card,
-  CardContent,
-  Checkbox,
-  Badge,
-  Skeleton,
-  ScrollArea,
-} from '@org/ui';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
+import { Card, CardContent, Checkbox, Badge, ScrollArea } from '@org/ui';
 import { useSpaceMemberActions } from '../../hooks/use-space-member-actions';
 import { createArraySelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionManagerProvider } from '~/components/shared/actions/hocs/with-action-manager';
@@ -27,7 +21,9 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
   // Fetch space and members
-  const { data: space } = useQuery(spacesQueries.space(activeProfileId, spaceId));
+  const { data: space } = useQuery(
+    spacesQueries.space(activeProfileId, spaceId)
+  );
   const {
     data: members,
     isLoading,
@@ -69,17 +65,18 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
 
   if (error) {
     return (
-      <div className="flex h-screen w-full items-center justify-center flex-col space-y-4">
-        <Card className="p-6 max-w-md">
-          <CardContent className="text-center space-y-4">
-            <h2 className="text-xl font-bold text-destructive">
-              Error loading space members
-            </h2>
-            <p className="text-muted-foreground">{error.message}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <InterfaceError
+        variant="card"
+        title="Failed to Load Space Members"
+        message={
+          error.message ||
+          'There was an error loading the space members. Please try again.'
+        }
+        showRetry={true}
+        showHome={true}
+        onRetry={() => window.location.reload()}
+        className="flex h-screen items-center justify-center"
+      />
     );
   }
 
@@ -109,12 +106,13 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
           {/* Members list */}
           {isLoading ? (
             <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <Card key={i} className="h-16">
-                  <CardContent className="h-full flex items-center justify-center">
-                    <Skeleton className="h-4 w-32" />
-                  </CardContent>
-                </Card>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <InterfaceLoadingSkeleton
+                  key={i}
+                  variant="card"
+                  lines={1}
+                  className="h-16"
+                />
               ))}
             </div>
           ) : members?.length === 0 ? (
@@ -149,8 +147,9 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
                     />
                     <span className="text-sm text-muted-foreground">
                       {selectedMemberIds.length > 0
-                        ? `${selectedMemberIds.length} of ${members?.length || 0
-                        } selected`
+                        ? `${selectedMemberIds.length} of ${
+                            members?.length || 0
+                          } selected`
                         : 'Select all members'}
                     </span>
                   </div>
@@ -161,10 +160,11 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
               {members?.map((member) => (
                 <Card
                   key={member.profileId}
-                  className={`transition-colors ${selectedMemberIds.includes(member.profileId)
+                  className={`transition-colors ${
+                    selectedMemberIds.includes(member.profileId)
                       ? 'bg-primary/5 border-primary/30'
                       : ''
-                    }`}
+                  }`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -201,10 +201,11 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
                           className="capitalize"
                         >
                           <span
-                            className={`inline-block h-2 w-2 rounded-full mr-2 ${member.role?.name === 'admin'
+                            className={`inline-block h-2 w-2 rounded-full mr-2 ${
+                              member.role?.name === 'admin'
                                 ? 'bg-green-500'
                                 : 'bg-blue-500'
-                              }`}
+                            }`}
                           />
                           {member.role?.name || 'member'}
                         </Badge>

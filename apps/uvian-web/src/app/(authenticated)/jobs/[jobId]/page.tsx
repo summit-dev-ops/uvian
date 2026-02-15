@@ -4,7 +4,7 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
-} from '~/components/shared/navigation/ui/page-container';
+} from '~/components/shared/ui/pages/page-container';
 import { JobDetailPageBreadcrumb } from '~/components/features/jobs/components/pages/breadcrumbs/job-page-breadcrumb';
 
 import { JobInterface } from '~/components/features/jobs/components/interfaces/job-interface';

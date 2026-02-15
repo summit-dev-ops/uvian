@@ -100,16 +100,13 @@ export function ProfileSwitcher() {
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <Avatar className="h-8 w-8">
-                  {activeProfile?.avatarUrl ? (
-                    <AvatarImage
-                      src={activeProfile.avatarUrl}
-                      alt={activeProfile.displayName}
-                    />
-                  ) : (
-                    <AvatarFallback>
-                      <User className="h-4 w-4" />
-                    </AvatarFallback>
-                  )}
+                  <AvatarImage
+                    src={activeProfile?.avatarUrl}
+                    alt={activeProfile.displayName}
+                  />
+                  <AvatarFallback>
+                    <User className="h-4 w-4" />
+                  </AvatarFallback>
                 </Avatar>
               </div>
               <div className="flex flex-col gap-0.5 leading-none">

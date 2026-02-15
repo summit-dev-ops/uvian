@@ -5,7 +5,7 @@ import { Plus, RefreshCw, Settings } from 'lucide-react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 

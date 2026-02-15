@@ -26,7 +26,7 @@ export const userQueries = {
       queryKey: userKeys.settings(),
       queryFn: async () => {
         const { data } = await apiClient.get<SettingsUI>(
-          `/api/profiles/me/settings`
+          `/api/users/me/settings`
         );
         return data
       },

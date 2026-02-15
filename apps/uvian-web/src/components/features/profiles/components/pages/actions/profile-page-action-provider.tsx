@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Edit, Settings, Share, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ActionRegistrationType, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+import { ActionRegistrationType, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 
 export interface ProfilePageActionContextType {

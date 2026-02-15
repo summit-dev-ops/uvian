@@ -11,7 +11,7 @@ import {
   PageActionProvider,
   type ActionRegistrationType,
   MODAL_IDS,
-} from '../../../../../shared/page-actions/page-action-context';
+} from '../../../../../shared/ui/pages/page-actions/page-action-context';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 

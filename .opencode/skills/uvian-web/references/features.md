@@ -1,11 +1,7 @@
----
-name: create-feature
-description: Create feature within the app. Features are reactive code that are impossible to use outside of the nextJS or reactive environment. As such you defined hooks, components, contexts, and other reactive code pieces in here. YOU MUST ALWAYS CONSIDER to use this skill whenever features are mentioned.
----
 
-# Skill: Create Feature Orchestrator (Integrated)
+# Features
 
-Use this skill to build user-facing features in `components/features/[feature]`. Features orchestrate multiple `lib/domains` modules to solve specific user stories.
+Features orchestrate multiple `lib/domains` modules to solve specific user stories.
 
 ## 🏗 Directory Structure
 
@@ -32,6 +28,9 @@ Feature components must never call domain API clients or raw queries directly. T
 ## 🎨 2. Component Composition
 
 Features should compose primitive UI elements from the feature and from @org/ui and domain-specific molecules.
+
+### Interfaces
+Interfaces are the main components that a feature exposes. These components are designed to be mounted pretty much anywhere without too high prop requirement.
 
 ### Forms
 YOU ALWAYS use the standardised react-hook-form based forms , with the Field structure exposed by @org/ui. It is imperative that you make as much of the input system using these forms as possible. Forms don't use the api, they don't handle their own data, they are strictly prop driven.

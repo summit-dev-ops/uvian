@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { useConversationPreviews } from '~/components/features/chat/hooks/use-conversation-previews';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
 
 import type { PreviewData } from '~/lib/domains/chat/types';
 import { ScrollArea } from '@org/ui';
@@ -14,8 +16,8 @@ import { useUserSessionStore } from '~/components/features/user/hooks/use-user-s
 interface ConversationWithPreview {
   id: string;
   title: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   syncStatus: 'synced' | 'pending' | 'error';
   lastMessage?: PreviewData['lastMessage'];
   isLoadingPreview?: boolean;
@@ -69,13 +71,18 @@ export function ConversationsListInterface() {
 
   if (error) {
     return (
-      <div className="flex h-screen w-full items-center justify-center flex-col space-y-4">
-        <h2 className="text-xl font-bold text-destructive">
-          Error loading conversations
-        </h2>
-        <p className="text-muted-foreground">{error.message}</p>
-        <button onClick={() => window.location.reload()}>Try Again</button>
-      </div>
+      <InterfaceError
+        variant="card"
+        title="Failed to Load Conversations"
+        message={
+          error.message ||
+          'There was an error loading your conversations. Please try again.'
+        }
+        showRetry={true}
+        showHome={true}
+        onRetry={() => window.location.reload()}
+        className="flex h-screen items-center justify-center"
+      />
     );
   }
 
@@ -84,10 +91,12 @@ export function ConversationsListInterface() {
       <div className="max-w-4xl mx-auto space-y-4">
         {isLoading ? (
           <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div
+            {Array.from({ length: 5 }).map((_, i) => (
+              <InterfaceLoadingSkeleton
                 key={i}
-                className="h-24 w-full rounded-xl bg-muted animate-pulse"
+                variant="card"
+                lines={3}
+                className="h-24"
               />
             ))}
           </div>

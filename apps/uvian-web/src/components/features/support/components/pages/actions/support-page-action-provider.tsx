@@ -5,7 +5,7 @@ import { RefreshCw } from 'lucide-react';
 import {
   ActionRegistrationType,
   PageActionProvider,
-} from '~/components/shared/page-actions/page-action-context';
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 interface SupportPageActionProviderProps {
   children: React.ReactNode;

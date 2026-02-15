@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
-import { MODAL_IDS, usePageActionContext } from '~/components/shared/page-actions/page-action-context';
+import { MODAL_IDS, usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 const EDIT_ACTION_IDS = {
   CANCEL: 'cancel',
   DELETE_SPACE: 'delete-space',

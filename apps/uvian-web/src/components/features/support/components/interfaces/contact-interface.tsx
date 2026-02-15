@@ -29,6 +29,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@org/ui';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
 import { ScrollArea } from '@org/ui';
 import { Badge } from '@org/ui';
 import { Label } from '@org/ui';

@@ -4,7 +4,7 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
-} from '~/components/shared/navigation/ui/page-container';
+} from '~/components/shared/ui/pages/page-container';
 
 import { JobDataTable } from '~/components/features/jobs';
 import { JobsPageBreadcrumb } from '~/components/features/jobs/components/pages/breadcrumbs/jobs-page-breadcrumb';

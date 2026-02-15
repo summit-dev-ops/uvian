@@ -1,11 +1,7 @@
----
-name: create-domain-module
-description: Create domains within the web app's lib folder for introducing new data to it. USE SKILL IMMEDIATELY and EVERY TIME when new domain or already existing domain work is required. 
----
 
-# Skill: Create Domain Module (Integrated)
+# Domains
 
-Use this skill to build a self-contained domain library in `lib/domains/[domain]`. This follows strict DDD principles and integrates with the project's global infrastructure. Always consider what the api has already defined as routes, what are the contracts. Think about the best react-query cache key structures. 
+Domains are self-contained libraries of DDD oriented imperative logic. They expose storeSlices, queries, mutations, types and actions. 
 
 ## 🏗 Directory Structure
 

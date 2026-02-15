@@ -11,6 +11,8 @@
 import * as React from 'react';
 import { Search } from 'lucide-react';
 import { SupportSearchResults } from '../support-search-results';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
 import type {
   SupportUI,
   SupportSearchParams,
@@ -153,22 +155,32 @@ export function SupportSearchInterface({
 
       {/* Search Status */}
       {isLoading && (
-        <div className="text-center py-8">
-          <p className="text-sm text-muted-foreground">
-            {searchQuery
+        <InterfaceLoading
+          variant="default"
+          message={
+            searchQuery
               ? `Searching for "${searchQuery}"...`
-              : 'Loading support content...'}
-          </p>
-        </div>
+              : 'Loading support content...'
+          }
+          size="default"
+          className="py-8"
+        />
       )}
 
       {/* Error State */}
       {error && (
-        <div className="text-center py-8">
-          <p className="text-sm text-destructive">
-            Failed to search support content. Please try again.
-          </p>
-        </div>
+        <InterfaceError
+          variant="card"
+          title="Search Failed"
+          message={
+            error.message ||
+            'Failed to search support content. Please try again.'
+          }
+          showRetry={true}
+          showHome={false}
+          onRetry={() => window.location.reload()}
+          className="py-8"
+        />
       )}
 
       {/* Results */}

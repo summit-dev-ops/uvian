@@ -4,133 +4,151 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Settings, Users, MessageSquare } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import { Button, Card, CardContent, ScrollArea, Skeleton } from '@org/ui';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
+import { Button, Card, CardContent } from '@org/ui';
 import type { SpaceUI } from '~/lib/domains/spaces/types';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
+
+// Import new layout components
+import {
+  InterfaceLayout,
+  InterfaceContainer,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
+  InterfaceSection,
+} from '~/components/shared/ui/interfaces/interface-layout';
 
 export function SpacesListInterface() {
   const { activeProfileId } = useUserSessionStore();
   // Fetch spaces
-  const { data: spaces, isLoading, error } = useQuery(spacesQueries.spaces(activeProfileId));
+  const {
+    data: spaces,
+    isLoading,
+    error,
+  } = useQuery(spacesQueries.spaces(activeProfileId));
 
   // Fetch space stats
   const { data: stats } = useQuery(spacesQueries.spaceStats(activeProfileId));
 
   if (error) {
     return (
-      <div className="flex h-screen w-full items-center justify-center flex-col space-y-4">
-        <Card className="p-6 max-w-md">
-          <CardContent className="text-center space-y-4">
-            <h2 className="text-xl font-bold text-destructive">
-              Error loading spaces
-            </h2>
-            <p className="text-muted-foreground">{error.message}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <InterfaceError
+        variant="card"
+        title="Failed to Load Spaces"
+        message={
+          error.message ||
+          'There was an error loading your spaces. Please try again.'
+        }
+        showRetry={true}
+        showHome={true}
+        onRetry={() => window.location.reload()}
+        className="flex h-screen items-center justify-center"
+      />
     );
   }
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Header with stats */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Spaces</h1>
-              <p className="text-muted-foreground mt-1">
-                Organize your conversations and collaborate with your team
-              </p>
-            </div>
-            {/* Create Space button moved to page actions */}
-            <div className="text-sm text-muted-foreground">
-              Use the actions menu to create a new space
-            </div>
-          </div>
-
-          {/* Stats cards */}
-          {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="p-4">
-                <CardContent className="space-y-1">
-                  <div className="text-2xl font-bold">{stats.total_spaces}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Total Spaces
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="p-4">
-                <CardContent className="space-y-1">
-                  <div className="text-2xl font-bold">{stats.owned_spaces}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Owned Spaces
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="p-4">
-                <CardContent className="space-y-1">
-                  <div className="text-2xl font-bold">
-                    {stats.member_spaces}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Member Spaces
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="p-4">
-                <CardContent className="space-y-1">
-                  <div className="text-2xl font-bold">
-                    {stats.total_conversations}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Total Conversations
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Spaces list */}
-          {isLoading ? (
-            <div className="grid gap-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="h-32">
-                  <CardContent className="h-full flex items-center justify-center">
-                    <Skeleton className="h-4 w-32" />
+    <InterfaceLayout>
+      <InterfaceContainer variant="default" size="full">
+        <InterfaceHeader>
+          <InterfaceHeaderContent
+            title="Spaces"
+            subtitle="Organize your conversations and collaborate with your team"
+          />
+        </InterfaceHeader>
+        <InterfaceContent>
+          <InterfaceSection variant="card">
+            {/* Stats cards */}
+            {stats && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="p-4">
+                  <CardContent className="space-y-1">
+                    <div className="text-2xl font-bold">
+                      {stats.totalSpaces}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Total Spaces
+                    </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          ) : spaces?.length === 0 ? (
-            <Card className="py-24">
-              <CardContent className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <span className="text-2xl">🏢</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">No spaces yet</h2>
-                  <p className="text-sm text-muted-foreground max-w-sm">
-                    Create your first space to organize conversations and
-                    collaborate with your team.
+                <Card className="p-4">
+                  <CardContent className="space-y-1">
+                    <div className="text-2xl font-bold">
+                      {stats.ownedSpaces}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Owned Spaces
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="p-4">
+                  <CardContent className="space-y-1">
+                    <div className="text-2xl font-bold">
+                      {stats.memberSpaces}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Member Spaces
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="p-4">
+                  <CardContent className="space-y-1">
+                    <div className="text-2xl font-bold">
+                      {stats.totalConversations}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Total Conversations
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </InterfaceSection>
+
+          <InterfaceSection title="Your Spaces">
+            {/* Spaces list */}
+            {isLoading ? (
+              <div className="grid gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <InterfaceLoadingSkeleton
+                    key={i}
+                    variant="card"
+                    lines={4}
+                    className="h-32"
+                  />
+                ))}
+              </div>
+            ) : spaces?.length === 0 ? (
+              <Card className="py-24">
+                <CardContent className="flex flex-col items-center justify-center space-y-4 text-center">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <span className="text-2xl">🏢</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">No spaces yet</h2>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Create your first space to organize conversations and
+                      collaborate with your team.
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Create your first space using the actions menu above
                   </p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Create your first space using the actions menu above
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {spaces?.map((space) => (
-                <SpaceCard key={space.id} space={space} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </ScrollArea>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {spaces?.map((space) => (
+                  <SpaceCard key={space.id} space={space} />
+                ))}
+              </div>
+            )}
+          </InterfaceSection>
+        </InterfaceContent>
+      </InterfaceContainer>
+    </InterfaceLayout>
   );
 }
 
@@ -170,10 +188,11 @@ function SpaceCard({ space }: SpaceCardProps) {
                 </div>
                 <div className="flex items-center gap-1">
                   <span
-                    className={`inline-block h-2 w-2 rounded-full ${space.userRole === 'admin'
+                    className={`inline-block h-2 w-2 rounded-full ${
+                      space.userRole === 'admin'
                         ? 'bg-green-500'
                         : 'bg-blue-500'
-                      }`}
+                    }`}
                   />
                   <span className="capitalize">
                     {space.userRole || 'member'}
@@ -188,7 +207,7 @@ function SpaceCard({ space }: SpaceCardProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // Handle settings click
+                // TODO: Handle settings click - needs implementation
               }}
               className="shrink-0"
             >

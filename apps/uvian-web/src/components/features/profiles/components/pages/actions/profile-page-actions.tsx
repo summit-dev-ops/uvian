@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Edit, Settings, Share, Download } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
-import { usePageActionContext } from '~/components/shared/page-actions/page-action-context';
+import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 const PROFILE_ACTION_IDS = {
   EDIT_PROFILE: 'edit-profile',
   SHOW_SETTINGS: 'show-settings',

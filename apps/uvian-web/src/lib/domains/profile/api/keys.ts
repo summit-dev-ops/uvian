@@ -13,6 +13,7 @@ export const profileKeys = {
     profileId
       ? ([...profileKeys.all, 'profile', profileId] as const)
       : ([...profileKeys.all, 'profile'] as const),
+  userProfiles: () => [...profileKeys.all, 'user-profiles'] as const,
   search: (params?: ProfileSearchParams) =>
     params
       ? ([...profileKeys.all, 'search', params] as const)

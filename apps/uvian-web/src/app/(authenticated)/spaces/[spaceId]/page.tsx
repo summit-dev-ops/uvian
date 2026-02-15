@@ -4,9 +4,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
-} from '~/components/shared/navigation/ui/page-container';
-import { PageActions } from '~/components/shared/page-header/page-actions';
-import { PageModals } from '~/components/shared/page-actions/page-modals';
+} from '~/components/shared/ui/pages/page-container';
+import { PageActions } from '~/components/shared/ui/pages/page-header/page-actions';
+import { PageModals } from '~/components/shared/ui/pages/page-actions/page-modals';
 import { SpaceOverviewPageActionProvider, SpaceOverviewPageActions } from '~/components/features/spaces/components/pages/actions';
 import { SpacePageBreadcrumb } from '~/components/features/spaces/components/pages/breadcrumbs';
 import { SpaceInterface } from '~/components/features/spaces/components/interfaces/space-interface';

@@ -18,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@org/ui';
-import { ScrollArea } from '@org/ui';
 import { Badge } from '@org/ui';
 import {
   Select,
@@ -27,7 +26,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@org/ui';
+import { useQuery } from '@tanstack/react-query';
+import { profileQueries } from '~/lib/domains/profile/api/queries';
+import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
 import type { ProfileUI } from '~/lib/domains/profile/types';
+
+// Import new layout components
+import {
+  InterfaceLayout,
+  InterfaceContainer,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
+  InterfaceSection,
+} from '~/components/shared/ui/interfaces/interface-layout';
 
 export interface ProfilesListInterfaceProps {
   // Configuration
@@ -59,65 +72,16 @@ export function ProfilesListInterface({
   const [selectedType, setSelectedType] = React.useState<string>('all');
   const [selectedStatus, setSelectedStatus] = React.useState<string>('all');
 
-  // Mock profiles data - in real implementation this would come from the API
-  const profiles: ProfileUI[] = [
-    {
-      id: '1',
-      userId: 'user_001',
-      displayName: 'John Doe',
-      bio: 'Software engineer passionate about building great user experiences',
-      avatarUrl: null,
-      type: 'human',
-      createdAt: '2024-01-15T00:00:00.000Z',
-      updatedAt: '2024-01-20T00:00:00.000Z',
-      isActive: true,
-      agentConfig: null,
-      publicFields: {
-        skills: ['React', 'TypeScript', 'Node.js', 'UI/UX Design'],
-        email: 'john.doe@example.com',
-        location: 'San Francisco, CA',
-      },
-    },
-    {
-      id: '2',
-      userId: 'user_002',
-      displayName: 'Jane Smith',
-      bio: 'Product manager with expertise in agile methodologies and user research',
-      avatarUrl: null,
-      type: 'human',
-      createdAt: '2024-01-10T00:00:00.000Z',
-      updatedAt: '2024-01-18T00:00:00.000Z',
-      isActive: true,
-      agentConfig: null,
-      publicFields: {
-        skills: ['Product Management', 'Agile', 'User Research', 'Strategy'],
-        email: 'jane.smith@example.com',
-        location: 'New York, NY',
-      },
-    },
-    {
-      id: '3',
-      userId: 'agent_001',
-      displayName: 'Support Assistant',
-      bio: 'AI-powered support assistant helping users with their questions and concerns',
-      avatarUrl: null,
-      type: 'agent',
-      createdAt: '2024-01-01T00:00:00.000Z',
-      updatedAt: '2024-01-22T00:00:00.000Z',
-      isActive: true,
-      agentConfig: {
-        isVerified: true,
-        capabilities: ['Customer Support', 'Problem Solving', 'Communication'],
-      },
-      publicFields: {
-        email: 'support@uvian.com',
-        responseTime: '< 1 minute',
-      },
-    },
-  ];
+  // Fetch user's profiles from the API
+  const {
+    data: profiles = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery(profileQueries.userProfiles());
 
   const filteredProfiles = React.useMemo(() => {
-    let filtered = profiles;
+    let filtered = profiles || [];
 
     // Filter by search query
     if (searchQuery.trim()) {
@@ -126,7 +90,7 @@ export function ProfilesListInterface({
         (profile) =>
           profile.displayName.toLowerCase().includes(query) ||
           profile.bio?.toLowerCase().includes(query) ||
-          ((profile.publicFields.skills as string[]) || []).some(
+          ((profile.publicFields?.skills as string[]) || []).some(
             (skill: string) => skill.toLowerCase().includes(query)
           )
       );
@@ -161,124 +125,194 @@ export function ProfilesListInterface({
     onProfileDelete?.(profile);
   };
 
-  return (
-    <ScrollArea className="flex-1">
-      <div className={`space-y-6 p-6 ${className || ''}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">User Profiles</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage user profiles and view their information and skills.
-            </p>
-          </div>
-          {showActions && (
-            <Button
-              onClick={onCreateProfile}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Create Profile
-            </Button>
-          )}
-        </div>
-
-        {/* Search and Filters */}
-        {(showSearch || showFilters) && (
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            {showSearch && (
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Search profiles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            )}
-
-            {showFilters && (
-              <div className="flex gap-2">
-                <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="human">Humans</SelectItem>
-                    <SelectItem value="agent">Agents</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={selectedStatus}
-                  onValueChange={setSelectedStatus}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="verified">Verified</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredProfiles.length} of {profiles.length} profiles
-          </p>
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSearchQuery('')}
-            >
-              Clear Search
-            </Button>
-          )}
-        </div>
-
-        {/* Profiles Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredProfiles.map((profile) => (
-            <ProfileCard
-              key={profile.id}
-              profile={profile}
-              onSelect={() => handleProfileSelect(profile)}
-              onEdit={(e) => handleProfileEdit(profile, e)}
-              onDelete={(e) => handleProfileDelete(profile, e)}
-              showActions={showActions}
+  // Show loading state
+  if (isLoading) {
+    return (
+      <InterfaceLayout>
+        <InterfaceContainer variant="default" size="full">
+          <InterfaceHeader>
+            <InterfaceHeaderContent
+              title="User Profiles"
+              subtitle="Manage user profiles and view their information and skills."
             />
-          ))}
-        </div>
+          </InterfaceHeader>
+          <InterfaceContent>
+            <InterfaceSection variant="card">
+              <div className="flex gap-2">
+                <div className="h-10 w-48 bg-muted rounded animate-pulse" />
+                <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+                <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+              </div>
+            </InterfaceSection>
+            <InterfaceSection>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <InterfaceLoadingSkeleton key={i} variant="card" />
+                ))}
+              </div>
+            </InterfaceSection>
+          </InterfaceContent>
+        </InterfaceContainer>
+      </InterfaceLayout>
+    );
+  }
 
-        {/* Empty State */}
-        {filteredProfiles.length === 0 && (
-          <div className="text-center py-12">
-            <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No profiles found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchQuery || selectedType !== 'all' || selectedStatus !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Get started by creating your first profile'}
-            </p>
-            {!searchQuery &&
-              selectedType === 'all' &&
-              selectedStatus === 'all' && (
-                <Button onClick={onCreateProfile}>Create Profile</Button>
+  // Show error state
+  if (error) {
+    return (
+      <InterfaceLayout>
+        <InterfaceContainer variant="default" size="full">
+          <InterfaceHeader>
+            <InterfaceHeaderContent
+              title="User Profiles"
+              subtitle="Manage user profiles and view their information and skills."
+            />
+          </InterfaceHeader>
+          <InterfaceContent>
+            <InterfaceSection>
+              <InterfaceError
+                variant="card"
+                title="Failed to Load Profiles"
+                message="There was an error loading your profiles. Please try again."
+                showRetry={true}
+                showHome={true}
+                onRetry={refetch}
+              />
+            </InterfaceSection>
+          </InterfaceContent>
+        </InterfaceContainer>
+      </InterfaceLayout>
+    );
+  }
+
+  return (
+    <InterfaceLayout>
+      <InterfaceContainer variant="default" size="full">
+        <InterfaceHeader>
+          <InterfaceHeaderContent
+            title="User Profiles"
+            subtitle="Manage user profiles and view their information and skills."
+            actions={
+              showActions && (
+                <Button
+                  onClick={onCreateProfile}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Profile
+                </Button>
+              )
+            }
+          />
+        </InterfaceHeader>
+        <InterfaceContent>
+          <InterfaceSection variant="card">
+            {/* Search and Filters */}
+            {(showSearch || showFilters) && (
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                {showSearch && (
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      type="text"
+                      placeholder="Search profiles..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                )}
+
+                {showFilters && (
+                  <div className="flex gap-2">
+                    <Select
+                      value={selectedType}
+                      onValueChange={setSelectedType}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="human">Humans</SelectItem>
+                        <SelectItem value="agent">Agents</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={setSelectedStatus}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="verified">Verified</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Results Summary */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredProfiles.length} of {profiles.length} profiles
+              </p>
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Clear Search
+                </Button>
               )}
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+            </div>
+          </InterfaceSection>
+
+          <InterfaceSection title="Profiles">
+            {/* Profiles Grid */}
+            {filteredProfiles.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredProfiles.map((profile) => (
+                  <ProfileCard
+                    key={profile.id}
+                    profile={profile}
+                    onSelect={() => handleProfileSelect(profile)}
+                    onEdit={(e) => handleProfileEdit(profile, e)}
+                    onDelete={(e) => handleProfileDelete(profile, e)}
+                    showActions={showActions}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  No profiles found
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery ||
+                  selectedType !== 'all' ||
+                  selectedStatus !== 'all'
+                    ? 'Try adjusting your search or filters'
+                    : 'Get started by creating your first profile'}
+                </p>
+                {!searchQuery &&
+                  selectedType === 'all' &&
+                  selectedStatus === 'all' && (
+                    <Button onClick={onCreateProfile}>Create Profile</Button>
+                  )}
+              </div>
+            )}
+          </InterfaceSection>
+        </InterfaceContent>
+      </InterfaceContainer>
+    </InterfaceLayout>
   );
 }
 

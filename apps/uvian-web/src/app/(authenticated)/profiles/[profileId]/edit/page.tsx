@@ -5,7 +5,7 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
-} from '~/components/shared/navigation/ui/page-container';
+} from '~/components/shared/ui/pages/page-container';
 
 export default async function ProfilePage({
   params,

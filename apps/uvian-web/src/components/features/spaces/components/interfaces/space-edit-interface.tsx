@@ -1,11 +1,13 @@
 'use client';
 
-import React, { act } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
 import {
   Button,
   Card,
@@ -13,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  Skeleton,
   ScrollArea,
 } from '@org/ui';
 import { SpaceEditor } from '../space-editor';
@@ -83,17 +84,18 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
 
   if (error) {
     return (
-      <div className="flex h-screen w-full items-center justify-center flex-col space-y-4">
-        <Card className="p-6 max-w-md">
-          <CardContent className="text-center space-y-4">
-            <h2 className="text-xl font-bold text-destructive">
-              Error loading space
-            </h2>
-            <p className="text-muted-foreground">{error.message}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <InterfaceError
+        variant="card"
+        title="Failed to Load Space"
+        message={
+          error.message ||
+          'There was an error loading this space. Please try again.'
+        }
+        showRetry={true}
+        showHome={true}
+        onRetry={() => window.location.reload()}
+        className="flex h-screen items-center justify-center"
+      />
     );
   }
 
@@ -101,25 +103,25 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Skeleton className="h-8 w-8" />
+          <InterfaceLoadingSkeleton lines={1} className="h-8 w-8" />
           <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64" />
+            <InterfaceLoadingSkeleton lines={1} className="h-8 w-48" />
+            <InterfaceLoadingSkeleton lines={1} className="h-4 w-64" />
           </div>
         </div>
         <Card>
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-10 w-full" />
+              <InterfaceLoadingSkeleton lines={1} className="h-4 w-32" />
+              <InterfaceLoadingSkeleton lines={1} className="h-10 w-full" />
             </div>
             <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-24 w-full" />
+              <InterfaceLoadingSkeleton lines={1} className="h-4 w-24" />
+              <InterfaceLoadingSkeleton lines={1} className="h-24 w-full" />
             </div>
             <div className="space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-10 w-32" />
+              <InterfaceLoadingSkeleton lines={1} className="h-4 w-40" />
+              <InterfaceLoadingSkeleton lines={1} className="h-10 w-32" />
             </div>
           </CardContent>
         </Card>

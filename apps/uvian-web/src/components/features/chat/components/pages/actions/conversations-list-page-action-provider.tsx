@@ -5,7 +5,7 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
-import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/page-actions/page-action-context';
+import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 

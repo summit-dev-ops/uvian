@@ -139,7 +139,7 @@ function defaultProfileItem(profile: ProfileUI) {
         )}
 
         <p className="text-xs text-muted-foreground mt-1">
-          Joined {profile.createdAt.toLocaleDateString()}
+          Joined {profile.createdAt}
         </p>
       </div>
     </div>

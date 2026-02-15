@@ -30,7 +30,7 @@ import { useActionManager } from '~/components/shared/actions/hooks/use-action-m
 import { createTableSelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionToolbar } from '~/components/shared/actions/ui/action-toolbar';
 import type { ActionConfig } from '~/components/shared/actions/types/action-manager';
-import { MODAL_IDS, usePageActionContext } from '~/components/shared/page-actions/page-action-context';
+import { MODAL_IDS, usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 interface MemberDataTableProps {
   data: ConversationMemberUI[];

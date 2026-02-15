@@ -10,6 +10,8 @@
 import * as React from 'react';
 import { ProfileSearchResults as ProfileSearchResultsComponent } from './profile-search-results';
 import { useProfileSearch } from '../../hooks/use-profile-search';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
 import type {
   ProfileSearchParams,
   ProfileUI,
@@ -59,7 +61,8 @@ export function ProfileSearchInterface({
     };
   }, [debouncedSearchQuery, selectedType]);
 
-  const { data, isLoading, error, isSearching } = useProfileSearch(searchParams);
+  const { data, isLoading, error, isSearching } =
+    useProfileSearch(searchParams);
 
   return (
     <div className={`no-scrollbar space-y-6 h-[50vh] ${className || ''}`}>
@@ -82,20 +85,29 @@ export function ProfileSearchInterface({
       <div className="no-scrollbar -mx-4 overflow-y-auto px-4">
         {/* Search Status */}
         {isLoading && (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground">
-              {searchQuery ? `Searching for "${searchQuery}"...` : 'Loading...'}
-            </p>
-          </div>
+          <InterfaceLoading
+            variant="default"
+            message={
+              searchQuery ? `Searching for "${searchQuery}"...` : 'Loading...'
+            }
+            size="default"
+            className="py-4"
+          />
         )}
 
         {/* Error State */}
         {error && (
-          <div className="text-center py-8">
-            <p className="text-sm text-destructive">
-              Failed to search profiles. Please try again.
-            </p>
-          </div>
+          <InterfaceError
+            variant="card"
+            title="Search Failed"
+            message={
+              error.message || 'Failed to search profiles. Please try again.'
+            }
+            showRetry={true}
+            showHome={false}
+            onRetry={() => window.location.reload()}
+            className="py-8"
+          />
         )}
 
         {/* Results */}

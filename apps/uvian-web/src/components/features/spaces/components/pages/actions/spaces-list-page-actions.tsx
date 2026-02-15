@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Plus, RefreshCw, Settings } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
-import { usePageActionContext } from '~/components/shared/page-actions/page-action-context';
+import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 const SPACES_ACTION_IDS = {
   CREATE_SPACE: 'create-space',
   REFRESH_SPACES: 'refresh-spaces',

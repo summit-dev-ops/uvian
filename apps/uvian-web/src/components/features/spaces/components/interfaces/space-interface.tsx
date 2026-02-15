@@ -4,14 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Settings, Users, MessageSquare, Calendar, Plus } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import {
-  Button,
-  Card,
-  CardContent,
-  Badge,
-  Skeleton,
-  ScrollArea,
-} from '@org/ui';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
+import { Button, Card, CardContent, Badge, ScrollArea } from '@org/ui';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface SpaceInterfaceProps {
@@ -32,17 +27,18 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
 
   if (error) {
     return (
-      <div className="flex h-screen w-full items-center justify-center flex-col space-y-4">
-        <Card className="p-6 max-w-md">
-          <CardContent className="text-center space-y-4">
-            <h2 className="text-xl font-bold text-destructive">
-              Error loading space
-            </h2>
-            <p className="text-muted-foreground">{error.message}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <InterfaceError
+        variant="card"
+        title="Failed to Load Space"
+        message={
+          error.message ||
+          'There was an error loading this space. Please try again.'
+        }
+        showRetry={true}
+        showHome={true}
+        onRetry={() => window.location.reload()}
+        className="flex h-screen items-center justify-center"
+      />
     );
   }
 
@@ -51,29 +47,29 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
       <div className="flex-1 min-h-0 overflow-auto">
         <div className="p-6">
           <div className="max-w-6xl mx-auto space-y-6">
-            <Skeleton className="h-8 w-48" />
+            <InterfaceLoadingSkeleton lines={1} className="h-8 w-48" />
             <div className="grid gap-6">
-              <Card className="h-64">
-                <CardContent className="h-full flex items-center justify-center">
-                  <Skeleton className="h-8 w-32" />
-                </CardContent>
-              </Card>
+              <InterfaceLoadingSkeleton
+                variant="card"
+                lines={1}
+                className="h-64"
+              />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="h-32">
-                  <CardContent className="h-full flex items-center justify-center">
-                    <Skeleton className="h-4 w-24" />
-                  </CardContent>
-                </Card>
-                <Card className="h-32">
-                  <CardContent className="h-full flex items-center justify-center">
-                    <Skeleton className="h-4 w-24" />
-                  </CardContent>
-                </Card>
-                <Card className="h-32">
-                  <CardContent className="h-full flex items-center justify-center">
-                    <Skeleton className="h-4 w-24" />
-                  </CardContent>
-                </Card>
+                <InterfaceLoadingSkeleton
+                  variant="card"
+                  lines={1}
+                  className="h-32"
+                />
+                <InterfaceLoadingSkeleton
+                  variant="card"
+                  lines={1}
+                  className="h-32"
+                />
+                <InterfaceLoadingSkeleton
+                  variant="card"
+                  lines={1}
+                  className="h-32"
+                />
               </div>
             </div>
           </div>

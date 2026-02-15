@@ -34,7 +34,7 @@ export const spacesQueries = {
   /**
    * Fetch a single space by ID.
    */
-  space: (authProfileId: string | undefined, spaceId?: string) =>
+  space: (authProfileId: string | undefined, spaceId: string) =>
     queryOptions({
       queryKey: spacesKeys.detail(authProfileId, spaceId),
       queryFn: async () => {
@@ -51,7 +51,7 @@ export const spacesQueries = {
   /**
    * Fetch all members of a space.
    */
-  spaceMembers: (authProfileId: string | undefined, spaceId?: string) =>
+  spaceMembers: (authProfileId: string | undefined, spaceId: string) =>
     queryOptions({
       queryKey: spacesKeys.members(authProfileId, spaceId),
       queryFn: async () => {
@@ -68,7 +68,7 @@ export const spacesQueries = {
   /**
    * Fetch space statistics.
    */
-  spaceStats: (authProfileId: string) =>
+  spaceStats: (authProfileId: string  | undefined) =>
     queryOptions({
       queryKey: spacesKeys.stats(authProfileId),
       queryFn: async () => {

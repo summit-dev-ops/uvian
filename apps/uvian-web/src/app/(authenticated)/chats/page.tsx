@@ -4,9 +4,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
-} from '~/components/shared/navigation/ui/page-container';
-import { PageActions } from '~/components/shared/page-header/page-actions';
-import { PageModals } from '~/components/shared/page-actions/page-modals';
+} from '~/components/shared/ui/pages/page-container';
+import { PageActions } from '~/components/shared/ui/pages/page-header/page-actions';
+import { PageModals } from '~/components/shared/ui/pages/page-actions/page-modals';
 import { ConversationsListPageActionProvider, ConversationsListPageActions } from '~/components/features/chat/components/pages/actions';
 import { ConversationsPageBreadcrumb } from '~/components/features/chat/components/pages/breadcrumbs';
 import { ConversationsListInterface } from '~/components/features/chat/components/interfaces/conversations-list-interface';

@@ -17,7 +17,7 @@ export type ProfileUI = {
   userId?: string | null;
   type: ProfileType;
   displayName: string;
-  avatarUrl?: string | null;
+  avatarUrl?: string
   bio?: string | null;
   agentConfig?: any;
   publicFields: any;

@@ -3,8 +3,8 @@
 import * as React from 'react';
 import { Edit, Users, Trash2 } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
-import { MODAL_IDS } from '~/components/shared/page-actions/modal-registry';
-import { usePageActionContext } from '~/components/shared/page-actions/page-action-context';
+import { MODAL_IDS } from '~/components/shared/ui/pages/page-actions/modal-registry';
+import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 const SPACE_ACTION_IDS = {
   EDIT_SPACE: 'edit-space',
   INVITE_PROFILES: 'invite-profiles',

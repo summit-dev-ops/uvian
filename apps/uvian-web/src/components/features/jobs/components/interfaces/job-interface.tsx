@@ -37,6 +37,8 @@ import {
 
 import { jobQueries } from '~/lib/domains/jobs/api/queries';
 import { jobMutations } from '~/lib/domains/jobs/api/mutations';
+import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
+import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
 import {
   getJobStatusInfo,
   formatJobDuration,
@@ -89,7 +91,7 @@ function JobDuration({ job }: { job: JobUI }) {
 
   const duration = React.useMemo(() => {
     const created = new Date(job.createdAt).getTime();
-    const endTime = job?.completedAt && new Date(job?.completedAt).getTime()
+    const endTime = job?.completedAt && new Date(job?.completedAt).getTime();
     return endTime ? endTime - created : null;
   }, [job.createdAt, job.completedAt, job.status, now]);
 
@@ -167,8 +169,12 @@ interface JobDetailViewProps {
 }
 
 export function JobInterface({ jobId }: JobDetailViewProps) {
-  const {activeProfileId} = useUserSessionStore()
-  const { data: job, isLoading, error } = useQuery(jobQueries.detail(activeProfileId,jobId));
+  const { activeProfileId } = useUserSessionStore();
+  const {
+    data: job,
+    isLoading,
+    error,
+  } = useQuery(jobQueries.detail(activeProfileId, jobId));
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -179,60 +185,61 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
 
   // Action handlers
   const handleBack = () => router.push('/jobs');
-  const handleCancel = () => cancelJobMutation.mutate({ authProfileId: activeProfileId, jobId });
-  const handleRetry = () => retryJobMutation.mutate({authProfileId: activeProfileId, jobId });
-  const handleDelete = () => deleteJobMutation.mutate({ authProfileId: activeProfileId,jobId });
+  const handleCancel = () =>
+    cancelJobMutation.mutate({ authProfileId: activeProfileId, jobId });
+  const handleRetry = () =>
+    retryJobMutation.mutate({ authProfileId: activeProfileId, jobId });
+  const handleDelete = () =>
+    deleteJobMutation.mutate({ authProfileId: activeProfileId, jobId });
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-muted rounded w-64 mb-4"></div>
+      <InterfaceLoading
+        variant="default"
+        message="Loading job details..."
+        size="full"
+        className="flex flex-col space-y-6"
+      >
+        <div className="animate-pulse space-y-6">
+          <div className="h-6 bg-muted rounded w-64"></div>
           <div className="space-y-4">
             <div className="h-32 bg-muted rounded"></div>
             <div className="h-32 bg-muted rounded"></div>
             <div className="h-32 bg-muted rounded"></div>
           </div>
         </div>
-      </div>
+      </InterfaceLoading>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Job not found</h2>
-          <p className="text-muted-foreground mb-4">
-            The job you're looking for doesn't exist or has been deleted.
-          </p>
-          <Button onClick={handleBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </Button>
-        </div>
-      </div>
+      <InterfaceError
+        variant="card"
+        title="Job Not Found"
+        message={
+          error.message ||
+          "The job you're looking for doesn't exist or has been deleted."
+        }
+        showRetry={true}
+        showHome={true}
+        onRetry={handleBack}
+      />
     );
   }
 
   if (!job) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Job not found</h2>
-          <p className="text-muted-foreground mb-4">
-            The job data is unavailable.
-          </p>
-          <Button onClick={handleBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </Button>
-        </div>
-      </div>
+      <InterfaceError
+        variant="card"
+        title="Job Not Found"
+        message="The job data is unavailable."
+        showRetry={true}
+        showHome={true}
+        onRetry={handleBack}
+      />
     );
   }
 
@@ -447,6 +454,7 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
             )}
           </div>
         </CardContent>
-      </Card></ScrollArea>
+      </Card>
+    </ScrollArea>
   );
 }

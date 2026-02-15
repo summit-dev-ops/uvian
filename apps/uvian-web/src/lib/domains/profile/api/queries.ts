@@ -33,7 +33,7 @@ export const profileQueries = {
    */
   userProfiles: () =>
     queryOptions({
-      queryKey: profileKeys.profile(),
+      queryKey: profileKeys.userProfiles(),
       queryFn: async () => {
         const { data } = await apiClient.get<{ profiles: ProfileUI[] }>(
           '/api/users/me/profiles'
