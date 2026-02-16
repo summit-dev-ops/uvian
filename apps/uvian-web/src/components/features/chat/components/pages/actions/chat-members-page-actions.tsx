@@ -3,17 +3,14 @@
 import * as React from 'react';
 import { UserPlus } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
-import {
-  MODAL_IDS,
-  usePageActionContext,
-} from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 
 /**
  * Chat members page-specific actions component
  * Uses PageActionContext for modal management
  */
 export function ChatMembersPageActions() {
-  const context = usePageActionContext();
+  const context = useModalContext();
 
   const handleInviteMember = React.useCallback(async () => {
     context.openModal(MODAL_IDS.INVITE_PROFILES);

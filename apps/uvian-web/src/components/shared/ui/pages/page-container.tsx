@@ -27,17 +27,10 @@ const pageContainerVariants = cva(
         contained: 'max-w-6xl mx-auto',
         wide: 'max-w-7xl mx-auto',
       },
-      spacing: {
-        none: 'p-0',
-        default: 'p-2',
-        compact: 'p-4',
-        spacious: 'p-6',
-      },
     },
     defaultVariants: {
       variant: 'default',
       size: 'full',
-      spacing: 'default',
     },
   }
 );
@@ -49,15 +42,12 @@ export interface PageContainerProps
 }
 
 const PageContainer = React.forwardRef<HTMLDivElement, PageContainerProps>(
-  ({ className, variant, size, spacing, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'div';
     return (
       <Comp
         ref={ref}
-        className={cn(
-          pageContainerVariants({ variant, size, spacing }),
-          className
-        )}
+        className={cn(pageContainerVariants({ variant, size }), className)}
         {...props}
       />
     );
@@ -113,8 +103,7 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
     },
     ref
   ) => {
-    
-    const router = useRouter()
+    const router = useRouter();
     const handleBack = () => {
       router.back();
     };

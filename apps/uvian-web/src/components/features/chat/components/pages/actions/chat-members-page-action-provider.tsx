@@ -1,10 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { UserPlus } from 'lucide-react';
 import {
   ActionRegistrationType,
-  MODAL_IDS,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
 
@@ -44,7 +42,6 @@ export function ChatMembersPageActionProvider({
     {
       id: MEMBERS_ACTION_IDS.INVITE_PROFILES,
       label: 'Invite',
-      icon: UserPlus,
       handler: handleInviteMember,
     },
   ];
@@ -70,14 +67,6 @@ export function ChatMembersPageActionProvider({
       actions={actions}
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
-      initialModalState={{
-        [MODAL_IDS.INVITE_PROFILES]: {
-          isOpen: false,
-          props: {
-            // PageModals will add open and onOpenChange
-          },
-        },
-      }}
     >
       {children}
     </PageActionProvider>

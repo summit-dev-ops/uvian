@@ -20,6 +20,7 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
           type: 'object',
           required: ['displayName'],
           properties: {
+            profileId: { type: 'string' },
             displayName: { type: 'string', minLength: 1 },
             avatarUrl: { type: 'string' },
             bio: { type: 'string' },
@@ -32,41 +33,19 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
           },
           additionalProperties: false,
         },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
       },
     },
     async (request, reply) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
-
         const userId = await userService.getCurrentUserFromRequest(request);
         if (!userId) {
           reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
-
         const data = request.body;
-
-        const existingProfile = await profileService.getProfile(
-          request.supabase,
-          authProfileId,
-        );
-
-        if (existingProfile) {
-          reply.code(409).send({ error: 'This Profile already exists' });
-          return;
-        }
-
         const profile = await profileService.createProfile(
           request.supabase,
-          authProfileId,
+          data.profileId,
           userId,
           data
         );
@@ -101,12 +80,6 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
             isActive: { type: 'boolean' },
           },
           additionalProperties: false,
-        },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
         },
       },
     },

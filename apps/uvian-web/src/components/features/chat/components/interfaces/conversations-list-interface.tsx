@@ -2,15 +2,25 @@
 
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { useConversationPreviews } from '~/components/features/chat/hooks/use-conversation-previews';
-import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
-import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
+import {
+  InterfaceLayout,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
+  InterfaceContainer,
+} from '~/components/shared/ui/interfaces/interface-layout';
+import {
+  InterfaceError,
+  InterfaceLoadingSkeleton,
+  InterfaceEmpty,
+} from '~/components/shared/ui/interfaces';
+import { ItemGroup } from '@org/ui';
+import { ConversationListItem } from '../conversation-list-item';
 
 import type { PreviewData } from '~/lib/domains/chat/types';
-import { ScrollArea } from '@org/ui';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface ConversationWithPreview {
@@ -69,27 +79,44 @@ export function ConversationsListInterface() {
     });
   };
 
+  // Early return for error state
   if (error) {
     return (
-      <InterfaceError
-        variant="card"
-        title="Failed to Load Conversations"
-        message={
-          error.message ||
-          'There was an error loading your conversations. Please try again.'
-        }
-        showRetry={true}
-        showHome={true}
-        onRetry={() => window.location.reload()}
-        className="flex h-screen items-center justify-center"
-      />
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Conversations"
+            subtitle="Error loading conversations"
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceError
+            variant="card"
+            title="Failed to Load Conversations"
+            message={
+              error.message ||
+              'There was an error loading your conversations. Please try again.'
+            }
+            showRetry={true}
+            showHome={true}
+            onRetry={() => window.location.reload()}
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
     );
   }
 
-  return (
-    <ScrollArea className="flex-1 p-4">
-      <div className="max-w-4xl mx-auto space-y-4">
-        {isLoading ? (
+  // Early return for loading state
+  if (isLoading) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader>
+          <InterfaceHeaderContent
+            title="Conversations"
+            subtitle="Loading conversations..."
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
           <div className="space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <InterfaceLoadingSkeleton
@@ -100,57 +127,68 @@ export function ConversationsListInterface() {
               />
             ))}
           </div>
-        ) : conversationsWithPreviews?.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-4 text-center">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <span className="text-2xl">💬</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">No conversations yet</h2>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Start your first conversation with Uvian AI.
-              </p>
-            </div>
-            <button
-              onClick={handleStartChatting}
-              disabled={isCreating}
-              className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {isCreating ? 'Creating...' : 'Start Chatting'}
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {conversationsWithPreviews?.map((conv) => (
-              <Link
-                key={conv.id}
-                href={`/chats/${conv.id}`}
-                className="group block p-4 rounded-xl border bg-card hover:bg-accent/50 transition-all duration-200"
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
+
+  // Early return for empty state
+  if (conversationsWithPreviews?.length === 0) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Conversations"
+            subtitle="No conversations yet"
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceEmpty
+            variant="card"
+            title="No conversations yet"
+            message="Start your first conversation with Uvian AI."
+            showIcon={true}
+            action={
+              <button
+                onClick={handleStartChatting}
+                disabled={isCreating}
+                className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold group-hover:text-primary transition-colors">
-                      {conv.title || 'Untitled Conversation'}
-                    </h3>
-                    {conv.isLoadingPreview ? (
-                      <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                    ) : (
-                      <p className="text-sm text-muted-foreground line-clamp-1">
-                        {conv.lastMessage?.content || 'No messages yet'}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(conv.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </Link>
+                {isCreating ? 'Creating...' : 'Start Chatting'}
+              </button>
+            }
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
+
+  return (
+    <InterfaceLayout>
+      <InterfaceContainer>
+        <InterfaceHeader>
+          <InterfaceHeaderContent
+            title="Conversations"
+            subtitle={`${conversationsWithPreviews?.length || 0} conversations`}
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <ItemGroup>
+            {conversationsWithPreviews?.map((conv) => (
+              <ConversationListItem
+                key={conv.id}
+                id={conv.id}
+                title={conv.title}
+                createdAt={conv.createdAt}
+                updatedAt={conv.updatedAt}
+                syncStatus={conv.syncStatus}
+                lastMessage={conv.lastMessage}
+                isLoadingPreview={conv.isLoadingPreview}
+              />
             ))}
-          </div>
-        )}
-      </div>
-    </ScrollArea>
+          </ItemGroup>
+        </InterfaceContent>
+      </InterfaceContainer>
+    </InterfaceLayout>
   );
 }

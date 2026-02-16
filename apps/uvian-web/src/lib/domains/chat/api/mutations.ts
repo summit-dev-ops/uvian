@@ -118,8 +118,8 @@ export const chatMutations = {
       const optimisticConversation: ConversationUI = {
         id: payload.id,
         title: payload.title,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         syncStatus: 'pending',
       };
 
@@ -197,10 +197,10 @@ export const chatMutations = {
         conversationId: payload.conversationId,
         content: payload.content,
         role: payload.role || 'user',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
         syncStatus: 'pending',
         isStreaming: false,
-        senderId: payload.authProfileId || 'current-user', // Use actual profile ID or fallback
+        senderId: payload.authProfileId
       };
 
       // Update cache with only the user message

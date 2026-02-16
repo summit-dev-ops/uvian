@@ -1,7 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import * as React from 'react';
-import { RefreshCw } from 'lucide-react';
 import {
   ActionRegistrationType,
   PageActionProvider,
@@ -23,31 +23,24 @@ export function SupportPageActionProvider({
   onError,
   onSuccess,
 }: SupportPageActionProviderProps) {
-  // Handler for refresh action
+  const router = useRouter();
   const handleRefreshSupport = React.useCallback(async () => {
-    // For now, just refresh the page - could be extended to refresh support data
-    window.location.reload();
+    router.refresh();
   }, []);
 
-  // Handler for contact support action
   const handleContactSupport = React.useCallback(async () => {
-    // Open contact support modal or redirect to contact form
-    // This could open a modal, redirect to contact page, etc.
     console.log('Contact support action triggered');
   }, []);
 
-  // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
       id: SUPPORT_ACTION_IDS.CONTACT_SUPPORT,
       label: 'Contact Support',
-      icon: RefreshCw, // Placeholder icon - should be a help or message icon
       handler: handleContactSupport,
     },
     {
       id: SUPPORT_ACTION_IDS.REFRESH_SUPPORT,
       label: 'Refresh',
-      icon: RefreshCw,
       handler: handleRefreshSupport,
     },
   ];

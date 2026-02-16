@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw, Filter, Search } from 'lucide-react';
 import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { profileMutations } from '~/lib/domains/profile/api';
+import { ProfileUI } from '~/lib/domains/profile/types';
 
 interface ProfilesListPageActionProviderProps {
   children: React.ReactNode;
@@ -25,11 +27,27 @@ export function ProfilesListPageActionProvider({
   onError,
   onSuccess,
 }: ProfilesListPageActionProviderProps) {
+  const queryClient = useQueryClient();
+  const { mutate: createProfile, isPending: isCreating } = useMutation(
+    profileMutations.createProfile(queryClient)
+  );
+
   // Handler for create profile action
-  const handleCreateProfile = React.useCallback(async () => {
-    // Navigate to profile creation or open create profile modal
-    console.log('Create profile action triggered');
-    // This could open a modal, redirect to creation page, etc.
+  const handleCreateProfile = React.useCallback(async (data: ProfileUI) => {
+    try {
+      // Use the mutation which includes optimistic updates and navigation
+      createProfile({
+        profileId: crypto.randomUUID(),
+        displayName: data.displayName,
+        avatarUrl: data.avatarUrl,
+        bio: data.bio,
+        publicFields: data.publicFields,
+        type: data.type,
+      });
+    } catch (error) {
+      console.error('Failed to create space:', error);
+      throw error;
+    }
   }, []);
 
   // Handler for refresh action
@@ -39,42 +57,16 @@ export function ProfilesListPageActionProvider({
     // This could invalidate queries and refetch data
   }, []);
 
-  // Handler for search action
-  const handleSearchProfiles = React.useCallback(async () => {
-    // Open search interface or focus search field
-    console.log('Search profiles action triggered');
-  }, []);
-
-  // Handler for filter action
-  const handleFilterProfiles = React.useCallback(async () => {
-    // Open filter options or toggle filter panel
-    console.log('Filter profiles action triggered');
-  }, []);
-
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
       id: PROFILES_LIST_ACTION_IDS.CREATE_PROFILE,
       label: 'Create Profile',
-      icon: Plus,
-      handler: handleCreateProfile,
-    },
-    {
-      id: PROFILES_LIST_ACTION_IDS.SEARCH_PROFILES,
-      label: 'Search Profiles',
-      icon: Search,
-      handler: handleSearchProfiles,
-    },
-    {
-      id: PROFILES_LIST_ACTION_IDS.FILTER_PROFILES,
-      label: 'Filter Profiles',
-      icon: Filter,
-      handler: handleFilterProfiles,
+      handler: ()=>{console.log("")},
     },
     {
       id: PROFILES_LIST_ACTION_IDS.REFRESH_PROFILES,
       label: 'Refresh',
-      icon: RefreshCw,
       handler: handleRefreshProfiles,
     },
   ];

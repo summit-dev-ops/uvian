@@ -1,17 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
-import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import {
+  ActionRegistrationType,
+  PageActionProvider,
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
-
 
 export interface SpaceEditPageActionContextType {
   spaceId: string;
-  // Pre-defined action IDs for type safety
   readonly ACTION_CANCEL: 'cancel';
   readonly ACTION_DELETE_SPACE: 'delete-space';
 }
@@ -55,32 +55,16 @@ export function SpaceEditPageActionProvider({
 
   // Handler for deleting space
   const handleDeleteSpace = React.useCallback(async () => {
-    try {
-      await deleteSpace({authProfileId: activeProfileId, spaceId });
-      router.push('/spaces');
-    } catch (error) {
-      console.error('Failed to delete space:', error);
-      throw error;
-    }
-  }, [deleteSpace,activeProfileId, router, spaceId]);
+    if (activeProfileId)
+      try {
+        await deleteSpace({ authProfileId: activeProfileId, spaceId });
+        router.push('/spaces');
+      } catch (error) {
+        console.error('Failed to delete space:', error);
+        throw error;
+      }
+  }, [deleteSpace, activeProfileId, router, spaceId]);
 
-  // Register the actions with the PageActionProvider
-  const actions: ActionRegistrationType[] = [
-    {
-      id: EDIT_ACTION_IDS.CANCEL,
-      label: 'Cancel',
-      icon: ArrowLeft,
-      handler: handleCancel,
-    },
-    {
-      id: EDIT_ACTION_IDS.DELETE_SPACE,
-      label: 'Delete Space',
-      icon: Trash2,
-      handler: handleDeleteSpace,
-      destructive: true,
-      loadingLabel: 'Deleting...',
-    },
-  ];
 
   // Success and error handlers for the PageActionProvider
   const handleActionSuccess = React.useCallback(
@@ -98,25 +82,26 @@ export function SpaceEditPageActionProvider({
     [onError]
   );
 
+  const actions: ActionRegistrationType[] = [
+    {
+      id: EDIT_ACTION_IDS.CANCEL,
+      label: 'Cancel',
+      handler: handleCancel,
+    },
+    {
+      id: EDIT_ACTION_IDS.DELETE_SPACE,
+      label: 'Delete Space',
+      handler: handleDeleteSpace,
+      destructive: true,
+      loadingLabel: 'Deleting...',
+    },
+  ];
+
   return (
     <PageActionProvider
       actions={actions}
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
-      initialModalState={{
-        [MODAL_IDS.CONFIRM_DELETE]: {
-          isOpen: false,
-          props: {
-            title: 'Delete Space',
-            description:
-              'This action cannot be undone. All conversations and messages will be permanently deleted.',
-            confirmText: 'Delete',
-            variant: 'destructive' as const,
-            isLoading: isDeleting,
-            onConfirm: handleDeleteSpace,
-          },
-        },
-      }}
     >
       {children}
     </PageActionProvider>

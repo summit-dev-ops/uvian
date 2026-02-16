@@ -117,8 +117,8 @@ export const spacesMutations = {
         createdBy: '', // Will be set by server
         settings: payload.settings || {},
         isPrivate: payload.isPrivate || false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         syncStatus: 'pending',
       };
 
@@ -193,7 +193,7 @@ export const spacesMutations = {
         updatedSpace.settings = payload.settings;
       if (payload.isPrivate !== undefined)
         updatedSpace.isPrivate = payload.isPrivate;
-      updatedSpace.updatedAt = new Date();
+      updatedSpace.updatedAt = new Date().toISOString();
       updatedSpace.syncStatus = 'pending';
 
       queryClient.setQueryData<SpaceUI>(

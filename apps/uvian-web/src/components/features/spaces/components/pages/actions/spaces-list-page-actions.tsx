@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Plus, RefreshCw, Settings } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { useModalContext } from '~/components/shared/ui/modals';
 const SPACES_ACTION_IDS = {
   CREATE_SPACE: 'create-space',
   REFRESH_SPACES: 'refresh-spaces',
@@ -15,34 +16,35 @@ const SPACES_ACTION_IDS = {
  * Uses PageActionContext for modal management and action execution
  */
 export function SpacesListPageActions() {
-  const context = usePageActionContext();
+  const actionContext = usePageActionContext();
+  const modalContext = useModalContext();
 
   const handleCreateSpace = React.useCallback(() => {
-    // Open the create space modal directly
-    // The provider has already configured the modal with onCreate and other props
-    context.openModal(SPACES_ACTION_IDS.CREATE_SPACE);
-  }, [context]);
+    modalContext.openModal(SPACES_ACTION_IDS.CREATE_SPACE);
+  }, [modalContext]);
 
   const handleRefresh = React.useCallback(async () => {
     // Execute the refresh action
-    await context.executeAction(SPACES_ACTION_IDS.REFRESH_SPACES);
-  }, [context]);
+    await actionContext.executeAction(SPACES_ACTION_IDS.REFRESH_SPACES);
+  }, [actionContext]);
 
   const handleShowSettings = React.useCallback(async () => {
     // Execute the settings action
-    await context.executeAction(SPACES_ACTION_IDS.SHOW_SETTINGS);
-  }, [context]);
+    await actionContext.executeAction(SPACES_ACTION_IDS.SHOW_SETTINGS);
+  }, [actionContext]);
 
   return (
     <>
       <DropdownMenuItem
         onClick={handleCreateSpace}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(SPACES_ACTION_IDS.CREATE_SPACE)}
+        disabled={actionContext.isActionExecuting(
+          SPACES_ACTION_IDS.CREATE_SPACE
+        )}
       >
         <Plus className="mr-2 h-4 w-4" />
         <span>
-          {context.isActionExecuting(SPACES_ACTION_IDS.CREATE_SPACE)
+          {actionContext.isActionExecuting(SPACES_ACTION_IDS.CREATE_SPACE)
             ? 'Creating...'
             : 'Create Space'}
         </span>
@@ -51,7 +53,9 @@ export function SpacesListPageActions() {
       <DropdownMenuItem
         onClick={handleRefresh}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(SPACES_ACTION_IDS.REFRESH_SPACES)}
+        disabled={actionContext.isActionExecuting(
+          SPACES_ACTION_IDS.REFRESH_SPACES
+        )}
       >
         <RefreshCw className="mr-2 h-4 w-4" />
         <span>Refresh</span>
@@ -60,7 +64,9 @@ export function SpacesListPageActions() {
       <DropdownMenuItem
         onClick={handleShowSettings}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(SPACES_ACTION_IDS.SHOW_SETTINGS)}
+        disabled={actionContext.isActionExecuting(
+          SPACES_ACTION_IDS.SHOW_SETTINGS
+        )}
       >
         <Settings className="mr-2 h-4 w-4" />
         <span>Settings</span>

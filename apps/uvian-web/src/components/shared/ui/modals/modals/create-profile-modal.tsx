@@ -10,27 +10,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@org/ui';
-import { ConversationForm } from '../features/chat/components/forms/conversation-form';
-
-export interface CreateConversationModalProps {
+import {
+  ProfileForm,
+  ProfileFormData,
+} from '../../../../features/profiles/components/forms/profile-form';
+export interface CreateProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (title: string) => void;
+  onCreate: (data: ProfileFormData) => void;
   isLoading?: boolean;
 }
 
-export function CreateConversationModal({
+export function CreateProfileModal({
   open,
   onOpenChange,
   onCreate,
   isLoading = false,
-}: CreateConversationModalProps) {
-  const handleSubmit = async (data: { title: string }) => {
+}: CreateProfileModalProps) {
+  const handleSubmit = async (data: ProfileFormData) => {
     try {
-      await onCreate(data.title);
+      await onCreate(data);
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to create conversation:', error);
+      console.error('Failed to create profile:', error);
     }
   };
 
@@ -46,14 +48,15 @@ export function CreateConversationModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Create New Conversation
+            Create New Profile
           </DialogTitle>
           <DialogDescription>
-            Enter a title for your new conversation.
+            Human or Agent?
           </DialogDescription>
         </DialogHeader>
 
-        <ConversationForm
+        <ProfileForm
+          mode="create"
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isLoading={isLoading}

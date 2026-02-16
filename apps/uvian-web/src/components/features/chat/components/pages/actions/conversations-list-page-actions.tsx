@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { useModalContext } from '~/components/shared/ui/modals';
 const LIST_ACTION_IDS = {
   CREATE_CONVERSATION: 'create-conversation',
   REFRESH_CONVERSATIONS: 'refresh-conversations',
@@ -15,31 +16,30 @@ const LIST_ACTION_IDS = {
  * This is a pure UI component that focuses only on rendering
  */
 export function ConversationsListPageActions() {
-  const context = usePageActionContext();
+  const actionContext = usePageActionContext();
+  const modalContext = useModalContext()
 
   const handleNewConversation = React.useCallback(() => {
-    // Open the create conversation modal directly
-    // The provider has already configured the modal with onCreate and other props
-    context.openModal(LIST_ACTION_IDS.CREATE_CONVERSATION);
-  }, [context]);
+     modalContext.openModal(LIST_ACTION_IDS.CREATE_CONVERSATION);
+  }, [modalContext]);
 
   const handleRefresh = React.useCallback(async () => {
     // Execute the refresh action
-    await context.executeAction(LIST_ACTION_IDS.REFRESH_CONVERSATIONS);
-  }, [context]);
+    await actionContext.executeAction(LIST_ACTION_IDS.REFRESH_CONVERSATIONS);
+  }, [actionContext]);
 
   return (
     <>
       <DropdownMenuItem
         onClick={handleNewConversation}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(
+        disabled={actionContext.isActionExecuting(
           LIST_ACTION_IDS.CREATE_CONVERSATION
         )}
       >
         <Plus className="mr-2 h-4 w-4" />
         <span>
-          {context.isActionExecuting(LIST_ACTION_IDS.CREATE_CONVERSATION)
+          {actionContext.isActionExecuting(LIST_ACTION_IDS.CREATE_CONVERSATION)
             ? 'Creating...'
             : 'New Conversation'}
         </span>
@@ -48,7 +48,7 @@ export function ConversationsListPageActions() {
       <DropdownMenuItem
         onClick={handleRefresh}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(
+        disabled={actionContext.isActionExecuting(
           LIST_ACTION_IDS.REFRESH_CONVERSATIONS
         )}
       >

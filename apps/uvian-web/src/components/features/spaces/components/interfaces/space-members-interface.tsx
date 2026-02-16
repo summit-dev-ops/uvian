@@ -4,9 +4,18 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { UserPlus } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
-import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
-import { Card, CardContent, Checkbox, Badge, ScrollArea } from '@org/ui';
+import {
+  InterfaceLayout,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
+} from '~/components/shared/ui/interfaces/interface-layout';
+import {
+  InterfaceError,
+  InterfaceLoading,
+  InterfaceEmpty,
+} from '~/components/shared/ui/interfaces';
+import { Card, CardContent, Checkbox, Badge } from '@org/ui';
 import { useSpaceMemberActions } from '../../hooks/use-space-member-actions';
 import { createArraySelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionManagerProvider } from '~/components/shared/actions/hocs/with-action-manager';
@@ -63,20 +72,60 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
     }
   };
 
+  // Early return for error state
   if (error) {
     return (
-      <InterfaceError
-        variant="card"
-        title="Failed to Load Space Members"
-        message={
-          error.message ||
-          'There was an error loading the space members. Please try again.'
-        }
-        showRetry={true}
-        showHome={true}
-        onRetry={() => window.location.reload()}
-        className="flex h-screen items-center justify-center"
-      />
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Space Members"
+            subtitle="Error loading members"
+            actions={
+              <button
+                onClick={() => window.history.back()}
+                className="px-3 py-1 text-sm border rounded hover:bg-accent"
+              >
+                Back
+              </button>
+            }
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceError
+            variant="card"
+            title="Failed to Load Space Members"
+            message={
+              error.message ||
+              'There was an error loading the space members. Please try again.'
+            }
+            showRetry={true}
+            showHome={true}
+            onRetry={() => window.location.reload()}
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
+
+  // Early return for loading state
+  if (isLoading) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Space Members"
+            subtitle="Loading members..."
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceLoading
+            variant="default"
+            message="Loading space members..."
+            size="lg"
+            className="min-h-[400px]"
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
     );
   }
 
@@ -91,46 +140,35 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
         layout: 'horizontal',
       }}
     >
-      <div className="space-y-6">
-        {/* Header with actions */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">Space Members</h1>
-            <p className="text-muted-foreground">
-              Manage members and their roles in {space?.name || 'this space'}
-            </p>
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1">
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Space Members"
+            subtitle={`Manage members and their roles in ${
+              space?.name || 'this space'
+            }`}
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
           {/* Members list */}
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <InterfaceLoadingSkeleton
-                  key={i}
-                  variant="card"
-                  lines={1}
-                  className="h-16"
-                />
-              ))}
-            </div>
-          ) : members?.length === 0 ? (
-            <Card className="py-12">
-              <CardContent className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <UserPlus className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-medium">No members yet</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isAdmin
-                      ? 'Invite your team to start collaborating.'
-                      : 'You are the only member so far.'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          {members?.length === 0 ? (
+            <InterfaceEmpty
+              variant="card"
+              title="No members yet"
+              message={
+                isAdmin
+                  ? 'Invite your team to start collaborating.'
+                  : 'You are the only member so far.'
+              }
+              action={
+                isAdmin && (
+                  <button className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">
+                    <UserPlus className="h-4 w-4 mr-2 inline" />
+                    Invite Members
+                  </button>
+                )
+              }
+            />
           ) : (
             <div className="space-y-3">
               {/* Select all checkbox */}
@@ -216,8 +254,8 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
               ))}
             </div>
           )}
-        </ScrollArea>
-      </div>
+        </InterfaceContent>
+      </InterfaceLayout>
     </ActionManagerProvider>
   );
 }

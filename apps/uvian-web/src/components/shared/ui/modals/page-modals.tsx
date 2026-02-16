@@ -1,18 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { usePageActionContext } from './page-action-context';
+import { useModalContext } from './modal-context';
 import { MODAL_REGISTRY } from './modal-registry';
 
 /**
  * PageModals component
- * Renders all active modals from the PageActionContext
+ * Renders all active modals from the ModalProvider
  * This component ensures modals are rendered at the page level, not within dropdown components
  * which solves the shadcn portal issue
  */
 export function PageModals() {
-  const context = usePageActionContext();
-  const modalState = context.getModalState();
+  const context = useModalContext();
+  const modalState = context.getAllModalStates();
 
   const activeModals = React.useMemo(() => {
     return Object.entries(modalState)

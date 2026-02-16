@@ -1,13 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import type { ModalState } from './modal-registry';
-import { MODAL_REGISTRY, MODAL_IDS } from './modal-registry';
 
 export interface ActionRegistration {
   id: string;
   label: string;
-  icon?: React.ComponentType<any>;
   handler: () => void | Promise<void>;
   disabled?: boolean;
   destructive?: boolean;
@@ -15,19 +12,8 @@ export interface ActionRegistration {
 }
 
 export interface PageActionContextType {
-  // Modal management
-  openModal: (modalId: string, props?: Record<string, any>) => void;
-  closeModal: (modalId: string) => void;
-  closeAllModals: () => void;
-  isModalOpen: (modalId: string) => boolean;
-  getModalProps: (modalId: string) => Record<string, any>;
-
-  // Action management
   executeAction: (actionId: string) => Promise<void>;
   isActionExecuting: (actionId: string) => boolean;
-
-  // State access
-  getModalState: () => Record<string, ModalState>;
   getExecutingActions: () => Record<string, boolean>;
 }
 
@@ -48,7 +34,6 @@ export function usePageActionContext() {
 export interface PageActionProviderProps {
   children: React.ReactNode;
   actions?: ActionRegistration[];
-  initialModalState?: Record<string, ModalState>;
   onActionError?: (error: Error, actionId: string) => void;
   onActionSuccess?: (actionId: string) => void;
 }
@@ -56,78 +41,13 @@ export interface PageActionProviderProps {
 export function PageActionProvider({
   children,
   actions = [],
-  initialModalState = {},
   onActionError,
   onActionSuccess,
 }: PageActionProviderProps) {
-  // Modal state management
-  const [modalState, setModalState] =
-    React.useState<Record<string, ModalState>>(initialModalState);
-
   // Action execution state
   const [executingActions, setExecutingActions] = React.useState<
     Record<string, boolean>
   >({});
-
-  // Initialize modal state for registered modals
-  React.useEffect(() => {
-    const initialState: Record<string, ModalState> = {};
-
-    Object.keys(MODAL_REGISTRY).forEach((modalId) => {
-      initialState[modalId] = {
-        isOpen: false,
-        props: {},
-      };
-    });
-
-    setModalState((prevState) => ({ ...initialState, ...prevState }));
-  }, []);
-
-  const openModal = React.useCallback(
-    (modalId: string, props: Record<string, any> = {}) => {
-      setModalState((prev) => ({
-        ...prev,
-        [modalId]: {
-          isOpen: true,
-          props: { ...prev[modalId]?.props, ...props },
-        },
-      }));
-    },
-    []
-  );
-
-  const closeModal = React.useCallback((modalId: string) => {
-    setModalState((prev) => ({
-      ...prev,
-      [modalId]: {
-        ...prev[modalId],
-        isOpen: false,
-      },
-    }));
-  }, []);
-
-  const closeAllModals = React.useCallback(() => {
-    setModalState((prev) =>
-      Object.keys(prev).reduce((acc, key) => {
-        acc[key] = { ...prev[key], isOpen: false };
-        return acc;
-      }, {} as Record<string, ModalState>)
-    );
-  }, []);
-
-  const isModalOpen = React.useCallback(
-    (modalId: string): boolean => {
-      return modalState[modalId]?.isOpen ?? false;
-    },
-    [modalState]
-  );
-
-  const getModalProps = React.useCallback(
-    (modalId: string): Record<string, any> => {
-      return modalState[modalId]?.props ?? {};
-    },
-    [modalState]
-  );
 
   const executeAction = React.useCallback(
     async (actionId: string): Promise<void> => {
@@ -161,21 +81,14 @@ export function PageActionProvider({
     [executingActions]
   );
 
-  const getModalState = React.useCallback(() => modalState, [modalState]);
   const getExecutingActions = React.useCallback(
     () => executingActions,
     [executingActions]
   );
 
   const contextValue: PageActionContextType = {
-    openModal,
-    closeModal,
-    closeAllModals,
-    isModalOpen,
-    getModalProps,
     executeAction,
     isActionExecuting,
-    getModalState,
     getExecutingActions,
   };
 
@@ -186,7 +99,4 @@ export function PageActionProvider({
   );
 }
 
-// Export constants for easy access
-export { MODAL_IDS, MODAL_REGISTRY };
-export type { ModalState };
 export type { ActionRegistration as ActionRegistrationType };

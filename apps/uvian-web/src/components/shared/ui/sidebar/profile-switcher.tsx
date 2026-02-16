@@ -33,20 +33,19 @@ export function ProfileSwitcher() {
     (p: ProfileUI) => p.type === 'human'
   );
 
+  const [selectedProfileId, setSelectedProfileId] =
+    React.useState(activeProfileId);
+
   const activeProfile =
     humanProfiles.find((p: ProfileUI) => p.id === activeProfileId) ||
     humanProfiles[0];
 
-  const [selectedProfileId, setSelectedProfileId] = React.useState(
-    activeProfile?.id || ''
-  );
-
   // Update selected profile when active profile changes
   React.useEffect(() => {
-    if (activeProfile?.id) {
-      setSelectedProfileId(activeProfile.id);
+    if (activeProfileId) {
+      setSelectedProfileId(activeProfileId);
     }
-  }, [activeProfile?.id]);
+  }, [activeProfileId]);
 
   const handleProfileSelect = (profileId: string) => {
     setSelectedProfileId(profileId);

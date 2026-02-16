@@ -35,7 +35,7 @@ const profileSchema = z.object({
   publicFields: z.record(z.string(), z.any()).optional(),
 });
 
-type ProfileFormData = z.infer<typeof profileSchema>;
+export type ProfileFormData = z.infer<typeof profileSchema>;
 
 export interface ProfileFormProps {
   // Mode and initial data

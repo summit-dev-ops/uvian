@@ -34,15 +34,15 @@ export class ChatService {
       id?: string;
       title: string;
       profileId: string; // The profile creating the chat
-      space_id?: string;
+      spaceId?: string;
     }
   ): Promise<Conversation> {
     // 1. App Logic: Verify space access if space_id provided
-    if (data.space_id) {
+    if (data.spaceId) {
       const { data: spaceMem } = await userClient
         .from('space_members')
         .select('space_id')
-        .eq('space_id', data.space_id)
+        .eq('space_id', data.spaceId)
         .eq('profile_id', data.profileId)
         .single();
 
@@ -56,7 +56,7 @@ export class ChatService {
       .insert({
         id: data.id,
         title: data.title,
-        space_id: data.space_id,
+        space_id: data.spaceId,
       })
       .select()
       .single();
@@ -79,16 +79,20 @@ export class ChatService {
     };
   }
 
-  async getConversations(userClient: SupabaseClient): Promise<Conversation[]> {
-    // RLS handles visibility (Space members or Direct members see the rows)
+  async getConversations(
+    userClient: SupabaseClient, 
+    profileId: string
+  ): Promise<Conversation[]> {
+    // Use !inner join to ensure we only get conversations where 
+    // the specific profileId is a member
     const { data, error } = await userClient
       .from('conversations')
-      .select(
-        `
+      .select(`
         *,
-        messages(count)
-      `
-      )
+        messages(count),
+        conversation_members!inner(profile_id)
+      `)
+      .eq('conversation_members.profile_id', profileId)
       .order('updated_at', { ascending: false });
 
     if (error) throw new Error(error.message);
@@ -105,13 +109,19 @@ export class ChatService {
 
   async getConversationsInSpace(
     userClient: SupabaseClient,
-    spaceId: string
+    spaceId: string,
+    profileId: string
   ): Promise<Conversation[]> {
-    // RLS ensures the user can only see rows if they are in the space
+    // Filter by space AND ensure the specific profile is a member
     const { data, error } = await userClient
       .from('conversations')
-      .select('*, messages(count)')
+      .select(`
+        *,
+        messages(count),
+        conversation_members!inner(profile_id)
+      `)
       .eq('space_id', spaceId)
+      .eq('conversation_members.profile_id', profileId)
       .order('updated_at', { ascending: false });
 
     if (error) throw new Error(error.message);
@@ -128,12 +138,18 @@ export class ChatService {
 
   async getConversation(
     userClient: SupabaseClient,
+    profileId: string,
     id: string
   ): Promise<Conversation | undefined> {
     const { data, error } = await userClient
       .from('conversations')
-      .select('*, messages(count)')
+      .select(`
+        *, 
+        messages(count),
+        conversation_members!inner(profile_id)
+      `)
       .eq('id', id)
+      .eq('conversation_members.profile_id', profileId)
       .single();
 
     if (error) return undefined;
@@ -153,14 +169,16 @@ export class ChatService {
     conversationId: string,
     data: CreateMessagePayload
   ): Promise<Message> {
-    // 1. App Logic: Verify access to conversation (RLS check via Select)
-    const { data: access } = await userClient
-      .from('conversations')
-      .select('id')
-      .eq('id', conversationId)
+    // 1. App Logic: Verify access via Conversation Members
+    // We must check if THIS profile is a member, not just if the User owns the chat via another profile.
+    const { data: memberCheck } = await userClient
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('conversation_id', conversationId)
+      .eq('profile_id', data.senderId)
       .single();
 
-    if (!access) throw new Error('Unauthorized or Conversation not found');
+    if (!memberCheck) throw new Error('Unauthorized: You are not a member of this chat');
 
     // 2. Insert via Admin Client
     const { data: message, error } = await adminSupabase
@@ -186,6 +204,7 @@ export class ChatService {
     return {
       id: message.id,
       conversationId: message.conversation_id,
+      senderId: message.sender_id,
       content: message.content,
       role: message.role,
       createdAt: message.created_at,
@@ -195,8 +214,13 @@ export class ChatService {
 
   async getMessages(
     userClient: SupabaseClient,
-    conversationId: string
+    conversationId: string,
+    profileId: string
   ): Promise<Message[]> {
+    // 1. Verify access before fetching messages
+    const access = await this.getUserRoleInConversation(userClient, conversationId, profileId);
+    if (!access) throw new Error('Unauthorized');
+
     const { data, error } = await userClient
       .from('messages')
       .select('*')
@@ -208,6 +232,7 @@ export class ChatService {
     return (data || []).map((m) => ({
       id: m.id,
       conversationId: m.conversation_id,
+      senderId: m.sender_id,
       content: m.content,
       role: m.role,
       createdAt: m.created_at,
@@ -250,6 +275,7 @@ export class ChatService {
     return {
       id: updated.id,
       conversationId: updated.conversation_id,
+      senderId: updated.sender_id,
       content: updated.content,
       role: updated.role,
       createdAt: updated.created_at,
@@ -331,6 +357,7 @@ export class ChatService {
       createdAt: membership.created_at,
     };
   }
+  
   async updateConversationMember(
     userClient: SupabaseClient,
     conversationId: string,

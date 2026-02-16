@@ -1,13 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { Edit, Users, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
-import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import {
+  ActionRegistrationType,
+  PageActionProvider,
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
-
 
 export interface SpaceOverviewPageActionContextType {
   spaceId: string;
@@ -75,39 +76,36 @@ export function SpaceOverviewPageActionProvider({
 
   // Handler for deleting space
   const handleDeleteSpace = React.useCallback(async () => {
+    if(activeProfileId)
     try {
-      await deleteSpace({authProfileId:activeProfileId, spaceId });
+      await deleteSpace({ authProfileId: activeProfileId, spaceId });
       router.push('/spaces');
     } catch (error) {
       console.error('Failed to delete space:', error);
       throw error;
     }
-  }, [deleteSpace, router, spaceId]);
+  }, [deleteSpace, router, spaceId, activeProfileId]);
 
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
       id: SPACE_ACTION_IDS.EDIT_SPACE,
       label: 'Edit Space',
-      icon: Edit,
       handler: handleEditSpace,
     },
     {
       id: SPACE_ACTION_IDS.INVITE_PROFILES,
       label: 'Invite',
-      icon: Users,
       handler: handleInviteMembers,
     },
     {
       id: SPACE_ACTION_IDS.MANAGE_MEMBERS,
       label: 'Manage Members',
-      icon: Users,
       handler: handleManageMembers,
     },
     {
       id: SPACE_ACTION_IDS.DELETE_SPACE,
       label: 'Delete Space',
-      icon: Trash2,
       handler: handleDeleteSpace,
       destructive: true,
       loadingLabel: 'Deleting...',
@@ -135,27 +133,6 @@ export function SpaceOverviewPageActionProvider({
       actions={actions}
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
-      initialModalState={{
-        [MODAL_IDS.INVITE_PROFILES]: {
-          isOpen: false,
-          props: {
-            // PageModals will add open and onOpenChange
-            // The actual onInvite handler will be provided by the UI component
-          },
-        },
-        [MODAL_IDS.CONFIRM_DELETE]: {
-          isOpen: false,
-          props: {
-            title: 'Delete Space',
-            description:
-              'This action cannot be undone. All conversations and messages will be permanently deleted.',
-            confirmText: 'Delete',
-            variant: 'destructive' as const,
-            isLoading: isDeleting,
-            onConfirm: handleDeleteSpace,
-          },
-        },
-      }}
     >
       {children}
     </PageActionProvider>

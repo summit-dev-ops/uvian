@@ -2,8 +2,14 @@
 
 import React from 'react';
 import { useConversationMembers } from '~/components/features/chat/hooks/use-conversation-members';
+import {
+  InterfaceLayout,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
+  InterfaceContainer,
+} from '~/components/shared/ui/interfaces/interface-layout';
 import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
-import { ScrollArea } from '@org/ui';
 import { MemberDataTable } from '~/components/features/chat/components/member-data-table';
 
 interface ChatMembersInterfaceProps {
@@ -16,25 +22,48 @@ export function ChatMembersInterface({
   const { members, isLoading, isAdmin, removeMember, updateRole } =
     useConversationMembers(conversationId);
 
+  // Early return for loading state
+  if (isLoading) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Chat Members"
+            subtitle="Loading members..."
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceLoading
+            variant="default"
+            message="Loading members..."
+            size="lg"
+            className="min-h-[400px]"
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
+
   return (
-    <ScrollArea className="flex-1 p-4">
-      {isLoading ? (
-        <InterfaceLoading
-          variant="default"
-          message="Loading members..."
-          size="default"
-          className="flex items-center justify-center h-24"
-        />
-      ) : (
-        <MemberDataTable
-          data={members || []}
-          isAdmin={isAdmin}
-          onRemove={removeMember}
-          onUpdateRole={(profileId, role) =>
-            updateRole(profileId, { name: role })
-          }
-        />
-      )}
-    </ScrollArea>
+    <InterfaceLayout>
+      <InterfaceContainer>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Chat Members"
+            subtitle={`${members?.length || 0} members`}
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <MemberDataTable
+            data={members || []}
+            isAdmin={isAdmin}
+            onRemove={removeMember}
+            onUpdateRole={(profileId, role) =>
+              updateRole(profileId, { name: role })
+            }
+          />
+        </InterfaceContent>
+      </InterfaceContainer>
+    </InterfaceLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { SidebarProvider } from '@org/ui';
 import { SidebarInset } from '@org/ui';
-import { AppSidebar } from '~/components/shared/sidebar/ui/app-sidebar';
+import { AppSidebar } from '~/components/shared/ui/sidebar/app-sidebar';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

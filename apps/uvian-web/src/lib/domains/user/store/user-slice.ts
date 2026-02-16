@@ -33,9 +33,10 @@ const DEFAULT_SETTINGS_DRAFT: SettingsDraft = {};
 // ============================================================================
 
 export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
-  activeProfileId: "d0e1041b-f911-45e5-b542-cfb4f7f29a10",
+  activeProfileId: undefined,
   // Actions
   setActiveProfile: (newProfileId) => {
+    console.log({newProfileId})
     set({ activeProfileId: newProfileId });
   },
   // Initial state

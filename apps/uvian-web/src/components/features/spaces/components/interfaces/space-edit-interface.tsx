@@ -6,8 +6,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
-import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
-import { InterfaceLoadingSkeleton } from '~/components/shared/ui/interfaces/interface-loading';
+import {
+  InterfaceLayout,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
+} from '~/components/shared/ui/interfaces/interface-layout';
+import {
+  InterfaceError,
+  InterfaceLoading,
+} from '~/components/shared/ui/interfaces';
 import {
   Button,
   Card,
@@ -15,10 +23,10 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  ScrollArea,
 } from '@org/ui';
 import { SpaceEditor } from '../space-editor';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
+import { SpaceForm } from '../forms/space-form';
 
 interface SpaceEditInterfaceProps {
   spaceId: string;
@@ -82,98 +90,117 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
     router.push(`/spaces/${spaceId}`);
   };
 
+  const spaceData = space || {
+    name: '',
+    description: '',
+    isPrivate: false,
+  };
+
+  const handleSubmit = async (formData: {
+    name: string;
+    description?: string;
+    isPrivate: boolean;
+  }) => {
+    await handleSave(formData);
+  };
+
+  const handleCancel = () => {
+    handleBack();
+  };
+  // Early return for error state
   if (error) {
     return (
-      <InterfaceError
-        variant="card"
-        title="Failed to Load Space"
-        message={
-          error.message ||
-          'There was an error loading this space. Please try again.'
-        }
-        showRetry={true}
-        showHome={true}
-        onRetry={() => window.location.reload()}
-        className="flex h-screen items-center justify-center"
-      />
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Edit Space"
+            subtitle="Error loading space"
+            actions={
+              <Button variant="outline" size="sm" onClick={handleBack}>
+                Back to Space
+              </Button>
+            }
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceError
+            variant="card"
+            title="Failed to Load Space"
+            message={
+              error.message ||
+              'There was an error loading this space. Please try again.'
+            }
+            showRetry={true}
+            showHome={true}
+            onRetry={() => window.location.reload()}
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
     );
   }
 
+  // Early return for loading state
   if (isLoading || !space) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <InterfaceLoadingSkeleton lines={1} className="h-8 w-8" />
-          <div className="space-y-2">
-            <InterfaceLoadingSkeleton lines={1} className="h-8 w-48" />
-            <InterfaceLoadingSkeleton lines={1} className="h-4 w-64" />
-          </div>
-        </div>
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <InterfaceLoadingSkeleton lines={1} className="h-4 w-32" />
-              <InterfaceLoadingSkeleton lines={1} className="h-10 w-full" />
-            </div>
-            <div className="space-y-2">
-              <InterfaceLoadingSkeleton lines={1} className="h-4 w-24" />
-              <InterfaceLoadingSkeleton lines={1} className="h-24 w-full" />
-            </div>
-            <div className="space-y-2">
-              <InterfaceLoadingSkeleton lines={1} className="h-4 w-40" />
-              <InterfaceLoadingSkeleton lines={1} className="h-10 w-32" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Edit Space"
+            subtitle="Loading space editor..."
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceLoading
+            variant="default"
+            message="Loading space editor..."
+            size="lg"
+            className="min-h-[400px]"
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
     );
   }
 
   return (
-    <ScrollArea className="flex-1 px-4">
-      <div className="flex items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Edit Space</h1>
-          <p className="text-muted-foreground">
-            Update your space settings and preferences
-          </p>
-        </div>
-      </div>
-
-      <SpaceEditor
-        className="p-2"
-        data={{
-          name: space?.name || '',
-          description: space?.description || '',
-          isPrivate: space?.isPrivate || false,
-        }}
-        onSave={handleSave}
-        onCancel={handleBack}
-        isLoading={isUpdating}
-      />
-
-      {/* Danger zone */}
-      {isAdmin && (
-        <Card className="border-destructive/20">
-          <CardHeader>
-            <CardTitle className="text-destructive">Danger Zone</CardTitle>
-            <CardDescription>
-              Once you delete a space, there is no going back. This will
-              permanently delete the space and all associated conversations.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {isDeleting ? 'Deleting...' : 'Delete Space'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </ScrollArea>
+    <InterfaceLayout>
+      <InterfaceHeader spacing="compact">
+        <InterfaceHeaderContent
+          title="Edit Space"
+          subtitle="Update your space settings and preferences"
+        />
+      </InterfaceHeader>
+      <InterfaceContent spacing="default">
+        <SpaceForm
+          mode="edit"
+          initialData={spaceData}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+          disabled={isUpdating}
+        />
+        {/* Danger zone */}
+        {isAdmin && (
+          <Card className="border-destructive/20">
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>
+                Once you delete a space, there is no going back. This will
+                permanently delete the space and all associated conversations.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {isDeleting ? 'Deleting...' : 'Delete Space'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </InterfaceContent>
+    </InterfaceLayout>
   );
 }

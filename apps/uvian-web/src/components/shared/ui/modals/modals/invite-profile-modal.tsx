@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@org/ui';
-import { ProfileSearchInterface } from '../features/profiles/components/interfaces/profile-search-interface';
+import { ProfileSearchInterface } from '../../../../features/profiles/components/interfaces/profile-search-interface';
 
 export type InviteProfileData = {
   role: 'admin' | 'member';

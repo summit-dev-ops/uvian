@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Building2 } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 
 import {
   Dialog,
@@ -10,39 +10,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@org/ui';
-import { SpaceForm } from '../features/spaces/components/forms/space-form';
+import { ConversationForm } from '../../../../features/chat/components/forms/conversation-form';
 
-export interface CreateSpaceModalProps {
+export interface CreateConversationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: {
-    name: string;
-    description?: string;
-    isPrivate: boolean;
-  }) => void;
+  onCreate: (title: string) => void;
   isLoading?: boolean;
 }
 
-export function CreateSpaceModal({
+export function CreateConversationModal({
   open,
   onOpenChange,
   onCreate,
   isLoading = false,
-}: CreateSpaceModalProps) {
-  const handleSubmit = async (data: {
-    name: string;
-    description?: string;
-    isPrivate: boolean;
-  }) => {
+}: CreateConversationModalProps) {
+  const handleSubmit = async (data: { title: string }) => {
     try {
-      await onCreate({
-        name: data.name.trim(),
-        description: data.description?.trim() || undefined,
-        isPrivate: data.isPrivate,
-      });
+      await onCreate(data.title);
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to create space:', error);
+      console.error('Failed to create conversation:', error);
     }
   };
 
@@ -54,20 +42,18 @@ export function CreateSpaceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Create New Space
+            <MessageSquare className="h-5 w-5" />
+            Create New Conversation
           </DialogTitle>
           <DialogDescription>
-            Create a new space to organize conversations and collaborate with
-            your team.
+            Enter a title for your new conversation.
           </DialogDescription>
         </DialogHeader>
 
-        <SpaceForm
-          mode="create"
+        <ConversationForm
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isLoading={isLoading}

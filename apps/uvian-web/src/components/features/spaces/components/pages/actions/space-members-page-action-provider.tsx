@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { UserPlus } from 'lucide-react';
-import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { ActionRegistrationType, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 
 export interface SpaceMembersPageActionContextType {
@@ -28,9 +27,7 @@ export function SpaceMembersPageActionProvider({
   onError,
   onSuccess,
 }: SpaceMembersPageActionProviderProps) {
-  // Handler for inviting members
   const handleInviteMembers = React.useCallback(async () => {
-    // This will be handled by opening the modal via UI component
     console.log('Opening invite members modal for space:', spaceId);
   }, [spaceId]);
 
@@ -39,7 +36,6 @@ export function SpaceMembersPageActionProvider({
     {
       id: MEMBERS_ACTION_IDS.INVITE_PROFILES,
       label: 'Invite',
-      icon: UserPlus,
       handler: handleInviteMembers,
     },
   ];
@@ -65,13 +61,6 @@ export function SpaceMembersPageActionProvider({
       actions={actions}
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
-      initialModalState={{
-        [MODAL_IDS.INVITE_PROFILES]: {
-          isOpen: false,
-          props: {
-          },
-        },
-      }}
     >
       {children}
     </PageActionProvider>

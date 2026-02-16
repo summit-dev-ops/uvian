@@ -1,6 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useStore } from 'zustand';
 import { createAppStore } from '~/lib/stores';
 import type { AppState } from '~/lib/stores/app-store/types';
@@ -30,7 +36,15 @@ export function useAppStore<T>(selector: (state: AppState) => T): T {
     throw new Error('useAppStore must be used within StoreProvider');
   }
 
-  return useStore(storeContext, selector);
+  const store = useStore(storeContext, selector);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  if (!hydrated) return null;
+  return store;
 }
 
 export function useStoreApi() {

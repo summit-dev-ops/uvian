@@ -15,6 +15,7 @@ export interface Profile {
 }
 
 export interface CreateProfilePayload {
+  profileId:string;
   displayName: string;
   avatarUrl?: string | null;
   bio?: string | null;
@@ -24,6 +25,7 @@ export interface CreateProfilePayload {
 }
 
 export interface UpdateProfilePayload {
+  profileId:string;
   displayName?: string;
   avatarUrl?: string | null;
   bio?: string | null;
@@ -67,9 +69,6 @@ export interface RelevanceScore {
 // Request types for Fastify routes
 export interface CreateProfileRequest {
   Body: CreateProfilePayload;
-  Headers: {
-    profileId: string;
-  };
 }
 
 export interface UpdateProfileRequest {

@@ -7,5 +7,7 @@ export type AppState = ChatSlice &
   ProfileSlice &
   UserSlice &
   SpacesSlice & {
+    hasHydrated:boolean;
+    setHasHydrated:(newValue:boolean)=>void
     // Other slices can be added here
   };

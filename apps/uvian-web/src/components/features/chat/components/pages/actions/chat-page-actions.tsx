@@ -3,10 +3,8 @@
 import * as React from 'react';
 import { LogOut, Download, Trash2, Users } from 'lucide-react';
 import { DropdownMenuItem, DropdownMenuSeparator } from '@org/ui';
-import {
-  MODAL_IDS,
-  usePageActionContext,
-} from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 
 const CHAT_ACTION_IDS = {
   LEAVE_CONVERSATION: 'leave-conversation',
@@ -22,32 +20,33 @@ const CHAT_ACTION_IDS = {
  * This is a pure UI component that focuses only on rendering
  */
 export function ChatPageActions() {
-  const context = usePageActionContext();
+  const actionContext = usePageActionContext();
+  const modalContext = useModalContext();
 
   const handleLeave = React.useCallback(async () => {
     // Open confirmation modal for leaving conversation
-    context.openModal(MODAL_IDS.CONFIRM_LEAVE);
-  }, [context]);
+    modalContext.openModal(MODAL_IDS.CONFIRM_LEAVE);
+  }, [modalContext]);
 
   const handleExport = React.useCallback(async () => {
     // Open export modal
-    context.openModal(MODAL_IDS.EXPORT_CHAT);
-  }, [context]);
+    modalContext.openModal(MODAL_IDS.EXPORT_CHAT);
+  }, [modalContext]);
 
   const handleDelete = React.useCallback(async () => {
     // Open confirmation modal for deleting conversation
-    context.openModal(MODAL_IDS.CONFIRM_DELETE);
-  }, [context]);
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE);
+  }, [modalContext]);
 
   const handleShowMembers = React.useCallback(async () => {
     // Execute the action that navigates to members page
-    await context.executeAction(CHAT_ACTION_IDS.SHOW_MEMBERS);
-  }, [context]);
+    await actionContext.executeAction(CHAT_ACTION_IDS.SHOW_MEMBERS);
+  }, [actionContext]);
 
   const handleInviteMember = React.useCallback(async () => {
     // Open invite member modal
-    context.openModal(MODAL_IDS.INVITE_PROFILES);
-  }, [context]);
+    modalContext.openModal(MODAL_IDS.INVITE_PROFILES);
+  }, [modalContext]);
 
   return (
     <>
@@ -55,11 +54,13 @@ export function ChatPageActions() {
       <DropdownMenuItem
         onClick={handleLeave}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(CHAT_ACTION_IDS.LEAVE_CONVERSATION)}
+        disabled={actionContext.isActionExecuting(
+          CHAT_ACTION_IDS.LEAVE_CONVERSATION
+        )}
       >
         <LogOut className="mr-2 h-4 w-4" />
         <span>
-          {context.isActionExecuting(CHAT_ACTION_IDS.LEAVE_CONVERSATION)
+          {actionContext.isActionExecuting(CHAT_ACTION_IDS.LEAVE_CONVERSATION)
             ? 'Leaving...'
             : 'Leave Conversation'}
         </span>
@@ -68,7 +69,7 @@ export function ChatPageActions() {
       <DropdownMenuItem
         onClick={handleExport}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(CHAT_ACTION_IDS.EXPORT_CHAT)}
+        disabled={actionContext.isActionExecuting(CHAT_ACTION_IDS.EXPORT_CHAT)}
       >
         <Download className="mr-2 h-4 w-4" />
         <span>Export Chat</span>
@@ -78,7 +79,9 @@ export function ChatPageActions() {
       <DropdownMenuItem
         onClick={handleInviteMember}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(CHAT_ACTION_IDS.INVITE_PROFILES)}
+        disabled={actionContext.isActionExecuting(
+          CHAT_ACTION_IDS.INVITE_PROFILES
+        )}
       >
         <Users className="mr-2 h-4 w-4" />
         <span>Invite Member</span>
@@ -89,7 +92,7 @@ export function ChatPageActions() {
       <DropdownMenuItem
         onClick={handleShowMembers}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(CHAT_ACTION_IDS.SHOW_MEMBERS)}
+        disabled={actionContext.isActionExecuting(CHAT_ACTION_IDS.SHOW_MEMBERS)}
       >
         <Users className="mr-2 h-4 w-4" />
         <span>Manage Members</span>
@@ -98,13 +101,13 @@ export function ChatPageActions() {
       <DropdownMenuItem
         onClick={handleDelete}
         className="cursor-pointer text-destructive"
-        disabled={context.isActionExecuting(
+        disabled={actionContext.isActionExecuting(
           CHAT_ACTION_IDS.DELETE_CONVERSATION
         )}
       >
         <Trash2 className="mr-2 h-4 w-4" />
         <span>
-          {context.isActionExecuting(CHAT_ACTION_IDS.DELETE_CONVERSATION)
+          {actionContext.isActionExecuting(CHAT_ACTION_IDS.DELETE_CONVERSATION)
             ? 'Deleting...'
             : 'Delete Conversation'}
         </span>

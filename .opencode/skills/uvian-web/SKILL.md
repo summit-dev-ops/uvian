@@ -20,8 +20,10 @@ Consult these resources as needed:
 
 ```
 references/
-  features.md          
-  domains.md          
+  features.md         # Defining and working with UI and UX features
+  domains.md          # Defining and working with domains of logic and data
+  pages.md            # Defining and working with Pages within the app
+  interfaces.md       # Defining and working with Interfaces within the app
 ```
 
 # General React Code practices

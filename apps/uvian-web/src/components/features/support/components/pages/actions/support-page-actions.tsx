@@ -4,6 +4,7 @@ import * as React from 'react';
 import { RefreshCw, MessageCircle } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { useModalContext } from '~/components/shared/ui/modals/modal-context';
 
 const SUPPORT_ACTION_IDS = {
   CONTACT_SUPPORT: 'contact-support',
@@ -15,26 +16,27 @@ const SUPPORT_ACTION_IDS = {
  * Provides UI for support-related actions
  */
 export function SupportPageActions() {
-  const context = usePageActionContext();
+  const actionContext = usePageActionContext();
+  const modalContext = useModalContext();
 
   const handleContactSupport = React.useCallback(() => {
-    context.openModal(SUPPORT_ACTION_IDS.CONTACT_SUPPORT);
-  }, [context]);
+    modalContext.openModal(SUPPORT_ACTION_IDS.CONTACT_SUPPORT);
+  }, [modalContext]);
 
   const handleRefresh = React.useCallback(async () => {
-    await context.executeAction(SUPPORT_ACTION_IDS.REFRESH_SUPPORT);
-  }, [context]);
+    await actionContext.executeAction(SUPPORT_ACTION_IDS.REFRESH_SUPPORT);
+  }, [actionContext]);
 
   return (
     <>
       <DropdownMenuItem
         onClick={handleContactSupport}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(SUPPORT_ACTION_IDS.CONTACT_SUPPORT)}
+        disabled={actionContext.isActionExecuting(SUPPORT_ACTION_IDS.CONTACT_SUPPORT)}
       >
         <MessageCircle className="mr-2 h-4 w-4" />
         <span>
-          {context.isActionExecuting(SUPPORT_ACTION_IDS.CONTACT_SUPPORT)
+          {actionContext.isActionExecuting(SUPPORT_ACTION_IDS.CONTACT_SUPPORT)
             ? 'Opening...'
             : 'Contact Support'}
         </span>
@@ -43,7 +45,7 @@ export function SupportPageActions() {
       <DropdownMenuItem
         onClick={handleRefresh}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(SUPPORT_ACTION_IDS.REFRESH_SUPPORT)}
+        disabled={actionContext.isActionExecuting(SUPPORT_ACTION_IDS.REFRESH_SUPPORT)}
       >
         <RefreshCw className="mr-2 h-4 w-4" />
         <span>Refresh</span>

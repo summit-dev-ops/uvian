@@ -32,3 +32,5 @@ export * from './slider';
 export * from './sonner';
 export * from './switch';
 export * from './toggle-group';
+export * from './accordion';
+export * from './hover-card';

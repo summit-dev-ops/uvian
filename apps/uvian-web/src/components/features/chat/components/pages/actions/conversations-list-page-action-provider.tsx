@@ -1,14 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
-import { ActionRegistrationType, MODAL_IDS, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import {
+  ActionRegistrationType,
+  PageActionProvider,
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
-
-
 
 export interface ConversationsListPageActionContextType {
   // Pre-defined action IDs for type safety
@@ -33,7 +33,7 @@ export function ConversationsListPageActionProvider({
   onSuccess,
 }: ConversationsListPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const {activeProfileId} = useUserSessionStore()
+  const { activeProfileId } = useUserSessionStore();
 
   // Mutation for creating conversations with success/error handling
   const { mutate: createConversation, isPending: isCreating } = useMutation(
@@ -43,20 +43,21 @@ export function ConversationsListPageActionProvider({
   // Handler for creating a new conversation - called by the modal
   const handleConversationCreation = React.useCallback(
     async (title: string) => {
-      try {
-        // Use the mutation which includes optimistic updates and navigation
-        const newConversation = await createConversation({
-          id: crypto.randomUUID(),
-          title,
-          authProfileId: activeProfileId,
-        });
+      if (activeProfileId)
+        try {
+          // Use the mutation which includes optimistic updates and navigation
+          const newConversation = await createConversation({
+            id: crypto.randomUUID(),
+            title,
+            authProfileId: activeProfileId,
+          });
 
-        // Return the new conversation data for navigation
-        return newConversation;
-      } catch (error) {
-        console.error('Failed to create conversation:', error);
-        throw error;
-      }
+          // Return the new conversation data for navigation
+          return newConversation;
+        } catch (error) {
+          console.error('Failed to create conversation:', error);
+          throw error;
+        }
     },
     [activeProfileId, createConversation]
   );
@@ -74,14 +75,12 @@ export function ConversationsListPageActionProvider({
     {
       id: LIST_ACTION_IDS.CREATE_CONVERSATION,
       label: 'New Conversation',
-      icon: Plus,
-      handler: handleRefreshConversations, // Placeholder - UI component handles modal opening
+      handler: handleRefreshConversations,
       loadingLabel: 'Creating...',
     },
     {
       id: LIST_ACTION_IDS.REFRESH_CONVERSATIONS,
       label: 'Refresh',
-      icon: RefreshCw,
       handler: handleRefreshConversations,
     },
   ];
@@ -113,17 +112,6 @@ export function ConversationsListPageActionProvider({
       actions={actions}
       onActionError={handleActionError}
       onActionSuccess={handleActionSuccess}
-      initialModalState={{
-        [MODAL_IDS.CREATE_CONVERSATION]: {
-          isOpen: false,
-          props: {
-            // Core modal props required by CreateConversationModal
-            onCreate: handleConversationCreation,
-            isLoading: isCreating,
-            // PageModals will automatically add open and onOpenChange props
-          },
-        },
-      }}
     >
       {children}
     </PageActionProvider>

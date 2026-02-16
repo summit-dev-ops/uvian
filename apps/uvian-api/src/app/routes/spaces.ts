@@ -146,8 +146,15 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
         const { spaceId } = request.params;
-        const space = await spacesService.getSpace(request.supabase, spaceId);
+        const space = await spacesService.getSpace(
+          request.supabase,
+          authProfileId,
+          spaceId
+        );
         if (!space) {
           reply.code(404).send({ error: 'Space not found' });
           return;
@@ -193,7 +200,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      try { 
+      try {
         const authProfileId = await profileService.getCurrentProfileFromRequest(
           request
         );

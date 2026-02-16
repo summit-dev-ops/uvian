@@ -236,8 +236,6 @@ export function MemberDataTable({
         className="mb-4"
         layout="horizontal"
       >
-
-        <h1 className="text-3xl font-bold">Edit Members</h1>
       </ActionToolbar>
       <Table>
         <TableHeader>

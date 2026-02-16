@@ -22,7 +22,7 @@ const InterfaceLayout = React.forwardRef<HTMLDivElement, InterfaceLayoutProps>(
     return (
       <div className="h-full flex flex-col">
         <ScrollArea className="flex-1">
-          <Comp ref={ref} className="h-full" {...props}>
+          <Comp ref={ref} className="h-full pr-2" {...props}>
             {children}
           </Comp>
         </ScrollArea>
@@ -52,17 +52,10 @@ const interfaceContainerVariants = cva(
         spacious: 'max-w-6xl mx-auto',
         full: 'w-full max-w-none',
       },
-      spacing: {
-        none: 'p-0',
-        compact: 'p-4',
-        default: 'p-6',
-        spacious: 'p-8',
-      },
     },
     defaultVariants: {
       variant: 'default',
       size: 'full',
-      spacing: 'default',
     },
   }
 );
@@ -76,13 +69,13 @@ export interface InterfaceContainerProps
 const InterfaceContainer = React.forwardRef<
   HTMLDivElement,
   InterfaceContainerProps
->(({ className, variant, size, spacing, asChild = false, ...props }, ref) => {
+>(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : 'div';
   return (
     <Comp
       ref={ref}
       className={cn(
-        interfaceContainerVariants({ variant, size, spacing }),
+        interfaceContainerVariants({ variant, size }),
         className
       )}
       {...props}
@@ -132,34 +125,41 @@ const InterfaceBanner = React.forwardRef<HTMLDivElement, InterfaceBannerProps>(
       ...props
     },
     ref
-  ) => (
-    <div
-      ref={ref}
-      className={cn(interfaceBannerVariants({ height }), className)}
-      {...props}
-    >
-      {imageUrl && (
-        <img
-          src={imageUrl}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      )}
+  ) => {
+    const directionMap = {
+      'to-t': 'to top',
+      'to-b': 'to bottom',
+      'to-l': 'to left',
+      'to-r': 'to right',
+    };
+
+    const cssDirection = directionMap[gradientDirection];
+
+    return (
       <div
-        className={cn('absolute inset-0', {
-          'bg-gradient-to-t': gradientDirection === 'to-t',
-          'bg-gradient-to-b': gradientDirection === 'to-b',
-          'bg-gradient-to-l': gradientDirection === 'to-l',
-          'bg-gradient-to-r': gradientDirection === 'to-r',
-        })}
-        style={{
-          opacity: gradientOpacity,
-          background: `linear-gradient(${gradientDirection}, ${gradientFrom} 0%, ${gradientTo} 100%)`,
-        }}
-      />
-      <div className="relative h-full flex items-end">{children}</div>
-    </div>
-  )
+        ref={ref}
+        className={cn(interfaceBannerVariants({ height }), className)}
+        {...props}
+      >
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+        <div
+          className="absolute inset-0"
+          style={{
+            opacity: gradientOpacity,
+            // Fix: Use the mapped cssDirection and ensure opacity is 1 for solid colors
+            background: `linear-gradient(${cssDirection}, ${gradientFrom}, ${gradientTo})`,
+          }}
+        />
+        <div className="relative h-full flex items-end">{children}</div>
+      </div>
+    );
+  }
 );
 InterfaceBanner.displayName = 'InterfaceBanner';
 
@@ -190,8 +190,8 @@ const interfaceHeaderVariants = cva(
     variants: {
       sticky: {
         always:
-          'sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b',
-        auto: 'sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b',
+          'sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        auto: 'sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
         never: '',
       },
       spacing: {
@@ -314,8 +314,8 @@ const interfaceFooterVariants = cva(
     variants: {
       sticky: {
         always:
-          'sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t',
-        auto: 'sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t',
+          'sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        auto: 'sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
         never: '',
       },
       spacing: {

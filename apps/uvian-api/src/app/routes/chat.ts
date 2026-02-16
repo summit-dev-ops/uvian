@@ -54,11 +54,25 @@ export default async function (fastify: FastifyInstance) {
 
   fastify.get<GetConversationsRequest>(
     '/api/conversations',
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        headers: {
+          type: 'object',
+          properties: {
+            profileId: { type: 'string' },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
         const conversations = await chatService.getConversations(
-          request.supabase
+          request.supabase,
+          authProfileId
         );
         reply.send(conversations);
       } catch (error: any) {
@@ -90,9 +104,13 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
         const { conversationId } = request.params;
         const conversation = await chatService.getConversation(
           request.supabase,
+          authProfileId,
           conversationId
         );
         if (!conversation) {
@@ -383,9 +401,13 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
         const { conversationId } = request.params;
         const messages = await chatService.getMessages(
           request.supabase,
+          authProfileId,
           conversationId
         );
         reply.send(messages);

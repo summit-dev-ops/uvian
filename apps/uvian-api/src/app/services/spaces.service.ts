@@ -12,8 +12,27 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 export class SpacesService {
   /**
-   * Private Helper: Verifies the profile belongs to the user and
-   * returns the role of that profile in a specific space.
+   * SECURITY: Verifies the Auth User actually owns the profile.
+   * This prevents User A from performing actions as User B (Spoofing).
+   */
+  private async verifyProfileOwnership(
+    userClient: SupabaseClient,
+    profileId: string
+  ): Promise<void> {
+    const { data, error } = await userClient
+      .from('profiles')
+      .select('id')
+      .eq('id', profileId)
+      .single();
+
+    if (error || !data) {
+      throw new Error('Unauthorized: You do not own this profile');
+    }
+  }
+
+  /**
+   * Private Helper: Returns the role of a profile in a specific space.
+   * Relies on verifyProfileOwnership being called BEFORE this.
    */
   private async getUserRoleInSpace(
     userClient: SupabaseClient,
@@ -31,30 +50,13 @@ export class SpacesService {
     return (data.role as SpaceMemberRole).name;
   }
 
-  /**
-   * Private Helper: Verifies profile ownership via User Client
-   */
-  private async verifyProfileOwnership(
-    userClient: SupabaseClient,
-    profileId: string
-  ): Promise<boolean> {
-    const { data, error } = await userClient
-      .from('profiles')
-      .select('id')
-      .eq('id', profileId)
-      .single();
-
-    return !error && !!data;
-  }
-
   async createSpace(
     userClient: SupabaseClient,
     profileId: string,
     data: CreateSpacePayload
   ): Promise<Space> {
-    if (!(await this.verifyProfileOwnership(userClient, profileId))) {
-      throw new Error('Unauthorized: Profile not owned by user');
-    }
+    // 1. SECURITY: Verify Ownership
+    await this.verifyProfileOwnership(userClient, profileId);
 
     const { data: space, error: spaceError } = await adminSupabase
       .from('spaces')
@@ -94,7 +96,8 @@ export class SpacesService {
     userClient: SupabaseClient,
     profileId: string
   ): Promise<Space[]> {
-    // RLS handles visibility. We filter by profileId to show spaces this profile is in.
+    // RLS handles visibility. 
+    // We use !inner join to STRICTLY filter by the provided profileId.
     const { data: spaces, error } = await userClient
       .from('spaces')
       .select(
@@ -108,6 +111,7 @@ export class SpacesService {
       .order('updated_at', { ascending: false });
 
     if (error) throw new Error(error.message);
+    
     return (spaces || []).map((space: any) => ({
       id: space.id,
       name: space.name,
@@ -126,46 +130,50 @@ export class SpacesService {
 
   async getSpace(
     userClient: SupabaseClient,
-    spaceId: string
+    spaceId: string,
+    profileId: string
   ): Promise<SpaceWithMembers | undefined> {
-    // RLS handles visibility. If user isn't a member/space isn't public, data is null.
+    // RLS handles visibility. 
+    // We strictly check if the *current* profile is a member using !inner.
     const { data: space, error } = await userClient
       .from('spaces')
       .select(
         `
         *,
-        space_members (
-          *,
+        space_members!inner (
+          profile_id,
+          role,
+          joined_at,
           profiles (id, display_name, avatar_url, type)
         )
       `
       )
       .eq('id', spaceId)
+      .eq('space_members.profile_id', profileId)
       .single();
 
-    if (error) return undefined;
+    if (error || !space) return undefined;
 
-    const transformedMembers: SpaceMember[] = (space.space_members || []).map(
-      (m: any) => ({
-        spaceId: m.space_id,
-        profileId: m.profile_id,
-        role: m.role,
-        joinedAt: m.joined_at,
-        profile: m.profiles,
-      })
-    );
+    // Note: Because of the !inner join above, 'space.space_members' might only contain 
+    // the current user's row depending on how Supabase returns joined data.
+    // Usually, we want ALL members for the return payload. 
+    // If the above query only returns the current user, we need a second fetch 
+    // for the full member list, authorized by the fact the first query succeeded.
+    
+    // Fetch all members separately to ensure we get the full list
+    const members = await this.getSpaceMembers(userClient, spaceId);
 
     return {
       id: space.id,
       name: space.name,
       createdAt: space.created_at,
       createdBy: space.created_by,
-      conversationCount: space.conversation_count,
+      conversationCount: space.conversation_count || 0,
       settings: space.settings,
       isPrivate: space.is_private,
       updatedAt: space.updated_at,
-      members: transformedMembers,
-      memberCount: transformedMembers.length,
+      members: members,
+      memberCount: members.length,
     };
   }
 
@@ -175,6 +183,10 @@ export class SpacesService {
     profileId: string,
     data: UpdateSpacePayload
   ): Promise<Space> {
+    // 1. SECURITY: Verify Ownership
+    await this.verifyProfileOwnership(userClient, profileId);
+
+    // 2. Check Role
     const role = await this.getUserRoleInSpace(userClient, id, profileId);
     if (role !== 'owner' && role !== 'admin') {
       throw new Error('Unauthorized: Only admins or owners can update spaces');
@@ -206,6 +218,9 @@ export class SpacesService {
     id: string,
     profileId: string
   ): Promise<void> {
+    // 1. SECURITY: Verify Ownership
+    await this.verifyProfileOwnership(userClient, profileId);
+
     const role = await this.getUserRoleInSpace(userClient, id, profileId);
     if (role !== 'owner') {
       throw new Error('Unauthorized: Only the owner can delete a space');
@@ -222,6 +237,9 @@ export class SpacesService {
     targetProfileId: string,
     role: SpaceMemberRole
   ): Promise<SpaceMember> {
+    // 1. SECURITY: Verify Ownership of Inviter
+    await this.verifyProfileOwnership(userClient, inviterProfileId);
+
     const inviterRole = await this.getUserRoleInSpace(
       userClient,
       spaceId,
@@ -251,8 +269,8 @@ export class SpacesService {
     userClient: SupabaseClient,
     spaceId: string
   ): Promise<SpaceMember[]> {
-    // RLS handles visibility:
-    // If user isn't in the space (and it's private), 'members' will be an empty array.
+    // RLS handles visibility. 
+    // Ensure the user actually has access to the space via RLS.
     const { data: members, error } = await userClient
       .from('space_members')
       .select(
@@ -269,7 +287,6 @@ export class SpacesService {
       .eq('space_id', spaceId);
 
     if (error) {
-      // If the error is a "403 Forbidden" or similar, RLS is doing its job.
       throw new Error(`Failed to fetch space members: ${error.message}`);
     }
 
@@ -294,6 +311,9 @@ export class SpacesService {
     removerProfileId: string,
     targetProfileId: string
   ): Promise<void> {
+    // 1. SECURITY: Verify Ownership
+    await this.verifyProfileOwnership(userClient, removerProfileId);
+
     const isSelf = removerProfileId === targetProfileId;
     const removerRole = await this.getUserRoleInSpace(
       userClient,
@@ -322,6 +342,9 @@ export class SpacesService {
     targetProfileId: string,
     newRole: SpaceMemberRole
   ): Promise<SpaceMember> {
+    // 1. SECURITY: Verify Ownership
+    await this.verifyProfileOwnership(userClient, updaterProfileId);
+
     const updaterRole = await this.getUserRoleInSpace(
       userClient,
       spaceId,
@@ -353,12 +376,14 @@ export class SpacesService {
     userClient: SupabaseClient,
     profileId: string
   ): Promise<SpaceStats> {
-    // Rely on User Client + RLS for automatic filtering
+    // STRICT FILTER: Only get stats for spaces THIS profile is a member of.
+    // The !inner join is crucial here.
     const { data: spaces } = await userClient
       .from('spaces')
-      .select('id, created_by, space_members!inner(profile_id)');
+      .select('id, created_by, space_members!inner(profile_id)')
+      .eq('space_members.profile_id', profileId);
 
-    if (!spaces)
+    if (!spaces || spaces.length === 0)
       return {
         totalSpaces: 0,
         ownedSpaces: 0,
@@ -370,24 +395,32 @@ export class SpacesService {
     const totalSpaceIds = spaces.map((s) => s.id);
     const ownedSpaces = spaces.filter((s) => s.created_by === profileId);
 
+    // Get conversations count for these spaces
     const { count: totalConvs } = await userClient
       .from('conversations')
       .select('*', { count: 'exact', head: true })
       .in('space_id', totalSpaceIds);
 
-    const { count: totalMembs } = await userClient
-      .from('space_members')
-      .select('*', { count: 'exact', head: true })
-      .in(
-        'space_id',
-        ownedSpaces.map((s) => s.id)
-      );
+    // Get member count for OWNED spaces only (usually stats show size of communities you own)
+    // Or you might want total members across all spaces you are in. 
+    // Implementation below matches original logic but scoped to ownedSpaces.
+    let totalMembersCount = 0;
+    if (ownedSpaces.length > 0) {
+        const { count } = await userClient
+        .from('space_members')
+        .select('*', { count: 'exact', head: true })
+        .in(
+            'space_id',
+            ownedSpaces.map((s) => s.id)
+        );
+        totalMembersCount = count || 0;
+    }
 
     return {
       totalSpaces: spaces.length,
       ownedSpaces: ownedSpaces.length,
       memberSpaces: spaces.length - ownedSpaces.length,
-      totalMembers: totalMembs || 0,
+      totalMembers: totalMembersCount,
       totalConversations: totalConvs || 0,
     };
   }

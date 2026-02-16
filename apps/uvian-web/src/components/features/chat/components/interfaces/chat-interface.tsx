@@ -14,6 +14,7 @@ import {
   InterfaceLayout,
   InterfaceContainer,
   InterfaceContent,
+  InterfaceFooter,
 } from '~/components/shared/ui/interfaces/interface-layout';
 
 export function ChatInterface({ conversationId }: { conversationId: string }) {
@@ -99,14 +100,16 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
               </div>
             )}
           </div>
-          <ChatInput
-            value={messageDraft}
-            onChange={setMessageDraft}
-            onSend={handleSend}
-            disabled={!isConnected}
-          />
         </div>
       </InterfaceContainer>
+      <InterfaceFooter sticky={"always"}>
+        <ChatInput
+          value={messageDraft}
+          onChange={setMessageDraft}
+          onSend={handleSend}
+          disabled={!isConnected}
+        />
+      </InterfaceFooter>
     </InterfaceLayout>
   );
 }

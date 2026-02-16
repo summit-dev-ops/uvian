@@ -1,19 +1,15 @@
 import { MutationOptions, QueryClient } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { profileKeys } from './keys';
-import type {
-  ProfileUI,
-  ProfileDraft,
-  ProfileType,
-} from '../types';
+import type { ProfileUI, ProfileDraft, ProfileType } from '../types';
 
 export type CreateProfilePayload = ProfileDraft & {
-  id?: string;
+  profileId: string;
   type?: ProfileType;
 };
 
 export type UpdateProfilePayload = ProfileDraft & {
-  profileId:string;
+  profileId: string;
 };
 
 export type DeleteProfilePayload = {
@@ -41,41 +37,39 @@ export const profileMutations = {
     CreateProfileContext
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.post<ProfileUI>(`/api/profiles`, {
-        displayName: payload.displayName,
-        avatarUrl: payload.avatarUrl,
-        bio: payload.bio,
-        publicFields: payload.publicFields,
-        type: payload.type,
-      });
-      return data
+      const { data } = await apiClient.post<ProfileUI>(
+        `/api/profiles`,
+        payload
+      );
+      return data;
     },
 
     onMutate: async (payload) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: profileKeys.profile() });
+      await queryClient.cancelQueries({
+        queryKey: profileKeys.profile(payload.profileId),
+      });
 
       // Snapshot previous value
       const previousProfile = queryClient.getQueryData<ProfileUI>(
-        profileKeys.profile()
+        profileKeys.profile(payload.profileId)
       );
 
       // Optimistically update
       const optimisticProfile: ProfileUI = {
-        id: 'temp-' + crypto.randomUUID(),
-        userId: 'temp-' + crypto.randomUUID(),
+        id: payload.profileId,
         type: payload.type || 'human',
         displayName: payload.displayName,
         avatarUrl: payload.avatarUrl,
         bio: payload.bio,
         publicFields: payload.publicFields || {},
         isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       queryClient.setQueryData<ProfileUI>(
-        profileKeys.profile(),
+        profileKeys.profile(payload.profileId),
         optimisticProfile
       );
 
@@ -85,15 +79,22 @@ export const profileMutations = {
     onError: (_err, _payload, context) => {
       // Rollback on error
       if (context?.previousProfile) {
-        queryClient.setQueryData(profileKeys.profile(), context.previousProfile);
+        queryClient.setQueryData(
+          profileKeys.profile(_payload.profileId),
+          context.previousProfile
+        );
       } else {
-        queryClient.removeQueries({ queryKey: profileKeys.profile() });
+        queryClient.removeQueries({
+          queryKey: profileKeys.profile(_payload.profileId),
+        });
       }
     },
 
-    onSuccess: () => {
+    onSuccess: (_data, _payload) => {
       // Invalidate to refetch with server data
-      queryClient.invalidateQueries({ queryKey: profileKeys.profile() });
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.profile(_payload.profileId),
+      });
     },
   }),
 
@@ -109,23 +110,28 @@ export const profileMutations = {
     UpdateProfileContext
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.put<ProfileUI>(`/api/profiles/${payload.profileId}`, {
-        displayName: payload.displayName,
-        avatarUrl: payload.avatarUrl,
-        bio: payload.bio,
-        publicFields: payload.publicFields,
-        isActive: payload.isActive,
-      });
-      return data
+      const { data } = await apiClient.put<ProfileUI>(
+        `/api/profiles/${payload.profileId}`,
+        {
+          displayName: payload.displayName,
+          avatarUrl: payload.avatarUrl,
+          bio: payload.bio,
+          publicFields: payload.publicFields,
+          isActive: payload.isActive,
+        }
+      );
+      return data;
     },
 
     onMutate: async (payload) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: profileKeys.profile() });
+      await queryClient.cancelQueries({
+        queryKey: profileKeys.profile(payload.profileId),
+      });
 
       // Snapshot previous value
       const previousProfile = queryClient.getQueryData<ProfileUI>(
-        profileKeys.profile()
+        profileKeys.profile(payload.profileId)
       );
 
       // Optimistically update
@@ -142,12 +148,12 @@ export const profileMutations = {
           payload.isActive !== undefined
             ? payload.isActive
             : previousProfile?.isActive || true,
-        createdAt: previousProfile?.createdAt || new Date(),
-        updatedAt: new Date(),
+        createdAt: previousProfile?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       queryClient.setQueryData<ProfileUI>(
-        profileKeys.profile(),
+        profileKeys.profile(payload.profileId),
         optimisticProfile
       );
 
@@ -157,7 +163,10 @@ export const profileMutations = {
     onError: (_err, _payload, context) => {
       // Rollback on error
       if (context?.previousProfile) {
-        queryClient.setQueryData(profileKeys.profile(), context.previousProfile);
+        queryClient.setQueryData(
+          profileKeys.profile(_payload.profileId),
+          context.previousProfile
+        );
       }
     },
 
@@ -179,20 +188,24 @@ export const profileMutations = {
     { previousProfile?: ProfileUI }
   > => ({
     mutationFn: async (payload) => {
-      await apiClient.delete(`/api/profiles/me`);
+      await apiClient.delete(`/api/profiles/${payload.profileId}`);
     },
 
     onMutate: async (payload) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: profileKeys.profile() });
+      await queryClient.cancelQueries({
+        queryKey: profileKeys.profile(payload.profileId),
+      });
 
       // Snapshot previous value
       const previousProfile = queryClient.getQueryData<ProfileUI>(
-        profileKeys.profile()
+        profileKeys.profile(payload.profileId)
       );
 
       // Remove from cache optimistically
-      queryClient.removeQueries({ queryKey: profileKeys.profile() });
+      queryClient.removeQueries({
+        queryKey: profileKeys.profile(payload.profileId),
+      });
 
       return { previousProfile };
     },
@@ -200,13 +213,18 @@ export const profileMutations = {
     onError: (_err, _payload, context) => {
       // Rollback on error
       if (context?.previousProfile) {
-        queryClient.setQueryData(profileKeys.profile(), context.previousProfile);
+        queryClient.setQueryData(
+          profileKeys.profile(_payload.profileId),
+          context.previousProfile
+        );
       }
     },
 
-    onSuccess: () => {
+    onSuccess: (_data, _payload) => {
       // Clean up related queries
-      queryClient.removeQueries({ queryKey: profileKeys.profile() });
+      queryClient.removeQueries({
+        queryKey: profileKeys.profile(_payload.profileId),
+      });
     },
   }),
 };

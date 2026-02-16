@@ -3,7 +3,9 @@
 import * as React from 'react';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
-import { MODAL_IDS, usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { useModalContext, MODAL_IDS } from '~/components/shared/ui/modals';
+
 const EDIT_ACTION_IDS = {
   CANCEL: 'cancel',
   DELETE_SPACE: 'delete-space',
@@ -14,23 +16,23 @@ const EDIT_ACTION_IDS = {
  * Uses PageActionContext for modal management and action execution
  */
 export function SpaceEditPageActions() {
-  const context = usePageActionContext();
+  const actionContext = usePageActionContext();
+  const modalContext = useModalContext();
 
   const handleCancel = React.useCallback(async () => {
-    await context.executeAction(EDIT_ACTION_IDS.CANCEL);
-  }, [context]);
+    await actionContext.executeAction(EDIT_ACTION_IDS.CANCEL);
+  }, [actionContext]);
 
   const handleDeleteSpace = React.useCallback(async () => {
-    // Open the delete confirmation modal
-    context.openModal(MODAL_IDS.CONFIRM_DELETE);
-  }, [context]);
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE);
+  }, [modalContext]);
 
   return (
     <>
       <DropdownMenuItem
         onClick={handleCancel}
         className="cursor-pointer"
-        disabled={context.isActionExecuting(EDIT_ACTION_IDS.CANCEL)}
+        disabled={actionContext.isActionExecuting(EDIT_ACTION_IDS.CANCEL)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         <span>Cancel</span>
@@ -39,11 +41,11 @@ export function SpaceEditPageActions() {
       <DropdownMenuItem
         onClick={handleDeleteSpace}
         className="cursor-pointer text-destructive"
-        disabled={context.isActionExecuting(EDIT_ACTION_IDS.DELETE_SPACE)}
+        disabled={actionContext.isActionExecuting(EDIT_ACTION_IDS.DELETE_SPACE)}
       >
         <Trash2 className="mr-2 h-4 w-4" />
         <span>
-          {context.isActionExecuting(EDIT_ACTION_IDS.DELETE_SPACE)
+          {actionContext.isActionExecuting(EDIT_ACTION_IDS.DELETE_SPACE)
             ? 'Deleting...'
             : 'Delete Space'}
         </span>

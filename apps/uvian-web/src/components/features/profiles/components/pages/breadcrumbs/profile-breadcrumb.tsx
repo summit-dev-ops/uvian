@@ -31,7 +31,9 @@ export function ProfilePageBreadcrumb({ profileId }: { profileId: string }) {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbPage>Profiles</BreadcrumbPage>
+          <BreadcrumbLink asChild>
+            <Link href="/profiles">Profiles</Link>
+          </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
@@ -39,7 +41,7 @@ export function ProfilePageBreadcrumb({ profileId }: { profileId: string }) {
             {isLoading ? (
               <Skeleton className="h-4 w-24" />
             ) : (
-              <Link href={`/profiles/${profile?.profileId}`}>
+              <Link href={`/profiles/${profileId}`}>
                 {profile?.displayName || 'Profile'}
               </Link>
             )}

@@ -1,17 +1,25 @@
-import type { ComponentType } from 'react';
-import { ConfirmModal } from '../../../../modals/confirm-modal';
-import { ExportModal } from '../../../../modals/export-modal';
-import { CreateConversationModal } from '../../../../modals/create-conversation-modal';
-import { CreateSpaceModal } from '../../../../modals/create-space-modal';
-import { InviteMembersModal } from '../../../../modals/invite-members-modal';
-import { InviteProfileModal } from '~/components/modals';
+import {
+  CreateProfileModal,
+  InviteProfileModal,
+  ExportModal,
+  ConfirmModal,
+  InviteMembersModal,
+  CreateSpaceModal,
+  CreateConversationModal,
+} from './modals';
+import { ModalRegistration } from './types';
 
-// Modal Registration Interface
-export interface ModalRegistration {
-  id: string;
-  Component: ComponentType<any>;
-  defaultProps?: Record<string, any>;
-}
+// Modal IDs as constants for type safety
+export const MODAL_IDS = {
+  CONFIRM_DELETE: 'confirm-delete',
+  CONFIRM_LEAVE: 'confirm-leave',
+  EXPORT_CHAT: 'export-chat',
+  CREATE_CONVERSATION: 'create-conversation',
+  CREATE_PROFILE: 'create-profile',
+  CREATE_SPACE: 'create-space',
+  INVITE_MEMBERS: 'invite-members',
+  INVITE_PROFILES: 'invite-profiles',
+} as const;
 
 // Modal Registry - Maps modal IDs to their components and default props
 export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
@@ -41,6 +49,10 @@ export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
     id: 'create-conversation',
     Component: CreateConversationModal,
   },
+  'create-profile': {
+    id: 'create-profile',
+    Component: CreateProfileModal,
+  },
   'create-space': {
     id: 'create-space',
     Component: CreateSpaceModal,
@@ -56,24 +68,7 @@ export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
     id: 'invite-profiles',
     Component: InviteProfileModal,
     defaultProps: {
-      defaulrole: 'member'
-    }
-  }
+      defaulrole: 'member',
+    },
+  },
 };
-
-// Modal IDs as constants for type safety
-export const MODAL_IDS = {
-  CONFIRM_DELETE: 'confirm-delete',
-  CONFIRM_LEAVE: 'confirm-leave',
-  EXPORT_CHAT: 'export-chat',
-  CREATE_CONVERSATION: 'create-conversation',
-  CREATE_SPACE: 'create-space',
-  INVITE_MEMBERS: 'invite-members',
-  INVITE_PROFILES: 'invite-profiles',
-} as const;
-
-// Modal state interface
-export interface ModalState {
-  isOpen: boolean;
-  props: Record<string, any>;
-}

@@ -35,11 +35,17 @@ export function ProfileEditPageBreadcrumb({
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href="/profiles">Profiles</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
           <BreadcrumbPage>
             {isLoading ? (
               <Skeleton className="h-4 w-24" />
             ) : (
-              <Link href={`/profiles/${profile?.profileId}`}>
+              <Link href={`/profiles/${profileId}`}>
                 {profile?.displayName || 'Profile'}
               </Link>
             )}

@@ -39,11 +39,11 @@ const mockFAQData: FAQItem[] = [
   },
   {
     id: '3',
-    question: 'What are the different job types available?',
+    question: 'What are workflow automation jobs and how do they work?',
     answer:
-      'Uvian supports various job types including full-time, part-time, contract, and freelance positions. Each job type has different requirements and payment structures.',
-    category: 'Jobs',
-    tags: ['jobs', 'job-types', 'employment'],
+      'Workflow automation jobs are background processes that execute predefined workflows. They can be triggered by events, scheduled, or run manually. Set up in the Jobs dashboard with configurable triggers and actions.',
+    category: 'Workflow Automation',
+    tags: ['workflow', 'automation', 'jobs', 'background'],
     helpful: 28,
     notHelpful: 2,
     views: 67,
@@ -75,6 +75,45 @@ const mockFAQData: FAQItem[] = [
     views: 43,
     createdAt: new Date('2024-01-19'),
     updatedAt: new Date('2024-01-19'),
+  },
+  {
+    id: '6',
+    question: 'How do I create a new workflow process?',
+    answer:
+      'Navigate to the Jobs section and click "Create New Process". Configure your workflow steps, set triggers, and define automation rules. You can also use templates for common business processes.',
+    category: 'Getting Started',
+    tags: ['workflow', 'process', 'automation', 'jobs'],
+    helpful: 42,
+    notHelpful: 2,
+    views: 189,
+    createdAt: new Date('2024-01-18'),
+    updatedAt: new Date('2024-01-21'),
+  },
+  {
+    id: '7',
+    question: 'How do I schedule automation jobs to run automatically?',
+    answer:
+      'You can schedule automation jobs using cron-like expressions or preset intervals. Navigate to the Jobs dashboard, select your process, and configure the schedule in the Automation tab.',
+    category: 'Workflow Automation',
+    tags: ['scheduling', 'automation', 'cron', 'process'],
+    helpful: 31,
+    notHelpful: 1,
+    views: 98,
+    createdAt: new Date('2024-01-16'),
+    updatedAt: new Date('2024-01-20'),
+  },
+  {
+    id: '8',
+    question: 'How do I set up team collaboration spaces?',
+    answer:
+      'Create a new Space from the main navigation, then invite team members through the Members section. Configure permissions and access levels for different team roles.',
+    category: 'Spaces & Collaboration',
+    tags: ['spaces', 'collaboration', 'team', 'members'],
+    helpful: 55,
+    notHelpful: 3,
+    views: 245,
+    createdAt: new Date('2024-01-15'),
+    updatedAt: new Date('2024-01-22'),
   },
 ];
 
@@ -110,10 +149,10 @@ const mockCategories: SupportCategory[] = [
   },
   {
     id: 'jobs',
-    name: 'Jobs & Opportunities',
-    description: 'Find and manage job opportunities and applications',
+    name: 'Workflow Automation',
+    description: 'Create and manage automated workflow processes and jobs',
     faqCount: 7,
-    icon: '💼',
+    icon: '⚙️',
   },
   {
     id: 'features',
@@ -152,8 +191,20 @@ const mockSupportAPI = {
 
     // Filter by category
     if (params.category && params.category !== 'all') {
+      // Handle category ID to name mapping
+      const categoryNameMap: Record<string, string> = {
+        'getting-started': 'Getting Started',
+        account: 'Account & Profile',
+        spaces: 'Spaces & Collaboration',
+        chats: 'Chats & Messaging',
+        jobs: 'Workflow Automation',
+        features: 'Features & Tips',
+        troubleshooting: 'Troubleshooting',
+      };
+
+      const categoryName = categoryNameMap[params.category] || params.category;
       filteredItems = filteredItems.filter(
-        (item) => item.category.toLowerCase() === params.category?.toLowerCase()
+        (item) => item.category.toLowerCase() === categoryName.toLowerCase()
       );
     }
 

@@ -1,21 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { Edit, Settings, Share, Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ActionRegistrationType, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
-
+import {
+  ActionRegistrationType,
+  PageActionProvider,
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 export interface ProfilePageActionContextType {
-  // Pre-defined action IDs for type safety
   readonly ACTION_EDIT_PROFILE: 'edit-profile';
-  readonly ACTION_SHOW_SETTINGS: 'show-settings';
   readonly ACTION_SHARE_PROFILE: 'share-profile';
   readonly ACTION_EXPORT_DATA: 'export-data';
 }
 
 interface ProfilePageActionProviderProps {
-  profileId: string,
+  profileId: string;
   children: React.ReactNode;
   onError?: (error: Error, actionId: string) => void;
   onSuccess?: (actionId: string) => void;
@@ -23,7 +22,6 @@ interface ProfilePageActionProviderProps {
 
 const PROFILE_ACTION_IDS = {
   EDIT_PROFILE: 'edit-profile',
-  SHOW_SETTINGS: 'show-settings',
   SHARE_PROFILE: 'share-profile',
   EXPORT_DATA: 'export-data',
 } as const;
@@ -43,17 +41,6 @@ export function ProfilePageActionProvider({
       router.push(`/profiles/${profileId}/edit`);
     } catch (error) {
       console.error('Failed to start editing profile:', error);
-      throw error;
-    }
-  }, [router]);
-
-  // Handler for settings
-  const handleShowSettings = React.useCallback(async () => {
-    try {
-      // Navigate to settings page
-      router.push('/settings');
-    } catch (error) {
-      console.error('Failed to navigate to settings:', error);
       throw error;
     }
   }, [router]);
@@ -108,25 +95,16 @@ export function ProfilePageActionProvider({
     {
       id: PROFILE_ACTION_IDS.EDIT_PROFILE,
       label: 'Edit Profile',
-      icon: Edit,
       handler: handleEditProfile,
-    },
-    {
-      id: PROFILE_ACTION_IDS.SHOW_SETTINGS,
-      label: 'Settings',
-      icon: Settings,
-      handler: handleShowSettings,
     },
     {
       id: PROFILE_ACTION_IDS.SHARE_PROFILE,
       label: 'Share Profile',
-      icon: Share,
       handler: handleShareProfile,
     },
     {
       id: PROFILE_ACTION_IDS.EXPORT_DATA,
       label: 'Export Data',
-      icon: Download,
       handler: handleExportData,
     },
   ];

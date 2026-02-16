@@ -8,10 +8,13 @@
  */
 
 import * as React from 'react';
-import { ProfileSearchResults as ProfileSearchResultsComponent } from './profile-search-results';
+import { ProfileSearchResults as ProfileSearchResultsComponent } from '../profile-search-results';
 import { useProfileSearch } from '../../hooks/use-profile-search';
-import { InterfaceError } from '~/components/shared/ui/interfaces/interface-error';
-import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
+import {
+  InterfaceError,
+  InterfaceLoading,
+  InterfaceEmpty,
+} from '~/components/shared/ui/interfaces';
 import type {
   ProfileSearchParams,
   ProfileUI,
@@ -64,6 +67,37 @@ export function ProfileSearchInterface({
   const { data, isLoading, error, isSearching } =
     useProfileSearch(searchParams);
 
+  // Early return for loading state
+  if (isLoading) {
+    return (
+      <InterfaceLoading
+        variant="default"
+        message={
+          searchQuery ? `Searching for "${searchQuery}"...` : 'Loading...'
+        }
+        size="lg"
+        className={`${className || ''} h-[50vh]`}
+      />
+    );
+  }
+
+  // Early return for error state
+  if (error) {
+    return (
+      <InterfaceError
+        variant="card"
+        title="Search Failed"
+        message={
+          error.message || 'Failed to search profiles. Please try again.'
+        }
+        showRetry={true}
+        showHome={false}
+        onRetry={() => window.location.reload()}
+        className={`${className || ''} h-[50vh]`}
+      />
+    );
+  }
+
   return (
     <div className={`no-scrollbar space-y-6 h-[50vh] ${className || ''}`}>
       <div className={searchFieldClassName}>
@@ -77,49 +111,27 @@ export function ProfileSearchInterface({
       </div>
       {showTypeFilter && (
         <div className="flex gap-2">
-          <Button onClick={() => setSelectedType('all')}>All Types</Button>
-          <Button onClick={() => setSelectedType('human')}>Humans</Button>
-          <Button onClick={() => setSelectedType('agent')}>Agent</Button>
+          <Button
+            variant={selectedType === 'all' ? 'default' : 'outline'}
+            onClick={() => setSelectedType('all')}
+          >
+            All Types
+          </Button>
+          <Button
+            variant={selectedType === 'human' ? 'default' : 'outline'}
+            onClick={() => setSelectedType('human')}
+          >
+            Humans
+          </Button>
+          <Button
+            variant={selectedType === 'agent' ? 'default' : 'outline'}
+            onClick={() => setSelectedType('agent')}
+          >
+            Agent
+          </Button>
         </div>
       )}
       <div className="no-scrollbar -mx-4 overflow-y-auto px-4">
-        {/* Search Status */}
-        {isLoading && (
-          <InterfaceLoading
-            variant="default"
-            message={
-              searchQuery ? `Searching for "${searchQuery}"...` : 'Loading...'
-            }
-            size="default"
-            className="py-4"
-          />
-        )}
-
-        {/* Error State */}
-        {error && (
-          <InterfaceError
-            variant="card"
-            title="Search Failed"
-            message={
-              error.message || 'Failed to search profiles. Please try again.'
-            }
-            showRetry={true}
-            showHome={false}
-            onRetry={() => window.location.reload()}
-            className="py-8"
-          />
-        )}
-
-        {/* Results */}
-        {data && searchQuery && (
-          <ProfileSearchResultsComponent
-            data={data}
-            isLoading={isLoading}
-            isLoadingMore={isSearching}
-            onProfileSelect={onProfileSelect}
-            className={resultsClassName}
-          />
-        )}
         {/* Results */}
         {data && searchQuery && (
           <ProfileSearchResultsComponent
@@ -133,12 +145,12 @@ export function ProfileSearchInterface({
 
         {/* Empty State - No Query */}
         {!searchQuery && !isLoading && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Start typing to search for profiles to invite to your spaces and
-              conversations.
-            </p>
-          </div>
+          <InterfaceEmpty
+            variant="default"
+            title="Search for Profiles"
+            message="Start typing to search for profiles to invite to your spaces and conversations."
+            showIcon={false}
+          />
         )}
       </div>
     </div>

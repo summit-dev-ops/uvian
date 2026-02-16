@@ -153,7 +153,7 @@ export class ProfileService {
       public_fields: data.publicFields || {},
     };
 
-    const { data: profile, error } = await supabaseClient
+    const { data: profile, error } = await adminSupabase
       .from('profiles')
       .insert(profileData)
       .select()
@@ -218,7 +218,7 @@ export class ProfileService {
       throw new Error('No valid fields to update');
     }
 
-    const { data: profile, error } = await supabaseClient
+    const { data: profile, error } = await adminSupabase
       .from('profiles')
       .update(updateData)
       .eq('id', profileId)
@@ -251,7 +251,7 @@ export class ProfileService {
     profileId: string,
     userId: string
   ): Promise<void> {
-    const { error } = await supabaseClient
+    const { error } = await adminSupabase
       .from('profiles')
       .delete()
       .eq('user_id', userId)
