@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Plus, RefreshCw, Settings } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useModalContext } from '~/components/shared/ui/modals';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 const SPACES_ACTION_IDS = {
   CREATE_SPACE: 'create-space',
   REFRESH_SPACES: 'refresh-spaces',
@@ -20,7 +20,7 @@ export function SpacesListPageActions() {
   const modalContext = useModalContext();
 
   const handleCreateSpace = React.useCallback(() => {
-    modalContext.openModal(SPACES_ACTION_IDS.CREATE_SPACE);
+    modalContext.openModal(MODAL_IDS.CREATE_SPACE, {onConfirmActionId: SPACES_ACTION_IDS.CREATE_SPACE});
   }, [modalContext]);
 
   const handleRefresh = React.useCallback(async () => {

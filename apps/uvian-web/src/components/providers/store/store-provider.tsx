@@ -36,15 +36,15 @@ export function useAppStore<T>(selector: (state: AppState) => T): T {
     throw new Error('useAppStore must be used within StoreProvider');
   }
 
-  const store = useStore(storeContext, selector);
-  const [hydrated, setHydrated] = useState(false);
+  return useStore(storeContext, selector);
+  // const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  // useEffect(() => {
+  //   setHydrated(true);
+  // }, []);
 
-  if (!hydrated) return null;
-  return store;
+  // if (!hydrated) return null;
+  // return store;
 }
 
 export function useStoreApi() {

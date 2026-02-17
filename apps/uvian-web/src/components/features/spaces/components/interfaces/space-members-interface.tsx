@@ -40,7 +40,7 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
   } = useQuery(spacesQueries.spaceMembers(activeProfileId, spaceId));
 
   // Check if current user is admin
-  const isAdmin = space?.userRole === 'admin';
+  const isAdmin = space?.userRole === 'owner' || space?.userRole === 'admin';
 
   // Build selection state from selected member IDs
   const selectedMembers = (members || []).filter((member) =>

@@ -75,7 +75,7 @@ export function ConversationsListPageActionProvider({
     {
       id: LIST_ACTION_IDS.CREATE_CONVERSATION,
       label: 'New Conversation',
-      handler: handleRefreshConversations,
+      handler: handleConversationCreation,
       loadingLabel: 'Creating...',
     },
     {

@@ -27,7 +27,9 @@ export function SpaceOverviewPageActions() {
 
   const handleInviteMembers = React.useCallback(async () => {
     // Open the invite members modal
-    modalContext.openModal(MODAL_IDS.INVITE_MEMBERS);
+    modalContext.openModal(MODAL_IDS.INVITE_MEMBERS, {
+      onConfirmActionId: SPACE_ACTION_IDS.INVITE_PROFILES,
+    });
   }, [modalContext]);
 
   const handleManageMembers = React.useCallback(async () => {
@@ -36,7 +38,9 @@ export function SpaceOverviewPageActions() {
 
   const handleDeleteSpace = React.useCallback(async () => {
     // Open the delete confirmation modal
-    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE);
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
+      onConfirmActionId: SPACE_ACTION_IDS.DELETE_SPACE,
+    });
   }, [modalContext]);
 
   return (

@@ -6,7 +6,7 @@ import { DropdownMenuItem, DropdownMenuSeparator } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 
-const CHAT_ACTION_IDS = {
+export const CHAT_ACTION_IDS = {
   LEAVE_CONVERSATION: 'leave-conversation',
   DELETE_CONVERSATION: 'delete-conversation',
   EXPORT_CHAT: 'export-chat',
@@ -25,7 +25,9 @@ export function ChatPageActions() {
 
   const handleLeave = React.useCallback(async () => {
     // Open confirmation modal for leaving conversation
-    modalContext.openModal(MODAL_IDS.CONFIRM_LEAVE);
+    modalContext.openModal(MODAL_IDS.CONFIRM_LEAVE, {
+      onConfirmActionId: CHAT_ACTION_IDS.LEAVE_CONVERSATION,
+    });
   }, [modalContext]);
 
   const handleExport = React.useCallback(async () => {
@@ -35,7 +37,9 @@ export function ChatPageActions() {
 
   const handleDelete = React.useCallback(async () => {
     // Open confirmation modal for deleting conversation
-    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE);
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
+      onConfirmActionId: CHAT_ACTION_IDS.DELETE_CONVERSATION,
+    });
   }, [modalContext]);
 
   const handleShowMembers = React.useCallback(async () => {
@@ -45,7 +49,9 @@ export function ChatPageActions() {
 
   const handleInviteMember = React.useCallback(async () => {
     // Open invite member modal
-    modalContext.openModal(MODAL_IDS.INVITE_PROFILES);
+    modalContext.openModal(MODAL_IDS.INVITE_PROFILES, {
+      onConfirmActionId: CHAT_ACTION_IDS.INVITE_PROFILES,
+    });
   }, [modalContext]);
 
   return (

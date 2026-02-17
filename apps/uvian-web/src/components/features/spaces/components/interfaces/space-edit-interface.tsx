@@ -24,7 +24,6 @@ import {
   CardTitle,
   CardDescription,
 } from '@org/ui';
-import { SpaceEditor } from '../space-editor';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import { SpaceForm } from '../forms/space-form';
 
@@ -54,7 +53,7 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
   );
 
   // Check if current user is admin
-  const isAdmin = space?.userRole === 'admin';
+  const isAdmin = space?.userRole === 'owner' || space?.userRole === 'admin';
 
   const handleSave = (data: {
     name: string;

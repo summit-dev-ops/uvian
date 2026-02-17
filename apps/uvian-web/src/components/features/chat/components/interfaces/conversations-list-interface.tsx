@@ -1,9 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
-import { chatMutations } from '~/lib/domains/chat/api/mutations';
 import { useConversationPreviews } from '~/components/features/chat/hooks/use-conversation-previews';
 import {
   InterfaceLayout,
@@ -17,11 +16,13 @@ import {
   InterfaceLoadingSkeleton,
   InterfaceEmpty,
 } from '~/components/shared/ui/interfaces';
-import { ItemGroup } from '@org/ui';
+import { Button, ItemGroup } from '@org/ui';
 import { ConversationListItem } from '../conversation-list-item';
 
 import type { PreviewData } from '~/lib/domains/chat/types';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
+import { chatMutations } from '~/lib/domains/chat/api';
+import { CreateConversationDialog } from '../dialogs';
 
 interface ConversationWithPreview {
   id: string;
@@ -36,16 +37,32 @@ interface ConversationWithPreview {
 export function ConversationsListInterface() {
   const queryClient = useQueryClient();
   const { activeProfileId } = useUserSessionStore();
-
   // Fetch conversations
   const {
     data: conversations,
     isLoading,
     error,
   } = useQuery(chatQueries.conversations(activeProfileId));
-
   // Fetch latest message previews using useQueries
   const { previews } = useConversationPreviews(conversations || []);
+
+  // Create conversation mutation
+  const {
+    mutate: createConversation,
+    isPending: isCreating,
+    error: creationError,
+  } = useMutation(chatMutations.createConversation(queryClient));
+
+  const handleStartChatting = async (data: { title: string }) => {
+    if (!activeProfileId) {
+      return;
+    }
+    createConversation({
+      id: crypto.randomUUID(),
+      title: data.title,
+      authProfileId: activeProfileId,
+    });
+  };
 
   // Combine conversations with their preview data
   const conversationsWithPreviews = useMemo((): ConversationWithPreview[] => {
@@ -62,22 +79,6 @@ export function ConversationsListInterface() {
       };
     });
   }, [conversations, previews]);
-
-  // Create conversation mutation
-  const { mutate: createConversation, isPending: isCreating } = useMutation(
-    chatMutations.createConversation(queryClient)
-  );
-
-  const handleStartChatting = () => {
-    const title = prompt('Enter conversation title:')?.trim();
-    if (!title || !activeProfileId) return;
-
-    createConversation({
-      id: crypto.randomUUID(),
-      title,
-      authProfileId: activeProfileId,
-    });
-  };
 
   // Early return for error state
   if (error) {
@@ -149,13 +150,13 @@ export function ConversationsListInterface() {
             message="Start your first conversation with Uvian AI."
             showIcon={true}
             action={
-              <button
-                onClick={handleStartChatting}
-                disabled={isCreating}
-                className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              <CreateConversationDialog
+                onSubmit={handleStartChatting}
+                submitPending={isCreating}
+                submitError={creationError}
               >
-                {isCreating ? 'Creating...' : 'Start Chatting'}
-              </button>
+                <Button>{'Start messaging...'}</Button>
+              </CreateConversationDialog>
             }
           />
         </InterfaceContent>

@@ -23,7 +23,7 @@ interface SpaceEditPageActionProviderProps {
   onSuccess?: (actionId: string) => void;
 }
 
-const EDIT_ACTION_IDS = {
+export const EDIT_ACTION_IDS = {
   CANCEL: 'cancel',
   DELETE_SPACE: 'delete-space',
 } as const;

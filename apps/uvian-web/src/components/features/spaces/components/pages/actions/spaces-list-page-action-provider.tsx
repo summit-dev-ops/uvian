@@ -80,8 +80,7 @@ export function SpacesListPageActionProvider({
 
   // Handler for settings action
   const handleShowSettings = React.useCallback(async () => {
-    // Navigate to settings page or open settings modal
-    console.log('Opening space settings');
+    // Navigate to settings page or open settings modals
     // Could navigate to a global settings page or open a settings modal
   }, []);
 
@@ -90,7 +89,7 @@ export function SpacesListPageActionProvider({
     {
       id: SPACES_ACTION_IDS.CREATE_SPACE,
       label: 'Create Space',
-      handler: () => {console.log("")},
+      handler:handleSpaceCreation,
       loadingLabel: 'Creating...',
     },
     {

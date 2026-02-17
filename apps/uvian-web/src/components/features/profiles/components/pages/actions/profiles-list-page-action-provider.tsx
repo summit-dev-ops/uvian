@@ -62,7 +62,7 @@ export function ProfilesListPageActionProvider({
     {
       id: PROFILES_LIST_ACTION_IDS.CREATE_PROFILE,
       label: 'Create Profile',
-      handler: ()=>{console.log("")},
+      handler: handleCreateProfile,
     },
     {
       id: PROFILES_LIST_ACTION_IDS.REFRESH_PROFILES,

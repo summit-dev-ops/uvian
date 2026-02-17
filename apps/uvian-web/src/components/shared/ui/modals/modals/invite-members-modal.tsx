@@ -1,16 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Mail } from 'lucide-react';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@org/ui';
-import { InviteMembersForm } from '~/components/features/spaces/components/forms/invite-members-form';
+import { InviteMembersDialog } from '../../dialogs';
+import { usePageActionContext } from '../../pages/page-actions/page-action-context';
 
 export type InviteMemberData = {
   email: string;
@@ -20,58 +12,49 @@ export type InviteMemberData = {
 export interface InviteMembersModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvite: (members: InviteMemberData[]) => void;
-  isLoading?: boolean;
+  onConfirmActionId: string;
+  onCancelActionId?: string;
   defaultRole?: 'admin' | 'member';
 }
 
 export function InviteMembersModal({
   open,
   onOpenChange,
-  onInvite,
-  isLoading = false,
+  onConfirmActionId,
+  onCancelActionId,
   defaultRole = 'member',
 }: InviteMembersModalProps) {
-  const handleSubmit = async (data: {
-    invites: InviteMemberData[];
-    bulkEmails?: string;
-  }) => {
+  const { executeAction, isActionExecuting } = usePageActionContext();
+  const isLoading = isActionExecuting(onConfirmActionId);
+
+  const handleSubmit = async (data: { invites: InviteMemberData[] }) => {
     try {
-      await onInvite(data.invites);
-      onOpenChange(false);
+      await executeAction(onConfirmActionId, data.invites);
     } catch (error) {
       console.error('Failed to invite members:', error);
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!isLoading) {
-      onOpenChange(false);
+      try {
+        if (onCancelActionId) {
+          await executeAction(onCancelActionId, {});
+        }
+      } catch (error) {
+        console.error('Failed to cancel member invitation:', error);
+      }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Invite Members
-          </DialogTitle>
-          <DialogDescription>
-            Invite team members to this space. They will receive an email
-            invitation.
-          </DialogDescription>
-        </DialogHeader>
-
-        <InviteMembersForm
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-          defaultRole={defaultRole}
-          showCancel={false} // Modal provides its own cancel
-        />
-      </DialogContent>
-    </Dialog>
+    <InviteMembersDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onSubmit={handleSubmit}
+      onCancel={handleCancel}
+      submitPending={isLoading}
+      defaultRole={defaultRole}
+    />
   );
 }

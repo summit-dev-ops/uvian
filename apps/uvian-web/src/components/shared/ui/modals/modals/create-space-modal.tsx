@@ -1,79 +1,59 @@
 'use client';
 
 import * as React from 'react';
-import { Building2 } from 'lucide-react';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@org/ui';
-import { SpaceForm } from '../../../../features/spaces/components/forms/space-form';
+import { CreateSpaceDialog } from '../../../../features/spaces/components/dialogs';
+import { SpaceFormData } from '../../../../features/spaces/components/forms/space-form';
+import { usePageActionContext } from '../../pages/page-actions/page-action-context';
 
 export interface CreateSpaceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: {
-    name: string;
-    description?: string;
-    isPrivate: boolean;
-  }) => void;
-  isLoading?: boolean;
+  onConfirmActionId: string;
+  onCancelActionId?: string;
 }
 
 export function CreateSpaceModal({
   open,
   onOpenChange,
-  onCreate,
-  isLoading = false,
+  onConfirmActionId,
+  onCancelActionId,
 }: CreateSpaceModalProps) {
-  const handleSubmit = async (data: {
-    name: string;
-    description?: string;
-    isPrivate: boolean;
-  }) => {
+  const { executeAction, isActionExecuting } = usePageActionContext();
+  const isLoading = isActionExecuting(onConfirmActionId);
+
+  const handleSubmit = async (data: SpaceFormData) => {
     try {
-      await onCreate({
+      await executeAction(onConfirmActionId, {
         name: data.name.trim(),
         description: data.description?.trim() || undefined,
         isPrivate: data.isPrivate,
       });
-      onOpenChange(false);
     } catch (error) {
       console.error('Failed to create space:', error);
     }
+    onOpenChange(false);
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!isLoading) {
-      onOpenChange(false);
+      try {
+        if (onCancelActionId) {
+          await executeAction(onCancelActionId, {});
+        }
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Failed to cancel space creation:', error);
+      }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Create New Space
-          </DialogTitle>
-          <DialogDescription>
-            Create a new space to organize conversations and collaborate with
-            your team.
-          </DialogDescription>
-        </DialogHeader>
-
-        <SpaceForm
-          mode="create"
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-          showCancel={false} // Modal provides its own cancel
-        />
-      </DialogContent>
-    </Dialog>
+    <CreateSpaceDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onSubmit={handleSubmit}
+      submitPending={isLoading}
+      onCancel={handleCancel}
+    />
   );
 }

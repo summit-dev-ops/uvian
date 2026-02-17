@@ -5,14 +5,14 @@ import * as React from 'react';
 export interface ActionRegistration {
   id: string;
   label: string;
-  handler: () => void | Promise<void>;
+  handler: (data?: any) => void | Promise<void>;
   disabled?: boolean;
   destructive?: boolean;
   loadingLabel?: string;
 }
 
 export interface PageActionContextType {
-  executeAction: (actionId: string) => Promise<void>;
+  executeAction: (actionId: string, data?: any) => Promise<void>;
   isActionExecuting: (actionId: string) => boolean;
   getExecutingActions: () => Record<string, boolean>;
 }
@@ -50,7 +50,7 @@ export function PageActionProvider({
   >({});
 
   const executeAction = React.useCallback(
-    async (actionId: string): Promise<void> => {
+    async (actionId: string, data: any): Promise<void> => {
       const action = actions.find((a) => a.id === actionId);
       if (!action) {
         throw new Error(`Action with id "${actionId}" not found`);
@@ -60,7 +60,7 @@ export function PageActionProvider({
       setExecutingActions((prev) => ({ ...prev, [actionId]: true }));
 
       try {
-        await action.handler();
+        await action.handler(data);
         onActionSuccess?.(actionId);
       } catch (error) {
         const err = error instanceof Error ? error : new Error('Unknown error');

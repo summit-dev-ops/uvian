@@ -407,8 +407,8 @@ export default async function (fastify: FastifyInstance) {
         const { conversationId } = request.params;
         const messages = await chatService.getMessages(
           request.supabase,
+          conversationId,
           authProfileId,
-          conversationId
         );
         reply.send(messages);
       } catch (error: any) {

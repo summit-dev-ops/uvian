@@ -32,10 +32,10 @@ export const useConversationMembers = (conversationId: string) => {
   const currentUserMember = members?.find(
     (m) => m.profileId === activeProfileId
   );
-  const isAdmin = currentUserMember?.role?.name === 'admin';
   return {
     members,
     isLoading,
+    role: currentUserMember?.role,
     inviteMember: (
       targetMemberProfileId: string,
       role: ConversationMemberRole
@@ -63,6 +63,5 @@ export const useConversationMembers = (conversationId: string) => {
     isRemoving,
     isUpdatingRole,
     currentProfileId: activeProfileId,
-    isAdmin,
   };
 };

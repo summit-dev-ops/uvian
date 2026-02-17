@@ -4,8 +4,9 @@ import * as React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useModalContext } from '~/components/shared/ui/modals';
-const LIST_ACTION_IDS = {
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
+
+export const LIST_ACTION_IDS = {
   CREATE_CONVERSATION: 'create-conversation',
   REFRESH_CONVERSATIONS: 'refresh-conversations',
 } as const;
@@ -17,10 +18,12 @@ const LIST_ACTION_IDS = {
  */
 export function ConversationsListPageActions() {
   const actionContext = usePageActionContext();
-  const modalContext = useModalContext()
+  const modalContext = useModalContext();
 
   const handleNewConversation = React.useCallback(() => {
-     modalContext.openModal(LIST_ACTION_IDS.CREATE_CONVERSATION);
+    modalContext.openModal(MODAL_IDS.CREATE_CONVERSATION, {
+      onConfirmActionId: LIST_ACTION_IDS.CREATE_CONVERSATION,
+    });
   }, [modalContext]);
 
   const handleRefresh = React.useCallback(async () => {

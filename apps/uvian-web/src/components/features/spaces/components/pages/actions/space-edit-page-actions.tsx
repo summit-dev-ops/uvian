@@ -5,11 +5,7 @@ import { ArrowLeft, Trash2 } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { useModalContext, MODAL_IDS } from '~/components/shared/ui/modals';
-
-const EDIT_ACTION_IDS = {
-  CANCEL: 'cancel',
-  DELETE_SPACE: 'delete-space',
-} as const;
+import { EDIT_ACTION_IDS } from './space-edit-page-action-provider';
 
 /**
  * Space edit page-specific actions component
@@ -24,7 +20,9 @@ export function SpaceEditPageActions() {
   }, [actionContext]);
 
   const handleDeleteSpace = React.useCallback(async () => {
-    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE);
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
+      onConfirmActionId: EDIT_ACTION_IDS.DELETE_SPACE,
+    });
   }, [modalContext]);
 
   return (

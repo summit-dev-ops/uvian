@@ -1,65 +1,54 @@
 'use client';
 
 import * as React from 'react';
-import { MessageSquare } from 'lucide-react';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@org/ui';
-import { ConversationForm } from '../../../../features/chat/components/forms/conversation-form';
+import { usePageActionContext } from '../../pages/page-actions/page-action-context';
+import { CreateConversationDialog } from '~/components/features/chat/components/dialogs';
 
 export interface CreateConversationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (title: string) => void;
-  isLoading?: boolean;
+  onConfirmActionId: string;
+  onCancelActionId?: string;
 }
 
 export function CreateConversationModal({
   open,
   onOpenChange,
-  onCreate,
-  isLoading = false,
+  onConfirmActionId,
+  onCancelActionId,
 }: CreateConversationModalProps) {
+  const { executeAction, isActionExecuting } = usePageActionContext();
+  const isLoading = isActionExecuting(onConfirmActionId);
+
   const handleSubmit = async (data: { title: string }) => {
     try {
-      await onCreate(data.title);
-      onOpenChange(false);
+      await executeAction(onConfirmActionId, data.title);
     } catch (error) {
       console.error('Failed to create conversation:', error);
     }
+    onOpenChange(false);
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!isLoading) {
-      onOpenChange(false);
+      try {
+        if (onCancelActionId) {
+          await executeAction(onCancelActionId, {});
+        }
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Failed to cancel conversation creation:', error);
+      }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Create New Conversation
-          </DialogTitle>
-          <DialogDescription>
-            Enter a title for your new conversation.
-          </DialogDescription>
-        </DialogHeader>
-
-        <ConversationForm
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-          showCancel={false} // Modal provides its own cancel
-        />
-      </DialogContent>
-    </Dialog>
+    <CreateConversationDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onSubmit={handleSubmit}
+      submitPending={isLoading}
+      onCancel={handleCancel}
+    />
   );
 }

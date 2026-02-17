@@ -30,7 +30,9 @@ import { useActionManager } from '~/components/shared/actions/hooks/use-action-m
 import { createTableSelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionToolbar } from '~/components/shared/actions/ui/action-toolbar';
 import type { ActionConfig } from '~/components/shared/actions/types/action-manager';
-import { MODAL_IDS, usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import {  usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
+import { MEMBERS_ACTION_IDS } from './pages/actions';
 
 interface MemberDataTableProps {
   data: ConversationMemberUI[];
@@ -46,6 +48,7 @@ export function MemberDataTable({
   onUpdateRole,
 }: MemberDataTableProps) {
   const context = usePageActionContext();
+  const modalContext = useModalContext();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -55,7 +58,7 @@ export function MemberDataTable({
   const [rowSelection, setRowSelection] = React.useState({});
 
   const handleInviteMember = React.useCallback(async () => {
-    context.openModal(MODAL_IDS.INVITE_MEMBERS);
+    modalContext.openModal(MODAL_IDS.INVITE_MEMBERS, {onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_PROFILES});
   }, [context]);
 
   // Configure actions for member management

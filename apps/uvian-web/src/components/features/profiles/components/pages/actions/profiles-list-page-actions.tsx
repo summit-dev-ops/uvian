@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useModalContext } from '~/components/shared/ui/modals';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 
 const PROFILES_LIST_ACTION_IDS = {
   CREATE_PROFILE: 'create-profile',
@@ -19,7 +19,9 @@ export function ProfilesListPageActions() {
   const modalContext = useModalContext();
 
   const handleCreateProfile = React.useCallback(() => {
-    modalContext.openModal(PROFILES_LIST_ACTION_IDS.CREATE_PROFILE);
+    modalContext.openModal(MODAL_IDS.CREATE_PROFILE, {
+      onConfirmActionId: PROFILES_LIST_ACTION_IDS.CREATE_PROFILE,
+    });
   }, [modalContext]);
 
   const handleRefresh = React.useCallback(async () => {

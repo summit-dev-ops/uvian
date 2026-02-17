@@ -24,7 +24,6 @@ export function useMessageProfiles(senderIds: string[]) {
     .map((q) => q.data as ProfileUI)
     .reduce((acc, profile) => {
       acc[profile.id] = profile;
-       console.log(profile)
       return acc;
     }, {} as Record<string, ProfileUI>);
 

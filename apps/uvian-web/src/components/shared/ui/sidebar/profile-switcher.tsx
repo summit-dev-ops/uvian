@@ -97,17 +97,15 @@ export function ProfileSwitcher() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage
-                    src={activeProfile?.avatarUrl}
-                    alt={activeProfile.displayName}
-                  />
-                  <AvatarFallback>
-                    <User className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+              <Avatar className="h-8 w-8">
+                <AvatarImage
+                  src={activeProfile?.avatarUrl}
+                  alt={activeProfile.displayName}
+                />
+                <AvatarFallback>
+                  <User className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
               <div className="flex flex-col gap-0.5 leading-none">
                 <span className="font-semibold">Profile</span>
                 <span className="">

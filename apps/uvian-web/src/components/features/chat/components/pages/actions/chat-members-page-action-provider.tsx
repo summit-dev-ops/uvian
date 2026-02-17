@@ -18,7 +18,7 @@ interface ChatMembersPageActionProviderProps {
   onSuccess?: (actionId: string) => void;
 }
 
-const MEMBERS_ACTION_IDS = {
+export const MEMBERS_ACTION_IDS = {
   INVITE_PROFILES: 'invite-profiles',
 } as const;
 

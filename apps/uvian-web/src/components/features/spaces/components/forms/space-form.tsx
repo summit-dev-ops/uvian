@@ -33,7 +33,7 @@ const spaceSchema = z.object({
   isPrivate: z.boolean(),
 });
 
-type SpaceFormData = z.infer<typeof spaceSchema>;
+export type SpaceFormData = z.infer<typeof spaceSchema>;
 
 export interface SpaceFormProps {
   // Mode and initial data

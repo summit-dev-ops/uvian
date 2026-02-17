@@ -152,8 +152,8 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const { spaceId } = request.params;
         const space = await spacesService.getSpace(
           request.supabase,
+          spaceId,
           authProfileId,
-          spaceId
         );
         if (!space) {
           reply.code(404).send({ error: 'Space not found' });

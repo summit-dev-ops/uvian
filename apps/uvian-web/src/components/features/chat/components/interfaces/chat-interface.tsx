@@ -16,6 +16,7 @@ import {
   InterfaceContent,
   InterfaceFooter,
 } from '~/components/shared/ui/interfaces/interface-layout';
+import { ScrollArea } from '@org/ui';
 
 export function ChatInterface({ conversationId }: { conversationId: string }) {
   const { activeProfileId } = useUserSessionStore();
@@ -58,58 +59,50 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
   };
 
   return (
-    <InterfaceLayout>
-      <InterfaceContainer variant="default" size="full">
-        <div className="flex-1 flex flex-col min-h-0 relative">
-          <div ref={scrollRef} className="flex flex-1">
-            {isLoading && messages?.length === 0 ? (
-              <InterfaceContent>
-                <InterfaceLoading
-                  variant="default"
-                  message="Initializing chat..."
-                  size="full"
-                  className="flex items-center justify-center h-full"
+    <InterfaceContainer className="flex flex-col min-h-0 relative">
+      <ScrollArea ref={scrollRef} className='flex-1'>
+        {isLoading && messages?.length === 0 ? (
+          <InterfaceContent>
+            <InterfaceLoading
+              variant="default"
+              message="Initializing chat..."
+              size="full"
+              className="flex items-center justify-center h-full"
+            />
+          </InterfaceContent>
+        ) : (
+          <div className="flex flex-col items-stretch flex-1">
+            {Array.isArray(messages) &&
+              messages.map((msg) => (
+                <MessageRow
+                  key={msg.id}
+                  message={msg}
+                  onCopy={() => undefined} // TODO: Could add a toast here later
                 />
-              </InterfaceContent>
-            ) : (
-              <div className="flex flex-col items-stretch ">
-                {Array.isArray(messages) &&
-                  messages.map((msg) => (
-                    <MessageRow
-                      key={msg.id}
-                      message={msg}
-                      onCopy={() => undefined} // TODO: Could add a toast here later
-                    />
-                  ))}
-                {(!messages || messages.length === 0) && !isLoading && (
-                  <div className="flex-1 flex flex-col items-center justify-center pt-24 space-y-4 px-4 text-center">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                      <span className="text-2xl">✨</span>
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold">
-                        Welcome to Uvian AI
-                      </h2>
-                      <p className="text-sm text-muted-foreground max-w-sm">
-                        Start a conversation to see how I can help you with your
-                        tasks today.
-                      </p>
-                    </div>
-                  </div>
-                )}
+              ))}
+            {(!messages || messages.length === 0) && !isLoading && (
+              <div className="flex-1 flex flex-col items-center justify-center pt-24 space-y-4 px-4 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <span className="text-2xl">✨</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Welcome to Uvian AI</h2>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    Start a conversation to see how I can help you with your
+                    tasks today.
+                  </p>
+                </div>
               </div>
             )}
           </div>
-        </div>
-      </InterfaceContainer>
-      <InterfaceFooter sticky={"always"}>
-        <ChatInput
-          value={messageDraft}
-          onChange={setMessageDraft}
-          onSend={handleSend}
-          disabled={!isConnected}
-        />
-      </InterfaceFooter>
-    </InterfaceLayout>
+        )}
+      </ScrollArea>
+      <ChatInput
+        value={messageDraft}
+        onChange={setMessageDraft}
+        onSend={handleSend}
+        disabled={!isConnected}
+      />
+    </InterfaceContainer>
   );
 }

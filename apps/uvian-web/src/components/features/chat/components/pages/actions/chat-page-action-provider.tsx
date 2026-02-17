@@ -45,7 +45,7 @@ export function ChatPageActionProvider({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { activeProfileId } = useUserSessionStore();
-  const { isAdmin, removeMember } = useConversationMembers(conversationId);
+  const { role, removeMember } = useConversationMembers(conversationId);
 
   // Mutation for deleting conversations
   const { mutate: deleteConversation, isPending: isDeleting } = useMutation(
@@ -65,7 +65,7 @@ export function ChatPageActionProvider({
   }, [activeProfileId, removeMember, router]);
 
   const handleDelete = React.useCallback(async () => {
-    if (!isAdmin) {
+    if ( !(role?.name ==="owner" || role?.name === "admin" )) {
       throw new Error('Only administrators can delete conversations.');
     }
     if (activeProfileId)
@@ -79,7 +79,7 @@ export function ChatPageActionProvider({
         console.error('Failed to delete conversation:', error);
         throw error;
       }
-  }, [isAdmin, deleteConversation, activeProfileId, conversationId, router]);
+  }, [role, deleteConversation, activeProfileId, conversationId, router]);
 
   const handleExport = React.useCallback(async () => {
     // Export action opens the export modal - actual export happens in the modal
@@ -108,7 +108,7 @@ export function ChatPageActionProvider({
       id: CHAT_ACTION_IDS.SHOW_MEMBERS,
       label: 'Manage Members',
       handler: handleShowMembers,
-      disabled: !isAdmin,
+      disabled: !(role?.name ==="owner" || role?.name === "admin" )
     },
     {
       id: CHAT_ACTION_IDS.DELETE_CONVERSATION,
@@ -116,7 +116,7 @@ export function ChatPageActionProvider({
       handler: handleDelete,
       destructive: true,
       loadingLabel: 'Deleting...',
-      disabled: !isAdmin,
+      disabled: !(role?.name ==="owner" || role?.name === "admin" )
     },
   ];
 

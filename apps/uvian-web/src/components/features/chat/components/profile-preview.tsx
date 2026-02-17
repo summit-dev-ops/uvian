@@ -17,11 +17,12 @@ interface ProfilePreviewProps {
   profileId: string;
   profile?: ProfileUI;
   children: React.ReactNode;
+  asChild?:boolean
 }
 
 export function ProfilePreview({
   profileId,
-  children,
+  children,asChild
 }: ProfilePreviewProps) {
   const { data: fullProfile } = useQuery({
     ...profileQueries.profile(profileId),
@@ -32,7 +33,7 @@ export function ProfilePreview({
 
   return (
     <HoverCard>
-      <HoverCardTrigger>{children}</HoverCardTrigger>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardContent>
         <ProfilePreviewContent profile={currentProfile} profileId={profileId} />
       </HoverCardContent>

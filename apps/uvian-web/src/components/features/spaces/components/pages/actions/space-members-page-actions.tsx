@@ -19,7 +19,9 @@ export function SpaceMembersPageActions() {
 
   const handleInviteMembers = React.useCallback(async () => {
     // Open the invite members modal
-    modalContext.openModal(MODAL_IDS.INVITE_PROFILES);
+    modalContext.openModal(MODAL_IDS.INVITE_PROFILES, {
+      onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_PROFILES,
+    });
   }, [modalContext]);
 
   return (

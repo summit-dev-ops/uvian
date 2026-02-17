@@ -28,27 +28,27 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
   return (
     <div className={`flex flex-1 py-2 px-6 ${isSystem ? 'opacity-60' : ''}`}>
       <div className="flex flex-1 flex-col gap-2">
-        {/* Header with avatar and metadata */}
         <div className="flex flex-row items-center gap-2">
-          <ProfilePreview profileId={message.senderId} profile={profile}>
-            <Avatar>
-              <AvatarImage src={profile?.avatarUrl} />
-              <AvatarFallback>{displayName}</AvatarFallback>
-            </Avatar>
+          <ProfilePreview
+            profileId={message.senderId}
+            profile={profile}
+            asChild
+          >
+            <Link
+              href={`/profiles/${message.senderId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors cursor-pointer flex flex-row items-center gap-2"
+            >
+              <Avatar>
+                <AvatarImage src={profile?.avatarUrl} />
+                <AvatarFallback>{displayName}</AvatarFallback>
+              </Avatar>
+              {displayName}
+            </Link>
           </ProfilePreview>
 
           <div className="flex-1 text-sm font-semibold flex items-center gap-2">
-            <ProfilePreview profileId={message.senderId} profile={profile}>
-              <Link
-                href={`/profiles/${message.senderId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary transition-colors cursor-pointer"
-              >
-                {displayName}
-              </Link>
-            </ProfilePreview>
-
             {message.isStreaming && (
               <Badge
                 variant="secondary"
@@ -68,7 +68,7 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
         </div>
 
         {/* Content - full width */}
-        <div className="pl-10 pr-6">
+        <div className="">
           <div className="text-sm leading-relaxed whitespace-pre-wrap min-h-[1.5rem]">
             {message.content}
             {message.isStreaming && (
@@ -79,7 +79,7 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
 
         {/* Actions - only for non-system, non-streaming messages */}
         {!isSystem && !message.isStreaming && (
-          <div className="flex items-center justify-between transition-opacity pl-10 pr-6">
+          <div className="flex items-center justify-between transition-opacity">
             <div className="flex items-center space-x-1">
               <Button
                 variant="ghost"

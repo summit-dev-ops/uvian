@@ -217,10 +217,6 @@ export class ChatService {
     conversationId: string,
     profileId: string
   ): Promise<Message[]> {
-    // 1. Verify access before fetching messages
-    const access = await this.getUserRoleInConversation(userClient, conversationId, profileId);
-    if (!access) throw new Error('Unauthorized');
-
     const { data, error } = await userClient
       .from('messages')
       .select('*')

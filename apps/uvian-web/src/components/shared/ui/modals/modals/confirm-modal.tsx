@@ -1,28 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { AlertTriangle } from 'lucide-react';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@org/ui';
-import { Button } from '@org/ui';
+import { ConfirmDialog } from '../../dialogs';
+import { usePageActionContext } from '../../pages/page-actions/page-action-context';
 
 export interface ConfirmModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
+  onConfirmActionId: string;
+  onCancelActionId?: string;
   description: string;
   confirmText?: string;
   cancelText?: string;
   variant?: 'default' | 'destructive';
-  isLoading?: boolean;
-  onConfirm: () => void | Promise<void>;
 }
 
 export function ConfirmModal({
@@ -30,55 +21,47 @@ export function ConfirmModal({
   onOpenChange,
   title,
   description,
+  onConfirmActionId,
+  onCancelActionId,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   variant = 'default',
-  isLoading = false,
-  onConfirm,
 }: ConfirmModalProps) {
+  const { executeAction, isActionExecuting } = usePageActionContext();
+  const isLoading = isActionExecuting(onConfirmActionId);
+
   const handleConfirm = async () => {
     try {
-      await onConfirm();
-      onOpenChange(false);
+      await executeAction(onConfirmActionId, {});
     } catch (error) {
       console.error('Confirmation action failed:', error);
-      // TODO: Show error toast
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!isLoading) {
-      onOpenChange(false);
+      try {
+        if (onCancelActionId) {
+          await executeAction(onCancelActionId, {});
+        }
+      } catch (error) {
+        console.error('Failed to cancel action confirmation:', error);
+      }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {variant === 'destructive' && (
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            )}
-            {title}
-          </DialogTitle>
-          <DialogDescription className="text-left">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
-            {cancelText}
-          </Button>
-          <Button
-            variant={variant === 'destructive' ? 'destructive' : 'default'}
-            onClick={handleConfirm}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Processing...' : confirmText}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+      confirmText={confirmText}
+      cancelText={cancelText}
+      variant={variant}
+      onConfirm={handleConfirm}
+      onCancel={handleCancel}
+      isLoading={isLoading}
+    />
   );
 }
