@@ -36,7 +36,7 @@ export function ConversationsListPageActionProvider({
   const { activeProfileId } = useUserSessionStore();
 
   // Mutation for creating conversations with success/error handling
-  const { mutate: createConversation, isPending: isCreating } = useMutation(
+  const { mutate: createConversation } = useMutation(
     chatMutations.createConversation(queryClient)
   );
 

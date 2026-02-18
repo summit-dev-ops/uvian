@@ -15,7 +15,7 @@ export interface Profile {
 }
 
 export interface CreateProfilePayload {
-  profileId:string;
+  profileId: string;
   displayName: string;
   avatarUrl?: string | null;
   bio?: string | null;
@@ -25,7 +25,7 @@ export interface CreateProfilePayload {
 }
 
 export interface UpdateProfilePayload {
-  profileId:string;
+  profileId: string;
   displayName?: string;
   avatarUrl?: string | null;
   bio?: string | null;
@@ -51,13 +51,17 @@ export interface ProfileSearchFilters {
 
 export interface ProfileSearchResponse {
   profiles: Profile[];
-  total: number;
-  page: number;
-  limit: number;
-  hasMore: boolean;
-  sortBy: 'relevance' | 'createdAt';
-  query: string;
-  searchFields: string[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  };
+  filters: {
+    query: string;
+    sortBy: 'relevance' | 'createdAt';
+    searchFields: string[];
+  };
 }
 
 export interface RelevanceScore {

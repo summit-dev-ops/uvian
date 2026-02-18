@@ -19,7 +19,7 @@ interface ChatMembersInterfaceProps {
 export function ChatMembersInterface({
   conversationId,
 }: ChatMembersInterfaceProps) {
-  const { members, isLoading,role, removeMember, updateRole } =
+  const { members, isLoading, role, removeMember, updateRole } =
     useConversationMembers(conversationId);
 
   const isAdmin = role?.name === 'owner' || role?.name === 'admin';
@@ -59,6 +59,7 @@ export function ChatMembersInterface({
           <MemberDataTable
             data={members || []}
             isAdmin={isAdmin}
+            conversationId={conversationId}
             onRemove={removeMember}
             onUpdateRole={(profileId, role) =>
               updateRole(profileId, { name: role })

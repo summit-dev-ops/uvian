@@ -5,6 +5,10 @@ import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
+import { useQueryClient } from '@tanstack/react-query';
+import { chatMutations } from '~/lib/domains/chat/api/mutations';
+import { executeMutation } from '~/lib/api/utils';
+import type { InviteConversationMemberPayload } from '~/lib/domains/chat/api/mutations';
 
 export interface ChatMembersPageActionContextType {
   conversationId: string;
@@ -28,14 +32,31 @@ export function ChatMembersPageActionProvider({
   onError,
   onSuccess,
 }: ChatMembersPageActionProviderProps) {
-  // Handler for inviting members
-  const handleInviteMember = React.useCallback(async () => {
-    // This will be handled by opening the modal via UI component
-    console.log(
-      'Opening invite member modal for conversation:',
-      conversationId
-    );
-  }, [conversationId]);
+  const queryClient = useQueryClient();
+
+  // Handler for inviting members - now actually makes API calls
+  const handleInviteMember = React.useCallback(
+    async (data: InviteConversationMemberPayload) => {
+      console.log(
+        '[ACTION_PROVIDER] handleInviteMember called with data:',
+        data
+      );
+      console.log('[ACTION_PROVIDER] queryClient available:', !!queryClient);
+      console.log(
+        '[ACTION_PROVIDER] chatMutations available:',
+        !!chatMutations
+      );
+
+      await executeMutation(
+        queryClient,
+        chatMutations.inviteConversationMember(queryClient),
+        data
+      );
+
+      console.log('[ACTION_PROVIDER] executeMutation completed successfully');
+    },
+    [queryClient]
+  );
 
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [

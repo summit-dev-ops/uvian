@@ -167,8 +167,7 @@ InterfaceBanner.displayName = 'InterfaceBanner';
 // INTERFACE BANNER CONTENT
 // ============================================================================
 
-interface InterfaceBannerContentProps
-  extends React.HTMLAttributes<HTMLDivElement> {}
+type InterfaceBannerContentProps = React.HTMLAttributes<HTMLDivElement>
 
 const InterfaceBannerContent = React.forwardRef<
   HTMLDivElement,

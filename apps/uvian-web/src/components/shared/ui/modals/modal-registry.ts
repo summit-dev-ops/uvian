@@ -79,7 +79,7 @@ export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
     id: 'invite-profiles',
     Component: InviteProfileModal,
     defaultProps: {
-      defaulrole: 'member',
+      defaultRole: 'member',
     },
   },
 };

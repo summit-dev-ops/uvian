@@ -48,7 +48,7 @@ export function ChatPageActionProvider({
   const { role, removeMember } = useConversationMembers(conversationId);
 
   // Mutation for deleting conversations
-  const { mutate: deleteConversation, isPending: isDeleting } = useMutation(
+  const { mutate: deleteConversation } = useMutation(
     chatMutations.deleteConversation(queryClient)
   );
 
@@ -65,7 +65,7 @@ export function ChatPageActionProvider({
   }, [activeProfileId, removeMember, router]);
 
   const handleDelete = React.useCallback(async () => {
-    if ( !(role?.name ==="owner" || role?.name === "admin" )) {
+    if (!(role?.name === 'owner' || role?.name === 'admin')) {
       throw new Error('Only administrators can delete conversations.');
     }
     if (activeProfileId)
@@ -108,7 +108,7 @@ export function ChatPageActionProvider({
       id: CHAT_ACTION_IDS.SHOW_MEMBERS,
       label: 'Manage Members',
       handler: handleShowMembers,
-      disabled: !(role?.name ==="owner" || role?.name === "admin" )
+      disabled: !(role?.name === 'owner' || role?.name === 'admin'),
     },
     {
       id: CHAT_ACTION_IDS.DELETE_CONVERSATION,
@@ -116,7 +116,7 @@ export function ChatPageActionProvider({
       handler: handleDelete,
       destructive: true,
       loadingLabel: 'Deleting...',
-      disabled: !(role?.name ==="owner" || role?.name === "admin" )
+      disabled: !(role?.name === 'owner' || role?.name === 'admin'),
     },
   ];
 

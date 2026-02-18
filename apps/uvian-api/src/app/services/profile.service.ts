@@ -374,13 +374,17 @@ export class ProfileService {
 
     return {
       profiles,
-      total,
-      page: searchFilters.page,
-      limit: searchFilters.limit,
-      hasMore,
-      sortBy: searchFilters.sortBy,
-      query: searchFilters.query,
-      searchFields: SEARCH_CONFIG.fields.map((f) => f.name),
+      pagination: {
+        total,
+        page: searchFilters.page,
+        limit: searchFilters.limit,
+        hasMore,
+      },
+      filters: {
+        query: searchFilters.query,
+        sortBy: searchFilters.sortBy,
+        searchFields: SEARCH_CONFIG.fields.map((f) => f.name),
+      },
     };
   }
 

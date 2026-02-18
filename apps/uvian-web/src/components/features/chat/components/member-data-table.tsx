@@ -25,29 +25,35 @@ import {
   TableHeader,
   TableRow,
 } from '@org/ui';
-import { ConversationMemberRole, ConversationMemberUI } from '~/lib/domains/chat/types';
+import {
+  ConversationMemberRole,
+  ConversationMemberUI,
+} from '~/lib/domains/chat/types';
 import { useActionManager } from '~/components/shared/actions/hooks/use-action-manager';
 import { createTableSelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionToolbar } from '~/components/shared/actions/ui/action-toolbar';
 import type { ActionConfig } from '~/components/shared/actions/types/action-manager';
-import {  usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 import { MEMBERS_ACTION_IDS } from './pages/actions';
 
 interface MemberDataTableProps {
   data: ConversationMemberUI[];
   isAdmin: boolean;
+  conversationId: string;
   onRemove: (profileId: string) => void;
-  onUpdateRole: (profileId: string, role: ConversationMemberRole["name"]) => void;
+  onUpdateRole: (
+    profileId: string,
+    role: ConversationMemberRole['name']
+  ) => void;
 }
 
 export function MemberDataTable({
   data,
   isAdmin,
+  conversationId,
   onRemove,
   onUpdateRole,
 }: MemberDataTableProps) {
-  const context = usePageActionContext();
   const modalContext = useModalContext();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -58,8 +64,11 @@ export function MemberDataTable({
   const [rowSelection, setRowSelection] = React.useState({});
 
   const handleInviteMember = React.useCallback(async () => {
-    modalContext.openModal(MODAL_IDS.INVITE_MEMBERS, {onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_PROFILES});
-  }, [context]);
+    modalContext.openModal(MODAL_IDS.INVITE_PROFILES, {
+      onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_PROFILES,
+      conversationId: conversationId,
+    });
+  }, [modalContext, conversationId]);
 
   // Configure actions for member management
   const memberActions: ActionConfig<ConversationMemberUI>[] =
@@ -77,7 +86,7 @@ export function MemberDataTable({
             maxSelection: 0, // Only show when no items are selected
           },
           perform: async (selection, params, context) => {
-            handleInviteMember()
+            await handleInviteMember();
           },
           icon: Users,
         },
@@ -206,7 +215,7 @@ export function MemberDataTable({
       accessorKey: 'createdAt',
       header: 'Joined',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'))
+        const date = new Date(row.getValue('createdAt'));
         return <div>{date.toLocaleDateString()}</div>;
       },
     },
@@ -238,8 +247,7 @@ export function MemberDataTable({
         onAction={performAction}
         className="mb-4"
         layout="horizontal"
-      >
-      </ActionToolbar>
+      ></ActionToolbar>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -250,9 +258,9 @@ export function MemberDataTable({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                   </TableHead>
                 );
               })}
