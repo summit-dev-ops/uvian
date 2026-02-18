@@ -5,9 +5,7 @@
  */
 
 import { QueryClient } from '@tanstack/react-query';
-import type {
-  MessageUI,
-} from './types';
+import type { MessageUI } from './types';
 import { chatKeys } from './api/keys';
 
 // ============================================================================
@@ -19,7 +17,7 @@ import { chatKeys } from './api/keys';
  */
 export function appendTokenToCache(
   queryClient: QueryClient,
-  profileId:string,
+  profileId: string,
   conversationId: string,
   messageId: string,
   token: string
@@ -78,13 +76,13 @@ export function finalizeStreamingMessage(
  */
 export function addMessageToCache(
   queryClient: QueryClient,
-  profileId:string,
+  authProfileId: string,
   conversationId: string,
   message: MessageUI,
   isDelta = false
 ): void {
   queryClient.setQueryData<MessageUI[]>(
-    chatKeys.messages(profileId, conversationId),
+    chatKeys.messages(authProfileId, conversationId),
     (oldMessages) => {
       if (!oldMessages) return [message];
 
@@ -92,7 +90,7 @@ export function addMessageToCache(
       const existingIndex = oldMessages.findIndex(
         (msg) => msg.id === message.id
       );
-
+      console.log({ message, isDelta });
       if (existingIndex !== -1) {
         if (isDelta) {
           // Update existing message with delta content
@@ -102,7 +100,6 @@ export function addMessageToCache(
                 ...msg,
                 content: msg.content + message.content,
                 isStreaming: true,
-                syncStatus: 'synced', // Keeping it updated
               };
             }
             return msg;

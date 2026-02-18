@@ -7,12 +7,15 @@ import { Copy, RefreshCcw, MoreHorizontal } from 'lucide-react';
 import { useMessageProfiles } from '~/components/features/chat/hooks/use-message-profiles';
 import { ProfilePreview } from './profile-preview';
 import type { MessageUI } from '~/lib/domains/chat/types';
+import Markdown from 'react-markdown';
 
 interface MessageRowProps {
   message: MessageUI;
   onRetry?: () => void;
   onCopy?: () => void;
 }
+
+const MENTION_REGEX = /\[@ id="([^"]+)" label="([^"]+)"\]/g;
 
 export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
   const { profiles } = useMessageProfiles([message.senderId]);
@@ -25,9 +28,19 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
     return profile?.displayName || 'Unknown Profile';
   }, [profile?.displayName]);
 
+  const processedContent = useMemo(() => {
+    return message.content.replace(MENTION_REGEX, (_, id, label) => {
+      return `[${label}](/profiles/${id})`;
+    });
+  }, [message.content]);
+
   return (
-    <div className={`flex flex-1 py-2 px-6 ${isSystem ? 'opacity-60' : ''}`}>
-      <div className="flex flex-1 flex-col gap-2">
+    <div
+      className={`flex flex-1 py-2 px-6 min-w-0 relative ${
+        isSystem ? 'opacity-60' : ''
+      }`}
+    >
+      <div className="flex flex-1 flex-col gap-2 min-w-0 relative">
         <div className="flex flex-row items-center gap-2">
           <ProfilePreview
             profileId={message.senderId}
@@ -67,14 +80,41 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
           </div>
         </div>
 
-        {/* Content - full width */}
-        <div className="">
-          <div className="text-sm leading-relaxed whitespace-pre-wrap min-h-[1.5rem]">
-            {message.content}
-            {message.isStreaming && (
-              <span className="inline-block w-1.5 h-4 ml-1 bg-primary animate-pulse align-middle" />
-            )}
-          </div>
+        <div className="leading-relaxed">
+          <article className="prose prose dark:prose-invert max-w-none">
+            <Markdown
+              components={{
+                p: ({ children }) => (
+                  <p className="break-words mb-2 last:mb-0">{children}</p>
+                ),
+
+                pre: ({ children }) => (
+                  <div className="w-full overflow-x-auto my-3 rounded-lg">
+                    <pre className="p-4 whitespace-pre-wrap break-all">
+                      {children}
+                    </pre>
+                  </div>
+                ),
+
+                ul: ({ children }) => (
+                  <ul className="list-disc ml-4 mb-2 break-words">
+                    {children}
+                  </ul>
+                ),
+                a: ({ href, children }) => (
+                  <a href={href} className="text-primary underline break-all">
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {processedContent}
+            </Markdown>
+          </article>
+
+          {message.isStreaming && (
+            <span className="inline-block w-1.5 h-4 ml-1 bg-primary animate-pulse align-middle" />
+          )}
         </div>
 
         {/* Actions - only for non-system, non-streaming messages */}

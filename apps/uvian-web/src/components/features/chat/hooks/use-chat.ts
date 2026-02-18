@@ -25,24 +25,25 @@ export const useChat = (conversationId: string) => {
   // 3. Socket Event Listeners for Real-time Updates
   useEffect(() => {
     if (!socket || !isConnected) return;
-    
-    const onNewMessage = (payload: any) => {
-      console.log('New message received:', payload);
-      chatUtils.addMessageToCache(
-        queryClient,
-        activeProfileId,
-        payload.conversationId,
-        payload.message,
-        payload.isStreaming
-      );
 
-      if (!payload.isStreaming) {
-        chatUtils.finalizeStreamingMessage(
+    const onNewMessage = (payload: any) => {
+      if (activeProfileId) {
+        chatUtils.addMessageToCache(
           queryClient,
           activeProfileId,
           payload.conversationId,
-          payload.message.id
+          payload.message,
+          payload.isDelta
         );
+        //42["new_message",{"message":{"id":"59d7d608-d2e4-4bcc-856a-2b16b149372e","conversationId":"a8bc96d5-0f65-4afa-bc7a-307c0d29585e","senderId":"7e9e45dc-0a09-466e-84c8-15fa087bb06d","content":" breath* Okay, I'm out of the","role":"assistant","createdAt":"2026-02-03T10:35:56Z","updatedAt":"2026-02-03T10:35:56Z"},"isDelta":true,"isComplete":false,"conversationId":"a8bc96d5-0f65-4afa-bc7a-307c0d29585e"}]
+        if (payload.isComplete) {
+          chatUtils.finalizeStreamingMessage(
+            queryClient,
+            activeProfileId,
+            payload.conversationId,
+            payload.message.id
+          );
+        }
       }
     };
 

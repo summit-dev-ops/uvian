@@ -1,16 +1,13 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupTextarea,
-} from '@org/ui';
+import { InputGroup, InputGroupAddon, InputGroupButton } from '@org/ui';
 import { SendHorizontal, Paperclip } from 'lucide-react';
+import { RichTextArea } from './rich-text-area';
 
 interface ChatInputProps {
   value: string;
+  context: { conversationId: string };
   onChange: (value: string) => void;
   onSend: () => void;
   disabled?: boolean;
@@ -18,6 +15,7 @@ interface ChatInputProps {
 
 export function ChatInput({
   value,
+  context,
   onChange,
   onSend,
   disabled,
@@ -44,15 +42,14 @@ export function ChatInput({
 
   return (
     <InputGroup className="bg-background rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden focus:ring-primary/20 focus:border-primary/40 transition-all has-[>textarea]:h-auto flex-col">
-      <InputGroupTextarea
-        ref={textareaRef}
-        rows={1}
+      <RichTextArea
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(newValue) => onChange(newValue)}
         onKeyDown={handleKeyDown}
         placeholder="Type your message..."
-        className="py-3.5 px-4 max-h-[200px] text-sm"
+        className="py-3.5 px-4 max-h-[200px] overflow-y-auto"
         disabled={disabled}
+        context={context}
       />
 
       <InputGroupAddon

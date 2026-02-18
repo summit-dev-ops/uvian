@@ -11,10 +11,8 @@ import { useUserSessionStore } from '~/components/features/user/hooks/use-user-s
 
 // Import new layout components (will use InterfaceContent with scrollType="never")
 import {
-  InterfaceLayout,
   InterfaceContainer,
   InterfaceContent,
-  InterfaceFooter,
 } from '~/components/shared/ui/interfaces/interface-layout';
 import { ScrollArea } from '@org/ui';
 
@@ -43,15 +41,15 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
       socket.emit('join_conversation', { conversationId });
     }
   }, [socket, isConnected, conversationId]);
-
   const handleSend = () => {
     if (!messageDraft.trim() || !isConnected || !activeProfileId) return;
+    const cleanedMessageDraft = messageDraft.replace(/&nbsp;/g, ' ').trim();
 
     sendMessage({
       authProfileId: activeProfileId,
       id: crypto.randomUUID(),
       conversationId: conversationId,
-      content: messageDraft,
+      content: cleanedMessageDraft,
       role: 'user',
     });
 
@@ -59,8 +57,11 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
   };
 
   return (
-    <InterfaceContainer className="flex flex-col min-h-0 relative">
-      <ScrollArea ref={scrollRef} className='flex-1'>
+    <InterfaceContainer className="flex flex-col min-h-0 min-w-0 relative">
+      <ScrollArea
+        ref={scrollRef}
+        className="flex-1 flex flex-col min-w-0 w-full  relative"
+      >
         {isLoading && messages?.length === 0 ? (
           <InterfaceContent>
             <InterfaceLoading
@@ -71,7 +72,7 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
             />
           </InterfaceContent>
         ) : (
-          <div className="flex flex-col items-stretch flex-1">
+          <div className="flex flex-col items-stretch flex-1 min-w-0 relative">
             {Array.isArray(messages) &&
               messages.map((msg) => (
                 <MessageRow
@@ -98,6 +99,7 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
         )}
       </ScrollArea>
       <ChatInput
+        context={{ conversationId }}
         value={messageDraft}
         onChange={setMessageDraft}
         onSend={handleSend}

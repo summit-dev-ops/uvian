@@ -26,15 +26,15 @@ export default async function ChatPage({
       <ChatPageActionProvider conversationId={conversationId}>
         <PageContainer
           size={'full'}
-          className="flex flex-1 flex-col min-h-0 relative"
+          className="flex flex-1 flex-col min-h-0   min-w-0 relative"
         >
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
+          <PageHeader className="flex flex-row flex-1 items-center   min-w-0 justify-between">
             <ChatPageBreadcrumb conversationId={conversationId} />
             <PageActions>
               <ChatPageActions />
             </PageActions>
           </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
+          <PageContent className="flex flex-1 flex-col  min-w-0  min-h-0 relative">
             <ChatInterface conversationId={conversationId} />
           </PageContent>
           <PageModals />
