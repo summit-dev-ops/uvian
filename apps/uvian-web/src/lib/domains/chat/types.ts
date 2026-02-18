@@ -16,8 +16,8 @@ export type ConversationMemberUI = {
 };
 
 export type ConversationMemberRole = {
-  name: "owner" | 'admin' | 'member';
-}
+  name: 'owner' | 'admin' | 'member';
+};
 
 export type MessageUI = {
   id: string; // UUID
@@ -34,6 +34,7 @@ export type MessageUI = {
 export type ConversationUI = {
   id: string; // UUID
   title: string;
+  resourceScopeId?: string;
   createdAt: string;
   updatedAt: string;
   syncStatus: DataSyncStatus;

@@ -49,7 +49,6 @@ export class SpacesService {
     if (error || !data) return null;
     return (data.role as SpaceMemberRole).name;
   }
-
   async createSpace(
     userClient: SupabaseClient,
     profileId: string,
@@ -58,6 +57,7 @@ export class SpacesService {
     // 1. SECURITY: Verify Ownership
     await this.verifyProfileOwnership(userClient, profileId);
 
+    // 2. Create the space
     const { data: space, error: spaceError } = await adminSupabase
       .from('spaces')
       .insert({
@@ -74,16 +74,28 @@ export class SpacesService {
 
     if (spaceError) throw new Error(spaceError.message);
 
-    // 2. Add creator as 'owner'
+    // 3. Add creator as 'owner'
     await adminSupabase.from('space_members').insert({
       space_id: space.id,
       profile_id: profileId,
       role: { name: 'owner' },
     });
 
+    // 4. Fetch the Scope ID (Trigger has finished by now)
+    const { data: scope, error: scopeError } = await adminSupabase
+      .from('resource_scopes')
+      .select('id')
+      .eq('space_id', space.id)
+      .single();
+
+    if (scopeError || !scope) {
+      throw new Error('System Error: Resource Scope failed to initialize');
+    }
+
     return {
       id: space.id,
       name: space.name,
+      resourceScopeId: scope.id, // Successfully retrieved
       createdAt: space.created_at,
       createdBy: space.created_by,
       settings: space.settings,
@@ -96,25 +108,25 @@ export class SpacesService {
     userClient: SupabaseClient,
     profileId: string
   ): Promise<Space[]> {
-    // RLS handles visibility. 
-    // We use !inner join to STRICTLY filter by the provided profileId.
     const { data: spaces, error } = await userClient
       .from('spaces')
       .select(
         `
         *,
         space_members!inner(profile_id, role),
-        conversations(id)
+        conversations(id),
+        resource_scopes!space_id(id) 
       `
       )
       .eq('space_members.profile_id', profileId)
       .order('updated_at', { ascending: false });
 
     if (error) throw new Error(error.message);
-    
+
     return (spaces || []).map((space: any) => ({
       id: space.id,
       name: space.name,
+      resourceScopeId: space.resource_scopes?.[0]?.id, // Map the scope ID
       createdAt: space.created_at,
       createdBy: space.created_by,
       settings: space.settings,
@@ -133,13 +145,12 @@ export class SpacesService {
     spaceId: string,
     profileId: string
   ): Promise<SpaceWithMembers | undefined> {
-    // RLS handles visibility. 
-    // We strictly check if the *current* profile is a member using !inner.
     const { data: space, error } = await userClient
       .from('spaces')
       .select(
         `
         *,
+        resource_scopes!space_id(id),
         space_members!inner (
           profile_id,
           role,
@@ -154,18 +165,12 @@ export class SpacesService {
 
     if (error || !space) return undefined;
 
-    // Note: Because of the !inner join above, 'space.space_members' might only contain 
-    // the current user's row depending on how Supabase returns joined data.
-    // Usually, we want ALL members for the return payload. 
-    // If the above query only returns the current user, we need a second fetch 
-    // for the full member list, authorized by the fact the first query succeeded.
-    
-    // Fetch all members separately to ensure we get the full list
     const members = await this.getSpaceMembers(userClient, spaceId);
 
     return {
       id: space.id,
       name: space.name,
+      resourceScopeId: space.resource_scopes?.[0]?.id, // Map scope ID
       createdAt: space.created_at,
       createdBy: space.created_by,
       conversationCount: space.conversation_count || 0,
@@ -183,10 +188,8 @@ export class SpacesService {
     profileId: string,
     data: UpdateSpacePayload
   ): Promise<Space> {
-    // 1. SECURITY: Verify Ownership
     await this.verifyProfileOwnership(userClient, profileId);
 
-    // 2. Check Role
     const role = await this.getUserRoleInSpace(userClient, id, profileId);
     if (role !== 'owner' && role !== 'admin') {
       throw new Error('Unauthorized: Only admins or owners can update spaces');
@@ -196,7 +199,7 @@ export class SpacesService {
       .from('spaces')
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq('id', id)
-      .select()
+      .select('*, resource_scopes(id)') // Include scope in update response
       .single();
 
     if (error) throw new Error(error.message);
@@ -204,9 +207,9 @@ export class SpacesService {
     return {
       id: space.id,
       name: space.name,
+      resourceScopeId: space.resource_scopes?.[0]?.id, // Map scope ID
       createdAt: space.created_at,
       createdBy: space.created_by,
-      conversationCount: space.conversation_count,
       settings: space.settings,
       isPrivate: space.is_private,
       updatedAt: space.updated_at,
@@ -269,7 +272,7 @@ export class SpacesService {
     userClient: SupabaseClient,
     spaceId: string
   ): Promise<SpaceMember[]> {
-    // RLS handles visibility. 
+    // RLS handles visibility.
     // Ensure the user actually has access to the space via RLS.
     const { data: members, error } = await userClient
       .from('space_members')
@@ -402,18 +405,18 @@ export class SpacesService {
       .in('space_id', totalSpaceIds);
 
     // Get member count for OWNED spaces only (usually stats show size of communities you own)
-    // Or you might want total members across all spaces you are in. 
+    // Or you might want total members across all spaces you are in.
     // Implementation below matches original logic but scoped to ownedSpaces.
     let totalMembersCount = 0;
     if (ownedSpaces.length > 0) {
-        const { count } = await userClient
+      const { count } = await userClient
         .from('space_members')
         .select('*', { count: 'exact', head: true })
         .in(
-            'space_id',
-            ownedSpaces.map((s) => s.id)
+          'space_id',
+          ownedSpaces.map((s) => s.id)
         );
-        totalMembersCount = count || 0;
+      totalMembersCount = count || 0;
     }
 
     return {

@@ -6,11 +6,13 @@ import {
   InviteMembersModal,
   CreateSpaceModal,
   CreateConversationModal,
+  CreateJobModal,
 } from './modals';
 import { ModalRegistration } from './types';
 
 // Modal IDs as constants for type safety
 export const MODAL_IDS = {
+  CONFIRM_ACTION: 'confirm-action',
   CONFIRM_DELETE: 'confirm-delete',
   CONFIRM_LEAVE: 'confirm-leave',
   EXPORT_CHAT: 'export-chat',
@@ -19,10 +21,19 @@ export const MODAL_IDS = {
   CREATE_SPACE: 'create-space',
   INVITE_MEMBERS: 'invite-members',
   INVITE_PROFILES: 'invite-profiles',
+  CREATE_JOB: 'create-job',
 } as const;
 
 // Modal Registry - Maps modal IDs to their components and default props
 export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
+  'create-job': {
+    id: 'create-job',
+    Component: CreateJobModal,
+  },
+  'confirm-action': {
+    id: 'confirm-action',
+    Component: ConfirmModal,
+  },
   'confirm-delete': {
     id: 'confirm-delete',
     Component: ConfirmModal,

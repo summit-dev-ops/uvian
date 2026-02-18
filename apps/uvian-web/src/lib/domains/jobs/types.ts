@@ -6,17 +6,20 @@
  */
 
 export type CreateJobPayload = {
-  authProfileId: string | undefined
+  authProfileId: string;
   type: string;
   input: Record<string, any>;
+  resourceScopeId: string;
 };
 
 export type JobFilters = {
-  authProfileId: string | undefined
+  authProfileId: string;
   status?: JobStatus;
   type?: string;
   dateFrom?: string;
   dateTo?: string;
+  spaceId?: string; // Filter jobs by space
+  conversationId?: string; // Filter jobs by conversation
   page?: number;
   limit?: number;
 };
@@ -44,21 +47,22 @@ export type JobStatus =
   | 'failed'
   | 'cancelled';
 
-export type DataSyncStatus = 'synced' | 'pending' | 'error';
-
 export type JobUI = {
   id: string; // UUID
   type: string;
-  status: JobStatus;
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
   input: Record<string, any>;
   output: Record<string, any> | null;
   errorMessage: string | null;
+  resourceScopeId: string; // Internal reference to resource scope
   createdAt: string;
   updatedAt: string;
   startedAt: string | null;
   completedAt: string | null;
-  duration?: number; // Calculated duration in milliseconds
-  syncStatus: DataSyncStatus;
+  // Enhanced fields from API (populated via joins)
+  spaceId?: string; // The space this job operates in
+  conversationId?: string; // The conversation this job operates in
+  scopeType?: 'space' | 'conversation'; // Type of resource scope
 };
 
 export type JobListResponseUI = {
@@ -67,15 +71,6 @@ export type JobListResponseUI = {
   page: number;
   limit: number;
   hasMore: boolean;
-};
-
-export type JobFiltersUI = {
-  status?: JobStatus;
-  type?: string;
-  dateFrom?: string | null;
-  dateTo?: string | null;
-  page?: number;
-  limit?: number;
 };
 
 export type JobAction = 'cancel' | 'retry' | 'delete' | 'view';
@@ -115,7 +110,7 @@ export type JobMetrics = {
   failed: number;
   cancelled: number;
   successRate: number; // Percentage
-  averageDuration?: number;
+  averageDuration?: number; // in milliseconds
 };
 
 // ============================================================================

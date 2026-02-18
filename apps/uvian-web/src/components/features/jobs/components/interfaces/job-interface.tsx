@@ -486,13 +486,15 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
                 </label>
                 <div>{job.updatedAt.toLocaleString()}</div>
               </div>
-              {job.duration && (
+              {job.createdAt && (
                 <div>
                   <label className="font-medium text-muted-foreground">
                     Total Duration
                   </label>
                   <div className="font-mono">
-                    {formatJobDuration(job.duration)}
+                    {formatJobDuration(
+                      new Date(job.createdAt).getMilliseconds()
+                    )}
                   </div>
                 </div>
               )}

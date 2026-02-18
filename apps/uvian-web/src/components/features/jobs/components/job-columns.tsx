@@ -78,7 +78,7 @@ function JobStatusCell({ job }: JobStatusCellProps) {
  * Job Duration Cell Component
  */
 function JobDurationCell({ job }: JobDurationCellProps) {
-  if (!job.duration && job.status === 'processing') {
+  if (!job.createdAt && job.status === 'processing') {
     return (
       <div className="flex items-center gap-2">
         <Clock className="h-4 w-4 text-muted-foreground" />
@@ -89,7 +89,7 @@ function JobDurationCell({ job }: JobDurationCellProps) {
 
   return (
     <div className="text-sm">
-      {job.duration ? formatJobDuration(job.duration) : '-'}
+      {job.createdAt ? formatJobDuration(new Date(job.createdAt).getMilliseconds()) : '-'}
     </div>
   );
 }

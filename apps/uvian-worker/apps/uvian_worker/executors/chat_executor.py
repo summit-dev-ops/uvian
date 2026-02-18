@@ -35,7 +35,7 @@ class ChatExecutor(BaseExecutor):
         
         full_response = []
         
-        message_id = str(uuid.uuid7())
+        message_id = str(uuid.uuid4())
 
         try:
             print(f"[{job_id}] Fetched conversation '{conversation['title']}' with {len(messages)} messages", flush=True)

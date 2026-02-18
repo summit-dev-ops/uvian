@@ -6,6 +6,7 @@
 export type SpaceUI = {
   id: string;
   name: string;
+  resourceScopeId?: string;
   description?: string;
   avatarUrl?: string;
   createdBy: string;

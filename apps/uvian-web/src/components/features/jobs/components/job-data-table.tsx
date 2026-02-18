@@ -29,7 +29,6 @@ import { ActionToolbar } from '~/components/shared/actions/ui/action-toolbar';
 import type { ActionConfig } from '~/components/shared/actions/types/action-manager';
 import { useJobsTable } from '../hooks/use-jobs-table';
 import { useJobCreation } from '../hooks/use-job-creation';
-import { JobCreationModal } from './job-creation-modal';
 import type { JobUI, JobFilters } from '~/lib/domains/jobs/types';
 import {
   canCancelJob,
@@ -338,13 +337,6 @@ export function JobDataTable({ filters, onFiltersChange }: JobDataTableProps) {
           </Button>
         </div>
       </div>
-
-      {/* Job Creation Modal */}
-      <JobCreationModal
-        isOpen={isCreateModalOpen}
-        onClose={closeCreateModal}
-        onSuccess={onCreateSuccess}
-      />
     </div>
   );
 }

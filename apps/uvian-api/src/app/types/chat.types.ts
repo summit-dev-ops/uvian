@@ -1,6 +1,7 @@
 export interface Conversation {
   id: string;
   title: string;
+  resourceScopeId:string;
   spaceId?: string;
   createdAt: string;
   updatedAt: string;

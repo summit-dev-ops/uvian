@@ -8,7 +8,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { jobKeys } from './keys';
-import { jobUtils } from '../utils';
 import type { JobFilters, JobListResponseUI, JobUI } from '../types';
 
 // ============================================================================
@@ -29,6 +28,8 @@ export const jobQueries = {
             type: filters.type,
             dateFrom: filters.dateFrom,
             dateTo: filters.dateTo,
+            spaceId: filters.spaceId,
+            conversationId: filters.conversationId,
             page: filters.page || 1,
             limit: filters.limit || 20,
           },

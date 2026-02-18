@@ -1,5 +1,6 @@
 export interface Space {
   id: string;
+  resourceScopeId:string;
   name: string;
   description?: string;
   avatarUrl?: string;
