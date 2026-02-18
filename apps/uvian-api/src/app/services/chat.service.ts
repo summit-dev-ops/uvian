@@ -7,6 +7,10 @@ import {
   CreateMessagePayload,
   Message,
 } from '../types/chat.types';
+import { MentionUtil } from '../utils/mention.util';
+import { jobService } from './job.service';
+import { resourceScopesService } from './resource-scopes.service';
+import { queueService } from './queue.service';
 
 export class ChatService {
   /**
@@ -205,6 +209,13 @@ export class ChatService {
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', conversationId);
+
+    // Process mentions asynchronously - don't block message creation
+    this.processMessageMentions(message.content, conversationId).catch(
+      (error) => {
+        console.error('Failed to process mentions:', error);
+      }
+    );
 
     return {
       id: message.id,
@@ -418,6 +429,76 @@ export class ChatService {
       .eq('profile_id', targetProfileId);
 
     if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Process mentions in message content and create jobs for agent mentions
+   */
+  private async processMessageMentions(
+    messageContent: string,
+    conversationId: string
+  ): Promise<void> {
+    try {
+      // Parse and validate agent mentions
+      const agentProfileIds = await MentionUtil.processMentions(messageContent);
+
+      if (!agentProfileIds.length) {
+        return; // No agent mentions found
+      }
+
+      // Get resource scope for the conversation
+      const resourceScope =
+        await resourceScopesService.getOrCreateConversationResourceScope(
+          adminSupabase,
+          conversationId
+        );
+
+      // Create jobs for each unique agent mention
+      for (const agentProfileId of agentProfileIds) {
+        // Check if there's already a queued chat job for this agent in this conversation
+        const hasExistingJob = await MentionUtil.hasExistingChatJob(
+          conversationId,
+          agentProfileId
+        );
+
+        if (hasExistingJob) {
+          console.log(
+            `Skipping job creation - existing job found for agent ${agentProfileId} in conversation ${conversationId}`
+          );
+          continue;
+        }
+
+        // Create chat job for the agent mention
+        const jobId = crypto.randomUUID();
+        const jobInput = {
+          conversationId,
+          agentProfileId,
+        };
+
+        await jobService.createJob(
+          adminSupabase,
+          agentProfileId, // Using agent profile ID as the requesting profile
+          {
+            id: jobId,
+            type: 'chat',
+            input: jobInput,
+            resourceScopeId: resourceScope.id,
+          }
+        );
+
+        // Add job to BullMQ queue for worker processing
+        await queueService.addJob('main-queue', 'chat', {
+          jobId: jobId,
+        });
+
+        console.log(
+          `Created chat job ${jobId} for agent ${agentProfileId} in conversation ${conversationId}`
+        );
+      }
+    } catch (error) {
+      console.error('Error processing message mentions:', error);
+      // Don't throw - we don't want to fail the entire message creation process
+    }
   }
 }
 
