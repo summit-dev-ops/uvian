@@ -35,9 +35,10 @@ export class JobService {
     profileId: string,
     data: {
       id: string;
-      type: string;
+      type: 'chat' | 'task' | 'agent';
       input: Record<string, any>;
       resourceScopeId: string;
+      threadId?: string; // For agent jobs
     }
   ): Promise<Job> {
     // SECURITY: Verify Profile Ownership
@@ -48,17 +49,24 @@ export class JobService {
       data.resourceScopeId,
       profileId
     );
+    const jobData: any = {
+      id: data.id,
+      type: data.type,
+      status: 'queued',
+      input: data.input || {},
+      resource_scope_id: data.resourceScopeId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Add thread_id for agent jobs
+    if (data.type === 'agent' && data.threadId) {
+      jobData.thread_id = data.threadId;
+    }
+
     const { data: job, error } = await adminSupabase
       .from('jobs')
-      .insert({
-        id: data.id,
-        type: data.type,
-        status: 'queued',
-        input: data.input || {},
-        resource_scope_id: data.resourceScopeId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .insert(jobData)
       .select(
         `
           *,
@@ -243,6 +251,11 @@ export class JobService {
 
     if (filters.type) {
       query = query.eq('type', filters.type);
+    }
+
+    // Thread ID filter for agent jobs
+    if (filters.threadId) {
+      query = query.eq('thread_id', filters.threadId);
     }
 
     if (filters.dateFrom) {
@@ -599,6 +612,8 @@ export class JobService {
       spaceId: resourceScope?.space_id,
       conversationId: resourceScope?.conversation_id,
       scopeType: resourceScope?.space_id ? 'space' : 'conversation',
+      // Agent-specific fields
+      threadId: dbRecord.thread_id,
     };
   }
 }

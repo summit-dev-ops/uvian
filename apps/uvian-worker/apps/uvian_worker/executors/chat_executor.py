@@ -1,20 +1,26 @@
-from executors.base import BaseExecutor
+from typing import List, Dict, Any
+import uuid
+from executors.base import BaseExecutor, JobData, JobResult
 from core.events import events
 from clients.runpod import chat_completion
 from repositories.messages import message_repository
 from repositories.conversations import conversation_repository
-import uuid
+from executors.config import SYSTEM_MESSAGE
 
 class ChatExecutor(BaseExecutor):
-    async def execute(self, job_data: dict):
-        job_id = job_data["id"]
-        inputs = job_data.get("input", {})
-        print(f"[{job_id}] Job inputs (minimal parameters): {inputs}", flush=True)   
+    """Chat executor for conversation-based AI interactions."""
+    
+    async def execute(self, job_data: JobData) -> JobResult:
+        """Execute a chat job with comprehensive type safety."""
+        job_id: str = job_data["id"]
+        inputs: Dict[str, Any] = job_data.get("input", {})
         
+        sender_id = inputs.get("agentProfileId")
+        if not sender_id:
+            raise ValueError("agentProfileId is required in job input")
+
         # Fetch minimal parameters from job input
         conversation_id = inputs.get("conversationId")
-        sender_id = inputs.get("agentProfileId")
-
         if not conversation_id:
             raise ValueError("conversationId is required in job input")
         
@@ -23,32 +29,25 @@ class ChatExecutor(BaseExecutor):
         if not conversation:
             raise ValueError(f"Conversation {conversation_id} not found")
         
-        sender_id = inputs.get("agentProfileId")
-        if not sender_id:
-            raise ValueError("agentProfileId is required in job input")
-
         # Fetch messages from database for this conversation
-        messages = message_repository.get_messages(conversation_id)
+        messages: List[Dict[str, Any]] = message_repository.get_messages(conversation_id)
         
         # Set up streaming channel
-        channel = f"conversation:{conversation_id}:messages"
+        channel: str = f"conversation:{conversation_id}:messages"
         
-        full_response = []
+        full_response: List[str] = []
         
-        message_id = str(uuid.uuid4())
+        message_id: str = str(uuid.uuid4())
 
         try:
-            print(f"[{job_id}] Fetched conversation '{conversation['title']}' with {len(messages)} messages", flush=True)
-            print(f"[{job_id}] Starting Chat Execution on channel {channel}...", flush=True)
-            
             # Prepare messages for AI (convert to expected format)
-            ai_messages = []
+            ai_messages: List[Dict[str, str]] = [SYSTEM_MESSAGE]
             
             # Add existing conversation messages
             for msg in messages:
                 ai_messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
+                    "role": str(msg["role"]) if msg["role"] is not None else "user",
+                    "content": str(msg["content"]) if msg["content"] is not None else ""
                 })
             
             async for token in chat_completion(ai_messages):
@@ -59,10 +58,10 @@ class ChatExecutor(BaseExecutor):
                     message_id,
                     content=token, 
                     is_delta=True
-                )
+                ) 
                 full_response.append(token)
             
-            result_text = "".join(full_response)
+            result_text: str = "".join(full_response)
             
             # Send final completion message
             await events.publish_message(
@@ -77,15 +76,24 @@ class ChatExecutor(BaseExecutor):
             
             message_repository.insert_message({
                 "id": message_id,
-                "sender_id" : sender_id,
+                "sender_id": sender_id,
                 "conversation_id": conversation_id,
                 "content": result_text,
                 "role": "assistant"
             })
             
-            return {"text": result_text, "conversationId": conversation_id, "messageId": message_id}
+            return {
+                "status": "completed",
+                "result": {
+                    "text": result_text, 
+                    "conversationId": conversation_id, 
+                    "messageId": message_id
+                }
+            }
 
         except Exception as e:
-            print(f"[{job_id}] Chat Execution Failed: {e}")
             await events.publish_token(channel, job_id, "", finished=True, error=str(e))
-            raise e
+            return {
+                "status": "failed",
+                "result": {"error": str(e)}
+            }

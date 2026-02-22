@@ -43,7 +43,8 @@ export function ChatPageBreadcrumb({
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
-        <BreadcrumbItem><BreadcrumbPage>
+        <BreadcrumbItem>
+          <BreadcrumbPage>
             {isLoading ? (
               <Skeleton className="h-4 w-24" />
             ) : (

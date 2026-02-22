@@ -1,6 +1,6 @@
 export interface Job {
   id: string;
-  type: string;
+  type: 'chat' | 'task' | 'agent';
   status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
   input: Record<string, any>;
   output: Record<string, any> | null;
@@ -14,16 +14,19 @@ export interface Job {
   spaceId?: string; // The space this job operates in
   conversationId?: string; // The conversation this job operates in
   scopeType?: 'space' | 'conversation'; // Type of resource scope
+  // Agent-specific fields
+  threadId?: string; // Process thread for agent jobs
 }
 
 export interface JobFilters {
   status?: Job['status'];
-  type?: string;
+  type?: Job['type'];
   dateFrom?: string;
   dateTo?: string;
   spaceId?: string; // Filter jobs by space
   conversationId?: string; // Filter jobs by conversation
   scopeType?: 'space' | 'conversation'; // Filter by scope type
+  threadId?: string; // Filter agent jobs by thread
 }
 
 export interface PaginationOptions {
@@ -132,20 +135,22 @@ export interface GetResourceScopeByResourceRequest {
 
 export interface CreateJobRequest {
   Body: {
-    type: string;
+    type: 'chat' | 'task' | 'agent';
     input: Record<string, any>;
     resourceScopeId: string;
+    threadId?: string; // Required for agent jobs
   };
 }
 export interface GetJobsRequest {
   Querystring: {
     status?: Job['status'];
-    type?: string;
+    type?: Job['type'];
     dateFrom?: string;
     dateTo?: string;
     spaceId?: string; // Filter by specific space
     conversationId?: string; // Filter by specific conversation
     scopeType?: 'space' | 'conversation'; // Filter by scope type
+    threadId?: string; // Filter agent jobs by thread
     page?: number;
     limit?: number;
   };

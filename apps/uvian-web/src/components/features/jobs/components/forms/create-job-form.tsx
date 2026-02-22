@@ -62,6 +62,7 @@ export interface CreateJobFormProps {
 // Job type options
 const JOB_TYPES = [
   { value: 'chat', label: 'Chat' },
+  { value: 'agent', label: 'Agent' },
   { value: 'task', label: 'Task' },
   { value: 'analysis', label: 'Analysis' },
   { value: 'processing', label: 'Processing' },

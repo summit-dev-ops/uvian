@@ -1,5 +1,5 @@
 import redis.asyncio as redis
-from core.config import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
+from .config import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
 import json
 
 class EventsClient:

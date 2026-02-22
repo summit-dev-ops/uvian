@@ -63,7 +63,7 @@ export default async function (fastify: FastifyInstance) {
         );
 
         const payload = request.body as {
-          type: string;
+          type: 'chat' | 'task' | 'agent';
           input: any;
           resourceScopeId: string;
         };
@@ -285,7 +285,7 @@ export default async function (fastify: FastifyInstance) {
           authProfileId,
           {
             status: query.status,
-            type: query.type,
+            type: query.type as 'chat' | 'task' | 'agent',
             dateFrom: query.dateFrom,
             dateTo: query.dateTo,
           },
@@ -395,7 +395,7 @@ export default async function (fastify: FastifyInstance) {
             authProfileId,
             {
               status: query.status,
-              type: query.type,
+              type: query.type as 'chat' | 'task' | 'agent',
               dateFrom: query.dateFrom,
               dateTo: query.dateTo,
             },

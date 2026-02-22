@@ -33,6 +33,13 @@ readme = 'README.md'
   runpod = "^1.8.1"
   httpx = "^0.28.1"
   supabase = "^2.27.3"
+  langgraph = "^1.0.8"
+  langchain-core = "^1.2.13"
+
+  langchain = "^1.2.10"
+  langchain-community = "^0.4.1"
+  langchain-openai = "^1.0.0"
+  openai = "^2.21.0"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.3.1"

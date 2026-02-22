@@ -480,7 +480,7 @@ export class ChatService {
           agentProfileId, // Using agent profile ID as the requesting profile
           {
             id: jobId,
-            type: 'chat',
+            type: 'agent',
             input: jobInput,
             resourceScopeId: resourceScope.id,
           }
