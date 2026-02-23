@@ -4,13 +4,15 @@ from .jobs import job_repository, JobRepository
 from .conversations import conversation_repository, ConversationRepository
 from .messages import message_repository, MessageRepository
 from .checkpoints import checkpoint_repository, CheckpointRepository
+from .profiles import profile_repository, ProfileRepository
 
 # Repository registry for dependency injection
 REPOSITORY_REGISTRY = {
     'job': job_repository,
     'conversation': conversation_repository,
     'message': message_repository,
-    'checkpoints': checkpoint_repository
+    'checkpoints': checkpoint_repository,
+    'profiles': profile_repository
 }
 
 def get_repository(name: str):
@@ -36,3 +38,7 @@ class RepositoryFactory:
     @staticmethod
     def get_checkpoints_repository() -> CheckpointRepository:
         return checkpoints_repository
+
+    @staticmethod
+    def get_profile_repository() -> ProfileRepository:
+        return profile_repository

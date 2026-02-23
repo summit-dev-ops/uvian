@@ -1,60 +1,61 @@
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 
-
-# Define tools
-@tool(parse_docstring=True)
-def multiply(a: int, b: int) -> int:
-    """Multiply `a` and `b`.
-
-    Args:
-        a: First int
-        b: Second int
-    """
-    return a * b
-
-
-@tool(parse_docstring=True)
-def add(a: int, b: int) -> int:
-    """Adds `a` and `b`.
-
-    Args:
-        a: First int
-        b: Second int
-    """
-    return a + b
-
-
-@tool(parse_docstring=True)
-def divide(a: int, b: int) -> float:
-    """Divide `a` and `b`.
-
-    Args:
-        a: First int
-        b: Second int
-    """
-    return a / b
-
-
-
-weather_schema = {
+search_skills_schema = {
     "type": "object",
     "properties": {
-        "location": {"type": "string"},
-        "units": {"type": "string"},
-        "include_forecast": {"type": "boolean"}
+        "query": {"type": "string"},
     },
-    "required": ["location", "units", "include_forecast"]
+    "required": ["query"]
 }
 
-@tool(args_schema=weather_schema)
-def get_weather(location: str, units: str = "celsius", include_forecast: bool = False) -> str:
-    """Get current weather and optional forecast."""
-    temp = 22 if units == "celsius" else 72
-    result = f"Current weather in {location}: {temp} degrees {units[0].upper()}"
-    if include_forecast:
-        result += "\nNext 5 days: Sunny"
-    return result
+@tool(args_schema=search_skills_schema)
+def search_skills(
+    runtime: ToolRuntime | None = None, **kargs) -> str:
+    """Search for skills in the skill database
+
+    Skills are predefined patterns of behaviour you can use to expand you abilities in processing requests. Use this tool when you are lacking in ability to perform some request to see what skills are available that can help you to perform better at the request.
+
+    Args:
+        query: simple query string you associate with the request you have: (copy writing, roleplaying, pricing strategy)
+    """
+
+    skills = runtime.state.get("skills")
+    # Skill not found
+    available = ", ".join(s["name"] for s in skills)
+    return f"Available skills: {available}"
+
+
+load_skill_schema = {
+    "type": "object",
+    "properties": {
+        "skill_name": {"type": "string"},
+    },
+    "required": ["skill_name"]
+}
+@tool(args_schema=load_skill_schema)
+def load_skill(
+    runtime: ToolRuntime | None = None, **kargs) -> str:
+    """Load the full content of a skill into the agent's context.
+
+    Use this when you need detailed information about how to handle a specific
+    type of request. This will provide you with comprehensive instructions,
+    policies, and guidelines for the skill area.
+
+    Args:
+        skill_name: The name of the skill to load (e.g., "expense_reporting", "travel_booking")
+    """
+    skills = runtime.state.get("skills")
+    skill_name = kargs["skill_name"]
+    print("load_skill: ", skill_name)
+    # Find and return the requested skill
+    for skill in skills:
+        if skill["name"] == skill_name:
+            return f"Loaded skill: {skill_name}\n\n{skill['content']}"
+
+    # Skill not found
+    available = ", ".join(s["name"] for s in skills)
+    return f"Skill '{skill_name}' not found. Available skills: {available}"
+
 
 # Augment the LLM with tools
-tools = [add, multiply, divide, get_weather]
-tools_by_name = {tool.name: tool for tool in tools}
+tools = [load_skill]

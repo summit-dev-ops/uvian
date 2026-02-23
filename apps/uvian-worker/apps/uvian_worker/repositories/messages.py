@@ -22,7 +22,43 @@ class MessageRepository:
         except Exception as e:
             print(f"Error fetching messages for {conversation_id}: {e}")
             return []
-    
+        
+    async def get_messages_with_profiles(
+        self, 
+        conversation_id: str, 
+        limit: int = 50, 
+        before_timestamp: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get messages enriched with the sender's profile information.
+        Uses cursor-based pagination (before_timestamp) to securely fetch older history.
+        """
+        try:
+            # Join the profile using the foreign key constraint: messages_sender_id_fkey
+            # We select specific profile fields to keep the payload clean
+            query = supabase_client.client.table('messages').select(
+                '*, profile:profiles!messages_sender_id_fkey(id, display_name, type)'
+            ).eq('conversation_id', conversation_id)
+            
+            # If fetching older messages, apply the cursor
+            if before_timestamp:
+                query = query.lt('created_at', before_timestamp)
+                
+            # Order DESCENDING to get the X messages immediately preceding the cursor
+            query = query.order('created_at', desc=True).limit(limit)
+            
+            result = query.execute()
+            messages = result.data or []
+            
+            # We fetched them descending to get the correct slice of time, 
+            # but we must reverse them so the transcript reads chronologically (oldest -> newest)
+            messages.reverse()
+            
+            return messages
+        except Exception as e:
+            print(f"Error fetching populated messages for {conversation_id}: {e}")
+            return []
+
     async def get_message(self, message_id: str) -> Optional[Dict[str, Any]]:
         """Get a specific message by ID."""
         try:
@@ -38,7 +74,7 @@ class MessageRepository:
         try:
             result =  supabase_client.client.table('messages').update(updates).eq('id', message_id).execute()
             print(f"[Supabase] Updated message {message_id}", flush=True)
-            return bool(result.data)
+            return result.data
         except Exception as e:
             print(f"Error updating message {message_id}: {e}", flush=True)
             return False
