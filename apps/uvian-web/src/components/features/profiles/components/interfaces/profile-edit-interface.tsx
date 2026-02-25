@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   InterfaceLayout,
   InterfaceHeader,
   InterfaceHeaderContent,
   InterfaceContent,
+  InterfaceContainer,
 } from '~/components/shared/ui/interfaces/interface-layout';
 import {
   InterfaceError,
@@ -15,135 +16,136 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { profileMutations, profileQueries } from '~/lib/domains/profile/api';
 import { ProfileForm } from '../forms/profile-form';
+import { Button } from '@org/ui';
 
-export function ProfileEditInterface({ profileId }: { profileId?: string }) {
+interface ProfileEditInterfaceProps {
+  profileId?: string;
+}
+
+export function ProfileEditInterface({ profileId }: ProfileEditInterfaceProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isLoading: isLoadingProfile, error: profileError } = useQuery(
-    profileQueries.profile(profileId)
+
+  const {
+    data: profile,
+    isLoading: isLoadingProfile,
+    error: profileError,
+    refetch,
+  } = useQuery(profileQueries.profile(profileId));
+
+  const { mutate: updateProfile, isPending: isUpdatingProfile } = useMutation(
+    profileMutations.updateProfile(queryClient)
   );
 
-  // Handle successful save
-  const handleSave = () => {
+  const isNewProfile = !profileId || !profile;
+
+  const handleSubmit = React.useCallback(
+    async (formData: {
+      displayName: string;
+      avatarUrl?: string;
+      bio?: string;
+      publicFields?: Record<string, unknown>;
+    }) => {
+      return new Promise<void>((resolve, reject) => {
+        updateProfile(
+          { profileId: profileId!, ...formData },
+          {
+            onSuccess: () => {
+              queryClient.invalidateQueries({ queryKey: ['profiles'] });
+              router.push(`/profiles/${profileId}`);
+              resolve();
+            },
+            onError: (error) => {
+              console.error('Profile save failed:', error);
+              reject(error);
+            },
+          }
+        );
+      });
+    },
+    [updateProfile, profileId, queryClient, router]
+  );
+
+  const handleCancel = React.useCallback(() => {
     router.push(`/profiles/${profileId}`);
-  };
+  }, [router, profileId]);
 
-  // Handle cancel
-  const handleCancel = () => {
-    router.push(`/profiles/${profileId}`);
-  };
-
-  const { data: profile } = useQuery(profileQueries.profile(profileId));
-  const { mutate: handleUpdateProfile, isPending: isUpdatingProfile } =
-    useMutation(profileMutations.updateProfile(queryClient));
-  const { mutate: handleCreateProfile, isPending: isCreatingProfile } =
-    useMutation(profileMutations.createProfile(queryClient));
-
-  // Merge profile data with initialData for form
-  const formInitialData = {
-    displayName: profile?.displayName || profile?.displayName || '',
-    avatarUrl: profile?.avatarUrl || profile?.avatarUrl || '',
-    bio: profile?.bio || profile?.bio || '',
-    publicFields: profile?.publicFields || profile?.publicFields || {},
-  };
-
-  const handleSubmit = async (formData: {
-    displayName: string;
-    avatarUrl?: string;
-    bio?: string;
-    publicFields?: Record<string, any>;
-  }) => {
-    try {
-      // Determine whether to update or create based on existing profile
-      if (profile && profileId) {
-        await handleUpdateProfile({ profileId, ...formData });
-      } else {
-        await handleCreateProfile(formData);
-      }
-
-      // Success - call onSave callback
-      handleSave();
-    } catch (error) {
-      console.error('Profile save failed:', error);
-    }
-  };
-
-  const isUpdating = isUpdatingProfile || isCreatingProfile;
-
-  // Early return for loading state
   if (isLoadingProfile) {
     return (
       <InterfaceLayout>
         <InterfaceHeader spacing="compact">
           <InterfaceHeaderContent
-            title="Edit Profile"
-            subtitle="Loading profile editor..."
+            title={isNewProfile ? 'Create Profile' : 'Edit Profile'}
+            subtitle="Loading..."
           />
         </InterfaceHeader>
         <InterfaceContent spacing="default">
-          <InterfaceLoading
-            variant="default"
-            message="Loading profile editor..."
-            size="lg"
-            className="min-h-[400px]"
-          />
+          <InterfaceLoading message="Loading..." />
         </InterfaceContent>
       </InterfaceLayout>
     );
   }
 
-  // Early return for error state
-  if (profileError) {
+  if (profileError && !isNewProfile) {
     return (
       <InterfaceLayout>
         <InterfaceHeader spacing="compact">
           <InterfaceHeaderContent
             title="Edit Profile"
-            subtitle="Error loading profile"
+            subtitle="Error"
             actions={
-              <button
-                onClick={() => router.push(`/profiles/${profileId}`)}
-                className="px-3 py-1 text-sm border rounded hover:bg-accent"
+              <Button
+                variant="outline"
+                onClick={() => router.push('/profiles')}
               >
-                Back to Profile
-              </button>
+                Back to Profiles
+              </Button>
             }
           />
         </InterfaceHeader>
         <InterfaceContent spacing="default">
           <InterfaceError
-            variant="card"
-            title="Error Loading Profile"
-            message={
-              profileError.message ||
-              'Something went wrong loading your profile.'
-            }
+            title="Failed to Load Profile"
+            message={profileError.message || 'Something went wrong.'}
             showRetry={true}
-            showHome={true}
-            onRetry={() => window.location.reload()}
+            onRetry={() => refetch()}
           />
         </InterfaceContent>
       </InterfaceLayout>
     );
   }
 
+  const formInitialData = {
+    displayName: profile?.displayName || '',
+    avatarUrl: profile?.avatarUrl || '',
+    coverUrl: profile?.coverUrl || '',
+    bio: profile?.bio || '',
+    publicFields: profile?.publicFields || {},
+  };
+
   return (
     <InterfaceLayout>
-      <InterfaceHeader spacing="compact">
-        <InterfaceHeaderContent
-          title="Edit Profile"
-          subtitle="Update your profile information"
-        />
-      </InterfaceHeader>
-      <InterfaceContent spacing="default">
-        <ProfileForm
-          mode="edit"
-          isLoading={isUpdating}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          initialData={formInitialData}
-        />
-      </InterfaceContent>
+      <InterfaceContainer>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title={isNewProfile ? 'Create Profile' : 'Edit Profile'}
+            subtitle={
+              isNewProfile
+                ? 'Create a new profile'
+                : 'Update profile information'
+            }
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <ProfileForm
+            mode={isNewProfile ? 'create' : 'edit'}
+            isLoading={isUpdatingProfile}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            initialData={formInitialData}
+          />
+        </InterfaceContent>
+      </InterfaceContainer>
     </InterfaceLayout>
   );
 }

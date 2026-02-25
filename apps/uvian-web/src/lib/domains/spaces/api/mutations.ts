@@ -19,6 +19,7 @@ export type CreateSpacePayload = {
   id?: string;
   name: string;
   description?: string;
+  coverUrl?: string;
   avatarUrl?: string;
   settings?: Record<string, any>;
   isPrivate?: boolean;
@@ -89,7 +90,7 @@ export const spacesMutations = {
       const { data } = await apiClient.post<SpaceUI>(
         '/api/spaces',
         payloadWithId,
-        { headers: { "x-profile-id": payload.authProfileId } }
+        { headers: { 'x-profile-id': payload.authProfileId } }
       );
       return data;
     },
@@ -113,6 +114,7 @@ export const spacesMutations = {
         id: spaceId,
         name: payload.name,
         description: payload.description,
+        coverUrl: payload.coverUrl,
         avatarUrl: payload.avatarUrl,
         createdBy: '', // Will be set by server
         settings: payload.settings || {},
@@ -166,7 +168,7 @@ export const spacesMutations = {
       const { data } = await apiClient.patch<SpaceUI>(
         `/api/spaces/${payload.id}`,
         payload,
-        { headers: { "x-profile-id": payload.authProfileId } }
+        { headers: { 'x-profile-id': payload.authProfileId } }
       );
       return data;
     },
@@ -187,6 +189,8 @@ export const spacesMutations = {
       if (payload.name) updatedSpace.name = payload.name;
       if (payload.description !== undefined)
         updatedSpace.description = payload.description;
+      if (payload.coverUrl !== undefined)
+        updatedSpace.coverUrl = payload.coverUrl;
       if (payload.avatarUrl !== undefined)
         updatedSpace.avatarUrl = payload.avatarUrl;
       if (payload.settings !== undefined)
@@ -245,7 +249,7 @@ export const spacesMutations = {
   > => ({
     mutationFn: async (payload) => {
       await apiClient.delete(`/api/spaces/${payload.spaceId}`, {
-        headers: { "x-profile-id": payload.authProfileId },
+        headers: { 'x-profile-id': payload.authProfileId },
       });
     },
 
@@ -314,7 +318,7 @@ export const spacesMutations = {
           profile_id: payload.targetMemberProfileId,
           role: payload.role || { name: 'member' },
         },
-        { headers: { "x-profile-id": payload.authProfileId } }
+        { headers: { 'x-profile-id': payload.authProfileId } }
       );
       return data;
     },
@@ -345,7 +349,7 @@ export const spacesMutations = {
     mutationFn: async (payload) => {
       await apiClient.delete(
         `/api/spaces/${payload.spaceId}/members/${payload.targetMemberProfileId}`,
-        { headers: { "x-profile-id": payload.authProfileId } }
+        { headers: { 'x-profile-id': payload.authProfileId } }
       );
     },
 
@@ -379,7 +383,7 @@ export const spacesMutations = {
       const { data } = await apiClient.patch<SpaceMemberUI>(
         `/api/spaces/${payload.spaceId}/members/${payload.targetMemberProfileId}/role`,
         { role: payload.role },
-        { headers: { "x-profile-id": payload.authProfileId } }
+        { headers: { 'x-profile-id': payload.authProfileId } }
       );
       return data;
     },

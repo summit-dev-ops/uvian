@@ -30,7 +30,7 @@ export function useJobCreation({
   filters,
   onCreated,
 }: UseJobCreationProps): UseJobCreationReturn {
-  const {activeProfileId} = useUserSessionStore()
+  const { activeProfileId } = useUserSessionStore();
   const queryClient = useQueryClient();
 
   // Modal state
@@ -49,9 +49,14 @@ export function useJobCreation({
   // Success callback - refresh job data and call optional callback
   const handleSuccess = React.useCallback(() => {
     // Invalidate job queries to refresh data
-    queryClient.invalidateQueries({
-      queryKey: jobQueries.list({authProfileId: activeProfileId, ...filters}).queryKey,
-    });
+    if (activeProfileId) {
+      queryClient.invalidateQueries({
+        queryKey: jobQueries.list({
+          authProfileId: activeProfileId,
+          ...filters,
+        }).queryKey,
+      });
+    }
     queryClient.invalidateQueries({ queryKey: ['jobs'] });
 
     // Call optional callback
@@ -59,7 +64,7 @@ export function useJobCreation({
 
     // Close modal
     closeModal();
-  }, [queryClient,activeProfileId, filters, onCreated, closeModal]);
+  }, [queryClient, activeProfileId, filters, onCreated, closeModal]);
 
   return {
     // Modal state

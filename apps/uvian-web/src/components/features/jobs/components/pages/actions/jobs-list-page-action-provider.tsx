@@ -33,7 +33,7 @@ export function JobsListPageActionProvider({
   const queryClient = useQueryClient();
   const { activeProfileId } = useUserSessionStore();
 
-  const { mutate: createJob, isPending: isCreating } = useMutation(
+  const { mutate: createJob } = useMutation(
     jobMutations.createJob(queryClient)
   );
 

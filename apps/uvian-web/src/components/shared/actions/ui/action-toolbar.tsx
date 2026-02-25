@@ -93,7 +93,7 @@ function ActionGroup<TItem, TParams = any>({
         {secondaryActions.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" suppressHydrationWarning>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -136,7 +136,7 @@ function ActionGroup<TItem, TParams = any>({
       {standardActions.length > 0 && destructiveActions.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" suppressHydrationWarning>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

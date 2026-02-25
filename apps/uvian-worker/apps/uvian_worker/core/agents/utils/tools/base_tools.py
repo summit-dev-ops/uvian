@@ -1,4 +1,6 @@
 from langchain.tools import tool, ToolRuntime
+from langgraph.types import Command
+from langchain_core.messages import ToolMessage, AIMessage
 
 search_skills_schema = {
     "type": "object",
@@ -44,14 +46,21 @@ def load_skill(
     Args:
         skill_name: The name of the skill to load (e.g., "expense_reporting", "travel_booking")
     """
+    loaded_skills = runtime.state.get("loaded_skills") or []
     skills = runtime.state.get("skills")
     skill_name = kargs["skill_name"]
-    print("load_skill: ", skill_name)
+    print("load_skill: ", skill_name, loaded_skills)
     # Find and return the requested skill
     for skill in skills:
-        if skill["name"] == skill_name:
-            return f"Loaded skill: {skill_name}\n\n{skill['content']}"
-
+        if skill["name"] == skill_name and not skill in loaded_skills:
+            return Command(
+                update={
+                    "loaded_skills": loaded_skills + [skill_name],  
+                    "messages": [ToolMessage(f"Loaded skill: {skill_name}\n\n{skill['content']}", tool_call_id=runtime.tool_call_id)]
+                }
+            )
+    
+        
     # Skill not found
     available = ", ".join(s["name"] for s in skills)
     return f"Skill '{skill_name}' not found. Available skills: {available}"

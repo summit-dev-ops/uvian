@@ -23,6 +23,7 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
             profileId: { type: 'string' },
             displayName: { type: 'string', minLength: 1 },
             avatarUrl: { type: 'string' },
+            coverUrl: { type: 'string' },
             bio: { type: 'string' },
             agentConfig: { type: 'object' },
             publicFields: { type: 'object' },
@@ -74,6 +75,7 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
           properties: {
             displayName: { type: 'string', minLength: 1 },
             avatarUrl: { type: 'string' },
+            coverUrl: { type: 'string' },
             bio: { type: 'string' },
             agentConfig: { type: 'object' },
             publicFields: { type: 'object' },

@@ -32,7 +32,7 @@ export function MembersPageBreadcrumb({
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="/">Home</Link>
+            <Link href="/home">Home</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
@@ -47,7 +47,9 @@ export function MembersPageBreadcrumb({
             {isLoading ? (
               <Skeleton className="h-4 w-24" />
             ) : (
-              <Link href={`/chats/${conversationId}`}>{conversation?.title || 'Chat'}</Link>
+              <Link href={`/chats/${conversationId}`}>
+                {conversation?.title || 'Chat'}
+              </Link>
             )}
           </BreadcrumbPage>
         </BreadcrumbItem>

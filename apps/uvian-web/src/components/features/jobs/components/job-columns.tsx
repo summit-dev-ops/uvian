@@ -89,7 +89,9 @@ function JobDurationCell({ job }: JobDurationCellProps) {
 
   return (
     <div className="text-sm">
-      {job.createdAt ? formatJobDuration(new Date(job.createdAt).getMilliseconds()) : '-'}
+      {job.createdAt
+        ? formatJobDuration(new Date(job.createdAt).getMilliseconds())
+        : '-'}
     </div>
   );
 }
@@ -112,7 +114,11 @@ function JobActionCell({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
+        <Button
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          suppressHydrationWarning
+        >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>

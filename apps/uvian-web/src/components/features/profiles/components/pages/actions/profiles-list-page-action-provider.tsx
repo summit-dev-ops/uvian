@@ -28,7 +28,7 @@ export function ProfilesListPageActionProvider({
   onSuccess,
 }: ProfilesListPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const { mutate: createProfile, isPending: isCreating } = useMutation(
+  const { mutate: createProfile } = useMutation(
     profileMutations.createProfile(queryClient)
   );
 

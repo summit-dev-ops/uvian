@@ -26,6 +26,8 @@ export function CreateSpaceModal({
       await executeAction(onConfirmActionId, {
         name: data.name.trim(),
         description: data.description?.trim() || undefined,
+        coverUrl: data.coverUrl?.trim() || undefined,
+        avatarUrl: data.avatarUrl?.trim() || undefined,
         isPrivate: data.isPrivate,
       });
     } catch (error) {

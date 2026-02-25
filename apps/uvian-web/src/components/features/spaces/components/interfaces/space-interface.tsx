@@ -1,47 +1,55 @@
 'use client';
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Settings,
   Users,
   MessageSquare,
-  ChevronRight,
-  Shield,
   Calendar,
   Lock,
   Globe,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+  Shield,
 } from 'lucide-react';
-import { spacesQueries } from '~/lib/domains/spaces/api/queries';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { spacesQueries, spacesMutations } from '~/lib/domains/spaces/api';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import {
   InterfaceLayout,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
   InterfaceContainer,
   InterfaceBanner,
-  InterfaceContent,
-  InterfaceSection,
-  InterfaceFooter,
-} from '~/components/shared/ui/interfaces/interface-layout';
+  InterfaceBannerContent,
+} from '~/components/shared/ui/interfaces';
 import {
   InterfaceError,
   InterfaceLoading,
 } from '~/components/shared/ui/interfaces';
+import { Avatar, AvatarImage, AvatarFallback } from '@org/ui';
+import { Button } from '@org/ui';
+import { Badge } from '@org/ui';
 import {
-  Button,
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-  Badge,
-  Separator,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@org/ui';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 
 interface SpaceInterfaceProps {
   spaceId: string;
 }
 
 export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { activeProfileId } = useUserSessionStore();
+  const modalContext = useModalContext();
 
   const {
     data: space,
@@ -50,176 +58,191 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
     refetch,
   } = useQuery(spacesQueries.space(activeProfileId, spaceId));
 
-  // Early return for error state
-  if (error) {
+  const { mutate: deleteSpace } = useMutation(
+    spacesMutations.deleteSpace(queryClient)
+  );
+
+  const handleEdit = React.useCallback(() => {
+    router.push(`/spaces/${spaceId}/edit`);
+  }, [router, spaceId]);
+
+  const handleDelete = React.useCallback(() => {
+    if (!space) return;
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
+      onConfirm: () => {
+        if (activeProfileId) {
+          deleteSpace(
+            { authProfileId: activeProfileId, spaceId: space.id },
+            {
+              onSuccess: () => {
+                router.push('/spaces');
+              },
+            }
+          );
+        }
+      },
+      title: 'Delete Space',
+      description: `Are you sure you want to delete "${space.name}"? This will also delete all conversations in this space.`,
+    });
+  }, [space, deleteSpace, modalContext, router, activeProfileId]);
+
+  if (isLoading) {
     return (
       <InterfaceLayout>
-        <InterfaceContainer>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent title="Space" subtitle="Loading..." />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceLoading message="Loading space..." />
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
+
+  if (error || !space) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent title="Space" subtitle="Error" />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
           <InterfaceError
             title="Failed to Load Space"
-            message="There was an error loading this space."
+            message={error?.message || 'Space not found'}
             showRetry={true}
             onRetry={() => refetch()}
           />
-        </InterfaceContainer>
+        </InterfaceContent>
       </InterfaceLayout>
     );
   }
 
-  // Early return for loading state
-  if (isLoading || !space) {
-    return (
-      <InterfaceLayout>
-        <InterfaceContainer>
-          <InterfaceLoading message="Loading space..." />
-        </InterfaceContainer>
-      </InterfaceLayout>
-    );
-  }
+  const createdDate = new Date(space.createdAt).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const isAdmin = space.userRole === 'owner' || space.userRole === 'admin';
 
   return (
     <InterfaceLayout>
-      {/* 1. Root Card Container - Compact Size, Card Variant, No Spacing */}
       <InterfaceContainer>
-        {/* 2. Header Section (Banner + Actions) */}
-        <InterfaceBanner
-          height="sm"
-          gradientFrom="#6B46C1" // Space Purple
-          gradientTo="#6B46C1"
-          gradientOpacity={1} // Solid color look
-          className="relative"
-        />
-
-        {/* 3. Content Body (Negative Margin for Avatar) */}
-        <InterfaceContent spacing="compact" className="pt-0">
-          {/* Avatar/Icon Overlap Wrapper */}
-          <div className="relative mb-3">
-            <div className="-mt-12 ml-1">
-              <div className="relative inline-block">
-                <Avatar className="w-24 h-24 border-[6px] border-card bg-card">
-                  <AvatarImage src={undefined} alt={space.name} />
-                  <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-600 text-white text-3xl">
+        <InterfaceBanner imageUrl={space.coverUrl} height="lg">
+          <InterfaceBannerContent className="flex flex-col gap-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
+                  {space.avatarUrl ? (
+                    <AvatarImage src={space.avatarUrl} alt={space.name} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/20 text-primary text-2xl">
                     {space.name.slice(0, 1).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
 
-                {/* Status/Privacy Indicator */}
-                <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-card flex items-center justify-center">
-                  <div
-                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                      space.isPrivate ? 'bg-yellow-500' : 'bg-green-500'
-                    }`}
-                  >
+                <div className="flex-1 min-w-0 pt-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h1 className="text-2xl font-bold text-white drop-shadow-md">
+                      {space.name}
+                    </h1>
+                    {isAdmin && (
+                      <Shield className="h-5 w-5 text-white drop-shadow-md" />
+                    )}
                     {space.isPrivate ? (
-                      <Lock className="h-2.5 w-2.5 text-white" />
+                      <Lock className="h-4 w-4 text-white/80" />
                     ) : (
-                      <Globe className="h-2.5 w-2.5 text-white" />
+                      <Globe className="h-4 w-4 text-white/80" />
                     )}
                   </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Badge
+                      variant={space.isPrivate ? 'secondary' : 'outline'}
+                      className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+                    >
+                      {space.isPrivate ? 'Private' : 'Public'}
+                    </Badge>
+                    <Badge
+                      variant="secondary"
+                      className="bg-white/10 text-white hover:bg-white/20 border-white/30"
+                    >
+                      {space.userRole || 'member'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEdit}
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      suppressHydrationWarning
+                      className="text-white hover:bg-white/20"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={handleDelete}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </div>
+          </InterfaceBannerContent>
+        </InterfaceBanner>
 
-          {/* Identity Block */}
-          <div className="px-1 mb-6">
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              {space.name}
-              {space.userRole === 'admin' && (
-                <Shield className="h-4 w-4 text-purple-500" />
-              )}
-            </h1>
-
-            <div className="flex flex-col gap-1 mt-1">
-              {space.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
+        <InterfaceContent spacing="default">
+          <div className="flex flex-col gap-6">
+            {space.description && (
+              <div>
+                <h3 className="text-sm font-medium mb-2">Description</h3>
+                <p className="text-sm text-muted-foreground">
                   {space.description}
                 </p>
-              )}
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                  {space.isPrivate ? 'PRIVATE SPACE' : 'PUBLIC SPACE'}
-                </Badge>
               </div>
-            </div>
-          </div>
+            )}
 
-          {/* Info Blocks Group */}
-          <div className="space-y-3">
-            {/* Info Box 1: Creation Date */}
-            <InterfaceSection className="p-3 space-y-1 bg-muted/30 border-none">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3 w-3 text-muted-foreground" />
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Established
-                </p>
-              </div>
-              <p className="text-sm font-medium pl-5">
-                {new Date(space.createdAt).toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            </InterfaceSection>
-
-            {/* Info Box 2: Interactive Lists */}
-            <InterfaceSection className="p-0 overflow-hidden bg-muted/30 border-none">
-              {/* Row: Members */}
+            <div className="flex gap-4">
               <Link
                 href={`/spaces/${spaceId}/members`}
-                className="w-full flex items-center justify-between p-3 hover:bg-accent/50 transition-colors group text-left"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 bg-background rounded-md shadow-sm">
-                    <Users className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">Members</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {space.memberCount || 0}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-                </div>
+                <Users className="h-4 w-4" />
+                <span>{space.memberCount || 0} members</span>
               </Link>
-
-              <Separator className="bg-background/50" />
-
-              {/* Row: Conversations */}
               <Link
                 href={`/spaces/${spaceId}/conversations`}
-                className="w-full flex items-center justify-between p-3 hover:bg-accent/50 transition-colors group text-left"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 bg-background rounded-md shadow-sm">
-                    <MessageSquare className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm font-medium">Conversations</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {space.conversationCount || 0}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-                </div>
+                <MessageSquare className="h-4 w-4" />
+                <span>{space.conversationCount || 0} conversations</span>
               </Link>
-            </InterfaceSection>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>Created {createdDate}</span>
+            </div>
           </div>
         </InterfaceContent>
-
-        {/* 4. Footer */}
-        <InterfaceFooter justify="center" spacing="compact" className="pt-2">
-          <Button
-            variant="link"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground no-underline text-xs"
-          >
-            View All Activity
-          </Button>
-        </InterfaceFooter>
       </InterfaceContainer>
     </InterfaceLayout>
   );

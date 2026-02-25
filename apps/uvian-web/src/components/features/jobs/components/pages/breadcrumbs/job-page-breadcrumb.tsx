@@ -19,7 +19,7 @@ import { useUserSessionStore } from '~/components/features/user/hooks/use-user-s
  * Shows: Home > Jobs > [Job ID]
  */
 export function JobDetailPageBreadcrumb({ jobId }: { jobId: string }) {
-  const {activeProfileId} = useUserSessionStore()
+  const { activeProfileId } = useUserSessionStore();
   const { isLoading } = useQuery(jobQueries.detail(activeProfileId, jobId));
 
   return (
@@ -27,7 +27,7 @@ export function JobDetailPageBreadcrumb({ jobId }: { jobId: string }) {
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="/">Home</Link>
+            <Link href="/home">Home</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />

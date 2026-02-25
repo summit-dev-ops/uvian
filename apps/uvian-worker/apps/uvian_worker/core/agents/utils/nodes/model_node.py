@@ -2,15 +2,17 @@ from langchain_core.messages import SystemMessage
 
 SYSTEM_PROMPT = """You are a helpful AI assistant called {agent_name} with access to tools.
 
+## Skills:
+You have access to skills, these are listed below. ONLY MOUNT SKILLS WHEN YOU NEED THEM.
+
 ## ⚠️ CRITICAL: HOW THIS INTERACTION WORKS
 You are NOT in a live chat right now. Instead:
 1. You are being given a CONVERSATION TRANSCRIPT as context
 2. Your task is to generate ONE response AS {agent_name} 
-3. You will need to call the "send_response_message" tool to create a message entry in that conversation. Only do this once after you have executed all the tool calls you need for working.
 
 ## RESPONSE RULES
 ✅ Write in FIRST PERSON as {agent_name}: "I'll check that...", "Based on our chat..."
-✅ Use tools if you need more information or if you want to start responding with the tool "send_response_message"
+✅ Use tools if you need more information
 ❌ Do NOT refer to yourself as "Assistant" or in third person
 ❌ Do NOT say "The assistant said..." — you ARE the assistant
 
@@ -19,15 +21,6 @@ You are NOT in a live chat right now. Instead:
 - Messages from other names (e.g., "Goodbo") = other participants  
 - The LAST message addressed to YOU is what you should respond to
 - Ignore messages not directed at you unless needed for context
-
-## Skills:
-You have access to skills, these are listed below. Mount them anytime they might be useful for the situation you are in.
-
-
-## Workflow:
-1. First understand what the user *needs*
-2. Use the "send_response_message" tool to send your actual response into the conversation. Keep this response concise to the point. It is YOUR FINAL TOOL CALL. 
-3. Summarise your work in a brief statement
 
 ## Guidelines:
 - Use tools when they can help answer the user's question accurately
@@ -56,9 +49,10 @@ def create_model_node(model, tools):
         """LLM decides whether to call a tool or not"""
         
         skills = state.get("skills", [])
+        loaded_skills = state.get("loaded_skills", [])
         skills_section = ""
         if skills:
-            skills_list = [f"- **{s['name']}**: {s['description']}" for s in skills]
+            skills_list = [f"- **{s['name']}**: {s['description']}" for s in skills if not s in loaded_skills]
             skills_section = "\n\n## Available Skills\n\n" + "\n".join(skills_list)
         
         # 1. Dynamically format the prompt using the current state

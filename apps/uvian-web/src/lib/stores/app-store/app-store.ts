@@ -10,25 +10,40 @@ import { createProfileSlice } from '~/lib/domains/profile/store';
 export const createAppStore = () => {
   return createStore<AppState>()(
     persist(
-      immer((set, get, api) => ({
-        hasHydrated: false, // Add this flag
-        setHasHydrated: (newState: boolean) => {
-          set({ hasHydrated: newState });
-        },
-        ...createChatSlice(set, get, api),
-        ...createUserSlice(set, get, api),
-        ...createSpacesSlice(set, get, api),
-        ...createProfileSlice(set, get, api),
-      })),
+      immer((set, get, api) => {
+        const chatSlice = createChatSlice(set as any, get as any, api as any);
+        const userSlice = createUserSlice(set as any, get as any, api as any);
+        const spacesSlice = createSpacesSlice(
+          set as any,
+          get as any,
+          api as any
+        );
+        const profileSlice = createProfileSlice(
+          set as any,
+          get as any,
+          api as any
+        );
+
+        return {
+          hasHydrated: false,
+          setHasHydrated: (newState: boolean) => {
+            set({ hasHydrated: newState });
+          },
+          ...chatSlice,
+          ...userSlice,
+          ...spacesSlice,
+          ...profileSlice,
+        };
+      }),
       {
         name: 'app-storage',
-        storage: createJSONStorage(() => localStorage), 
+        storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           activeProfileId: state.activeProfileId,
         }),
         onRehydrateStorage: (state) => {
           return () => state.setHasHydrated(true);
-        }
+        },
       }
     )
   );

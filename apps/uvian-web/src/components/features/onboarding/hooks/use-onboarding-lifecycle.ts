@@ -56,7 +56,7 @@ export function useOnboardingLifecycle(
 
     // Auto-navigate if enabled
     if (finalConfig.autoProgressOnComplete) {
-      router.push('/dashboard');
+      router.push('/home');
     }
   }, [
     router,

@@ -59,7 +59,7 @@ export function useSpaceMemberActions({
       visibility: { minSelection: 0, maxSelection: 0 },
       perform: async (selection, params, context) => {
         const profileId = prompt('Enter profile ID to invite:')?.trim();
-        if (!profileId) return;
+        if (!profileId || !activeProfileId) return;
 
         await executeMutation(
           context.queryClient,
@@ -86,7 +86,7 @@ export function useSpaceMemberActions({
           'Enter new role (admin/member):',
           member.role?.name || 'member'
         ) as SpaceMemberRole['name'];
-        if (newRole && newRole !== member.role?.name) {
+        if (newRole && newRole !== member.role?.name && activeProfileId) {
           await executeMutation(
             context.queryClient,
             spacesMutations.updateSpaceMemberRole(context.queryClient),
@@ -116,6 +116,7 @@ export function useSpaceMemberActions({
         },
       },
       perform: async (selection, params, context) => {
+        if (!activeProfileId) return;
         const profileIds = selection.selectedItems.map((m) => m.profileId);
         await spacesActions.bulkUpdateMemberRole(
           activeProfileId,
@@ -143,6 +144,7 @@ export function useSpaceMemberActions({
         },
       },
       perform: async (selection, params, context) => {
+        if (!activeProfileId) return;
         const profileIds = selection.selectedItems.map((m) => m.profileId);
         await spacesActions.bulkUpdateMemberRole(
           activeProfileId,
@@ -162,6 +164,7 @@ export function useSpaceMemberActions({
       group: 'danger',
       visibility: { minSelection: 1 },
       perform: async (selection, params, context) => {
+        if (!activeProfileId) return;
         const profileIds = selection.selectedItems.map((m) => m.profileId);
 
         // Confirm before removing

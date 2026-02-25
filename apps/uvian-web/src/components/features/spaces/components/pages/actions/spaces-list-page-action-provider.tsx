@@ -11,10 +11,8 @@ import {
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 export interface SpacesListPageActionContextType {
-  // Pre-defined action IDs for type safety
   readonly ACTION_CREATE_SPACE: 'create-space';
   readonly ACTION_REFRESH_SPACES: 'refresh-spaces';
-  readonly ACTION_SHOW_SETTINGS: 'show-settings';
 }
 
 interface SpacesListPageActionProviderProps {
@@ -26,7 +24,6 @@ interface SpacesListPageActionProviderProps {
 const SPACES_ACTION_IDS = {
   CREATE_SPACE: 'create-space',
   REFRESH_SPACES: 'refresh-spaces',
-  SHOW_SETTINGS: 'show-settings',
 } as const;
 
 export function SpacesListPageActionProvider({
@@ -37,21 +34,18 @@ export function SpacesListPageActionProvider({
   const queryClient = useQueryClient();
   const { activeProfileId } = useUserSessionStore();
 
-  // Mutation for creating spaces with success/error handling
-  const { mutate: createSpace, isPending: isCreating } = useMutation(
+  const { mutate: createSpace } = useMutation(
     spacesMutations.createSpace(queryClient)
   );
-  // Handler for creating a new space - called by the modal
+
   const handleSpaceCreation = React.useCallback(
     async (data: {
       name: string;
       description?: string;
       isPrivate: boolean;
     }) => {
-      console.log(activeProfileId);
-      if (activeProfileId)
+      if (activeProfileId) {
         try {
-          // Use the mutation which includes optimistic updates and navigation
           createSpace({
             authProfileId: activeProfileId,
             id: crypto.randomUUID(),
@@ -63,13 +57,12 @@ export function SpacesListPageActionProvider({
           console.error('Failed to create space:', error);
           throw error;
         }
+      }
     },
     [createSpace, activeProfileId]
   );
 
-  // Handler for refresh action
   const handleRefreshSpaces = React.useCallback(async () => {
-    // Standard React Query approach - invalidate spaces queries
     queryClient.invalidateQueries({
       queryKey: spacesQueries.spaces(activeProfileId).queryKey,
     });
@@ -78,18 +71,11 @@ export function SpacesListPageActionProvider({
     });
   }, [queryClient, activeProfileId]);
 
-  // Handler for settings action
-  const handleShowSettings = React.useCallback(async () => {
-    // Navigate to settings page or open settings modals
-    // Could navigate to a global settings page or open a settings modal
-  }, []);
-
-  // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
       id: SPACES_ACTION_IDS.CREATE_SPACE,
       label: 'Create Space',
-      handler:handleSpaceCreation,
+      handler: handleSpaceCreation,
       loadingLabel: 'Creating...',
     },
     {
@@ -97,22 +83,11 @@ export function SpacesListPageActionProvider({
       label: 'Refresh',
       handler: handleRefreshSpaces,
     },
-    {
-      id: SPACES_ACTION_IDS.SHOW_SETTINGS,
-      label: 'Settings',
-      handler: handleShowSettings,
-    },
   ];
 
-  // Success and error handlers for the PageActionProvider
   const handleActionSuccess = React.useCallback(
     (actionId: string) => {
       onSuccess?.(actionId);
-
-      // Special handling for space creation success
-      if (actionId === SPACES_ACTION_IDS.CREATE_SPACE) {
-        console.log('Create space action initiated');
-      }
     },
     [onSuccess]
   );

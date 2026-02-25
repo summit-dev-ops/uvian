@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { RotateCcw, Download, Upload } from 'lucide-react';
 import {
   ActionRegistrationType,
   PageActionProvider,
@@ -30,7 +29,6 @@ export function SettingsPageActionProvider({
   onError,
   onSuccess,
 }: SettingsPageActionProviderProps) {
-
   // Handler for resetting settings
   const handleResetSettings = React.useCallback(async () => {
     try {
@@ -108,19 +106,16 @@ export function SettingsPageActionProvider({
     {
       id: SETTINGS_ACTION_IDS.RESET_SETTINGS,
       label: 'Reset Settings',
-      icon: RotateCcw,
       handler: handleResetSettings,
     },
     {
       id: SETTINGS_ACTION_IDS.EXPORT_SETTINGS,
       label: 'Export Settings',
-      icon: Download,
       handler: handleExportSettings,
     },
     {
       id: SETTINGS_ACTION_IDS.IMPORT_SETTINGS,
       label: 'Import Settings',
-      icon: Upload,
       handler: handleImportSettings,
     },
   ];

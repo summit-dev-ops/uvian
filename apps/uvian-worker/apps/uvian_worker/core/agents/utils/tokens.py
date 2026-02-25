@@ -19,5 +19,5 @@ def check_context(state: MessagesState) -> str:
     
     if current_tokens > TRIGGER_THRESHOLD:
         print(f"⚠️  Context at {current_tokens}/{MAX_TOKENS} tokens → triggering summarization")
-        return "summarize"
-    return "llm_call"
+        return "summarize_node"
+    return "model_node"

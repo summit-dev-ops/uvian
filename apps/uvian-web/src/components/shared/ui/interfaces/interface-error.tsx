@@ -111,7 +111,7 @@ const InterfaceErrorActions = React.forwardRef<
     };
 
     const handleHome = () => {
-      router.push('/');
+      router.push('/home');
     };
 
     if (!showRetry && !showHome) {

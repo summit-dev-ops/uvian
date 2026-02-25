@@ -9,6 +9,7 @@ import {
 } from '../types/job.types';
 import { resourceScopesService } from './resource-scopes.service';
 import { adminSupabase } from '../clients/supabase.client';
+import { feedService } from './feed.service';
 
 export class JobService {
   /**
@@ -417,6 +418,19 @@ export class JobService {
 
     if (error) {
       throw new Error(`Failed to cancel job: ${error.message}`);
+    }
+
+    // Create feed items for job status change
+    const resourceScopeId = updatedJob.resource_scopes?.id;
+    if (resourceScopeId) {
+      feedService
+        .createFeedItemsForJob(
+          updatedJob.id,
+          updatedJob.type,
+          'cancelled',
+          resourceScopeId
+        )
+        .catch((err) => console.error('Failed to create feed items:', err));
     }
 
     return this.transformFromDatabase(updatedJob);

@@ -1,8 +1,9 @@
 export interface Space {
   id: string;
-  resourceScopeId:string;
+  resourceScopeId: string;
   name: string;
   description?: string;
+  coverUrl?: string;
   avatarUrl?: string;
   createdBy: string;
   settings: SpaceSettings;
@@ -31,6 +32,7 @@ export interface CreateSpacePayload {
   id?: string;
   name: string;
   description?: string;
+  coverUrl?: string;
   avatarUrl?: string;
   settings?: SpaceSettings;
   isPrivate?: boolean;
@@ -39,6 +41,7 @@ export interface CreateSpacePayload {
 export interface UpdateSpacePayload {
   name?: string;
   description?: string;
+  coverUrl?: string;
   avatarUrl?: string;
   settings?: SpaceSettings;
   isPrivate?: boolean;

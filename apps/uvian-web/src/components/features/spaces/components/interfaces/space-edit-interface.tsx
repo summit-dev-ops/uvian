@@ -1,31 +1,25 @@
 'use client';
 
-import React from 'react';
+import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
-import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { spacesQueries, spacesMutations } from '~/lib/domains/spaces/api';
+import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import {
   InterfaceLayout,
   InterfaceHeader,
   InterfaceHeaderContent,
   InterfaceContent,
-} from '~/components/shared/ui/interfaces/interface-layout';
+  InterfaceContainer,
+} from '~/components/shared/ui/interfaces';
 import {
   InterfaceError,
   InterfaceLoading,
 } from '~/components/shared/ui/interfaces';
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@org/ui';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
+import { Button } from '@org/ui';
 import { SpaceForm } from '../forms/space-form';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 
 interface SpaceEditInterfaceProps {
   spaceId: string;
@@ -35,15 +29,15 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { activeProfileId } = useUserSessionStore();
+  const modalContext = useModalContext();
 
-  // Fetch space data
   const {
     data: space,
     isLoading,
     error,
+    refetch,
   } = useQuery(spacesQueries.space(activeProfileId, spaceId));
 
-  // Mutations
   const { mutate: updateSpace, isPending: isUpdating } = useMutation(
     spacesMutations.updateSpace(queryClient)
   );
@@ -52,154 +46,157 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
     spacesMutations.deleteSpace(queryClient)
   );
 
-  // Check if current user is admin
   const isAdmin = space?.userRole === 'owner' || space?.userRole === 'admin';
 
-  const handleSave = (data: {
-    name: string;
-    description?: string;
-    isPrivate: boolean;
-  }) => {
-    if (activeProfileId) {
-      updateSpace({
-        authProfileId: activeProfileId,
-        id: spaceId,
-        name: data.name.trim(),
-        description: data.description?.trim() || undefined,
-        isPrivate: data.isPrivate,
+  const handleSubmit = React.useCallback(
+    async (formData: {
+      name: string;
+      description?: string;
+      coverUrl?: string;
+      avatarUrl?: string;
+      isPrivate: boolean;
+    }) => {
+      return new Promise<void>((resolve, reject) => {
+        if (!activeProfileId) {
+          reject(new Error('No active profile'));
+          return;
+        }
+        updateSpace(
+          {
+            authProfileId: activeProfileId,
+            id: spaceId,
+            name: formData.name.trim(),
+            description: formData.description?.trim() || undefined,
+            coverUrl: formData.coverUrl?.trim() || undefined,
+            avatarUrl: formData.avatarUrl?.trim() || undefined,
+            isPrivate: formData.isPrivate,
+          },
+          {
+            onSuccess: () => {
+              queryClient.invalidateQueries({ queryKey: ['spaces'] });
+              router.push(`/spaces/${spaceId}`);
+              resolve();
+            },
+            onError: (error) => {
+              console.error('Failed to update space:', error);
+              reject(error);
+            },
+          }
+        );
       });
-    }
-  };
+    },
+    [updateSpace, activeProfileId, spaceId, queryClient, router]
+  );
 
-  const handleDelete = () => {
-    if (
-      confirm(
-        'Are you sure you want to delete this space? This action cannot be undone.'
-      )
-    ) {
-      if (activeProfileId) {
-        deleteSpace({ authProfileId: activeProfileId, spaceId });
-      }
-
-      router.push('/spaces');
-    }
-  };
-
-  const handleBack = () => {
+  const handleCancel = React.useCallback(() => {
     router.push(`/spaces/${spaceId}`);
-  };
+  }, [router, spaceId]);
 
-  const spaceData = space || {
-    name: '',
-    description: '',
-    isPrivate: false,
-  };
+  const handleDelete = React.useCallback(() => {
+    if (!space) return;
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
+      onConfirm: () => {
+        if (activeProfileId) {
+          deleteSpace(
+            { authProfileId: activeProfileId, spaceId: space.id },
+            {
+              onSuccess: () => {
+                router.push('/spaces');
+              },
+            }
+          );
+        }
+      },
+      title: 'Delete Space',
+      description: `Are you sure you want to delete "${space.name}"? This will also delete all conversations in this space.`,
+    });
+  }, [space, deleteSpace, modalContext, router, activeProfileId]);
 
-  const handleSubmit = async (formData: {
-    name: string;
-    description?: string;
-    isPrivate: boolean;
-  }) => {
-    await handleSave(formData);
-  };
+  if (isLoading) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent title="Edit Space" subtitle="Loading..." />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceLoading message="Loading..." />
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
 
-  const handleCancel = () => {
-    handleBack();
-  };
-  // Early return for error state
-  if (error) {
+  if (error || !space) {
     return (
       <InterfaceLayout>
         <InterfaceHeader spacing="compact">
           <InterfaceHeaderContent
             title="Edit Space"
-            subtitle="Error loading space"
+            subtitle="Error"
             actions={
-              <Button variant="outline" size="sm" onClick={handleBack}>
-                Back to Space
+              <Button variant="outline" onClick={() => router.push('/spaces')}>
+                Back to Spaces
               </Button>
             }
           />
         </InterfaceHeader>
         <InterfaceContent spacing="default">
           <InterfaceError
-            variant="card"
             title="Failed to Load Space"
-            message={
-              error.message ||
-              'There was an error loading this space. Please try again.'
-            }
+            message={error?.message || 'Space not found'}
             showRetry={true}
-            showHome={true}
-            onRetry={() => window.location.reload()}
+            onRetry={() => refetch()}
           />
         </InterfaceContent>
       </InterfaceLayout>
     );
   }
 
-  // Early return for loading state
-  if (isLoading || !space) {
-    return (
-      <InterfaceLayout>
-        <InterfaceHeader spacing="compact">
-          <InterfaceHeaderContent
-            title="Edit Space"
-            subtitle="Loading space editor..."
-          />
-        </InterfaceHeader>
-        <InterfaceContent spacing="default">
-          <InterfaceLoading
-            variant="default"
-            message="Loading space editor..."
-            size="lg"
-            className="min-h-[400px]"
-          />
-        </InterfaceContent>
-      </InterfaceLayout>
-    );
-  }
+  const formInitialData = {
+    name: space.name || '',
+    description: space.description || '',
+    coverUrl: space.coverUrl || '',
+    avatarUrl: space.avatarUrl || '',
+    isPrivate: space.isPrivate || false,
+  };
 
   return (
     <InterfaceLayout>
-      <InterfaceHeader spacing="compact">
-        <InterfaceHeaderContent
-          title="Edit Space"
-          subtitle="Update your space settings and preferences"
-        />
-      </InterfaceHeader>
-      <InterfaceContent spacing="default">
-        <SpaceForm
-          mode="edit"
-          initialData={spaceData}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isLoading={isLoading}
-          disabled={isUpdating}
-        />
-        {/* Danger zone */}
-        {isAdmin && (
-          <Card className="border-destructive/20">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
-                Once you delete a space, there is no going back. This will
-                permanently delete the space and all associated conversations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+      <InterfaceContainer>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent
+            title="Edit Space"
+            subtitle="Update space settings"
+          />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <SpaceForm
+            mode="edit"
+            initialData={formInitialData}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            isLoading={isUpdating}
+          />
+
+          {isAdmin && (
+            <div className="mt-8 pt-6 border-t">
+              <h3 className="text-sm font-medium mb-2 text-destructive">
+                Danger Zone
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Once you delete a space, there is no going back.
+              </p>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={isDeleting}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="mr-2 h-4 w-4" />
                 {isDeleting ? 'Deleting...' : 'Delete Space'}
               </Button>
-            </CardContent>
-          </Card>
-        )}
-      </InterfaceContent>
+            </div>
+          )}
+        </InterfaceContent>
+      </InterfaceContainer>
     </InterfaceLayout>
   );
 }

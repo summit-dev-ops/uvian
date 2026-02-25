@@ -12,7 +12,6 @@ import type {
   OnboardingState,
   OnboardingStep,
   OnboardingProfileData,
-  OnboardingFormData,
   OnboardingConfig,
 } from '../types';
 
@@ -32,22 +31,30 @@ const STEP_PROGRESS = {
 
 /**
  * useOnboarding - Orchestrator hook for onboarding feature
- * 
+ *
  * Manages the entire onboarding flow while delegating domain operations
  * to existing profile infrastructure. Follows the "hook bridge" pattern.
- * 
+ *
  * @param config - Configuration options for onboarding behavior
  * @returns OnboardingContextValue - Complete onboarding context
  */
-export function useOnboarding(config: OnboardingConfig = {}): OnboardingContextValue {
+export function useOnboarding(
+  config: OnboardingConfig = {}
+): OnboardingContextValue {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   const queryClient = useQueryClient();
   const router = useRouter();
 
   // Check if user needs onboarding by querying existing profile data
-  const { data: userProfiles, isLoading: profilesLoading } = queryClient.getQueryData(profileQueries.userProfiles().queryKey)
-    ? { data: queryClient.getQueryData(profileQueries.userProfiles().queryKey), isLoading: false }
-    : { data: undefined, isLoading: true };
+  const { data: userProfiles, isLoading: profilesLoading } =
+    queryClient.getQueryData(profileQueries.userProfiles().queryKey)
+      ? {
+          data: queryClient.getQueryData(
+            profileQueries.userProfiles().queryKey
+          ),
+          isLoading: false,
+        }
+      : { data: undefined, isLoading: true };
 
   // Fetch user profiles for onboarding check
   React.useEffect(() => {
@@ -63,20 +70,22 @@ export function useOnboarding(config: OnboardingConfig = {}): OnboardingContextV
   });
 
   // Create profile mutation using existing domain logic
-  const createProfileMutation = useMutation(profileMutations.createProfile(queryClient));
+  const createProfileMutation = useMutation(
+    profileMutations.createProfile(queryClient)
+  );
 
   // Determine if user needs onboarding
   const needsOnboarding = React.useMemo(() => {
     // If profiles are still loading, assume they need onboarding
     if (profilesLoading) return true;
-    
+
     // If no profiles exist, user needs onboarding
     return !userProfiles || userProfiles.length === 0;
   }, [userProfiles, profilesLoading]);
 
   // Start onboarding flow
   const startOnboarding = React.useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isActive: true,
       hasStarted: true,
@@ -85,43 +94,47 @@ export function useOnboarding(config: OnboardingConfig = {}): OnboardingContextV
 
   // Complete onboarding
   const completeOnboarding = React.useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isActive: false,
       isCompleted: true,
     }));
-    
+
     // Navigate to dashboard or main app
     if (finalConfig.autoProgressOnComplete) {
-      router.push('/dashboard');
+      router.push('/home');
     }
   }, [router, finalConfig.autoProgressOnComplete]);
 
   // Skip onboarding
   const skipOnboarding = React.useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isActive: false,
       isCompleted: true,
     }));
-    
+
     router.push('/dashboard');
   }, [router]);
 
   // Navigation methods
   const goToStep = React.useCallback((step: OnboardingStep) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       currentStep: step,
     }));
   }, []);
 
   const nextStep = React.useCallback(() => {
-    setState(prev => {
-      const stepOrder: OnboardingStep[] = ['welcome', 'profile-creation', 'completion'];
+    setState((prev) => {
+      const stepOrder: OnboardingStep[] = [
+        'welcome',
+        'profile-creation',
+        'completion',
+      ];
       const currentIndex = stepOrder.indexOf(prev.currentStep);
       const nextIndex = Math.min(currentIndex + 1, stepOrder.length - 1);
-      
+
       return {
         ...prev,
         currentStep: stepOrder[nextIndex],
@@ -131,12 +144,16 @@ export function useOnboarding(config: OnboardingConfig = {}): OnboardingContextV
 
   const previousStep = React.useCallback(() => {
     if (!finalConfig.enableBackNavigation) return;
-    
-    setState(prev => {
-      const stepOrder: OnboardingStep[] = ['welcome', 'profile-creation', 'completion'];
+
+    setState((prev) => {
+      const stepOrder: OnboardingStep[] = [
+        'welcome',
+        'profile-creation',
+        'completion',
+      ];
       const currentIndex = stepOrder.indexOf(prev.currentStep);
       const prevIndex = Math.max(currentIndex - 1, 0);
-      
+
       return {
         ...prev,
         currentStep: stepOrder[prevIndex],
@@ -145,25 +162,29 @@ export function useOnboarding(config: OnboardingConfig = {}): OnboardingContextV
   }, [finalConfig.enableBackNavigation]);
 
   // Create profile for onboarding
-  const createProfile = React.useCallback(async (data: OnboardingProfileData) => {
-    const profileData = {
-      displayName: data.displayName,
-      type: data.type as ProfileType,
-      bio: data.bio || '',
-      avatarUrl: data.avatarUrl,
-      publicFields: {},
-      isActive: true,
-    };
+  const createProfile = React.useCallback(
+    async (data: OnboardingProfileData) => {
+      const profileData = {
+        profileId: crypto.randomUUID(),
+        displayName: data.displayName,
+        type: data.type as ProfileType,
+        bio: data.bio || '',
+        avatarUrl: data.avatarUrl,
+        publicFields: {},
+        isActive: true,
+      };
 
-    const result = await createProfileMutation.mutateAsync(profileData);
-    
-    setState(prev => ({
-      ...prev,
-      profileId: result.id,
-    }));
+      const result = await createProfileMutation.mutateAsync(profileData);
 
-    return { profileId: result.id };
-  }, [createProfileMutation]);
+      setState((prev) => ({
+        ...prev,
+        profileId: result.id,
+      }));
+
+      return { profileId: result.id };
+    },
+    [createProfileMutation]
+  );
 
   // Utility computed values
   const canProceedToNext = React.useMemo(() => {
@@ -181,7 +202,7 @@ export function useOnboarding(config: OnboardingConfig = {}): OnboardingContextV
 
   const canGoBack = React.useMemo(() => {
     if (!finalConfig.enableBackNavigation) return false;
-    
+
     switch (state.currentStep) {
       case 'welcome':
         return false;
@@ -200,22 +221,22 @@ export function useOnboarding(config: OnboardingConfig = {}): OnboardingContextV
   return {
     // State
     state,
-    
+
     // Navigation
     goToStep,
     nextStep,
     previousStep,
-    
+
     // Profile creation
     createProfile,
     isCreatingProfile: createProfileMutation.isPending,
     profileCreationError: createProfileMutation.error,
-    
+
     // Lifecycle
     startOnboarding,
     completeOnboarding,
     skipOnboarding,
-    
+
     // Utility
     needsOnboarding,
     canProceedToNext,

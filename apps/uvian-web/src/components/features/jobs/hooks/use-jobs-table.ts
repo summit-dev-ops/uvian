@@ -48,7 +48,7 @@ interface UseJobsTableReturn {
  * Integrates TanStack Query, local state, and mutations
  */
 export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
-  const {activeProfileId} = useUserSessionStore()
+  const { activeProfileId } = useUserSessionStore();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -83,7 +83,10 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
     error,
     refetch,
   } = useQuery({
-    ...jobQueries.list({authProfileId: activeProfileId,...queryFilters}),
+    ...jobQueries.list({
+      authProfileId: activeProfileId ?? '',
+      ...queryFilters,
+    }),
     enabled: true,
   });
 
@@ -131,21 +134,21 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
 
   const handleCancel = React.useCallback(
     (jobId: string) => {
-      cancelJob({authProfileId: activeProfileId, jobId });
+      cancelJob({ authProfileId: activeProfileId, jobId });
     },
     [cancelJob, activeProfileId]
   );
 
   const handleRetry = React.useCallback(
     (jobId: string) => {
-      retryJob({authProfileId: activeProfileId, jobId });
+      retryJob({ authProfileId: activeProfileId, jobId });
     },
     [retryJob, activeProfileId]
   );
 
   const handleDelete = React.useCallback(
     (jobId: string) => {
-      deleteJob({authProfileId: activeProfileId, jobId });
+      deleteJob({ authProfileId: activeProfileId, jobId });
     },
     [deleteJob, activeProfileId]
   );

@@ -5,6 +5,6 @@ export * from './create-profile-modal';
 export * from './create-space-modal';
 export * from './invite-members-modal';
 export * from './invite-profile-modal';
-export * from './create-job-modal'
-
-
+export * from './create-job-modal';
+export * from './contact-support-modal';
+export * from './create-post-modal';

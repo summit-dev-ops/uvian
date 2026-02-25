@@ -39,7 +39,7 @@ export function SpaceEditPageActionProvider({
   const { activeProfileId } = useUserSessionStore();
 
   // Mutation for deleting spaces
-  const { mutate: deleteSpace, isPending: isDeleting } = useMutation(
+  const { mutate: deleteSpace } = useMutation(
     spacesMutations.deleteSpace(queryClient)
   );
 
@@ -64,7 +64,6 @@ export function SpaceEditPageActionProvider({
         throw error;
       }
   }, [deleteSpace, activeProfileId, router, spaceId]);
-
 
   // Success and error handlers for the PageActionProvider
   const handleActionSuccess = React.useCallback(

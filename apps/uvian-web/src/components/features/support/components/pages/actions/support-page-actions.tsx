@@ -4,7 +4,7 @@ import * as React from 'react';
 import { RefreshCw, MessageCircle } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useModalContext } from '~/components/shared/ui/modals/modal-context';
+import { useModalContext, MODAL_IDS } from '~/components/shared/ui/modals';
 
 const SUPPORT_ACTION_IDS = {
   CONTACT_SUPPORT: 'contact-support',
@@ -20,7 +20,9 @@ export function SupportPageActions() {
   const modalContext = useModalContext();
 
   const handleContactSupport = React.useCallback(() => {
-    modalContext.openModal(SUPPORT_ACTION_IDS.CONTACT_SUPPORT);
+    modalContext.openModal(MODAL_IDS.CONTACT_SUPPORT, {
+      onConfirmActionId: SUPPORT_ACTION_IDS.CONTACT_SUPPORT,
+    });
   }, [modalContext]);
 
   const handleRefresh = React.useCallback(async () => {
@@ -32,7 +34,9 @@ export function SupportPageActions() {
       <DropdownMenuItem
         onClick={handleContactSupport}
         className="cursor-pointer"
-        disabled={actionContext.isActionExecuting(SUPPORT_ACTION_IDS.CONTACT_SUPPORT)}
+        disabled={actionContext.isActionExecuting(
+          SUPPORT_ACTION_IDS.CONTACT_SUPPORT
+        )}
       >
         <MessageCircle className="mr-2 h-4 w-4" />
         <span>
@@ -45,7 +49,9 @@ export function SupportPageActions() {
       <DropdownMenuItem
         onClick={handleRefresh}
         className="cursor-pointer"
-        disabled={actionContext.isActionExecuting(SUPPORT_ACTION_IDS.REFRESH_SUPPORT)}
+        disabled={actionContext.isActionExecuting(
+          SUPPORT_ACTION_IDS.REFRESH_SUPPORT
+        )}
       >
         <RefreshCw className="mr-2 h-4 w-4" />
         <span>Refresh</span>

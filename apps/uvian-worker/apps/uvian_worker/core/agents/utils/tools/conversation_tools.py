@@ -50,7 +50,7 @@ async def send_response_message(
     runtime: ToolRuntime | None = None, **kargs
 ) -> Command:
     """
-    Creates a new message in the style of the 
+    Inserts a standard conversation message into the conversation as your response.
 
     """
     # is_init = False
@@ -92,4 +92,4 @@ async def send_response_message(
 
     return f"Message sent with {new_content}"
 
-tools = [send_response_message, fetch_older_messages]
+tools = [ fetch_older_messages]

@@ -44,7 +44,7 @@ export function SpaceOverviewPageActionProvider({
   const { activeProfileId } = useUserSessionStore();
 
   // Mutation for deleting spaces
-  const { mutate: deleteSpace, isPending: isDeleting } = useMutation(
+  const { mutate: deleteSpace } = useMutation(
     spacesMutations.deleteSpace(queryClient)
   );
 
@@ -76,14 +76,14 @@ export function SpaceOverviewPageActionProvider({
 
   // Handler for deleting space
   const handleDeleteSpace = React.useCallback(async () => {
-    if(activeProfileId)
-    try {
-      await deleteSpace({ authProfileId: activeProfileId, spaceId });
-      router.push('/spaces');
-    } catch (error) {
-      console.error('Failed to delete space:', error);
-      throw error;
-    }
+    if (activeProfileId)
+      try {
+        await deleteSpace({ authProfileId: activeProfileId, spaceId });
+        router.push('/spaces');
+      } catch (error) {
+        console.error('Failed to delete space:', error);
+        throw error;
+      }
   }, [deleteSpace, router, spaceId, activeProfileId]);
 
   // Register the actions with the PageActionProvider

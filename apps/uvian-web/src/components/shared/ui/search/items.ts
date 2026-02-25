@@ -1,12 +1,14 @@
-import { SpaceItemSearchResult, SpaceItemSearchResultData } from "~/components/features/spaces/components/search";
-import { ProfileItemSearchResult, ProfileItemSearchResultData } from "~/components/features/user/components/search";
-
-export type SearchResultItemData = ProfileItemSearchResultData | SpaceItemSearchResultData
+// Placeholder for search items - to be implemented
+export type SearchResultItemData = {
+  type: string;
+  url: string;
+  [key: string]: unknown;
+};
 
 export interface SearchResultItemProps {
-  data: SearchResultItemData
+  data: SearchResultItemData;
 }
-export const ITEM_RENDERERS = {
-    profile: ProfileItemSearchResult,
-    space: SpaceItemSearchResult
-}
+export const ITEM_RENDERERS: Record<
+  string,
+  React.FC<{ data: SearchResultItemData }>
+> = {};

@@ -48,7 +48,7 @@ export default function ConfirmSignUpForm() {
 
           // Redirect to dashboard after a short delay
           setTimeout(() => {
-            router.push('/dashboard');
+            router.push('/home');
           }, 2000);
         } else {
           setStatus('error');

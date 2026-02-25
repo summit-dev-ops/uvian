@@ -60,8 +60,9 @@ export const profileMutations = {
         id: payload.profileId,
         type: payload.type || 'human',
         displayName: payload.displayName,
-        avatarUrl: payload.avatarUrl,
-        bio: payload.bio,
+        avatarUrl: payload.avatarUrl ?? undefined,
+        coverUrl: payload.coverUrl ?? undefined,
+        bio: payload.bio ?? undefined,
         publicFields: payload.publicFields || {},
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -95,6 +96,10 @@ export const profileMutations = {
       queryClient.invalidateQueries({
         queryKey: profileKeys.profile(_payload.profileId),
       });
+      // Invalidate user profiles list
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.userProfiles(),
+      });
     },
   }),
 
@@ -115,6 +120,7 @@ export const profileMutations = {
         {
           displayName: payload.displayName,
           avatarUrl: payload.avatarUrl,
+          coverUrl: payload.coverUrl,
           bio: payload.bio,
           publicFields: payload.publicFields,
           isActive: payload.isActive,
@@ -140,8 +146,9 @@ export const profileMutations = {
         id: previousProfile?.id || 'unknown',
         type: previousProfile?.type || 'human',
         displayName: payload.displayName,
-        avatarUrl: payload.avatarUrl,
-        bio: payload.bio,
+        avatarUrl: payload.avatarUrl ?? undefined,
+        coverUrl: payload.coverUrl ?? undefined,
+        bio: payload.bio ?? undefined,
         publicFields: payload.publicFields || {},
         agentConfig: payload.agentConfig,
         isActive:
@@ -173,6 +180,10 @@ export const profileMutations = {
     onSuccess: () => {
       // Invalidate to refetch with server data
       queryClient.invalidateQueries({ queryKey: profileKeys.profile() });
+      // Invalidate user profiles list
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.userProfiles(),
+      });
     },
   }),
 
@@ -224,6 +235,10 @@ export const profileMutations = {
       // Clean up related queries
       queryClient.removeQueries({
         queryKey: profileKeys.profile(_payload.profileId),
+      });
+      // Invalidate user profiles list
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.userProfiles(),
       });
     },
   }),

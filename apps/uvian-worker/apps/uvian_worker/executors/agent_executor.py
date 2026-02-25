@@ -175,6 +175,7 @@ class AgentExecutor(BaseExecutor):
                 "custom_instructions": agent_profile.get("agent_config").get("prompt"),
                 "agent_name": agent_profile.get("display_name"),
                 "transcript": conversation_transcript,
+                "loaded_skills":[],
                 "llm_calls": 0 ,
                 "channel_id":channel, 
                 "conversation_id":conversation_id , 
@@ -199,7 +200,7 @@ class AgentExecutor(BaseExecutor):
                 stream_mode="messages" 
             ):
                 full_response.append(chunk)
-                print(chunk.content)
+                # print(chunk)
 
             # print(full_response)
             return {

@@ -64,6 +64,7 @@ export class SpacesService {
         id: data.id,
         name: data.name,
         description: data.description,
+        cover_image_url: data.coverUrl,
         avatar_url: data.avatarUrl,
         settings: data.settings || {},
         is_private: data.isPrivate || false,
@@ -126,7 +127,10 @@ export class SpacesService {
     return (spaces || []).map((space: any) => ({
       id: space.id,
       name: space.name,
-      resourceScopeId: space.resource_scopes?.[0]?.id, // Map the scope ID
+      description: space.description,
+      resourceScopeId: space.resource_scopes?.[0]?.id,
+      coverUrl: space.cover_image_url,
+      avatarUrl: space.avatar_url,
       createdAt: space.created_at,
       createdBy: space.created_by,
       settings: space.settings,
@@ -170,7 +174,10 @@ export class SpacesService {
     return {
       id: space.id,
       name: space.name,
-      resourceScopeId: space.resource_scopes?.[0]?.id, // Map scope ID
+      description: space.description,
+      resourceScopeId: space.resource_scopes?.[0]?.id,
+      coverUrl: space.cover_image_url,
+      avatarUrl: space.avatar_url,
       createdAt: space.created_at,
       createdBy: space.created_by,
       conversationCount: space.conversation_count || 0,
@@ -195,6 +202,16 @@ export class SpacesService {
       throw new Error('Unauthorized: Only admins or owners can update spaces');
     }
 
+    const updateData: any = { ...data, updated_at: new Date().toISOString() };
+    if (updateData.coverUrl !== undefined) {
+      updateData.cover_image_url = updateData.coverUrl;
+      delete updateData.coverUrl;
+    }
+    if (updateData.avatarUrl !== undefined) {
+      updateData.avatar_url = updateData.avatarUrl;
+      delete updateData.avatarUrl;
+    }
+
     const { data: space, error } = await adminSupabase
       .from('spaces')
       .update({ ...data, updated_at: new Date().toISOString() })
@@ -207,7 +224,10 @@ export class SpacesService {
     return {
       id: space.id,
       name: space.name,
-      resourceScopeId: space.resource_scopes?.[0]?.id, // Map scope ID
+      description: space.description,
+      resourceScopeId: space.resource_scopes?.[0]?.id,
+      coverUrl: space.cover_image_url,
+      avatarUrl: space.avatar_url,
       createdAt: space.created_at,
       createdBy: space.created_by,
       settings: space.settings,

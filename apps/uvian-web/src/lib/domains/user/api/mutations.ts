@@ -9,13 +9,9 @@
 import { MutationOptions, QueryClient } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { userKeys } from './keys';
-import type {
-  SettingsUI,
-  SettingsDraft,
-} from '../types';
+import type { SettingsUI, SettingsDraft } from '../types';
 
 export type UpdateSettingsPayload = SettingsDraft;
-
 
 type UpdateSettingsContext = {
   previousSettings?: SettingsUI;
@@ -42,7 +38,7 @@ export const userMutations = {
         `/api/profiles/me/settings`,
         payload
       );
-      return data
+      return data;
     },
 
     onMutate: async (payload) => {
@@ -58,8 +54,8 @@ export const userMutations = {
       const optimisticSettings: SettingsUI = {
         userId: previousSettings?.userId || 'unknown',
         settings: payload,
-        createdAt: previousSettings?.createdAt || new Date(),
-        updatedAt: new Date(),
+        createdAt: previousSettings?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       queryClient.setQueryData<SettingsUI>(

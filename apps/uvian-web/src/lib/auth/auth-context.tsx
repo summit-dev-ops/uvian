@@ -7,6 +7,7 @@ import {
   useState,
   ReactNode,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Session } from '@supabase/supabase-js';
 import { createClient } from '~/lib/supabase/client';
 
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
+  const router = useRouter();
 
   useEffect(() => {
     // Get initial session
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    router.push('/');
   };
 
   const value = {

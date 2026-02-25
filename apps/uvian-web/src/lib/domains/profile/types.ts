@@ -17,7 +17,8 @@ export type ProfileUI = {
   userId?: string | null;
   type: ProfileType;
   displayName: string;
-  avatarUrl?: string
+  avatarUrl?: string;
+  coverUrl?: string;
   bio?: string | null;
   agentConfig?: any;
   publicFields: any;
@@ -26,7 +27,6 @@ export type ProfileUI = {
   updatedAt: string;
 };
 
-
 // ============================================================================
 // User Store Types (Local UI state)
 // ============================================================================
@@ -34,6 +34,7 @@ export type ProfileUI = {
 export type ProfileDraft = {
   displayName: string;
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   bio?: string | null;
   agentConfig?: any;
   publicFields?: Record<string, any>;

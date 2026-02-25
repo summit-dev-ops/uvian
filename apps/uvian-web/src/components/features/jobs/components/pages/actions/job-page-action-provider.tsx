@@ -51,13 +51,11 @@ export function JobPageActionProvider({
   const queryClient = useQueryClient();
   const { activeProfileId } = useUserSessionStore();
 
-  const { mutate: deleteJob, isPending: isDeleting } = useMutation(
+  const { mutate: deleteJob } = useMutation(
     jobMutations.deleteJob(queryClient)
   );
-  const { mutate: retryJob, isPending: isRetrying } = useMutation(
-    jobMutations.retryJob(queryClient)
-  );
-  const { mutate: cancelJob, isPending: isCanceling } = useMutation(
+  const { mutate: retryJob } = useMutation(jobMutations.retryJob(queryClient));
+  const { mutate: cancelJob } = useMutation(
     jobMutations.cancelJob(queryClient)
   );
 

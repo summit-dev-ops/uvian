@@ -54,6 +54,7 @@ export class ProfileService {
       type: data.type,
       displayName: data.display_name,
       avatarUrl: data.avatar_url,
+      coverUrl: data.cover_url,
       bio: data.bio,
       agentConfig: data.agent_config,
       publicFields: data.public_fields,
@@ -88,6 +89,7 @@ export class ProfileService {
       type: data.type,
       displayName: data.display_name,
       avatarUrl: data.avatar_url,
+      coverUrl: data.cover_url,
       bio: data.bio,
       agentConfig: data.agent_config,
       publicFields: data.public_fields,
@@ -122,6 +124,7 @@ export class ProfileService {
       type: profile.type,
       displayName: profile.display_name,
       avatarUrl: profile.avatar_url,
+      coverUrl: profile.cover_url,
       bio: profile.bio,
       agentConfig: profile.agent_config,
       publicFields: profile.public_fields,
@@ -148,6 +151,7 @@ export class ProfileService {
       type: data.type || 'human',
       display_name: data.displayName.trim(),
       avatar_url: data.avatarUrl || null,
+      cover_url: data.coverUrl || null,
       bio: data.bio || null,
       agent_config: data.agentConfig || null,
       public_fields: data.publicFields || {},
@@ -170,6 +174,7 @@ export class ProfileService {
       type: profile.type,
       displayName: profile.display_name,
       avatarUrl: profile.avatar_url,
+      coverUrl: profile.cover_url,
       bio: profile.bio,
       agentConfig: profile.agent_config,
       publicFields: profile.public_fields,
@@ -196,6 +201,10 @@ export class ProfileService {
 
     if (data.avatarUrl !== undefined) {
       updateData.avatar_url = data.avatarUrl || null;
+    }
+
+    if (data.coverUrl !== undefined) {
+      updateData.cover_url = data.coverUrl || null;
     }
 
     if (data.bio !== undefined) {
@@ -237,6 +246,7 @@ export class ProfileService {
       type: profile.type,
       displayName: profile.display_name,
       avatarUrl: profile.avatar_url,
+      coverUrl: profile.cover_url,
       bio: profile.bio,
       agentConfig: profile.agent_config,
       publicFields: profile.public_fields,
@@ -355,6 +365,7 @@ export class ProfileService {
       type: profile.type,
       displayName: profile.display_name,
       avatarUrl: profile.avatar_url,
+      coverUrl: profile.cover_url,
       bio: profile.bio,
       agentConfig: profile.agent_config,
       publicFields: profile.public_fields,

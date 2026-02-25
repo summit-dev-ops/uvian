@@ -9,6 +9,7 @@ import {
 import { ResourceScope } from '../types/job.types';
 import { resourceScopesService } from './resource-scopes.service';
 import { adminSupabase } from '../clients/supabase.client';
+import { feedService } from './feed.service';
 
 export class TicketService {
   /**
@@ -440,6 +441,19 @@ export class TicketService {
 
     if (error) {
       throw new Error(`Failed to update ticket: ${error.message}`);
+    }
+
+    // Create feed items for ticket status change
+    const resourceScopeId = updatedTicket.resource_scopes?.id;
+    if (resourceScopeId && updates.status) {
+      feedService
+        .createFeedItemsForTicket(
+          updatedTicket.id,
+          updatedTicket.thread_id,
+          updates.status,
+          resourceScopeId
+        )
+        .catch((err) => console.error('Failed to create feed items:', err));
     }
 
     return this.transformFromDatabase(updatedTicket);

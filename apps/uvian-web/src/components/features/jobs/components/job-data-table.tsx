@@ -35,15 +35,17 @@ import {
   canRetryJob,
   canDeleteJob,
 } from '~/lib/domains/jobs/utils';
+import {
+  InterfaceLayout,
+  InterfaceHeader,
+  InterfaceHeaderContent,
+  InterfaceContent,
+} from '~/components/shared/ui/interfaces';
 
 interface JobDataTableProps {
   filters?: JobFilters;
   onFiltersChange?: (filters: JobFilters) => void;
 }
-
-// ============================================================================
-// Job Action Definitions
-// ============================================================================
 
 function useJobActions(
   jobs: JobUI[],
@@ -62,7 +64,7 @@ function useJobActions(
         group: 'job-management',
         visibility: {
           minSelection: 0,
-          maxSelection: 0, // Only show when no items are selected
+          maxSelection: 0,
         },
         perform: () => {
           openCreateModal();
@@ -76,14 +78,14 @@ function useJobActions(
         visibility: {
           requireSelection: true,
         },
-        selectionValidator: (selection: any) =>
-          selection.selectedItems.every((job: JobUI) =>
+        selectionValidator: (selection: unknown) =>
+          (selection as { selectedItems: JobUI[] }).selectedItems.every((job) =>
             canCancelJob(job.status)
           ),
-        perform: async (selection: any) => {
-          const promises = selection.selectedItems.map((job: JobUI) =>
-            onCancel(job.id)
-          );
+        perform: async (selection: unknown) => {
+          const selectedItems = (selection as { selectedItems: JobUI[] })
+            .selectedItems;
+          const promises = selectedItems.map((job) => onCancel(job.id));
           await Promise.all(promises);
         },
       },
@@ -95,14 +97,14 @@ function useJobActions(
         visibility: {
           requireSelection: true,
         },
-        selectionValidator: (selection: any) =>
-          selection.selectedItems.every((job: JobUI) =>
+        selectionValidator: (selection: unknown) =>
+          (selection as { selectedItems: JobUI[] }).selectedItems.every((job) =>
             canRetryJob(job.status)
           ),
-        perform: async (selection: any) => {
-          const promises = selection.selectedItems.map((job: JobUI) =>
-            onRetry(job.id)
-          );
+        perform: async (selection: unknown) => {
+          const selectedItems = (selection as { selectedItems: JobUI[] })
+            .selectedItems;
+          const promises = selectedItems.map((job) => onRetry(job.id));
           await Promise.all(promises);
         },
       },
@@ -114,14 +116,14 @@ function useJobActions(
         visibility: {
           requireSelection: true,
         },
-        selectionValidator: (selection: any) =>
-          selection.selectedItems.every((job: JobUI) =>
+        selectionValidator: (selection: unknown) =>
+          (selection as { selectedItems: JobUI[] }).selectedItems.every((job) =>
             canDeleteJob(job.status)
           ),
-        perform: async (selection: any) => {
-          const promises = selection.selectedItems.map((job: JobUI) =>
-            onDelete(job.id)
-          );
+        perform: async (selection: unknown) => {
+          const selectedItems = (selection as { selectedItems: JobUI[] })
+            .selectedItems;
+          const promises = selectedItems.map((job) => onDelete(job.id));
           await Promise.all(promises);
         },
         requiresConfirmation: true,
@@ -132,10 +134,6 @@ function useJobActions(
 
   return jobActions;
 }
-
-// ============================================================================
-// Main Component
-// ============================================================================
 
 export function JobDataTable({ filters, onFiltersChange }: JobDataTableProps) {
   const {
@@ -149,13 +147,10 @@ export function JobDataTable({ filters, onFiltersChange }: JobDataTableProps) {
     isRefetching,
   } = useJobsTable(filters);
 
-  // Job creation modal hook
-  const {
-    isOpen: isCreateModalOpen,
-    openModal: openCreateModal,
-    closeModal: closeCreateModal,
-    onSuccess: onCreateSuccess,
-  } = useJobCreation({ filters, onCreated: refetch });
+  const { openModal: openCreateModal } = useJobCreation({
+    filters,
+    onCreated: refetch,
+  });
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -165,13 +160,11 @@ export function JobDataTable({ filters, onFiltersChange }: JobDataTableProps) {
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
-  // Create table columns with action handlers
   const columns = React.useMemo(
     () => createJobColumns(onView, onCancel, onRetry, onDelete),
     [onView, onCancel, onRetry, onDelete]
   );
 
-  // Job actions configuration
   const jobActions = useJobActions(
     jobs,
     onView,
@@ -181,7 +174,6 @@ export function JobDataTable({ filters, onFiltersChange }: JobDataTableProps) {
     openCreateModal
   );
 
-  // Create selection state and integrate with action manager
   const selectionState = React.useMemo(
     () => createTableSelectionState(jobs, rowSelection),
     [jobs, rowSelection]
@@ -211,132 +203,144 @@ export function JobDataTable({ filters, onFiltersChange }: JobDataTableProps) {
     },
   });
 
-  // Handle refresh
   const handleRefresh = React.useCallback(() => {
     refetch();
   }, [refetch]);
 
-  // Loading state
+  const totalJobs = table.getFilteredRowModel().rows.length;
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
+  const subtitle =
+    selectedCount > 0
+      ? `${selectedCount} of ${totalJobs} selected`
+      : `${totalJobs} job${totalJobs !== 1 ? 's' : ''}`;
+
   if (isLoading) {
     return (
-      <div className="w-full">
-        <ActionToolbar
-          groupedActions={groupedActions}
-          onAction={performAction}
-          className="mb-4"
-          layout="horizontal"
-        >
-          <h1 className="text-3xl font-bold">Job Management</h1>
-          <div className="flex-1" />
-          <Button onClick={handleRefresh} disabled={isRefetching}>
-            {isRefetching ? 'Refreshing...' : 'Refresh'}
-          </Button>
-        </ActionToolbar>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading jobs...</p>
+      <InterfaceLayout>
+        <InterfaceHeader>
+          <InterfaceHeaderContent title="Jobs" subtitle="Loading..." />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+              <p className="mt-2 text-muted-foreground">Loading jobs...</p>
+            </div>
           </div>
-        </div>
-      </div>
+        </InterfaceContent>
+      </InterfaceLayout>
     );
   }
 
   return (
-    <div className="w-full">
-      <ActionToolbar
-        groupedActions={groupedActions}
-        onAction={performAction}
-        className="mb-4"
-        layout="horizontal"
-      >
-        <h1 className="text-3xl font-bold">Job Management</h1>
-        <div className="flex-1" />
-        <Button onClick={handleRefresh} disabled={isRefetching}>
-          {isRefetching ? 'Refreshing...' : 'Refresh'}
-        </Button>
-      </ActionToolbar>
+    <InterfaceLayout>
+      <InterfaceHeader>
+        <InterfaceHeaderContent
+          title="Jobs"
+          subtitle={subtitle}
+          actions={
+            <Button
+              onClick={handleRefresh}
+              disabled={isRefetching}
+              variant="outline"
+              size="sm"
+            >
+              {isRefetching ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          }
+        />
+      </InterfaceHeader>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+      <InterfaceContent spacing="compact">
+        <ActionToolbar
+          groupedActions={groupedActions}
+          onAction={performAction}
+          layout="horizontal"
+        />
+      </InterfaceContent>
+
+      <InterfaceContent spacing="default">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  <div className="text-center">
-                    <p className="text-lg font-medium">No jobs found</p>
-                    <p className="text-muted-foreground">
-                      Create a new job to get started
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    <div className="text-center">
+                      <p className="text-lg font-medium">No jobs found</p>
+                      <p className="text-muted-foreground">
+                        Create a new job to get started
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{' '}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+        <div className="flex items-center justify-between py-4">
+          <div className="text-sm text-muted-foreground">
+            {table.getFilteredSelectedRowModel().rows.length} of{' '}
+            {table.getFilteredRowModel().rows.length} row(s) selected.
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-    </div>
+      </InterfaceContent>
+    </InterfaceLayout>
   );
 }

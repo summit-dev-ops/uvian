@@ -11,6 +11,7 @@ import { MentionUtil } from '../utils/mention.util';
 import { jobService } from './job.service';
 import { resourceScopesService } from './resource-scopes.service';
 import { queueService } from './queue.service';
+import { feedService } from './feed.service';
 
 export class ChatService {
   /**
@@ -216,6 +217,13 @@ export class ChatService {
         console.error('Failed to process mentions:', error);
       }
     );
+
+    // Create feed items for conversation members
+    feedService
+      .createFeedItemsForMessage(message.id, conversationId, message.sender_id)
+      .catch((error) => {
+        console.error('Failed to create feed items:', error);
+      });
 
     return {
       id: message.id,

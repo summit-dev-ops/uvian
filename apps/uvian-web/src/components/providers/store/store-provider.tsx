@@ -1,12 +1,6 @@
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { createContext, useContext, useRef } from 'react';
 import { useStore } from 'zustand';
 import { createAppStore } from '~/lib/stores';
 import type { AppState } from '~/lib/stores/app-store/types';

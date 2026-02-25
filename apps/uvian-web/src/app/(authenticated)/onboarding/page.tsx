@@ -18,8 +18,8 @@ export default function OnboardingPage({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-purple-950">
       <OnboardingContainer
-        onComplete={() => (window.location.href = '/dashboard')}
-        onSkip={() => (window.location.href = '/dashboard')}
+        onComplete={() => (window.location.href = '/home')}
+        onSkip={() => (window.location.href = '/home')}
         onGoHome={() => (window.location.href = '/')}
         enableSkip={true}
         enableBackNavigation={true}

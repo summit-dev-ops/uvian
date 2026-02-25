@@ -4,29 +4,21 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Calendar,
   Clock,
   Activity,
   AlertCircle,
   CheckCircle2,
   XCircle,
   Pause,
-  ArrowLeft,
   MoreHorizontal,
   Copy,
   RefreshCw,
   Trash2,
+  ArrowLeft,
 } from 'lucide-react';
 
 import { Button } from '@org/ui';
 import { Badge } from '@org/ui';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@org/ui';
 import { ScrollArea } from '@org/ui';
 import {
   DropdownMenu,
@@ -42,10 +34,12 @@ import {
   InterfaceHeader,
   InterfaceHeaderContent,
   InterfaceContent,
+  InterfaceContainer,
 } from '~/components/shared/ui/interfaces/interface-layout';
 import {
   InterfaceError,
   InterfaceLoading,
+  InterfaceSection,
 } from '~/components/shared/ui/interfaces';
 import {
   getJobStatusInfo,
@@ -57,10 +51,6 @@ import {
 } from '~/lib/domains/jobs/utils';
 import type { JobUI, JobStatus } from '~/lib/domains/jobs/types';
 import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
-
-// ============================================================================
-// Status Display Component
-// ============================================================================
 
 function JobStatusBadge({ status }: { status: JobStatus }) {
   const statusInfo = getJobStatusInfo(status);
@@ -83,10 +73,6 @@ function JobStatusBadge({ status }: { status: JobStatus }) {
   );
 }
 
-// ============================================================================
-// Duration Display Component
-// ============================================================================
-
 function JobDuration({ job }: { job: JobUI }) {
   const [now, setNow] = React.useState(Date.now());
   React.useEffect(() => {
@@ -104,7 +90,7 @@ function JobDuration({ job }: { job: JobUI }) {
   }, [job.createdAt, job.completedAt, job.status, now]);
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center gap-2">
       <Clock className="w-4 h-4 text-muted-foreground" />
       <span className="font-mono">
         {duration ? formatJobDuration(duration) : 'Running...'}
@@ -113,22 +99,18 @@ function JobDuration({ job }: { job: JobUI }) {
   );
 }
 
-// ============================================================================
-// JSON Display Component
-// ============================================================================
-
 function JsonDisplay({
   data,
   title,
   emptyText = 'No data available',
 }: {
-  data: any;
+  data: unknown;
   title: string;
   emptyText?: string;
 }) {
   const [isExpanded, setIsExpanded] = React.useState(false);
 
-  if (!data || Object.keys(data).length === 0) {
+  if (!data || Object.keys(data as object).length === 0) {
     return (
       <div className="text-muted-foreground text-sm italic">{emptyText}</div>
     );
@@ -140,7 +122,7 @@ function JsonDisplay({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h4 className="font-medium">{title}</h4>
-        <div className="flex space-x-2">
+        <div className="flex gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -168,30 +150,26 @@ function JsonDisplay({
   );
 }
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
 interface JobDetailViewProps {
   jobId: string;
 }
 
 export function JobInterface({ jobId }: JobDetailViewProps) {
   const { activeProfileId } = useUserSessionStore();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
   const {
     data: job,
     isLoading,
     error,
+    refetch,
   } = useQuery(jobQueries.detail(activeProfileId, jobId));
-  const router = useRouter();
-  const queryClient = useQueryClient();
 
-  // Job mutations
   const cancelJobMutation = useMutation(jobMutations.cancelJob(queryClient));
   const retryJobMutation = useMutation(jobMutations.retryJob(queryClient));
   const deleteJobMutation = useMutation(jobMutations.deleteJob(queryClient));
 
-  // Action handlers
   const handleBack = () => router.push('/jobs');
   const handleCancel = () =>
     cancelJobMutation.mutate({ authProfileId: activeProfileId, jobId });
@@ -200,36 +178,26 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
   const handleDelete = () =>
     deleteJobMutation.mutate({ authProfileId: activeProfileId, jobId });
 
-  // Early return for loading state
   if (isLoading) {
     return (
       <InterfaceLayout>
         <InterfaceHeader spacing="compact">
-          <InterfaceHeaderContent
-            title="Job Details"
-            subtitle="Loading job details..."
-          />
+          <InterfaceHeaderContent title="Job" subtitle="Loading..." />
         </InterfaceHeader>
         <InterfaceContent spacing="default">
-          <InterfaceLoading
-            variant="default"
-            message="Loading job details..."
-            size="lg"
-            className="min-h-[400px]"
-          />
+          <InterfaceLoading message="Loading job..." />
         </InterfaceContent>
       </InterfaceLayout>
     );
   }
 
-  // Early return for error state
-  if (error) {
+  if (error || !job) {
     return (
       <InterfaceLayout>
         <InterfaceHeader spacing="compact">
           <InterfaceHeaderContent
-            title="Job Details"
-            subtitle="Error loading job"
+            title="Job"
+            subtitle="Error"
             actions={
               <Button variant="outline" size="sm" onClick={handleBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -240,45 +208,12 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
         </InterfaceHeader>
         <InterfaceContent spacing="default">
           <InterfaceError
-            variant="card"
             title="Job Not Found"
             message={
-              error.message ||
-              "The job you're looking for doesn't exist or has been deleted."
+              error?.message || "The job doesn't exist or has been deleted."
             }
             showRetry={true}
-            showHome={true}
-            onRetry={handleBack}
-          />
-        </InterfaceContent>
-      </InterfaceLayout>
-    );
-  }
-
-  // Early return for null job data
-  if (!job) {
-    return (
-      <InterfaceLayout>
-        <InterfaceHeader spacing="compact">
-          <InterfaceHeaderContent
-            title="Job Details"
-            subtitle="Job data unavailable"
-            actions={
-              <Button variant="outline" size="sm" onClick={handleBack}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Jobs
-              </Button>
-            }
-          />
-        </InterfaceHeader>
-        <InterfaceContent spacing="default">
-          <InterfaceError
-            variant="card"
-            title="Job Not Found"
-            message="The job data is unavailable."
-            showRetry={true}
-            showHome={true}
-            onRetry={handleBack}
+            onRetry={() => refetch()}
           />
         </InterfaceContent>
       </InterfaceLayout>
@@ -289,219 +224,203 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
 
   return (
     <InterfaceLayout>
-      <InterfaceHeader spacing="compact">
-        <InterfaceHeaderContent
-          title="Job Details"
-          subtitle={`Job ID: ${job.id}`}
-          actions={
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleBack}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Jobs
-                </DropdownMenuItem>
-                {canCancelJob(job.status) && (
-                  <DropdownMenuItem
-                    onClick={handleCancel}
-                    className="text-destructive"
-                    disabled={cancelJobMutation.isPending}
+      <InterfaceContainer>
+        <InterfaceHeader>
+          <InterfaceHeaderContent
+            title="Job"
+            subtitle={statusInfo.description}
+            actions={
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <JobStatusBadge status={job.status} />
+                  <span className="text-sm text-muted-foreground">
+                    {formatJobType(job.type)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigator.clipboard.writeText(job.id)}
                   >
-                    <Pause className="w-4 h-4 mr-2" />
-                    {cancelJobMutation.isPending
-                      ? 'Cancelling...'
-                      : 'Cancel Job'}
-                  </DropdownMenuItem>
-                )}
-                {canRetryJob(job.status) && (
-                  <DropdownMenuItem
-                    onClick={handleRetry}
-                    disabled={retryJobMutation.isPending}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    {retryJobMutation.isPending ? 'Retrying...' : 'Retry Job'}
-                  </DropdownMenuItem>
-                )}
-                {canDeleteJob(job.status) && (
-                  <DropdownMenuItem
-                    onClick={handleDelete}
-                    className="text-destructive"
-                    disabled={deleteJobMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {deleteJobMutation.isPending ? 'Deleting...' : 'Delete Job'}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }
-        >
-          <div className="flex items-center space-x-3">
-            <JobStatusBadge status={job.status} />
-            <span className="text-sm text-muted-foreground">
-              Type: {formatJobType(job.type)}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigator.clipboard.writeText(job.id)}
-            >
-              <Copy className="w-3 h-3" />
-            </Button>
-          </div>
-        </InterfaceHeaderContent>
-      </InterfaceHeader>
-      <InterfaceContent spacing="default">
-        {/* Status Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="w-5 h-5" />
-              <span>Status Information</span>
-            </CardTitle>
-            <CardDescription>{statusInfo.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      suppressHydrationWarning
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleBack}>
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Jobs
+                    </DropdownMenuItem>
+                    {canCancelJob(job.status) && (
+                      <DropdownMenuItem
+                        onClick={handleCancel}
+                        className="text-destructive"
+                        disabled={cancelJobMutation.isPending}
+                      >
+                        <Pause className="w-4 h-4 mr-2" />
+                        {cancelJobMutation.isPending
+                          ? 'Cancelling...'
+                          : 'Cancel Job'}
+                      </DropdownMenuItem>
+                    )}
+                    {canRetryJob(job.status) && (
+                      <DropdownMenuItem
+                        onClick={handleRetry}
+                        disabled={retryJobMutation.isPending}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        {retryJobMutation.isPending
+                          ? 'Retrying...'
+                          : 'Retry Job'}
+                      </DropdownMenuItem>
+                    )}
+                    {canDeleteJob(job.status) && (
+                      <DropdownMenuItem
+                        onClick={handleDelete}
+                        className="text-destructive"
+                        disabled={deleteJobMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        {deleteJobMutation.isPending
+                          ? 'Deleting...'
+                          : 'Delete Job'}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            }
+          />
+        </InterfaceHeader>
+
+        <InterfaceContent spacing="default">
+          <InterfaceSection>
+            <h3 className="text-sm font-medium mb-4">Status Information</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
                   Status
                 </label>
-                <div>
+                <div className="mt-1">
                   <JobStatusBadge status={job.status} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
                   Duration
                 </label>
-                <JobDuration job={job} />
+                <div className="mt-1">
+                  <JobDuration job={job} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
                   Created
                 </label>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span>{job.createdAt.toLocaleString()}</span>
+                <div className="mt-1 text-sm">
+                  {new Date(job.createdAt).toLocaleString()}
                 </div>
               </div>
               {job.startedAt && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wider">
                     Started
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>{job.startedAt.toLocaleString()}</span>
+                  <div className="mt-1 text-sm">
+                    {new Date(job.startedAt).toLocaleString()}
                   </div>
                 </div>
               )}
               {job.completedAt && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wider">
                     {job.status === 'failed' ? 'Failed' : 'Completed'}
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>{job.completedAt.toLocaleString()}</span>
+                  <div className="mt-1 text-sm">
+                    {new Date(job.completedAt).toLocaleString()}
                   </div>
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </InterfaceSection>
 
-        {/* Job Data */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Input */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Input Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <JsonDisplay
-                data={job.input}
-                title="Job Input"
-                emptyText="No input data provided"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Output or Error */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {job.status === 'failed' ? 'Error Details' : 'Output Data'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {job.status === 'failed' && job.errorMessage ? (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-destructive">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="font-medium">Error Message</span>
-                  </div>
-                  <div className="p-3 border border-destructive/20 rounded-md bg-destructive/5">
-                    <code className="text-sm">{job.errorMessage}</code>
-                  </div>
-                </div>
-              ) : (
-                <JsonDisplay
-                  data={job.output}
-                  title="Job Output"
-                  emptyText="Job output will appear here when completed"
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Technical Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Technical Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <InterfaceSection>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="font-medium text-muted-foreground">
+                <JsonDisplay
+                  data={job.input}
+                  title="Input Data"
+                  emptyText="No input data provided"
+                />
+              </div>
+              <div>
+                {job.status === 'failed' && job.errorMessage ? (
+                  <div>
+                    <h4 className="font-medium mb-2">Error Details</h4>
+                    <div className="flex items-center gap-2 text-destructive mb-2">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="font-medium">Error Message</span>
+                    </div>
+                    <div className="p-3 border border-destructive/20 rounded-md bg-destructive/5">
+                      <code className="text-sm">{job.errorMessage}</code>
+                    </div>
+                  </div>
+                ) : (
+                  <JsonDisplay
+                    data={job.output}
+                    title="Output Data"
+                    emptyText="Job output will appear here when completed"
+                  />
+                )}
+              </div>
+            </div>
+          </InterfaceSection>
+
+          <InterfaceSection>
+            <h3 className="text-sm font-medium mb-4">Technical Details</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
                   Job ID
                 </label>
-                <div className="font-mono break-all">{job.id}</div>
+                <div className="mt-1 font-mono break-all">{job.id}</div>
               </div>
               <div>
-                <label className="font-medium text-muted-foreground">
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
                   Type
                 </label>
-                <div>{formatJobType(job.type)}</div>
+                <div className="mt-1 capitalize">{formatJobType(job.type)}</div>
               </div>
               <div>
-                <label className="font-medium text-muted-foreground">
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
                   Last Updated
                 </label>
-                <div>{job.updatedAt.toLocaleString()}</div>
-              </div>
-              {job.createdAt && (
-                <div>
-                  <label className="font-medium text-muted-foreground">
-                    Total Duration
-                  </label>
-                  <div className="font-mono">
-                    {formatJobDuration(
-                      new Date(job.createdAt).getMilliseconds()
-                    )}
-                  </div>
+                <div className="mt-1">
+                  {new Date(job.updatedAt).toLocaleString()}
                 </div>
-              )}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Total Duration
+                </label>
+                <div className="mt-1 font-mono">
+                  {formatJobDuration(
+                    new Date(job.createdAt).getTime() - Date.now()
+                  )}
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </InterfaceContent>
+          </InterfaceSection>
+        </InterfaceContent>
+      </InterfaceContainer>
     </InterfaceLayout>
   );
 }

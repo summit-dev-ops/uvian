@@ -78,6 +78,7 @@ export function PageActions({ children, className }: PageActionsProps) {
           variant="outline"
           size="icon"
           className={cn('gap-0', className)}
+          suppressHydrationWarning
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>

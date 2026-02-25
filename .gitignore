@@ -50,7 +50,6 @@ test-output
 
 .cache
 
-*/__pycache__
 *.py[cod]
 *$py.class
 
@@ -78,3 +77,4 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+__pycache__/

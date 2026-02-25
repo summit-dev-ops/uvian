@@ -19,15 +19,17 @@ import { useUserSessionStore } from '~/components/features/user/hooks/use-user-s
  * Shows: Home > Spaces > [Space Name] > Members
  */
 export function SpaceMembersPageBreadcrumb({ spaceId }: { spaceId: string }) {
-  const {activeProfileId} = useUserSessionStore()
-  const { data: space, isLoading } = useQuery(spacesQueries.space(activeProfileId,spaceId));
+  const { activeProfileId } = useUserSessionStore();
+  const { data: space, isLoading } = useQuery(
+    spacesQueries.space(activeProfileId, spaceId)
+  );
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
-            <Link href="/">Home</Link>
+            <Link href="/home">Home</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />

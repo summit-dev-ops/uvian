@@ -1,21 +1,38 @@
 'use client';
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, MoreHorizontal, UserCheck } from 'lucide-react';
-import { profileQueries } from '~/lib/domains/profile/api';
-
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Bot,
+  User,
+  Calendar,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { profileQueries, profileMutations } from '~/lib/domains/profile/api';
 import {
   InterfaceLayout,
-  InterfaceContainer,
-  InterfaceBanner,
+  InterfaceHeader,
+  InterfaceHeaderContent,
   InterfaceContent,
-  InterfaceSection,
-  InterfaceFooter,
-} from '~/components/shared/ui/interfaces/interface-layout';
-
-import { Avatar, AvatarImage, AvatarFallback } from '@org/ui';
-import { Badge, Button, Separator } from '@org/ui';
+  InterfaceContainer,
+} from '~/components/shared/ui/interfaces';
+import {
+  InterfaceError,
+  InterfaceLoading,
+} from '~/components/shared/ui/interfaces';
+import { Avatar, AvatarFallback, AvatarImage } from '@org/ui';
+import { Button } from '@org/ui';
+import { Badge } from '@org/ui';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@org/ui';
+import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 
 interface ProfileInterfaceProps {
   profileId: string;
@@ -26,113 +43,165 @@ export function ProfileInterface({
   profileId,
   className,
 }: ProfileInterfaceProps) {
-  const { data: profile, isLoading } = useQuery(
-    profileQueries.profile(profileId)
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const modalContext = useModalContext();
+
+  const {
+    data: profile,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery(profileQueries.profile(profileId));
+
+  const { mutate: deleteProfile } = useMutation(
+    profileMutations.deleteProfile(queryClient)
   );
 
-  if (isLoading || !profile) return null; // Simplified for structural focus
+  const handleEdit = React.useCallback(() => {
+    router.push(`/profiles/${profileId}/edit`);
+  }, [router, profileId]);
+
+  const handleDelete = React.useCallback(() => {
+    if (!profile) return;
+    modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
+      onConfirm: () => {
+        deleteProfile(
+          { profileId: profile.id },
+          {
+            onSuccess: () => {
+              router.push('/profiles');
+            },
+          }
+        );
+      },
+      title: 'Delete Profile',
+      description: `Are you sure you want to delete "${profile.displayName}"? This action cannot be undone.`,
+    });
+  }, [profile, deleteProfile, modalContext, router]);
+
+  if (isLoading) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent title="Profile" subtitle="Loading..." />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceLoading message="Loading profile..." />
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <InterfaceLayout>
+        <InterfaceHeader spacing="compact">
+          <InterfaceHeaderContent title="Profile" subtitle="Error" />
+        </InterfaceHeader>
+        <InterfaceContent spacing="default">
+          <InterfaceError
+            title="Failed to Load Profile"
+            message={error?.message || 'Profile not found'}
+            showRetry={true}
+            onRetry={() => refetch()}
+          />
+        </InterfaceContent>
+      </InterfaceLayout>
+    );
+  }
+
+  const TypeIcon = profile.type === 'agent' ? Bot : User;
+  const createdDate = new Date(profile.createdAt).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   return (
     <InterfaceLayout>
       <InterfaceContainer className={className}>
-        {/* 2. Header Section (Banner + Actions) */}
-        <InterfaceBanner
-          height="sm"
-          gradientFrom="#5865F2"
-          gradientTo="#5865F2"
-          className="relative"
-        ></InterfaceBanner>
+        <InterfaceHeader>
+          <InterfaceHeaderContent
+            title="Profile"
+            subtitle={profile.type}
+            actions={
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" suppressHydrationWarning>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={handleDelete}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            }
+          />
+        </InterfaceHeader>
 
-        {/* 3. Content Body (Negative Margin for Avatar) */}
-        <InterfaceContent spacing="compact" className="pt-0">
-          {/* Avatar Overlap Wrapper */}
-          <div className="relative mb-3">
-            <div className="-mt-12 ml-1">
-              <div className="relative inline-block">
-                <Avatar className="w-24 h-24 border-[6px] border-card">
-                  <AvatarImage
-                    src={profile.avatarUrl}
-                    alt={profile.displayName}
-                  />
-                  <AvatarFallback className="bg-[#5865F2] text-white text-xl">
-                    {profile.displayName.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                {/* Status Indicator */}
-                <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-card flex items-center justify-center">
-                  <div className="w-4 h-4 rounded-full border-4 border-muted-foreground/50" />
+        <InterfaceContent spacing="default">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-start gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage
+                  src={profile.avatarUrl || ''}
+                  alt={profile.displayName}
+                />
+                <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                  {profile.displayName.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-xl font-semibold truncate">
+                    {profile.displayName}
+                  </h1>
+                  <TypeIcon className="h-4 w-4 text-muted-foreground" />
+                  {profile.isActive && (
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    variant={profile.type === 'agent' ? 'default' : 'outline'}
+                  >
+                    {profile.type === 'agent' ? 'Agent' : 'Human'}
+                  </Badge>
+                  {profile.isActive && (
+                    <Badge variant="secondary">Active</Badge>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Identity Block */}
-          <div className="px-1 mb-6">
-            <h1 className="text-xl font-bold text-foreground">
-              {profile.displayName}
-            </h1>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm text-muted-foreground">
-                {profile.displayName.toLowerCase()}.
-              </span>
-              <Badge
-                variant="secondary"
-                className="h-4 px-1 bg-[#23a559] hover:bg-[#23a559] text-white border-none"
-              >
-                #
-              </Badge>
+            {profile.bio && (
+              <div>
+                <h3 className="text-sm font-medium mb-2">Bio</h3>
+                <p className="text-sm text-muted-foreground">{profile.bio}</p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>Joined {createdDate}</span>
             </div>
           </div>
-
-          {/* Info Blocks (Using Section with card variant) */}
-          <div className="space-y-3">
-            {/* Member Since Block */}
-            <InterfaceSection
-              variant="card"
-              className="p-3 space-y-1 bg-muted/30 border-none"
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Member Since
-              </p>
-              <p className="text-sm">
-                {new Date(profile.createdAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            </InterfaceSection>
-
-            {/* Mutuals List Group */}
-            <InterfaceSection
-              variant="card"
-              className="p-0 overflow-hidden bg-muted/30 border-none"
-            >
-              <button className="w-full flex items-center justify-between p-3 hover:bg-accent/50 transition-colors group text-left">
-                <span className="text-sm font-medium">Mutual Servers — 3</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-              </button>
-
-              <Separator className="bg-background/50" />
-
-              <button className="w-full flex items-center justify-between p-3 hover:bg-accent/50 transition-colors group text-left">
-                <span className="text-sm font-medium">Mutual Friends — 1</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-              </button>
-            </InterfaceSection>
-          </div>
         </InterfaceContent>
-
-        {/* 4. Footer */}
-        <InterfaceFooter justify="center" spacing="compact" className="pt-2">
-          <Button
-            variant="link"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground no-underline text-xs"
-          >
-            View Full Profile
-          </Button>
-        </InterfaceFooter>
       </InterfaceContainer>
     </InterfaceLayout>
   );

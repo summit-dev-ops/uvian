@@ -39,26 +39,35 @@ export const useConversationMembers = (conversationId: string) => {
     inviteMember: (
       targetMemberProfileId: string,
       role: ConversationMemberRole
-    ) =>
+    ) => {
+      if (!activeProfileId) return;
       inviteMember({
         conversationId,
         authProfileId: activeProfileId,
         targetMemberProfileId,
         role,
-      }),
-    removeMember: (targetMemberProfileId: string) =>
+      });
+    },
+    removeMember: (targetMemberProfileId: string) => {
+      if (!activeProfileId) return;
       removeMember({
         conversationId,
         authProfileId: activeProfileId,
         targetMemberProfileId,
-      }),
-    updateRole: (targetMemberProfileId: string, role: ConversationMemberRole) =>
+      });
+    },
+    updateRole: (
+      targetMemberProfileId: string,
+      role: ConversationMemberRole
+    ) => {
+      if (!activeProfileId) return;
       updateRole({
         conversationId,
         targetMemberProfileId,
         authProfileId: activeProfileId,
         role,
-      }),
+      });
+    },
     isInviting,
     isRemoving,
     isUpdatingRole,

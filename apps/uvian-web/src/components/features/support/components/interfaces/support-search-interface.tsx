@@ -32,7 +32,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@org/ui';
-import { Input } from '@org/ui';
 import { useSupportSearch, useSupportCategories } from '../../hooks/index';
 
 export interface SupportSearchInterfaceProps {
@@ -112,10 +111,7 @@ export function SupportSearchInterface({
   return (
     <InterfaceLayout>
       <InterfaceContainer className={className}>
-        <InterfaceHeader
-          sticky={'always'}
-          className="flex flex-col gap-2" 
-        >
+        <InterfaceHeader sticky={'always'} className="flex flex-col gap-2">
           {(!data || isLoading) && (
             <InterfaceHeaderContent
               title="Support Search"

@@ -7,6 +7,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { Button, cn, Separator, SidebarTrigger } from '@org/ui';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ProfileMenu } from './page-header/profile-menu';
 
 // ============================================================================
 // PAGE CONTAINER
@@ -134,6 +135,7 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
           >
             {children}
           </Comp>
+          <ProfileMenu />
         </div>
       </header>
     );

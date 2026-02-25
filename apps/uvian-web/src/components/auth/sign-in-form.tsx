@@ -52,7 +52,7 @@ export default function SignInForm() {
       if (error) {
         setError(error.message);
       } else {
-        router.push('/dashboard');
+        router.push('/home');
       }
     } catch (err) {
       setError('An unexpected error occurred');

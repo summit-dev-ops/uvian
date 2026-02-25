@@ -6,10 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, X } from 'lucide-react';
 
-import {
-  Button,
-  Textarea,
-} from '@org/ui';
+import { Button, Textarea } from '@org/ui';
 import {
   Field,
   FieldDescription,
@@ -27,6 +24,7 @@ const profileSchema = z.object({
     .min(1, 'Display name is required')
     .max(100, 'Display name must be 100 characters or less'),
   avatarUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  coverUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   bio: z
     .string()
     .max(500, 'Bio must be 500 characters or less')
@@ -49,6 +47,7 @@ export interface ProfileFormProps {
   // Optional props
   isLoading?: boolean;
   showAvatarUrlField?: boolean;
+  showCoverUrlField?: boolean;
   showCancel?: boolean;
   className?: string;
 }
@@ -65,6 +64,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   onCancel,
   isLoading = false,
   showAvatarUrlField = true,
+  showCoverUrlField = true,
   showCancel = true,
   className,
 }) => {
@@ -73,6 +73,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     defaultValues: {
       displayName: initialData?.displayName || '',
       avatarUrl: initialData?.avatarUrl || '',
+      coverUrl: initialData?.coverUrl || '',
       bio: initialData?.bio || '',
       publicFields: initialData?.publicFields || {},
     },
@@ -87,6 +88,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       reset({
         displayName: initialData.displayName || '',
         avatarUrl: initialData.avatarUrl || '',
+        coverUrl: initialData.coverUrl || '',
         bio: initialData.bio || '',
         publicFields: initialData.publicFields || {},
       });
@@ -136,9 +138,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               <FieldDescription>
                 Your display name is how others will see you
               </FieldDescription>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -150,9 +150,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
             control={control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="profile-avatarUrl">
-                  Avatar URL
-                </FieldLabel>
+                <FieldLabel htmlFor="profile-avatarUrl">Avatar URL</FieldLabel>
                 <Input
                   {...field}
                   id="profile-avatarUrl"
@@ -162,6 +160,34 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                 />
                 <FieldDescription>
                   Optional: Provide a URL to your avatar image
+                </FieldDescription>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+        )}
+
+        {/* Cover URL */}
+        {showCoverUrlField && (
+          <Controller
+            name="coverUrl"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="profile-coverUrl">
+                  Cover Image URL
+                </FieldLabel>
+                <Input
+                  {...field}
+                  id="profile-coverUrl"
+                  placeholder="https://example.com/cover.jpg"
+                  disabled={isLoading}
+                  aria-invalid={fieldState.invalid}
+                />
+                <FieldDescription>
+                  Optional: Provide a URL to your cover image
                 </FieldDescription>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
@@ -194,9 +220,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                   {bioLength}/500
                 </span>
               </div>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -229,8 +253,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               ? 'Creating...'
               : 'Create Profile'
             : isLoading
-              ? 'Updating...'
-              : 'Update Profile'}
+            ? 'Updating...'
+            : 'Update Profile'}
         </Button>
       </div>
     </form>

@@ -8,6 +8,7 @@ export type SpaceUI = {
   name: string;
   resourceScopeId?: string;
   description?: string;
+  coverUrl?: string;
   avatarUrl?: string;
   createdBy: string;
   settings: Record<string, any>;
@@ -37,9 +38,10 @@ export type SpaceMemberUI = {
 export type CreateSpacePayload = {
   name: string;
   description?: string;
-  avatar_url?: string;
+  coverUrl?: string;
+  avatarUrl?: string;
   settings?: Record<string, any>;
-  is_private?: boolean;
+  isPrivate?: boolean;
 };
 
 export type UpdateSpacePayload = {

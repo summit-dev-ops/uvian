@@ -1,11 +1,16 @@
 import { computePosition, flip, shift } from '@floating-ui/dom';
 import { posToDOMRect, ReactRenderer } from '@tiptap/react';
+import type { Editor } from '@tiptap/react';
+import type {
+  SuggestionProps,
+  SuggestionKeyDownProps,
+} from '@tiptap/suggestion';
 import { QueryClient } from '@tanstack/react-query';
 import MentionList from './mention-list';
 import { chatQueries } from '~/lib/domains/chat/api';
 import { profileQueries } from '~/lib/domains/profile/api';
 
-const updatePosition = (editor, element) => {
+const updatePosition = (editor: Editor, element: HTMLElement) => {
   const virtualElement = {
     getBoundingClientRect: () =>
       posToDOMRect(
@@ -56,7 +61,7 @@ export const createSuggestionConfig = (
     let component: any;
 
     return {
-      onStart: (props) => {
+      onStart: (props: SuggestionProps) => {
         component = new ReactRenderer(MentionList, {
           props,
           editor: props.editor,
@@ -71,13 +76,13 @@ export const createSuggestionConfig = (
         updatePosition(props.editor, component.element);
       },
 
-      onUpdate(props) {
+      onUpdate(props: SuggestionProps) {
         component.updateProps(props);
         if (!props.clientRect) return;
         updatePosition(props.editor, component.element);
       },
 
-      onKeyDown(props) {
+      onKeyDown(props: SuggestionKeyDownProps) {
         if (props.event.key === 'Escape') {
           component.destroy();
           return true;

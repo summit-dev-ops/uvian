@@ -30,6 +30,8 @@ const spaceSchema = z.object({
     .max(500, 'Description must be 500 characters or less')
     .optional()
     .or(z.literal('')),
+  coverUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  avatarUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   isPrivate: z.boolean(),
 });
 
@@ -41,6 +43,8 @@ export interface SpaceFormProps {
   initialData?: {
     name: string;
     description?: string;
+    coverUrl?: string;
+    avatarUrl?: string;
     isPrivate: boolean;
   };
 
@@ -77,6 +81,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
     defaultValues: {
       name: initialData?.name || '',
       description: initialData?.description || '',
+      coverUrl: initialData?.coverUrl || '',
+      avatarUrl: initialData?.avatarUrl || '',
       isPrivate: initialData?.isPrivate || false,
     },
     mode: 'onChange',
@@ -90,6 +96,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
       reset({
         name: initialData.name || '',
         description: initialData.description || '',
+        coverUrl: initialData?.coverUrl || '',
+        avatarUrl: initialData?.avatarUrl || '',
         isPrivate: initialData.isPrivate || false,
       });
     }
@@ -172,6 +180,50 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({
               <FieldDescription>
                 Optional: Provide details about what this space is for
               </FieldDescription>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        {/* Cover Image URL */}
+        <Controller
+          name="coverUrl"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="space-coverUrl">Cover Image</FieldLabel>
+              <Input
+                {...field}
+                id="space-coverUrl"
+                type="url"
+                placeholder="https://example.com/cover.jpg"
+                disabled={isLoading || disabled}
+                aria-invalid={fieldState.invalid}
+              />
+              <FieldDescription>
+                URL for the space banner/cover image
+              </FieldDescription>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        {/* Avatar Image URL */}
+        <Controller
+          name="avatarUrl"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="space-avatarUrl">Avatar Image</FieldLabel>
+              <Input
+                {...field}
+                id="space-avatarUrl"
+                type="url"
+                placeholder="https://example.com/avatar.jpg"
+                disabled={isLoading || disabled}
+                aria-invalid={fieldState.invalid}
+              />
+              <FieldDescription>URL for a space avatar image</FieldDescription>
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}

@@ -6,6 +6,7 @@ export interface Profile {
   type: ProfileType;
   displayName: string;
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   bio?: string | null;
   agentConfig?: any;
   publicFields: any;
@@ -18,6 +19,7 @@ export interface CreateProfilePayload {
   profileId: string;
   displayName: string;
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   bio?: string | null;
   agentConfig?: any;
   publicFields?: Record<string, any>;
@@ -28,6 +30,7 @@ export interface UpdateProfilePayload {
   profileId: string;
   displayName?: string;
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   bio?: string | null;
   agentConfig?: any;
   publicFields?: Record<string, any>;

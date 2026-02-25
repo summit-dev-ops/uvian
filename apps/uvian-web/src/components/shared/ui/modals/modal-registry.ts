@@ -7,6 +7,8 @@ import {
   CreateSpaceModal,
   CreateConversationModal,
   CreateJobModal,
+  ContactSupportModal,
+  CreatePostModal,
 } from './modals';
 import { ModalRegistration } from './types';
 
@@ -22,6 +24,9 @@ export const MODAL_IDS = {
   INVITE_MEMBERS: 'invite-members',
   INVITE_PROFILES: 'invite-profiles',
   CREATE_JOB: 'create-job',
+  CONTACT_SUPPORT: 'contact-support',
+  CREATE_POST: 'create-post',
+  DELETE_POST: 'delete-post',
 } as const;
 
 // Modal Registry - Maps modal IDs to their components and default props
@@ -81,5 +86,13 @@ export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
     defaultProps: {
       defaultRole: 'member',
     },
+  },
+  'contact-support': {
+    id: 'contact-support',
+    Component: ContactSupportModal,
+  },
+  'create-post': {
+    id: 'create-post',
+    Component: CreatePostModal,
   },
 };

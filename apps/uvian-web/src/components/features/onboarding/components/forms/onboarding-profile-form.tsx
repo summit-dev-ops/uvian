@@ -6,11 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Loader2 } from 'lucide-react';
 
-import {
-  Button,
-  Textarea,
-  Input,
-} from '@org/ui';
+import { Button, Textarea, Input } from '@org/ui';
 import {
   Field,
   FieldDescription,
@@ -32,20 +28,20 @@ const onboardingProfileSchema = z.object({
     .string()
     .min(2, 'Display name must be at least 2 characters')
     .max(50, 'Display name must be 50 characters or less')
-    .regex(/^[a-zA-Z0-9\s\-_\.]+$/, 'Display name can only contain letters, numbers, spaces, hyphens, underscores, and dots'),
+    .regex(
+      /^[a-zA-Z0-9\s\-_\.]+$/,
+      'Display name can only contain letters, numbers, spaces, hyphens, underscores, and dots'
+    ),
   type: z.enum(['human', 'agent', 'system'], {
-    errorMap: () => ({ message: 'Please select a profile type' }),
+    message: 'Please select a profile type',
   }),
   bio: z
     .string()
     .max(300, 'Bio must be 300 characters or less')
     .optional()
     .or(z.literal('')),
-  avatarUrl: z
-    .string()
-    .url('Must be a valid URL')
-    .optional()
-    .or(z.literal('')),
+  avatarUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  coverUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 });
 
 type OnboardingFormData = z.infer<typeof onboardingProfileSchema>;
@@ -53,7 +49,7 @@ type OnboardingFormData = z.infer<typeof onboardingProfileSchema>;
 export interface OnboardingProfileFormProps {
   // Required callbacks
   onSubmit: (data: OnboardingFormData) => void | Promise<void>;
-  
+
   // Optional props
   isLoading?: boolean;
   initialData?: Partial<OnboardingFormData>;
@@ -62,7 +58,7 @@ export interface OnboardingProfileFormProps {
 
 /**
  * OnboardingProfileForm - Simplified profile creation form for onboarding
- * 
+ *
  * Based on the existing profile form but optimized for new users.
  * Focuses on essential information and provides better UX for first-time setup.
  */
@@ -79,6 +75,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
       type: initialData?.type || 'human',
       bio: initialData?.bio || '',
       avatarUrl: initialData?.avatarUrl || '',
+      coverUrl: initialData?.coverUrl || '',
     },
     mode: 'onChange',
   });
@@ -89,6 +86,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
   const watchedValues = watch();
   const bioLength = (watchedValues.bio || '').length;
   const avatarLength = (watchedValues.avatarUrl || '').length;
+  const coverLength = (watchedValues.coverUrl || '').length;
 
   React.useEffect(() => {
     if (initialData) {
@@ -97,6 +95,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
         type: initialData.type || 'human',
         bio: initialData.bio || '',
         avatarUrl: initialData.avatarUrl || '',
+        coverUrl: initialData.coverUrl || '',
       });
     }
   }, [initialData, reset]);
@@ -136,9 +135,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
               <FieldDescription>
                 This is how others will see you. You can change this later.
               </FieldDescription>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -149,9 +146,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
           control={control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="onboarding-type">
-                Profile Type *
-              </FieldLabel>
+              <FieldLabel htmlFor="onboarding-type">Profile Type *</FieldLabel>
               <Select
                 value={field.value}
                 onValueChange={field.onChange}
@@ -169,9 +164,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
               <FieldDescription>
                 Choose the type that best describes your identity
               </FieldDescription>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -182,9 +175,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
           control={control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="onboarding-bio">
-                Bio
-              </FieldLabel>
+              <FieldLabel htmlFor="onboarding-bio">Bio</FieldLabel>
               <Textarea
                 {...field}
                 id="onboarding-bio"
@@ -202,9 +193,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
                   {bioLength}/300
                 </span>
               </div>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -215,9 +204,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
           control={control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="onboarding-avatarUrl">
-                Avatar URL
-              </FieldLabel>
+              <FieldLabel htmlFor="onboarding-avatarUrl">Avatar URL</FieldLabel>
               <Input
                 {...field}
                 id="onboarding-avatarUrl"
@@ -234,9 +221,37 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
                   {avatarLength > 0 ? `${avatarLength} chars` : 'Optional'}
                 </span>
               </div>
-              {fieldState.invalid && (
-                <FieldError errors={[fieldState.error]} />
-              )}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        {/* Cover URL */}
+        <Controller
+          name="coverUrl"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="onboarding-coverUrl">
+                Cover Image URL
+              </FieldLabel>
+              <Input
+                {...field}
+                id="onboarding-coverUrl"
+                placeholder="https://example.com/cover.jpg"
+                disabled={isLoading}
+                aria-invalid={fieldState.invalid}
+                autoComplete="url"
+              />
+              <div className="flex justify-between items-center">
+                <FieldDescription>
+                  Optional: Link to your cover image
+                </FieldDescription>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {coverLength > 0 ? `${coverLength} chars` : 'Optional'}
+                </span>
+              </div>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
@@ -244,9 +259,7 @@ export const OnboardingProfileForm: React.FC<OnboardingProfileFormProps> = ({
 
       {/* Form Actions */}
       <div className="flex items-center justify-between pt-4">
-        <div className="text-sm text-muted-foreground">
-          * Required fields
-        </div>
+        <div className="text-sm text-muted-foreground">* Required fields</div>
         <Button
           type="submit"
           form="onboarding-profile-form"

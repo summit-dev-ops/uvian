@@ -13,6 +13,8 @@ import {
 import { SpacePageBreadcrumb } from '~/components/features/spaces/components/pages/breadcrumbs';
 import { SpaceInterface } from '~/components/features/spaces/components/interfaces/space-interface';
 import { ModalProvider } from '~/components/shared/ui/modals';
+import { InnerSidebar } from '~/components/shared/ui/sidebar/inner-sidebar';
+import { SpacesSidebar } from '~/components/features/spaces/components/pages/sidebar';
 
 export default async function SpacePage({
   params,
@@ -24,21 +26,26 @@ export default async function SpacePage({
   return (
     <ModalProvider>
       <SpaceOverviewPageActionProvider spaceId={spaceId}>
-        <PageContainer
-          size={'full'}
-          className="flex flex-1 flex-col min-h-0 relative"
-        >
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
-            <SpacePageBreadcrumb spaceId={spaceId} />
-            <PageActions>
-              <SpaceOverviewPageActions />
-            </PageActions>
-          </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
-            <SpaceInterface spaceId={spaceId} />
-          </PageContent>
-          <PageModals />
-        </PageContainer>
+        <div className="flex flex-1 min-h-0">
+          <InnerSidebar>
+            <SpacesSidebar spaceId={spaceId} />
+          </InnerSidebar>
+          <PageContainer
+            size={'full'}
+            className="flex flex-1 flex-col min-h-0 relative"
+          >
+            <PageHeader className="flex flex-row flex-1 items-center justify-between">
+              <SpacePageBreadcrumb spaceId={spaceId} />
+              <PageActions>
+                <SpaceOverviewPageActions />
+              </PageActions>
+            </PageHeader>
+            <PageContent className="flex flex-1 flex-col min-h-0 relative">
+              <SpaceInterface spaceId={spaceId} />
+            </PageContent>
+            <PageModals />
+          </PageContainer>
+        </div>
       </SpaceOverviewPageActionProvider>
     </ModalProvider>
   );

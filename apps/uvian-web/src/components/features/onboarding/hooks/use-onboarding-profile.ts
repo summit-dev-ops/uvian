@@ -48,6 +48,7 @@ export function useOnboardingProfile(
   const createProfile = React.useCallback(
     async (data: OnboardingProfileData) => {
       const profileData = {
+        profileId: crypto.randomUUID(),
         displayName: data.displayName,
         type: data.type as ProfileType,
         bio: data.bio || '',
