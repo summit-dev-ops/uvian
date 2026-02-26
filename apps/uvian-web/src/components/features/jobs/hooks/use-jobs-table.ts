@@ -3,9 +3,13 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { jobQueries } from '~/lib/domains/jobs/api/queries';
+import { apiClient } from '~/lib/api/api-clients';
 import { jobMutations } from '~/lib/domains/jobs/api/mutations';
-import type { JobUI, JobFilters } from '~/lib/domains/jobs/types';
+import type {
+  JobUI,
+  JobFilters,
+  JobListResponseUI,
+} from '~/lib/domains/jobs/types';
 import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface UseJobsTableReturn {
@@ -46,6 +50,11 @@ interface UseJobsTableReturn {
 /**
  * Main orchestrator hook for job data table
  * Integrates TanStack Query, local state, and mutations
+ *
+ * @param filters - Supports three modes:
+ *   - { spaceId: string } → fetches jobs for that space
+ *   - { conversationId: string } → fetches jobs for that conversation
+ *   - No scope filter → fetches all jobs (usage/billing view)
  */
 export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
   const { activeProfileId } = useUserSessionStore();
@@ -59,21 +68,35 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
   const [filterDateFrom, setFilterDateFrom] = React.useState<Date | null>(null);
   const [filterDateTo, setFilterDateTo] = React.useState<Date | null>(null);
 
-  // Prepare query filters
-  const queryFilters = React.useMemo(() => {
-    const dateFrom = filterDateFrom ? filterDateFrom.toISOString() : undefined;
-    const dateTo = filterDateTo ? filterDateTo.toISOString() : undefined;
+  // Determine the endpoint based on filters
+  const getEndpoint = React.useCallback(() => {
+    if (filters?.spaceId) {
+      return `/api/spaces/${filters.spaceId}/jobs`;
+    }
+    if (filters?.conversationId) {
+      return `/api/conversations/${filters.conversationId}/jobs`;
+    }
+    return '/api/jobs/usage';
+  }, [filters?.spaceId, filters?.conversationId]);
 
-    return {
-      ...filters,
-      status: (filterStatus as any) || filters?.status,
-      type: filterType || filters?.type,
-      dateFrom,
-      dateTo,
-      page: filters?.page || 1,
-      limit: filters?.limit || 20,
-    };
-  }, [filters, filterStatus, filterType, filterDateFrom, filterDateTo]);
+  // Build query params
+  const queryParams = React.useMemo(() => {
+    const params: Record<string, string> = {};
+    if (filterStatus) params.status = filterStatus;
+    if (filterType) params.type = filterType;
+    if (filterDateFrom) params.dateFrom = filterDateFrom.toISOString();
+    if (filterDateTo) params.dateTo = filterDateTo.toISOString();
+    params.page = String(filters?.page || 1);
+    params.limit = String(filters?.limit || 20);
+    return params;
+  }, [
+    filterStatus,
+    filterType,
+    filterDateFrom,
+    filterDateTo,
+    filters?.page,
+    filters?.limit,
+  ]);
 
   // Fetch jobs using TanStack Query
   const {
@@ -82,12 +105,16 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
     isRefetching,
     error,
     refetch,
-  } = useQuery({
-    ...jobQueries.list({
-      authProfileId: activeProfileId ?? '',
-      ...queryFilters,
-    }),
-    enabled: true,
+  } = useQuery<JobListResponseUI, Error>({
+    queryKey: ['jobs', filters?.spaceId, filters?.conversationId, queryParams],
+    queryFn: async () => {
+      const { data } = await apiClient.get<JobListResponseUI>(getEndpoint(), {
+        params: queryParams,
+        headers: { 'x-profile-id': activeProfileId },
+      });
+      return data;
+    },
+    enabled: !!activeProfileId,
   });
 
   // Mutations for job actions
@@ -124,12 +151,28 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
     setFilterDateTo(null);
   }, []);
 
+  // Get the base path for navigation
+  const getJobPath = React.useCallback(
+    (jobId: string) => {
+      const job = jobResponse?.jobs.find((j: JobUI) => j.id === jobId);
+      if (job?.spaceId) {
+        return `/spaces/${job.spaceId}/jobs/${jobId}`;
+      }
+      if (job?.conversationId) {
+        return `/chats/${job.conversationId}/jobs/${jobId}`;
+      }
+      // Fallback to global jobs page
+      return `/jobs/${jobId}`;
+    },
+    [jobResponse?.jobs]
+  );
+
   // Action handlers
   const handleView = React.useCallback(
     (jobId: string) => {
-      router.push(`/jobs/${jobId}`);
+      router.push(getJobPath(jobId));
     },
-    [router]
+    [router, getJobPath]
   );
 
   const handleCancel = React.useCallback(
@@ -161,7 +204,7 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
     jobs,
     isLoading,
     isRefetching,
-    error: error as Error | null,
+    error,
 
     // Action handlers
     onView: handleView,

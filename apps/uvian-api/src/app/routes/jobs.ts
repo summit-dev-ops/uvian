@@ -11,10 +11,9 @@ import {
   GetJobsRequest,
   GetSpaceJobsRequest,
   GetConversationJobsRequest,
-  JobFilters,
-  PaginationOptions,
   RetryJobRequest,
   GetJobMetricsRequest,
+  GetJobsUsageRequest,
 } from '../types/job.types';
 
 export default async function (fastify: FastifyInstance) {
@@ -122,19 +121,20 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  // List jobs with filtering and pagination (enhanced version)
+  // List jobs - requires spaceId or conversationId filter
   fastify.get<GetJobsRequest>('/api/jobs', {
     preHandler: [fastify.authenticate],
     schema: {
       querystring: {
         type: 'object',
+        required: ['spaceId'],
         properties: {
+          spaceId: { type: 'string' },
+          conversationId: { type: 'string' },
           status: { type: 'string' },
           type: { type: 'string' },
           dateFrom: { type: 'string' },
           dateTo: { type: 'string' },
-          spaceId: { type: 'string' },
-          conversationId: { type: 'string' },
           page: { type: 'integer', minimum: 1 },
           limit: { type: 'integer', minimum: 1, maximum: 100 },
         },
@@ -180,25 +180,146 @@ export default async function (fastify: FastifyInstance) {
       },
     },
     handler: async (request, reply) => {
-      const query = request.query as JobFilters & PaginationOptions;
+      try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
 
-      const page = query.page || 1;
-      const limit = query.limit || 20;
+        const query = request.query;
 
-      const result = await jobService.listJobs(
-        request.supabase,
-        {
-          status: query.status,
-          type: query.type,
-          dateFrom: query.dateFrom,
-          dateTo: query.dateTo,
-          spaceId: query.spaceId,
-          conversationId: query.conversationId,
+        if (!query.spaceId && !query.conversationId) {
+          reply.code(400).send({
+            error: 'Either spaceId or conversationId is required',
+          });
+          return;
+        }
+
+        if (query.spaceId) {
+          const result = await jobService.listSpaceJobs(
+            request.supabase,
+            query.spaceId,
+            authProfileId,
+            {
+              status: query.status,
+              type: query.type,
+              dateFrom: query.dateFrom,
+              dateTo: query.dateTo,
+            },
+            { page: query.page || 1, limit: query.limit || 20 }
+          );
+          reply.send(result);
+        } else {
+          const result = await jobService.listConversationJobs(
+            request.supabase,
+            query.conversationId!,
+            authProfileId,
+            {
+              status: query.status,
+              type: query.type,
+              dateFrom: query.dateFrom,
+              dateTo: query.dateTo,
+            },
+            { page: query.page || 1, limit: query.limit || 20 }
+          );
+          reply.send(result);
+        }
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.message.includes('does not have access') ||
+            error.message.includes('Unauthorized'))
+        ) {
+          reply.code(403).send({ error: error.message });
+        } else {
+          reply.code(500).send({ error: 'Internal server error' });
+        }
+      }
+    },
+  });
+
+  // Get all jobs for a profile across all scopes (for billing/usage)
+  fastify.get<GetJobsUsageRequest>('/api/jobs/usage', {
+    preHandler: [fastify.authenticate],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          status: { type: 'string' },
+          type: { type: 'string' },
+          dateFrom: { type: 'string' },
+          dateTo: { type: 'string' },
+          page: { type: 'integer', minimum: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 100 },
         },
-        { page, limit }
-      );
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            jobs: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  type: { type: 'string' },
+                  status: { type: 'string' },
+                  input: { type: 'object' },
+                  output: { anyOf: [{ type: 'object' }, { type: 'null' }] },
+                  errorMessage: {
+                    anyOf: [{ type: 'string' }, { type: 'null' }],
+                  },
+                  resourceScopeId: { type: 'string' },
+                  spaceId: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  conversationId: {
+                    anyOf: [{ type: 'string' }, { type: 'null' }],
+                  },
+                  scopeType: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  createdAt: { type: 'string' },
+                  updatedAt: { type: 'string' },
+                  startedAt: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  completedAt: {
+                    anyOf: [{ type: 'string' }, { type: 'null' }],
+                  },
+                },
+              },
+            },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
+            hasMore: { type: 'boolean' },
+          },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const authProfileId = await profileService.getCurrentProfileFromRequest(
+          request
+        );
 
-      reply.send(result);
+        const query = request.query;
+
+        const result = await jobService.getAllJobsForProfile(
+          request.supabase,
+          authProfileId,
+          {
+            status: query.status,
+            type: query.type,
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo,
+          },
+          { page: query.page || 1, limit: query.limit || 20 }
+        );
+
+        reply.send(result);
+      } catch (error) {
+        if (error instanceof Error) {
+          reply.code(500).send({ error: error.message });
+        } else {
+          reply.code(500).send({ error: 'Internal server error' });
+        }
+      }
     },
   });
 
@@ -519,6 +640,12 @@ export default async function (fastify: FastifyInstance) {
             averageProcessingTime: { type: 'number' },
           },
         },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
         403: {
           type: 'object',
           properties: {
@@ -540,23 +667,11 @@ export default async function (fastify: FastifyInstance) {
           conversationId?: string;
         };
 
-        // If spaceId or conversationId is provided, validate access
-        if (query.spaceId) {
-          await jobService.listSpaceJobs(
-            request.supabase,
-            query.spaceId,
-            authProfileId,
-            {},
-            { page: 1, limit: 1 }
-          );
-        } else if (query.conversationId) {
-          await jobService.listConversationJobs(
-            request.supabase,
-            query.conversationId,
-            authProfileId,
-            {},
-            { page: 1, limit: 1 }
-          );
+        if (!query.spaceId && !query.conversationId) {
+          reply.code(400).send({
+            error: 'Either spaceId or conversationId is required',
+          });
+          return;
         }
 
         const metrics = await jobService.getJobMetrics(

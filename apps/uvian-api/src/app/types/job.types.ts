@@ -176,3 +176,13 @@ export interface DeleteJobRequest {
     id: string;
   };
 }
+export interface GetJobsUsageRequest {
+  Querystring: {
+    status?: Job['status'];
+    type?: Job['type'];
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  };
+}

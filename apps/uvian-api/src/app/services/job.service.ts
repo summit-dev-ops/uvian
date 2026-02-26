@@ -575,6 +575,127 @@ export class JobService {
   }
 
   /**
+   * Gets all jobs across all scopes the user has access to (for billing/usage)
+   */
+  async getAllJobsForProfile(
+    userClient: SupabaseClient,
+    profileId: string,
+    filters: JobFilters = {},
+    pagination: PaginationOptions = { page: 1, limit: 20 }
+  ): Promise<JobListResponse> {
+    // Get all space IDs user is a member of
+    const { data: spaceMemberships } = await userClient
+      .from('space_members')
+      .select('space_id')
+      .eq('profile_id', profileId);
+
+    const spaceIds = spaceMemberships?.map((m) => m.space_id) || [];
+
+    // Get all conversation IDs user is a member of
+    const { data: conversationMemberships } = await userClient
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('profile_id', profileId);
+
+    const conversationIds =
+      conversationMemberships?.map((m) => m.conversation_id) || [];
+
+    // If user has no memberships, return empty
+    if (spaceIds.length === 0 && conversationIds.length === 0) {
+      return {
+        jobs: [],
+        total: 0,
+        page: pagination.page,
+        limit: pagination.limit,
+        hasMore: false,
+      };
+    }
+
+    // Get resource scope IDs for those spaces and conversations
+    let scopeQuery = userClient.from('resource_scopes').select('id');
+
+    if (spaceIds.length > 0) {
+      scopeQuery = scopeQuery.in('space_id', spaceIds);
+    }
+    if (conversationIds.length > 0) {
+      scopeQuery = scopeQuery.in('conversation_id', conversationIds);
+    }
+
+    const { data: scopes } = await scopeQuery;
+    const scopeIds = scopes?.map((s) => s.id) || [];
+
+    // If no scopes found, return empty
+    if (scopeIds.length === 0) {
+      return {
+        jobs: [],
+        total: 0,
+        page: pagination.page,
+        limit: pagination.limit,
+        hasMore: false,
+      };
+    }
+
+    // Query jobs for all accessible scopes
+    let query = userClient.from('jobs').select(
+      `
+        *,
+        resource_scopes!jobs_resource_scope_id_fkey(
+          id,
+          space_id,
+          conversation_id
+        )
+      `,
+      { count: 'exact' }
+    );
+
+    // Filter by accessible scope IDs
+    query = query.in('resource_scope_id', scopeIds);
+
+    // Apply additional filters
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+
+    if (filters.dateFrom) {
+      query = query.gte('created_at', filters.dateFrom);
+    }
+
+    if (filters.dateTo) {
+      query = query.lte('created_at', filters.dateTo);
+    }
+
+    // Apply sorting (newest first)
+    query = query.order('created_at', { ascending: false });
+
+    // Apply pagination
+    const offset = (pagination.page - 1) * pagination.limit;
+    query = query.range(offset, offset + pagination.limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch jobs: ${error.message}`);
+    }
+
+    const jobs = (data || []).map(this.transformFromDatabase);
+    const total = count || 0;
+    const totalPages = Math.ceil(total / pagination.limit);
+    const hasMore = pagination.page < totalPages;
+
+    return {
+      jobs,
+      total,
+      page: pagination.page,
+      limit: pagination.limit,
+      hasMore,
+    };
+  }
+
+  /**
    * Validates that a user has access to a job based on its resource scope (following established pattern)
    */
   private async validateJobAccess(

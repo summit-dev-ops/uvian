@@ -16,10 +16,29 @@ export const jobKeys = {
     [...jobKeys.all, authProfileId, 'detail'] as const,
   detail: (authProfileId: string | undefined, jobId: string) =>
     [...jobKeys.details(authProfileId), jobId] as const,
-  byStatus: (authProfileId: string | undefined, status: string) =>
-    [...jobKeys.all, authProfileId, 'status', status] as const,
-  byType: (authProfileId: string | undefined, type: string) =>
-    [...jobKeys.all, authProfileId, 'type', type] as const,
+  listBySpace: (
+    authProfileId: string | undefined,
+    spaceId: string,
+    filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
+  ) =>
+    [...jobKeys.all, authProfileId, 'space', spaceId, 'list', filters] as const,
+  listByConversation: (
+    authProfileId: string | undefined,
+    conversationId: string,
+    filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
+  ) =>
+    [
+      ...jobKeys.all,
+      authProfileId,
+      'conversation',
+      conversationId,
+      'list',
+      filters,
+    ] as const,
+  usage: (
+    authProfileId: string | undefined,
+    filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
+  ) => [...jobKeys.all, authProfileId, 'usage', filters] as const,
   metrics: (authProfileId: string | undefined) =>
     [...jobKeys.all, authProfileId, 'metrics'] as const,
   metricsByDate: (
@@ -27,4 +46,30 @@ export const jobKeys = {
     dateFrom?: string,
     dateTo?: string
   ) => [...jobKeys.metrics(authProfileId), dateFrom, dateTo] as const,
+  metricsBySpace: (
+    authProfileId: string | undefined,
+    spaceId: string,
+    dateFrom?: string,
+    dateTo?: string
+  ) =>
+    [
+      ...jobKeys.metrics(authProfileId),
+      'space',
+      spaceId,
+      dateFrom,
+      dateTo,
+    ] as const,
+  metricsByConversation: (
+    authProfileId: string | undefined,
+    conversationId: string,
+    dateFrom?: string,
+    dateTo?: string
+  ) =>
+    [
+      ...jobKeys.metrics(authProfileId),
+      'conversation',
+      conversationId,
+      dateFrom,
+      dateTo,
+    ] as const,
 };

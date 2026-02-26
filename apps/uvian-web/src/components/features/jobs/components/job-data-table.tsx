@@ -148,7 +148,6 @@ export function JobDataTable({ filters, onFiltersChange }: JobDataTableProps) {
   } = useJobsTable(filters);
 
   const { openModal: openCreateModal } = useJobCreation({
-    filters,
     onCreated: refetch,
   });
 
