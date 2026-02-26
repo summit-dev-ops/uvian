@@ -43,6 +43,9 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
+opencode.json
+
+
 # Next.js
 .next
 out
