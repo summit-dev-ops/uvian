@@ -3,19 +3,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
-import { ConversationMemberRole } from '~/lib/domains/chat/types';
+import {
+  ConversationMemberRole,
+  type ConversationMemberUI,
+} from '~/lib/domains/chat/types';
+import { useProfilesByUserId } from '~/components/features/profiles/hooks/use-profiles-by-user';
 
 export const useConversationMembers = (conversationId: string) => {
-  const { activeProfileId } = useUserSessionStore();
   const queryClient = useQueryClient();
 
   // 1. Fetch members
   const { data: members, isLoading } = useQuery(
-    chatQueries.conversationMembers(activeProfileId, conversationId)
+    chatQueries.conversationMembers(conversationId)
   );
 
-  // 2. Mutations
+  // 2. Fetch profiles for all members by userId
+  const userIds = members?.map((m) => m.userId) ?? [];
+  const { profiles, isLoading: isLoadingProfiles } =
+    useProfilesByUserId(userIds);
+
+  // 3. Enrich members with profiles
+  const enrichedMembers: ConversationMemberUI[] =
+    members?.map((member) => ({
+      ...member,
+      profile: profiles[member.userId],
+    })) ?? [];
+
+  // 4. Mutations
   const { mutate: inviteMember, isPending: isInviting } = useMutation(
     chatMutations.inviteConversationMember(queryClient)
   );
@@ -28,49 +42,35 @@ export const useConversationMembers = (conversationId: string) => {
     chatMutations.updateConversationMemberRole(queryClient)
   );
 
-  // 3. Derived State
-  const currentUserMember = members?.find(
-    (m) => m.profileId === activeProfileId
-  );
   return {
-    members,
-    isLoading,
-    role: currentUserMember?.role,
+    members: enrichedMembers,
+    isLoading: isLoading || isLoadingProfiles,
+    role: undefined,
     inviteMember: (
-      targetMemberProfileId: string,
+      targetMemberUserId: string,
       role: ConversationMemberRole
     ) => {
-      if (!activeProfileId) return;
       inviteMember({
         conversationId,
-        authProfileId: activeProfileId,
-        targetMemberProfileId,
+        targetMemberUserId,
         role,
       });
     },
-    removeMember: (targetMemberProfileId: string) => {
-      if (!activeProfileId) return;
+    removeMember: (targetMemberUserId: string) => {
       removeMember({
         conversationId,
-        authProfileId: activeProfileId,
-        targetMemberProfileId,
+        targetMemberUserId,
       });
     },
-    updateRole: (
-      targetMemberProfileId: string,
-      role: ConversationMemberRole
-    ) => {
-      if (!activeProfileId) return;
+    updateRole: (targetMemberUserId: string, role: ConversationMemberRole) => {
       updateRole({
         conversationId,
-        targetMemberProfileId,
-        authProfileId: activeProfileId,
+        targetMemberUserId,
         role,
       });
     },
     isInviting,
     isRemoving,
     isUpdatingRole,
-    currentProfileId: activeProfileId,
   };
 };

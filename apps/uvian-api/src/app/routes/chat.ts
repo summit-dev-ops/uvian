@@ -1,82 +1,45 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { chatService } from '../services/chat.service';
 import {
+  GetConversationsRequest,
+  GetConversationRequest,
+  GetConversationMembersRequest,
   CreateConversationRequest,
   InviteConversationMemberRequest,
+  DeleteConversationMemberRequest,
   UpdateConversationMemberRoleRequest,
   CreateMessageRequest,
-  GetConversationRequest,
-  GetConversationsRequest,
-  GetConversationMembersRequest,
-  DeleteConversationMemberRequest,
   GetMessagesRequest,
   DeleteConversationRequest,
 } from '../types/chat.types';
-import { profileService } from '../services/profile.service';
 
 export default async function (fastify: FastifyInstance) {
-  fastify.post<CreateConversationRequest>(
-    '/api/conversations',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        body: {
-          type: 'object',
-          required: ['title', 'profileId'],
-          properties: {
-            id: { type: 'string' },
-            title: { type: 'string', minLength: 1 },
-            profileId: { type: 'string' },
-          },
-          additionalProperties: false,
-        },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const data = request.body;
-        const conversation = await chatService.createConversation(
-          request.supabase,
-          data
-        );
-        reply.code(201).send(conversation);
-      } catch (error: any) {
-        reply.code(400).send({ error: error.message });
-      }
-    }
-  );
-
   fastify.get<GetConversationsRequest>(
     '/api/conversations',
     {
       preHandler: [fastify.authenticate],
       schema: {
-        headers: {
+        querystring: {
           type: 'object',
           properties: {
-            profileId: { type: 'string' },
+            cursor: { type: 'string' },
+            limit: { type: 'integer', minimum: 1, maximum: 100 },
           },
+          additionalProperties: false,
         },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<GetConversationsRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
         const conversations = await chatService.getConversations(
-          request.supabase,
-          authProfileId
+          request.supabase
         );
         reply.send(conversations);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to fetch conversations' });
       }
     }
   );
@@ -89,37 +52,28 @@ export default async function (fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['conversationId'],
-          properties: {
-            conversationId: { type: 'string' },
-          },
+          properties: { conversationId: { type: 'string' } },
           additionalProperties: false,
-        },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
         },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<GetConversationRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
         const { conversationId } = request.params;
         const conversation = await chatService.getConversation(
           request.supabase,
-          authProfileId,
           conversationId
         );
-        if (!conversation) {
-          reply.code(404).send({ error: 'Conversation not found' });
-          return;
-        }
         reply.send(conversation);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        if (error.message.includes('not found')) {
+          reply.code(404).send({ error: 'Conversation not found' });
+        } else {
+          reply.code(400).send({ error: 'Failed to fetch conversation' });
+        }
       }
     }
   );
@@ -132,20 +86,15 @@ export default async function (fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['conversationId'],
-          properties: {
-            conversationId: { type: 'string' },
-          },
+          properties: { conversationId: { type: 'string' } },
           additionalProperties: false,
-        },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
         },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<GetConversationMembersRequest>,
+      reply: FastifyReply
+    ) => {
       try {
         const { conversationId } = request.params;
         const members = await chatService.getConversationMembers(
@@ -154,7 +103,45 @@ export default async function (fastify: FastifyInstance) {
         );
         reply.send(members);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to fetch conversation members' });
+      }
+    }
+  );
+
+  fastify.post<CreateConversationRequest>(
+    '/api/conversations',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          required: ['title'],
+          properties: {
+            id: { type: 'string' },
+            title: { type: 'string', minLength: 1 },
+            spaceId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<CreateConversationRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+        const conversation = await chatService.createConversation(
+          userId,
+          request.body || {}
+        );
+        reply.code(201).send(conversation);
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to create conversation' });
       }
     }
   );
@@ -167,108 +154,118 @@ export default async function (fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['conversationId'],
-          properties: {
-            conversationId: { type: 'string' },
-          },
+          properties: { conversationId: { type: 'string' } },
           additionalProperties: false,
         },
         body: {
           type: 'object',
-          required: ['profileId'],
+          required: ['userId'],
           properties: {
-            profileId: { type: 'string' },
+            userId: { type: 'string' },
             role: {
               type: 'object',
               properties: {
                 name: { type: 'string', enum: ['owner', 'admin', 'member'] },
               },
-              required: ['name'],
-              additionalProperties: false,
             },
           },
           additionalProperties: false,
         },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<InviteConversationMemberRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
         const { conversationId } = request.params;
-        const { profileId, role } = request.body;
-        const membership = await chatService.inviteConversationMember(
+        const { userId: targetUserId, role } = request.body || {};
+        const membership = await chatService.inviteMember(
           request.supabase,
+          userId,
           conversationId,
-          authProfileId,
-          profileId,
+          targetUserId,
           role || { name: 'member' }
         );
         reply.code(201).send(membership);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        if (error.message.includes('permissions')) {
+          reply
+            .code(403)
+            .send({ error: 'Insufficient permissions to invite member' });
+        } else {
+          reply
+            .code(400)
+            .send({ error: 'Failed to invite conversation member' });
+        }
       }
     }
   );
 
   fastify.delete<DeleteConversationMemberRequest>(
-    '/api/conversations/:conversationId/conversation-members/:profileId',
+    '/api/conversations/:conversationId/conversation-members/:userId',
     {
       preHandler: [fastify.authenticate],
       schema: {
         params: {
           type: 'object',
-          required: ['conversationId', 'profileId'],
+          required: ['conversationId', 'userId'],
           properties: {
             conversationId: { type: 'string' },
-            profileId: { type: 'string' },
+            userId: { type: 'string' },
           },
           additionalProperties: false,
         },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<DeleteConversationMemberRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
-        const { conversationId, profileId: targetProfileId } = request.params;
-        await chatService.removeConversationMember(
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+        const { conversationId, userId: targetUserId } = request.params;
+        await chatService.removeMember(
           request.supabase,
+          userId,
           conversationId,
-          authProfileId,
-          targetProfileId
+          targetUserId
         );
         reply.code(204).send();
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        if (error.message.includes('permissions')) {
+          reply
+            .code(403)
+            .send({ error: 'Insufficient permissions to remove member' });
+        } else {
+          reply
+            .code(400)
+            .send({ error: 'Failed to remove conversation member' });
+        }
       }
     }
   );
 
   fastify.patch<UpdateConversationMemberRoleRequest>(
-    '/api/conversations/:conversationId/conversation-members/:profileId/role',
+    '/api/conversations/:conversationId/conversation-members/:userId/role',
     {
       preHandler: [fastify.authenticate],
       schema: {
         params: {
           type: 'object',
-          required: ['conversationId', 'profileId'],
+          required: ['conversationId', 'userId'],
           properties: {
             conversationId: { type: 'string' },
-            profileId: { type: 'string' },
+            userId: { type: 'string' },
           },
           additionalProperties: false,
         },
@@ -281,37 +278,40 @@ export default async function (fastify: FastifyInstance) {
               properties: {
                 name: { type: 'string', enum: ['owner', 'admin', 'member'] },
               },
-              required: ['name'],
-              additionalProperties: false,
             },
           },
           additionalProperties: false,
         },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<UpdateConversationMemberRoleRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
-        const { conversationId, profileId: targetProfileId } = request.params;
-        const { role } = request.body;
-        const membership = await chatService.updateConversationMember(
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+        const { conversationId, userId: targetUserId } = request.params;
+        const { role } = request.body || {};
+        const membership = await chatService.updateMemberRole(
           request.supabase,
+          userId,
           conversationId,
-          authProfileId,
-          targetProfileId,
+          targetUserId,
           role
         );
         reply.send(membership);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        if (error.message.includes('permissions')) {
+          reply
+            .code(403)
+            .send({ error: 'Insufficient permissions to update member role' });
+        } else {
+          reply.code(400).send({ error: 'Failed to update member role' });
+        }
       }
     }
   );
@@ -324,44 +324,40 @@ export default async function (fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['conversationId'],
-          properties: {
-            conversationId: { type: 'string' },
-          },
+          properties: { conversationId: { type: 'string' } },
           additionalProperties: false,
         },
         body: {
           type: 'object',
-          required: ['id', 'senderId', 'content'],
+          required: ['id', 'content'],
           properties: {
             id: { type: 'string' },
-            senderId: { type: 'string' },
             content: { type: 'string' },
             role: { type: 'string', enum: ['user', 'assistant', 'system'] },
           },
           additionalProperties: false,
         },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<CreateMessageRequest>,
+      reply: FastifyReply
+    ) => {
       try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
         const { conversationId } = request.params;
-        const data = request.body;
-        const message = await chatService.upsertMessage(
+        const { id, content, role } = request.body || {};
+        const message = await chatService.createMessage(
           request.supabase,
+          userId,
           conversationId,
-          {
-            ...data,
-            role: data.role as 'user' | 'assistant' | 'system',
-          }
+          { id, content, role }
         );
 
-        // Emit socket event to the room
         fastify.io.to(conversationId).emit('new_message', {
           conversationId,
           message,
@@ -369,10 +365,10 @@ export default async function (fastify: FastifyInstance) {
 
         reply.code(201).send(message);
       } catch (error: any) {
-        if (error.message === 'Unauthorized or Conversation not found') {
-          reply.code(404).send({ error: error.message });
+        if (error.message.includes('not a member')) {
+          reply.code(403).send({ error: 'Not a member of this conversation' });
         } else {
-          reply.code(400).send({ error: error.message });
+          reply.code(400).send({ error: 'Failed to create message' });
         }
       }
     }
@@ -386,33 +382,24 @@ export default async function (fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['conversationId'],
-          properties: {
-            conversationId: { type: 'string' },
-          },
+          properties: { conversationId: { type: 'string' } },
           additionalProperties: false,
-        },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
         },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<GetMessagesRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
         const { conversationId } = request.params;
         const messages = await chatService.getMessages(
           request.supabase,
-          conversationId,
-          authProfileId,
+          conversationId
         );
         reply.send(messages);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to fetch messages' });
       }
     }
   );
@@ -425,36 +412,35 @@ export default async function (fastify: FastifyInstance) {
         params: {
           type: 'object',
           required: ['conversationId'],
-          properties: {
-            conversationId: { type: 'string' },
-          },
+          properties: { conversationId: { type: 'string' } },
           additionalProperties: false,
-        },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
         },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<DeleteConversationRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
         const { conversationId } = request.params;
         await chatService.deleteConversation(
           request.supabase,
-          conversationId,
-          authProfileId
+          userId,
+          conversationId
         );
         reply.code(204).send();
       } catch (error: any) {
-        if (error.message === 'Only owners can delete conversations') {
-          reply.code(401).send({ error: error.message });
+        if (error.message.includes('Only owners')) {
+          reply
+            .code(403)
+            .send({ error: 'Only conversation owners can delete' });
         } else {
-          reply.code(400).send({ error: error.message });
+          reply.code(400).send({ error: 'Failed to delete conversation' });
         }
       }
     }

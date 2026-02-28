@@ -9,12 +9,10 @@ import { apiClient } from '~/lib/api/api-clients';
 import { feedKeys } from './keys';
 
 export type MarkAsReadPayload = {
-  authProfileId: string;
   itemId: string;
 };
 
 export type MarkAllReadPayload = {
-  authProfileId: string;
   type?: 'post' | 'message' | 'job' | 'ticket';
   beforeItemId?: string;
 };
@@ -28,11 +26,7 @@ export const feedMutations = {
     queryClient: QueryClient
   ): MutationOptions<void, Error, MarkAsReadPayload, MarkAsReadContext> => ({
     mutationFn: async (payload) => {
-      await apiClient.patch(
-        `/api/feed/${payload.itemId}/read`,
-        {},
-        { headers: { 'x-profile-id': payload.authProfileId } }
-      );
+      await apiClient.patch(`/api/feed/${payload.itemId}/read`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: feedKeys.feed() });
@@ -48,9 +42,7 @@ export const feedMutations = {
       if (payload.type) body.type = payload.type;
       if (payload.beforeItemId) body.beforeItemId = payload.beforeItemId;
 
-      await apiClient.post('/api/feed/read', body, {
-        headers: { 'x-profile-id': payload.authProfileId },
-      });
+      await apiClient.post('/api/feed/read', body);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: feedKeys.feed() });

@@ -50,7 +50,6 @@ import {
   canDeleteJob,
 } from '~/lib/domains/jobs/utils';
 import type { JobUI, JobStatus } from '~/lib/domains/jobs/types';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 function JobStatusBadge({ status }: { status: JobStatus }) {
   const statusInfo = getJobStatusInfo(status);
@@ -155,7 +154,6 @@ interface JobDetailViewProps {
 }
 
 export function JobInterface({ jobId }: JobDetailViewProps) {
-  const { activeProfileId } = useUserSessionStore();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -164,19 +162,16 @@ export function JobInterface({ jobId }: JobDetailViewProps) {
     isLoading,
     error,
     refetch,
-  } = useQuery(jobQueries.detail(activeProfileId, jobId));
+  } = useQuery(jobQueries.detail(jobId));
 
   const cancelJobMutation = useMutation(jobMutations.cancelJob(queryClient));
   const retryJobMutation = useMutation(jobMutations.retryJob(queryClient));
   const deleteJobMutation = useMutation(jobMutations.deleteJob(queryClient));
 
   const handleBack = () => router.push('/jobs');
-  const handleCancel = () =>
-    cancelJobMutation.mutate({ authProfileId: activeProfileId, jobId });
-  const handleRetry = () =>
-    retryJobMutation.mutate({ authProfileId: activeProfileId, jobId });
-  const handleDelete = () =>
-    deleteJobMutation.mutate({ authProfileId: activeProfileId, jobId });
+  const handleCancel = () => cancelJobMutation.mutate({ jobId });
+  const handleRetry = () => retryJobMutation.mutate({ jobId });
+  const handleDelete = () => deleteJobMutation.mutate({ jobId });
 
   if (isLoading) {
     return (

@@ -4,8 +4,6 @@
 
 export const postsKeys = {
   all: ['posts'] as const,
-  posts: (profileId?: string, spaceId?: string) =>
-    [...postsKeys.all, profileId, spaceId, 'list'] as const,
-  post: (profileId?: string, postId?: string) =>
-    [...postsKeys.all, profileId, 'post', postId] as const,
+  posts: (spaceId?: string) => [...postsKeys.all, spaceId, 'list'] as const,
+  post: (postId?: string) => [...postsKeys.all, 'post', postId] as const,
 };

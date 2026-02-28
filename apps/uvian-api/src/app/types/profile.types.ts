@@ -1,51 +1,27 @@
-export type ProfileType = 'human' | 'agent' | 'system' | 'admin';
-
 export interface Profile {
   id: string;
-  userId?: string | null;
-  type: ProfileType;
-  displayName: string;
-  avatarUrl?: string | null;
-  coverUrl?: string | null;
-  bio?: string | null;
-  agentConfig?: any;
-  publicFields: any;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateProfilePayload {
-  profileId: string;
-  displayName: string;
-  avatarUrl?: string | null;
-  coverUrl?: string | null;
-  bio?: string | null;
-  agentConfig?: any;
-  publicFields?: Record<string, any>;
-  type?: ProfileType;
+  displayName?: string;
+  avatarUrl?: string;
+  bio?: string;
 }
 
 export interface UpdateProfilePayload {
-  profileId: string;
   displayName?: string;
-  avatarUrl?: string | null;
-  coverUrl?: string | null;
-  bio?: string | null;
-  agentConfig?: any;
-  publicFields?: Record<string, any>;
-  isActive?: boolean;
-}
-
-export interface SearchableField {
-  name: string;
-  weight: number;
-  boost?: number;
+  avatarUrl?: string;
+  bio?: string;
 }
 
 export interface ProfileSearchFilters {
   query?: string;
-  type?: string[];
   sortBy?: 'relevance' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
   page?: number;
@@ -67,13 +43,6 @@ export interface ProfileSearchResponse {
   };
 }
 
-export interface RelevanceScore {
-  profileId: string;
-  score: number;
-  matchedFields: string[];
-}
-
-// Request types for Fastify routes
 export interface CreateProfileRequest {
   Body: CreateProfilePayload;
 }
@@ -83,16 +52,10 @@ export interface UpdateProfileRequest {
     profileId: string;
   };
   Body: UpdateProfilePayload;
-  Headers: {
-    profileId: string;
-  };
 }
 
 export interface DeleteProfileRequest {
   Params: {
-    profileId: string;
-  };
-  Headers: {
     profileId: string;
   };
 }
@@ -101,21 +64,10 @@ export interface GetProfileRequest {
   Params: {
     profileId: string;
   };
-  Headers: {
-    profileId: string;
-  };
 }
 
-export interface SearchProfilesRequest {
-  Querystring: {
-    query?: string;
-    type?: string | string[];
-    sortBy?: 'relevance' | 'createdAt';
-    sortOrder?: 'asc' | 'desc';
-    page?: string;
-    limit?: string;
-  };
-  Headers: {
-    profileId: string;
-  };
-}
+export type SearchProfilesRequest = {
+  Querystring?: Record<string, unknown>;
+  Params?: Record<string, unknown>;
+  Body?: Record<string, unknown>;
+};

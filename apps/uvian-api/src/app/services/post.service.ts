@@ -1,23 +1,89 @@
-import { adminSupabase } from '../clients/supabase.client';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Post } from '../types/post.types';
-import { feedService } from './feed.service';
+import { adminSupabase } from '../clients/supabase.client';
 
 export class PostService {
+  async getPostsBySpace(
+    userClient: SupabaseClient,
+    spaceId: string,
+    options: { limit?: number; cursor?: string } = {}
+  ) {
+    const limit = options.limit || 20;
+
+    let q = userClient
+      .from('get_posts_for_space')
+      .select('*')
+      .eq('space_id', spaceId)
+      .order('created_at', { ascending: false })
+      .limit(limit + 1);
+
+    if (options.cursor) {
+      q = q.lt('id', options.cursor);
+    }
+
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const hasMore = (data || []).length > limit;
+    const items = hasMore ? data.slice(0, -1) : data;
+
+    return {
+      items: (items || []).map((row) => ({
+        id: row.id,
+        spaceId: row.space_id,
+        userId: row.user_id,
+        contentType: row.content_type,
+        content: row.content,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })),
+      nextCursor: hasMore ? items[items.length - 1]?.id : null,
+      hasMore,
+    };
+  }
+
+  async getPost(userClient: SupabaseClient, postId: string) {
+    const { data, error } = await userClient
+      .from('get_post_details')
+      .select('*')
+      .eq('id', postId)
+      .single();
+
+    if (error || !data) throw new Error('Post not found');
+
+    return {
+      id: data.id,
+      spaceId: data.space_id,
+      userId: data.user_id,
+      contentType: data.content_type,
+      content: data.content,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
   async createPost(
     userClient: SupabaseClient,
     data: {
       spaceId: string;
-      profileId: string;
+      userId: string;
       contentType: 'text' | 'url';
       content: string;
     }
-  ): Promise<Post> {
+  ) {
+    const { data: member } = await userClient
+      .from('space_members')
+      .select('id')
+      .eq('space_id', data.spaceId)
+      .eq('user_id', data.userId)
+      .single();
+
+    if (!member) throw new Error('Not a member of this space');
+
     const { data: post, error } = await adminSupabase
       .from('posts')
       .insert({
         space_id: data.spaceId,
-        profile_id: data.profileId,
+        user_id: data.userId,
         content_type: data.contentType,
         content: data.content,
       })
@@ -25,97 +91,13 @@ export class PostService {
       .single();
 
     if (error) throw new Error(error.message);
-
-    // Create feed items for space members
-    feedService
-      .createFeedItemsForPost(post.id, data.spaceId, data.profileId)
-      .catch((err) => console.error('Failed to create feed items:', err));
-
-    return {
-      id: post.id,
-      spaceId: post.space_id,
-      profileId: post.profile_id,
-      contentType: post.content_type,
-      content: post.content,
-      createdAt: post.created_at,
-      updatedAt: post.updated_at,
-    };
+    return post;
   }
 
-  async getPostsBySpace(
-    userClient: SupabaseClient,
-    spaceId: string,
-    profileId: string,
-    options: { limit?: number; cursor?: string } = {}
-  ): Promise<Post[]> {
-    const limit = options.limit || 20;
-
-    let query = adminSupabase
-      .from('posts')
-      .select('*')
-      .eq('space_id', spaceId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (options.cursor) {
-      const { data: cursorItem } = await adminSupabase
-        .from('posts')
-        .select('created_at')
-        .eq('id', options.cursor)
-        .single();
-
-      if (cursorItem) {
-        query = query.lt('created_at', cursorItem.created_at);
-      }
-    }
-
-    const { data: posts, error } = await query;
-
-    if (error) throw new Error(error.message);
-
-    return posts.map((post) => ({
-      id: post.id,
-      spaceId: post.space_id,
-      profileId: post.profile_id,
-      contentType: post.content_type,
-      content: post.content,
-      createdAt: post.created_at,
-      updatedAt: post.updated_at,
-    }));
-  }
-
-  async getPost(
-    userClient: SupabaseClient,
-    postId: string,
-    profileId: string
-  ): Promise<Post | null> {
-    const { data: post, error } = await adminSupabase
-      .from('posts')
-      .select('*')
-      .eq('id', postId)
-      .single();
-
-    if (error || !post) return null;
-
-    return {
-      id: post.id,
-      spaceId: post.space_id,
-      profileId: post.profile_id,
-      contentType: post.content_type,
-      content: post.content,
-      createdAt: post.created_at,
-      updatedAt: post.updated_at,
-    };
-  }
-
-  async deletePost(
-    userClient: SupabaseClient,
-    postId: string,
-    profileId: string
-  ): Promise<void> {
+  async deletePost(userClient: SupabaseClient, postId: string, userId: string) {
     const { data: post, error: fetchError } = await adminSupabase
       .from('posts')
-      .select('profile_id')
+      .select('user_id')
       .eq('id', postId)
       .single();
 
@@ -123,8 +105,8 @@ export class PostService {
       throw new Error('Post not found');
     }
 
-    if (post.profile_id !== profileId) {
-      throw new Error('Unauthorized: You can only delete your own posts');
+    if (post.user_id !== userId) {
+      throw new Error("Cannot delete another user's post");
     }
 
     const { error } = await adminSupabase
@@ -133,6 +115,7 @@ export class PostService {
       .eq('id', postId);
 
     if (error) throw new Error(error.message);
+    return { success: true };
   }
 }
 

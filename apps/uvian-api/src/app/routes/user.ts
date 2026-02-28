@@ -1,14 +1,63 @@
 import { FastifyInstance } from 'fastify';
-import { userService } from '../services/user.service';
-import { profileService } from '../services/profile.service';
 import {
   GetUserSettingsRequest,
   UpdateUserSettingsRequest,
   DeleteUserSettingsRequest,
-  GetUserProfilesRequest,
+  GetUserAccountRequest,
+  GetUserProfileRequest,
 } from '../types/users.types';
 
 export default async function (fastify: FastifyInstance) {
+  // Get current user's account
+  fastify.get<GetUserAccountRequest>(
+    '/api/users/me',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      try {
+        const { data, error } = await request.supabase
+          .from('get_my_account')
+          .select('*')
+          .single();
+
+        if (error || !data) {
+          reply.code(404).send({ error: 'Account not found' });
+          return;
+        }
+
+        reply.send(data);
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to fetch account' });
+      }
+    }
+  );
+
+  // Get current user's profile
+  fastify.get<GetUserProfileRequest>(
+    '/api/users/me/profile',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      try {
+        const { data, error } = await request.supabase
+          .from('get_my_profile')
+          .select('*')
+          .single();
+
+        if (error || !data) {
+          reply.code(404).send({ error: 'Profile not found' });
+          return;
+        }
+
+        reply.send(data);
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to fetch profile' });
+      }
+    }
+  );
+
   // Get current user's settings
   fastify.get<GetUserSettingsRequest>(
     '/api/users/me/settings',
@@ -17,22 +66,14 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const userId = await userService.getCurrentUserFromRequest(request);
+        const { data, error } = await request.supabase
+          .from('get_my_settings')
+          .select('*')
+          .single();
 
-        if (!userId) {
-          reply.code(404).send({ error: 'Not authenticated' });
-          return;
-        }
-
-        const settings = await userService.getSettings(
-          request.supabase,
-          userId
-        );
-
-        if (!settings) {
-          // Return empty settings if none exist yet
+        if (error || !data) {
           reply.send({
-            profileId: userId,
+            userId: request.user?.id,
             settings: {},
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -40,9 +81,9 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        reply.send(settings);
+        reply.send(data);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to fetch settings' });
       }
     }
   );
@@ -52,13 +93,22 @@ export default async function (fastify: FastifyInstance) {
     '/api/users/me/settings',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          required: ['settings'],
+          properties: {
+            settings: { type: 'object' },
+          },
+          additionalProperties: false,
+        },
+      },
     },
     async (request, reply) => {
       try {
-        const userId = await userService.getCurrentUserFromRequest(request);
-
+        const userId = request.user?.id;
         if (!userId) {
-          reply.code(404).send({ error: 'Not authenticated' });
+          reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
 
@@ -69,14 +119,24 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        const updatedSettings = await userService.updateSettings(
-          request.supabase,
-          userId,
-          settings
-        );
-        reply.send(updatedSettings);
+        const { data, error } = await request.supabase
+          .from('settings')
+          .upsert({
+            user_id: userId,
+            settings,
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (error) {
+          reply.code(400).send({ error: 'Failed to update settings' });
+          return;
+        }
+
+        reply.send(data);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to update settings' });
       }
     }
   );
@@ -89,43 +149,25 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const userId = await userService.getCurrentUserFromRequest(request);
+        const userId = request.user?.id;
         if (!userId) {
-          reply.code(404).send({ error: 'Not authenticated' });
+          reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
 
-        await userService.deleteSettings(request.supabase, userId);
+        const { error } = await request.supabase
+          .from('settings')
+          .delete()
+          .eq('user_id', userId);
+
+        if (error) {
+          reply.code(400).send({ error: 'Failed to delete settings' });
+          return;
+        }
+
         reply.code(204).send();
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
-      }
-    }
-  );
-
-  // Get current user's profiles
-  fastify.get<GetUserProfilesRequest>(
-    '/api/users/me/profiles',
-    {
-      preHandler: [fastify.authenticate],
-    },
-    async (request, reply) => {
-      try {
-        const userId = await userService.getCurrentUserFromRequest(request);
-
-        if (!userId) {
-          reply.code(404).send({ error: 'Not authenticated' });
-          return;
-        }
-
-        const profiles = await profileService.getProfilesByAuthUserId(
-          request.supabase,
-          userId
-        );
-
-        reply.send({ profiles });
-      } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to delete settings' });
       }
     }
   );

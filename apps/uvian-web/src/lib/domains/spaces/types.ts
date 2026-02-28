@@ -23,7 +23,7 @@ export type SpaceUI = {
 
 export type SpaceMemberUI = {
   spaceId: string;
-  profileId: string;
+  userId: string;
   role: SpaceMemberRole;
   joinedAt: string;
   profile?: {
@@ -50,18 +50,18 @@ export type UpdateSpacePayload = {
 
 export type InviteSpaceMemberPayload = {
   spaceId: string;
-  profileId: string;
+  userId: string;
   role?: SpaceMemberRole;
 };
 
 export type RemoveSpaceMemberPayload = {
   spaceId: string;
-  profileId: string;
+  userId: string;
 };
 
 export type UpdateSpaceMemberRolePayload = {
   spaceId: string;
-  profileId: string;
+  userId: string;
   role: SpaceMemberRole;
 };
 

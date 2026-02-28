@@ -10,7 +10,6 @@ import type {
   JobFilters,
   JobListResponseUI,
 } from '~/lib/domains/jobs/types';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface UseJobsTableReturn {
   // Data
@@ -57,7 +56,6 @@ interface UseJobsTableReturn {
  *   - No scope filter → fetches all jobs (usage/billing view)
  */
 export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
-  const { activeProfileId } = useUserSessionStore();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -110,11 +108,9 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
     queryFn: async () => {
       const { data } = await apiClient.get<JobListResponseUI>(getEndpoint(), {
         params: queryParams,
-        headers: { 'x-profile-id': activeProfileId },
       });
       return data;
     },
-    enabled: !!activeProfileId,
   });
 
   // Mutations for job actions
@@ -177,23 +173,23 @@ export function useJobsTable(filters?: JobFilters): UseJobsTableReturn {
 
   const handleCancel = React.useCallback(
     (jobId: string) => {
-      cancelJob({ authProfileId: activeProfileId, jobId });
+      cancelJob({ jobId });
     },
-    [cancelJob, activeProfileId]
+    [cancelJob]
   );
 
   const handleRetry = React.useCallback(
     (jobId: string) => {
-      retryJob({ authProfileId: activeProfileId, jobId });
+      retryJob({ jobId });
     },
-    [retryJob, activeProfileId]
+    [retryJob]
   );
 
   const handleDelete = React.useCallback(
     (jobId: string) => {
-      deleteJob({ authProfileId: activeProfileId, jobId });
+      deleteJob({ jobId });
     },
-    [deleteJob, activeProfileId]
+    [deleteJob]
   );
 
   // Get jobs from response

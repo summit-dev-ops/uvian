@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@org/ui';
 import { Copy, RefreshCcw, MoreHorizontal } from 'lucide-react';
-import { useMessageProfiles } from '~/components/features/chat/hooks/use-message-profiles';
 import { ProfilePreview } from './profile-preview';
 import type { MessageUI } from '~/lib/domains/chat/types';
 import Markdown from 'react-markdown';
@@ -18,8 +17,7 @@ interface MessageRowProps {
 const MENTION_REGEX = /\[@ id="([^"]+)" label="([^"]+)"\]/g;
 
 export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
-  const { profiles } = useMessageProfiles([message.senderId]);
-  const profile = profiles[message.senderId];
+  const profile = message.senderProfile;
 
   const isAI = message.role === 'assistant';
   const isSystem = message.role === 'system';
@@ -43,12 +41,12 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
       <div className="flex flex-1 flex-col gap-2 min-w-0 relative">
         <div className="flex flex-row items-center gap-2">
           <ProfilePreview
-            profileId={message.senderId}
+            profileId={message?.senderProfile?.id}
             profile={profile}
             asChild
           >
             <Link
-              href={`/profiles/${message.senderId}`}
+              href={`/profiles/${message?.senderProfile?.id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-primary transition-colors cursor-pointer flex flex-row items-center gap-2"

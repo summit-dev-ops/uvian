@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { feedQueries } from '~/lib/domains/feed/api/queries';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 export const useFeed = (options?: {
   type?: 'post' | 'message' | 'job' | 'ticket';
@@ -10,9 +9,8 @@ export const useFeed = (options?: {
   limit?: number;
   spaceId?: string;
 }) => {
-  const { activeProfileId } = useUserSessionStore();
   const { data, isLoading, error, refetch } = useQuery(
-    feedQueries.feed(activeProfileId || undefined, options || {})
+    feedQueries.feed(options || {})
   );
 
   return {
@@ -26,9 +24,8 @@ export const useFeed = (options?: {
 };
 
 export const useUnreadCount = () => {
-  const { activeProfileId } = useUserSessionStore();
   const { data, isLoading, error, refetch } = useQuery(
-    feedQueries.unreadCount(activeProfileId || undefined)
+    feedQueries.unreadCount()
   );
 
   return {

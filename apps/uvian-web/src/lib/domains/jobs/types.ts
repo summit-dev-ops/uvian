@@ -6,14 +6,12 @@
  */
 
 export type CreateJobPayload = {
-  authProfileId: string;
   type: string;
   input: Record<string, any>;
   resourceScopeId: string;
 };
 
 export type JobFilters = {
-  authProfileId: string;
   status?: JobStatus;
   type?: string;
   dateFrom?: string;

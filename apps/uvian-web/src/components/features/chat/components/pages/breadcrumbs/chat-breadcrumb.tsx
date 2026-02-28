@@ -12,7 +12,6 @@ import {
   BreadcrumbSeparator,
   Skeleton,
 } from '@org/ui';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 /**
  * Simple breadcrumb for main chat page
@@ -23,9 +22,8 @@ export function ChatPageBreadcrumb({
 }: {
   conversationId: string;
 }) {
-  const { activeProfileId } = useUserSessionStore();
   const { data: conversation, isLoading } = useQuery(
-    chatQueries.conversation(activeProfileId, conversationId)
+    chatQueries.conversation(conversationId)
   );
 
   return (

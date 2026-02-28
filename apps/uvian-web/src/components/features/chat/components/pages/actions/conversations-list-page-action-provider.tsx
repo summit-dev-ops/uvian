@@ -8,7 +8,6 @@ import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 export interface ConversationsListPageActionContextType {
   // Pre-defined action IDs for type safety
@@ -33,7 +32,6 @@ export function ConversationsListPageActionProvider({
   onSuccess,
 }: ConversationsListPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
 
   // Mutation for creating conversations with success/error handling
   const { mutate: createConversation } = useMutation(
@@ -43,32 +41,30 @@ export function ConversationsListPageActionProvider({
   // Handler for creating a new conversation - called by the modal
   const handleConversationCreation = React.useCallback(
     async (title: string) => {
-      if (activeProfileId)
-        try {
-          // Use the mutation which includes optimistic updates and navigation
-          const newConversation = await createConversation({
-            id: crypto.randomUUID(),
-            title,
-            authProfileId: activeProfileId,
-          });
+      try {
+        // Use the mutation which includes optimistic updates and navigation
+        const newConversation = await createConversation({
+          id: crypto.randomUUID(),
+          title,
+        });
 
-          // Return the new conversation data for navigation
-          return newConversation;
-        } catch (error) {
-          console.error('Failed to create conversation:', error);
-          throw error;
-        }
+        // Return the new conversation data for navigation
+        return newConversation;
+      } catch (error) {
+        console.error('Failed to create conversation:', error);
+        throw error;
+      }
     },
-    [activeProfileId, createConversation]
+    [createConversation]
   );
 
   // Handler for refresh action
   const handleRefreshConversations = React.useCallback(async () => {
     // Standard React Query approach - invalidate conversations query
     queryClient.invalidateQueries({
-      queryKey: chatQueries.conversations(activeProfileId).queryKey,
+      queryKey: chatQueries.conversations().queryKey,
     });
-  }, [queryClient, activeProfileId]);
+  }, [queryClient]);
 
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [

@@ -12,7 +12,7 @@ export default forwardRef((props: any, ref) => {
   const selectItem = (index: number) => {
     const item = props.items[index];
     if (item) {
-      props.command({ id: item.profileId, label: item.profile.displayName });
+      props.command({ id: item.profile.id, label: item.profile?.displayName });
     }
   };
 
@@ -73,12 +73,12 @@ export default forwardRef((props: any, ref) => {
             )}
           >
             <Avatar className="h-4 w-4">
-              <AvatarImage src={item.profile.avatarUrl} className="h-4 w-4" />
+              <AvatarImage src={item.profile?.avatarUrl} className="h-4 w-4" />
               <AvatarFallback className="h-4 w-4">
-                {item.profile.displayName}
+                {item.profile?.displayName}
               </AvatarFallback>
             </Avatar>
-            {item.profile.displayName}
+            {item.profile?.displayName}
           </button>
         ))
       ) : (

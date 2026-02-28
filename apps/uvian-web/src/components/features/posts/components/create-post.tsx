@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@org/ui';
 import { Textarea } from '@org/ui';
 import { useCreatePost } from '../hooks/use-posts';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
+import { useCurrentUser } from '~/components/features/user/hooks/use-current-user';
 
 interface CreatePostProps {
   spaceId: string;
@@ -13,18 +13,19 @@ interface CreatePostProps {
 export function CreatePost({ spaceId }: CreatePostProps) {
   const [content, setContent] = useState('');
   const createPost = useCreatePost();
-  const { activeProfileId } = useUserSessionStore();
+  const { userId } = useCurrentUser();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || !activeProfileId) return;
+    if (!content.trim()) return;
 
     try {
       await createPost.mutateAsync({
-        authProfileId: activeProfileId,
+        id: crypto.randomUUID(),
         spaceId,
         content: content.trim(),
         contentType: 'text',
+        userId: userId || '',
       });
       setContent('');
     } catch (error) {
@@ -45,7 +46,7 @@ export function CreatePost({ spaceId }: CreatePostProps) {
       <div className="flex justify-end">
         <Button
           type="submit"
-          disabled={!content.trim() || createPost.isPending || !activeProfileId}
+          disabled={!content.trim() || createPost.isPending}
         >
           {createPost.isPending ? 'Posting...' : 'Post'}
         </Button>

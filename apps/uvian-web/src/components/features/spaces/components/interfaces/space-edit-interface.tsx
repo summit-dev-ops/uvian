@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spacesQueries, spacesMutations } from '~/lib/domains/spaces/api';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import {
   InterfaceLayout,
   InterfaceHeader,
@@ -28,7 +27,6 @@ interface SpaceEditInterfaceProps {
 export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
   const modalContext = useModalContext();
 
   const {
@@ -36,7 +34,7 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
     isLoading,
     error,
     refetch,
-  } = useQuery(spacesQueries.space(activeProfileId, spaceId));
+  } = useQuery(spacesQueries.space(spaceId));
 
   const { mutate: updateSpace, isPending: isUpdating } = useMutation(
     spacesMutations.updateSpace(queryClient)
@@ -57,13 +55,8 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
       isPrivate: boolean;
     }) => {
       return new Promise<void>((resolve, reject) => {
-        if (!activeProfileId) {
-          reject(new Error('No active profile'));
-          return;
-        }
         updateSpace(
           {
-            authProfileId: activeProfileId,
             id: spaceId,
             name: formData.name.trim(),
             description: formData.description?.trim() || undefined,
@@ -85,7 +78,7 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
         );
       });
     },
-    [updateSpace, activeProfileId, spaceId, queryClient, router]
+    [updateSpace, spaceId, queryClient, router]
   );
 
   const handleCancel = React.useCallback(() => {
@@ -96,21 +89,19 @@ export function SpaceEditInterface({ spaceId }: SpaceEditInterfaceProps) {
     if (!space) return;
     modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
       onConfirm: () => {
-        if (activeProfileId) {
-          deleteSpace(
-            { authProfileId: activeProfileId, spaceId: space.id },
-            {
-              onSuccess: () => {
-                router.push('/spaces');
-              },
-            }
-          );
-        }
+        deleteSpace(
+          { spaceId: space.id },
+          {
+            onSuccess: () => {
+              router.push('/spaces');
+            },
+          }
+        );
       },
       title: 'Delete Space',
       description: `Are you sure you want to delete "${space.name}"? This will also delete all conversations in this space.`,
     });
-  }, [space, deleteSpace, modalContext, router, activeProfileId]);
+  }, [space, deleteSpace, modalContext, router]);
 
   if (isLoading) {
     return (

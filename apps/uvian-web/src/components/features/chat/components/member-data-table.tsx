@@ -40,11 +40,8 @@ interface MemberDataTableProps {
   data: ConversationMemberUI[];
   isAdmin: boolean;
   conversationId: string;
-  onRemove: (profileId: string) => void;
-  onUpdateRole: (
-    profileId: string,
-    role: ConversationMemberRole['name']
-  ) => void;
+  onRemove: (userId: string) => void;
+  onUpdateRole: (userId: string, role: ConversationMemberRole['name']) => void;
 }
 
 export function MemberDataTable({
@@ -104,7 +101,7 @@ export function MemberDataTable({
           },
           perform: async (selection, params, context) => {
             const promises = selection.selectedItems.map((member) =>
-              onUpdateRole(member.profileId, 'admin')
+              onUpdateRole(member.userId, 'admin')
             );
             await Promise.all(promises);
           },
@@ -124,7 +121,7 @@ export function MemberDataTable({
           },
           perform: async (selection, params, context) => {
             const promises = selection.selectedItems.map((member) =>
-              onUpdateRole(member.profileId, 'member')
+              onUpdateRole(member.userId, 'member')
             );
             await Promise.all(promises);
           },
@@ -138,7 +135,7 @@ export function MemberDataTable({
           visibility: { requireSelection: true },
           perform: async (selection, params, context) => {
             const promises = selection.selectedItems.map((member) =>
-              onRemove(member.profileId)
+              onRemove(member.userId)
             );
             await Promise.all(promises);
           },
@@ -183,21 +180,23 @@ export function MemberDataTable({
       enableHiding: false,
     },
     {
-      accessorKey: 'profileId',
+      accessorKey: 'userId',
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           >
-            Profile ID
+            User
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         );
       },
-      cell: ({ row }) => (
-        <div className="lowercase">{row.getValue('profileId')}</div>
-      ),
+      cell: ({ row }) => {
+        const member = row.original;
+        const displayName = member.profile?.displayName || member.userId;
+        return <div className="lowercase">{displayName}</div>;
+      },
     },
     {
       accessorKey: 'role',

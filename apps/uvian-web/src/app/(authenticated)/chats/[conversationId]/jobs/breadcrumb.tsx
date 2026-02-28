@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface ConversationJobsBreadcrumbProps {
   conversationId: string;
@@ -13,11 +12,7 @@ interface ConversationJobsBreadcrumbProps {
 export function ConversationJobsBreadcrumb({
   conversationId,
 }: ConversationJobsBreadcrumbProps) {
-  const { activeProfileId } = useUserSessionStore();
-
-  const { data: conversations } = useQuery(
-    chatQueries.conversations(activeProfileId)
-  );
+  const { data: conversations } = useQuery(chatQueries.conversations());
 
   const conversation = conversations?.find((c) => c.id === conversationId);
 

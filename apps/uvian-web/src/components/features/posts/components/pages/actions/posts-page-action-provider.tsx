@@ -6,8 +6,8 @@ import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import { postsMutations } from '~/lib/domains/posts/api/mutations';
+import { useCurrentUser } from '~/components/features/user/hooks/use-current-user';
 
 export interface PostsPageActionContextType {
   spaceId: string;
@@ -34,7 +34,7 @@ export function PostsPageActionProvider({
   onSuccess,
 }: PostsPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
+  const { userId } = useCurrentUser();
 
   const { mutate: createPost } = useMutation(
     postsMutations.createPost(queryClient)
@@ -46,15 +46,13 @@ export function PostsPageActionProvider({
 
   const handleCreatePost = React.useCallback(
     async (data: { spaceId: string; content: string }) => {
-      if (!activeProfileId) {
-        throw new Error('No active profile');
-      }
       return new Promise<void>((resolve, reject) => {
         createPost(
           {
-            authProfileId: activeProfileId,
+            id: crypto.randomUUID(),
             spaceId: data.spaceId,
             content: data.content,
+            userId: userId || '',
           },
           {
             onSuccess: () => resolve(),
@@ -63,18 +61,14 @@ export function PostsPageActionProvider({
         );
       });
     },
-    [activeProfileId, createPost]
+    [createPost, userId]
   );
 
   const handleDeletePost = React.useCallback(
     async (data: { postId: string }) => {
-      if (!activeProfileId) {
-        throw new Error('No active profile');
-      }
       return new Promise<void>((resolve, reject) => {
         deletePost(
           {
-            authProfileId: activeProfileId,
             postId: data.postId,
           },
           {
@@ -84,7 +78,7 @@ export function PostsPageActionProvider({
         );
       });
     },
-    [activeProfileId, deletePost]
+    [deletePost]
   );
 
   const actions: ActionRegistrationType[] = [

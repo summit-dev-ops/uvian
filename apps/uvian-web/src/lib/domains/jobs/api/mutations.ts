@@ -15,7 +15,6 @@ import type { JobUI } from '../types';
 // ============================================================================
 
 export type CreateJobMutationPayload = {
-  authProfileId: string;
   id?: string; // Optional client-generated ID
   type: string;
   input: Record<string, any>;
@@ -23,17 +22,14 @@ export type CreateJobMutationPayload = {
 };
 
 export type CancelJobMutationPayload = {
-  authProfileId: string | undefined;
   jobId: string;
 };
 
 export type RetryJobMutationPayload = {
-  authProfileId: string | undefined;
   jobId: string;
 };
 
 export type DeleteJobMutationPayload = {
-  authProfileId: string | undefined;
   jobId: string;
 };
 
@@ -76,27 +72,20 @@ export const jobMutations = {
     CreateJobContext
   > => ({
     mutationFn: async (payload): Promise<JobUI> => {
-      const { data } = await apiClient.post<JobUI>(
-        '/api/jobs',
-        {
-          type: payload.type,
-          input: payload.input,
-          resourceScopeId: payload.resourceScopeId,
-        },
-        {
-          headers: { 'x-profile-id': payload.authProfileId },
-        }
-      );
+      const { data } = await apiClient.post<JobUI>('/api/jobs', {
+        type: payload.type,
+        input: payload.input,
+        resourceScopeId: payload.resourceScopeId,
+      });
       return data;
     },
 
-    onSuccess: (_, payload) => {
-      // Invalidate job lists to refetch with new job
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: jobKeys.lists(payload.authProfileId),
+        queryKey: jobKeys.lists(),
       });
       queryClient.invalidateQueries({
-        queryKey: jobKeys.metrics(payload.authProfileId),
+        queryKey: jobKeys.metrics(),
       });
     },
   }),
@@ -115,31 +104,23 @@ export const jobMutations = {
     mutationFn: async (payload) => {
       const { data } = await apiClient.patch<JobUI>(
         `/api/jobs/${payload.jobId}/cancel`,
-        undefined,
-        {
-          headers: {
-            'x-profile-id': payload.authProfileId,
-          },
-        }
+        undefined
       );
       return data;
     },
 
     onMutate: async (payload) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: jobKeys.lists(payload.authProfileId),
+        queryKey: jobKeys.lists(),
       });
       await queryClient.cancelQueries({
-        queryKey: jobKeys.detail(payload.authProfileId, payload.jobId),
+        queryKey: jobKeys.detail(payload.jobId),
       });
 
-      // Snapshot previous state
       const previousJob = queryClient.getQueryData<JobUI>(
-        jobKeys.detail(payload.authProfileId, payload.jobId)
+        jobKeys.detail(payload.jobId)
       );
 
-      // Optimistically update job status
       const optimisticJob: JobUI = {
         id: payload.jobId,
         type: previousJob?.type || 'unknown',
@@ -154,9 +135,8 @@ export const jobMutations = {
         completedAt: new Date().toISOString(),
       };
 
-      // Update job detail cache
       queryClient.setQueryData<JobUI>(
-        jobKeys.detail(payload.authProfileId, payload.jobId),
+        jobKeys.detail(payload.jobId),
         optimisticJob
       );
 
@@ -164,22 +144,20 @@ export const jobMutations = {
     },
 
     onError: (_err, payload, context) => {
-      // Rollback on error
       if (context?.previousJob) {
         queryClient.setQueryData(
-          jobKeys.detail(payload.authProfileId, payload.jobId),
+          jobKeys.detail(payload.jobId),
           context.previousJob
         );
       }
     },
 
     onSuccess: (_, payload) => {
-      // Invalidate to refetch with server data
       queryClient.invalidateQueries({
-        queryKey: jobKeys.detail(payload.authProfileId, payload.jobId),
+        queryKey: jobKeys.detail(payload.jobId),
       });
       queryClient.invalidateQueries({
-        queryKey: jobKeys.lists(payload.authProfileId),
+        queryKey: jobKeys.lists(),
       });
     },
   }),
@@ -198,31 +176,23 @@ export const jobMutations = {
     mutationFn: async (payload) => {
       const { data } = await apiClient.patch<JobUI>(
         `/api/jobs/${payload.jobId}/retry`,
-        undefined,
-        {
-          headers: {
-            'x-profile-id': payload.authProfileId,
-          },
-        }
+        undefined
       );
       return data;
     },
 
     onMutate: async (payload) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: jobKeys.detail(payload.authProfileId, payload.jobId),
+        queryKey: jobKeys.detail(payload.jobId),
       });
       await queryClient.cancelQueries({
-        queryKey: jobKeys.lists(payload.authProfileId),
+        queryKey: jobKeys.lists(),
       });
 
-      // Snapshot previous state
       const previousJob = queryClient.getQueryData<JobUI>(
-        jobKeys.detail(payload.authProfileId, payload.jobId)
+        jobKeys.detail(payload.jobId)
       );
 
-      // Optimistically update job status
       const optimisticJob: JobUI = {
         id: payload.jobId,
         type: previousJob?.type || 'unknown',
@@ -237,9 +207,8 @@ export const jobMutations = {
         completedAt: null,
       };
 
-      // Update job detail cache
       queryClient.setQueryData<JobUI>(
-        jobKeys.detail(payload.authProfileId, payload.jobId),
+        jobKeys.detail(payload.jobId),
         optimisticJob
       );
 
@@ -247,22 +216,20 @@ export const jobMutations = {
     },
 
     onError: (_err, payload, context) => {
-      // Rollback on error
       if (context?.previousJob) {
         queryClient.setQueryData(
-          jobKeys.detail(payload.authProfileId, payload.jobId),
+          jobKeys.detail(payload.jobId),
           context.previousJob
         );
       }
     },
 
     onSuccess: (_, payload) => {
-      // Invalidate to refetch with server data
       queryClient.invalidateQueries({
-        queryKey: jobKeys.detail(payload.authProfileId, payload.jobId),
+        queryKey: jobKeys.detail(payload.jobId),
       });
       queryClient.invalidateQueries({
-        queryKey: jobKeys.lists(payload.authProfileId),
+        queryKey: jobKeys.lists(),
       });
     },
   }),
@@ -279,47 +246,35 @@ export const jobMutations = {
     DeleteJobContext
   > => ({
     mutationFn: async (payload) => {
-      await apiClient.delete(`/api/jobs/${payload.jobId}`, {
-        headers: { 'x-profile-id': payload.authProfileId },
-      });
+      await apiClient.delete(`/api/jobs/${payload.jobId}`);
     },
 
     onMutate: async (payload) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: jobKeys.lists(payload.authProfileId),
+        queryKey: jobKeys.lists(),
       });
       await queryClient.cancelQueries({
-        queryKey: jobKeys.detail(payload.authProfileId, payload.jobId),
+        queryKey: jobKeys.detail(payload.jobId),
       });
 
-      // Snapshot current job lists
-      const previousJobs = queryClient.getQueryData<JobUI[]>(
-        jobKeys.lists(payload.authProfileId)
-      );
+      const previousJobs = queryClient.getQueryData<JobUI[]>(jobKeys.lists());
 
       return { previousJobs };
     },
 
     onError: (_err, payload, context) => {
-      // Rollback on error - restore previous jobs list
       if (context?.previousJobs) {
-        queryClient.setQueryData(
-          jobKeys.lists(payload.authProfileId),
-          context.previousJobs
-        );
+        queryClient.setQueryData(jobKeys.lists(), context.previousJobs);
       }
 
-      // Restore job detail cache
       queryClient.invalidateQueries({
-        queryKey: jobKeys.detail(payload.authProfileId, payload.jobId),
+        queryKey: jobKeys.detail(payload.jobId),
       });
     },
 
     onSuccess: (_, payload) => {
-      // Invalidate metrics
       queryClient.invalidateQueries({
-        queryKey: jobKeys.metrics(payload.authProfileId),
+        queryKey: jobKeys.metrics(),
       });
     },
   }),
@@ -332,7 +287,7 @@ export const jobMutations = {
   ): MutationOptions<
     void,
     Error,
-    { jobIds: string[]; authProfileId: string },
+    { jobIds: string[] },
     { previousJobs?: { jobs: JobUI[] }[] }
   > => ({
     mutationFn: async (payload) => {
@@ -343,33 +298,30 @@ export const jobMutations = {
     },
 
     onMutate: async (payload) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: jobKeys.lists(payload.authProfileId),
+        queryKey: jobKeys.lists(),
       });
 
-      // Remove individual job detail caches
       payload.jobIds.forEach((jobId) => {
         queryClient.removeQueries({
-          queryKey: jobKeys.detail(payload.authProfileId, jobId),
+          queryKey: jobKeys.detail(jobId),
         });
       });
 
       return { previousJobs: [] };
     },
 
-    onError: (_err, payload, context) => {
-      // Invalidate to restore job detail caches
+    onError: (_err, payload, _context) => {
       payload.jobIds.forEach((jobId) => {
         queryClient.invalidateQueries({
-          queryKey: jobKeys.detail(payload.authProfileId, jobId),
+          queryKey: jobKeys.detail(jobId),
         });
       });
     },
 
-    onSuccess: (_, payload) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: jobKeys.metrics(payload.authProfileId),
+        queryKey: jobKeys.metrics(),
       });
     },
   }),

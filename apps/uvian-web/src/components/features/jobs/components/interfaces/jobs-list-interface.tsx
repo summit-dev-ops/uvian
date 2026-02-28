@@ -13,7 +13,6 @@ import {
   JobsListPageActions,
 } from '~/components/features/jobs/components/pages/actions';
 import { JobDataTable } from '~/components/features/jobs/components/job-data-table';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.ComponentType<any>;
@@ -29,10 +28,7 @@ export function JobsListInterface({
   conversationId,
   BreadcrumbComponent,
 }: JobsListInterfaceProps) {
-  const { activeProfileId } = useUserSessionStore();
-
   const filters = {
-    authProfileId: activeProfileId ?? '',
     ...(spaceId ? { spaceId } : {}),
     ...(conversationId ? { conversationId } : {}),
   };

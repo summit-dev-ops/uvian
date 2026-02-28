@@ -1,69 +1,85 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { postService } from '../services/post.service';
-import { profileService } from '../services/profile.service';
 import {
-  CreatePostRequest,
   GetSpacePostsRequest,
   GetPostRequest,
+  CreatePostRequest,
+  DeletePostRequest,
 } from '../types/post.types';
 
 export default async function (fastify: FastifyInstance) {
-  fastify.delete<GetPostRequest>(
+  fastify.get<GetSpacePostsRequest>(
+    '/api/spaces/:spaceId/posts',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: { spaceId: { type: 'string' } },
+          required: ['spaceId'],
+          additionalProperties: false,
+        },
+        querystring: {
+          type: 'object',
+          properties: {
+            cursor: { type: 'string' },
+            limit: { type: 'integer', minimum: 1, maximum: 100 },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<GetSpacePostsRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { spaceId } = request.params;
+        const { cursor, limit } = request.query || {};
+
+        const result = await postService.getPostsBySpace(
+          request.supabase,
+          spaceId,
+          { cursor, limit }
+        );
+
+        reply.send(result);
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to fetch posts' });
+      }
+    }
+  );
+
+  fastify.get<GetPostRequest>(
     '/api/posts/:id',
     {
       preHandler: [fastify.authenticate],
       schema: {
         params: {
           type: 'object',
-          properties: {
-            id: { type: 'string' },
-          },
+          properties: { id: { type: 'string' } },
           required: ['id'],
-        },
-        response: {
-          204: { type: 'null' },
-          400: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-          403: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-          404: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          additionalProperties: false,
         },
       },
     },
     async (request: FastifyRequest<GetPostRequest>, reply: FastifyReply) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
         const { id } = request.params;
 
-        await postService.deletePost(request.supabase, id, authProfileId);
+        const post = await postService.getPost(request.supabase, id);
 
-        reply.code(204).send();
+        reply.send(post);
       } catch (error: any) {
-        if (error.message.includes('Unauthorized')) {
-          reply.code(403).send({ error: error.message });
-        } else if (error.message.includes('not found')) {
-          reply.code(404).send({ error: error.message });
+        if (error.message === 'Post not found') {
+          reply.code(404).send({ error: 'Post not found' });
         } else {
-          reply.code(400).send({ error: error.message });
+          reply.code(400).send({ error: 'Failed to fetch post' });
         }
       }
     }
   );
+
   fastify.post<CreatePostRequest>(
     '/api/spaces/:spaceId/posts',
     {
@@ -71,10 +87,9 @@ export default async function (fastify: FastifyInstance) {
       schema: {
         params: {
           type: 'object',
-          properties: {
-            spaceId: { type: 'string' },
-          },
+          properties: { spaceId: { type: 'string' } },
           required: ['spaceId'],
+          additionalProperties: false,
         },
         body: {
           type: 'object',
@@ -89,198 +104,71 @@ export default async function (fastify: FastifyInstance) {
           },
           additionalProperties: false,
         },
-        response: {
-          201: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              spaceId: { type: 'string' },
-              profileId: { type: 'string' },
-              contentType: { type: 'string' },
-              content: { type: 'string' },
-              createdAt: { type: 'string' },
-              updatedAt: { type: 'string' },
-            },
-          },
-          400: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-          403: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
-        },
       },
     },
     async (request: FastifyRequest<CreatePostRequest>, reply: FastifyReply) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+
         const { spaceId } = request.params;
-        const { content, contentType } = request.body;
+        const { content, contentType } = request.body || {};
 
         const post = await postService.createPost(request.supabase, {
           spaceId,
-          profileId: authProfileId,
-          contentType: contentType || 'text',
+          userId,
           content,
+          contentType: contentType || 'text',
         });
 
         reply.code(201).send(post);
       } catch (error: any) {
-        if (
-          error.message.includes('does not have access') ||
-          error.message.includes('Unauthorized')
-        ) {
-          reply.code(403).send({ error: error.message });
+        if (error.message.includes('Not a member')) {
+          reply.code(403).send({ error: 'Not a member of this space' });
         } else {
-          reply.code(400).send({ error: error.message });
+          reply.code(400).send({ error: 'Failed to create post' });
         }
       }
     }
   );
 
-  fastify.get<GetSpacePostsRequest>(
-    '/api/spaces/:spaceId/posts',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        params: {
-          type: 'object',
-          properties: {
-            spaceId: { type: 'string' },
-          },
-          required: ['spaceId'],
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            cursor: { type: 'string' },
-            limit: { type: 'integer', minimum: 1, maximum: 100 },
-          },
-        },
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              items: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    spaceId: { type: 'string' },
-                    profileId: { type: 'string' },
-                    contentType: { type: 'string' },
-                    content: { type: 'string' },
-                    createdAt: { type: 'string' },
-                    updatedAt: { type: 'string' },
-                  },
-                },
-              },
-              nextCursor: { type: ['string', 'null'] },
-              hasMore: { type: 'boolean' },
-            },
-          },
-        },
-      },
-    },
-    async (
-      request: FastifyRequest<GetSpacePostsRequest>,
-      reply: FastifyReply
-    ) => {
-      try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
-        const { spaceId } = request.params;
-        const { cursor, limit } = request.query || {};
-
-        const posts = await postService.getPostsBySpace(
-          request.supabase,
-          spaceId,
-          authProfileId,
-          {
-            cursor,
-            limit: limit || 20,
-          }
-        );
-
-        const hasMore = posts.length > (limit || 20);
-        const items = hasMore ? posts.slice(0, -1) : posts;
-
-        reply.send({
-          items,
-          nextCursor: hasMore ? posts[posts.length - 1].id : null,
-          hasMore,
-        });
-      } catch (error: any) {
-        reply.code(400).send({ error: error.message });
-      }
-    }
-  );
-
-  fastify.get<GetPostRequest>(
+  fastify.delete<DeletePostRequest>(
     '/api/posts/:id',
     {
       preHandler: [fastify.authenticate],
       schema: {
         params: {
           type: 'object',
-          properties: {
-            id: { type: 'string' },
-          },
+          properties: { id: { type: 'string' } },
           required: ['id'],
-        },
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              spaceId: { type: 'string' },
-              profileId: { type: 'string' },
-              contentType: { type: 'string' },
-              content: { type: 'string' },
-              createdAt: { type: 'string' },
-              updatedAt: { type: 'string' },
-            },
-          },
-          404: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-            },
-          },
+          additionalProperties: false,
         },
       },
     },
-    async (request: FastifyRequest<GetPostRequest>, reply: FastifyReply) => {
+    async (request: FastifyRequest<DeletePostRequest>, reply: FastifyReply) => {
       try {
-        const authProfileId = await profileService.getCurrentProfileFromRequest(
-          request
-        );
-        const { id } = request.params;
-
-        const post = await postService.getPost(
-          request.supabase,
-          id,
-          authProfileId
-        );
-
-        if (!post) {
-          reply.code(404).send({ error: 'Post not found' });
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
 
-        reply.send(post);
+        const { id } = request.params;
+
+        await postService.deletePost(request.supabase, id, userId);
+
+        reply.code(204).send();
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        if (error.message.includes('another user')) {
+          reply.code(403).send({ error: "Cannot delete another user's post" });
+        } else if (error.message === 'Post not found') {
+          reply.code(404).send({ error: 'Post not found' });
+        } else {
+          reply.code(400).send({ error: 'Failed to delete post' });
+        }
       }
     }
   );

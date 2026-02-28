@@ -17,9 +17,9 @@ export type FeedQueryOptions = {
 };
 
 export const feedQueries = {
-  feed: (authProfileId: string | undefined, options: FeedQueryOptions = {}) =>
+  feed: (options: FeedQueryOptions = {}) =>
     queryOptions({
-      queryKey: feedKeys.feed(authProfileId),
+      queryKey: feedKeys.feed(),
       queryFn: async () => {
         const params = new URLSearchParams();
         if (options.type) params.set('type', options.type);
@@ -28,26 +28,22 @@ export const feedQueries = {
         if (options.spaceId) params.set('spaceId', options.spaceId);
 
         const { data } = await apiClient.get<FeedResponse>(
-          `/api/feed?${params.toString()}`,
-          { headers: { 'x-profile-id': authProfileId } }
+          `/api/feed?${params.toString()}`
         );
         return data;
       },
-      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 2,
     }),
 
-  unreadCount: (authProfileId: string | undefined) =>
+  unreadCount: () =>
     queryOptions({
-      queryKey: feedKeys.unreadCount(authProfileId),
+      queryKey: feedKeys.unreadCount(),
       queryFn: async () => {
         const { data } = await apiClient.get<UnreadCountResponse>(
-          '/api/feed/unread-count',
-          { headers: { 'x-profile-id': authProfileId } }
+          '/api/feed/unread-count'
         );
         return data;
       },
-      enabled: !!authProfileId,
       staleTime: 1000 * 30,
     }),
 };

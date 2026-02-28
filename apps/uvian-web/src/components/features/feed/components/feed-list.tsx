@@ -4,7 +4,6 @@ import { useFeed } from '../hooks/use-feed';
 import { useMarkAsRead } from '../hooks/use-feed-mutations';
 import { FeedItem } from './feed-item';
 import type { FeedItemUI } from '~/lib/domains/feed/types';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface FeedListProps {
   type?: 'post' | 'message' | 'job' | 'ticket';
@@ -14,12 +13,10 @@ interface FeedListProps {
 export function FeedList({ type, spaceId }: FeedListProps) {
   const { feed, isLoading } = useFeed({ type, spaceId });
   const markAsRead = useMarkAsRead();
-  const { activeProfileId } = useUserSessionStore();
 
   const handleItemClick = async (item: FeedItemUI) => {
-    if (!item.readAt && activeProfileId) {
+    if (!item.readAt) {
       await markAsRead.mutateAsync({
-        authProfileId: activeProfileId,
         itemId: item.id,
       });
     }

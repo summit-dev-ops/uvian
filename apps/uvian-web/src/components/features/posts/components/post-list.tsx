@@ -2,7 +2,6 @@
 
 import { useSpacePosts } from '../hooks/use-posts';
 import { PostItem } from './post-item';
-import { CreatePost } from './create-post';
 
 interface PostListProps {
   spaceId: string;
@@ -21,7 +20,6 @@ export function PostList({ spaceId }: PostListProps) {
 
   return (
     <div className="divide-y">
-      <CreatePost spaceId={spaceId} />
       {posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-center">
           <div className="text-muted-foreground">No posts yet</div>
@@ -30,7 +28,9 @@ export function PostList({ spaceId }: PostListProps) {
           </p>
         </div>
       ) : (
-        posts.map((post) => <PostItem key={post.id} post={post} />)
+        posts.map((post) => (
+          <PostItem key={post.id} post={post} spaceId={spaceId} />
+        ))
       )}
     </div>
   );

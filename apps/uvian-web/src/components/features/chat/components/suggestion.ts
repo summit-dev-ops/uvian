@@ -8,7 +8,7 @@ import type {
 import { QueryClient } from '@tanstack/react-query';
 import MentionList from './mention-list';
 import { chatQueries } from '~/lib/domains/chat/api';
-import { profileQueries } from '~/lib/domains/profile/api';
+import { userQueries } from '~/lib/domains/user/api';
 
 const updatePosition = (editor: Editor, element: HTMLElement) => {
   const virtualElement = {
@@ -35,16 +35,15 @@ const updatePosition = (editor: Editor, element: HTMLElement) => {
 // FACTORY FUNCTION
 export const createSuggestionConfig = (
   queryClient: QueryClient,
-  authProfileId: string | undefined,
   { conversationId }: { conversationId: string }
 ) => ({
   items: async ({ query }: { query: string }) => {
     const conversationMembers = await queryClient.fetchQuery(
-      chatQueries.conversationMembers(authProfileId, conversationId)
+      chatQueries.conversationMembers(conversationId)
     );
     const conversationMembersProfiles = await Promise.all(
       conversationMembers.map((member) =>
-        queryClient.fetchQuery(profileQueries.profile(member.profileId))
+        queryClient.fetchQuery(userQueries.profileByUserId(member.userId))
       )
     );
     const conversationMembersWithProfiles = conversationMembers.map(

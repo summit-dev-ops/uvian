@@ -48,7 +48,7 @@ export interface UpdateSpacePayload {
 }
 
 export interface InviteSpaceMemberPayload {
-  profileId: string;
+  userId: string;
   role?: SpaceMemberRole;
 }
 
@@ -70,29 +70,23 @@ export interface SpaceStats {
 
 export interface CreateSpaceRequest {
   Body: CreateSpacePayload;
-  Headers: {
-    profileId: string;
-  };
 }
 
-export interface GetSpacesRequest {
-  Headers: {
-    profileId: string;
-  };
-}
+export type GetSpacesRequest = {
+  Querystring?: Record<string, unknown>;
+  Params?: Record<string, unknown>;
+  Body?: Record<string, unknown>;
+};
 
-export interface GetSpaceStatsRequest {
-  Headers: {
-    profileId: string;
-  };
-}
+export type GetSpaceStatsRequest = {
+  Querystring?: Record<string, unknown>;
+  Params?: Record<string, unknown>;
+  Body?: Record<string, unknown>;
+};
 
 export interface GetSpaceRequest {
   Params: {
     spaceId: string;
-  };
-  Headers: {
-    profileId: string;
   };
 }
 
@@ -101,26 +95,17 @@ export interface UpdateSpaceRequest {
     spaceId: string;
   };
   Body: UpdateSpacePayload;
-  Headers: {
-    profileId: string;
-  };
 }
 
 export interface DeleteSpaceRequest {
   Params: {
     spaceId: string;
   };
-  Headers: {
-    profileId: string;
-  };
 }
 
 export interface GetSpaceMembersRequest {
   Params: {
     spaceId: string;
-  };
-  Headers: {
-    profileId: string;
   };
 }
 
@@ -129,28 +114,19 @@ export interface InviteSpaceMemberRequest {
     spaceId: string;
   };
   Body: InviteSpaceMemberPayload;
-  Headers: {
-    profileId: string;
-  };
 }
 
 export interface RemoveSpaceMemberRequest {
   Params: {
     spaceId: string;
-    profileId: string;
-  };
-  Headers: {
-    profileId: string;
+    userId: string;
   };
 }
 
 export interface UpdateSpaceMemberRoleRequest {
   Params: {
     spaceId: string;
-    profileId: string;
+    userId: string;
   };
   Body: UpdateSpaceMemberRolePayload;
-  Headers: {
-    profileId: string;
-  };
 }

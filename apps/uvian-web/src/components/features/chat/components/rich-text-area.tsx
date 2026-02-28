@@ -9,7 +9,6 @@ import { Plugin } from '@tiptap/pm/state';
 import { Markdown } from '@tiptap/markdown';
 import { createSuggestionConfig } from './suggestion';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface RichTextAreaProps
   extends Omit<React.ComponentProps<'div'>, 'onChange'> {
@@ -74,11 +73,10 @@ export function RichTextArea({
   ...props
 }: RichTextAreaProps) {
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
 
   const suggestionConfig = useMemo(
-    () => createSuggestionConfig(queryClient, activeProfileId, context),
-    [queryClient, activeProfileId, context]
+    () => createSuggestionConfig(queryClient, context),
+    [queryClient, context]
   );
 
   const editor = useEditor({

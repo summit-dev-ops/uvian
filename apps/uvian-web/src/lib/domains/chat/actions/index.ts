@@ -144,7 +144,7 @@ export const chatActions = {
     group: 'chat',
     variant: 'info',
     canPerform: (ctx, payload) =>
-      !!payload.targetMemberProfileId && !!payload.conversationId,
+      !!payload.targetMemberUserId && !!payload.conversationId,
     perform: async (
       ctx: BaseActionContext,
       payload: InviteConversationMemberPayload
@@ -168,7 +168,7 @@ export const chatActions = {
     group: 'chat',
     variant: 'destructive',
     canPerform: (ctx, payload) =>
-      !!payload.targetMemberProfileId && !!payload.conversationId,
+      !!payload.targetMemberUserId && !!payload.conversationId,
     perform: async (
       ctx: BaseActionContext,
       payload: RemoveConversationMemberPayload
@@ -192,7 +192,7 @@ export const chatActions = {
     group: 'chat',
     variant: 'info',
     canPerform: (ctx, payload) =>
-      !!payload.targetMemberProfileId && !!payload.conversationId,
+      !!payload.targetMemberUserId && !!payload.conversationId,
     perform: async (
       ctx: BaseActionContext,
       payload: UpdateConversationMemberRolePayload
@@ -214,7 +214,6 @@ export const chatActions = {
    * Static function for bulk operations using the action manager.
    */
   bulkRemoveMembers: async (
-    authProfileId: string,
     targetMemberProfileIds: string[],
     context: BaseActionContext,
     conversationId: string
@@ -223,7 +222,7 @@ export const chatActions = {
       await executeMutation(
         context.queryClient,
         chatMutations.removeConversationMember(context.queryClient),
-        { authProfileId, targetMemberProfileId: profileId, conversationId }
+        { targetMemberUserId: profileId, conversationId }
       );
     });
 
@@ -235,9 +234,8 @@ export const chatActions = {
    * Static function for bulk operations using the action manager.
    */
   bulkUpdateMemberRole: async (
-    authProfileId: string,
     targetMemberProfileIds: string[],
-    newRole: ConversationMemberRole["name"],
+    newRole: ConversationMemberRole['name'],
     context: BaseActionContext,
     conversationId: string
   ) => {
@@ -246,8 +244,7 @@ export const chatActions = {
         context.queryClient,
         chatMutations.updateConversationMemberRole(context.queryClient),
         {
-          authProfileId,
-          targetMemberProfileId: profileId,
+          targetMemberUserId: profileId,
           conversationId,
           role: { name: newRole },
         }
@@ -262,7 +259,6 @@ export const chatActions = {
    * Static function for bulk operations using the action manager.
    */
   bulkDeleteConversations: async (
-    authProfileId: string,
     conversationIds: string[],
     context: BaseActionContext
   ) => {
@@ -270,7 +266,7 @@ export const chatActions = {
       await executeMutation(
         context.queryClient,
         chatMutations.deleteConversation(context.queryClient),
-        { authProfileId, conversationId }
+        { conversationId }
       );
 
       // Clear cache for each conversation
@@ -286,7 +282,6 @@ export const chatActions = {
    * Static function for bulk operations using the action manager.
    */
   bulkArchiveConversations: async (
-    authProfileId: string,
     conversationIds: string[],
     context: BaseActionContext
   ) => {
@@ -296,7 +291,7 @@ export const chatActions = {
       await executeMutation(
         context.queryClient,
         chatMutations.deleteConversation(context.queryClient),
-        { authProfileId, conversationId }
+        { conversationId }
       );
     });
 

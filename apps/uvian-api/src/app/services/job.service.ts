@@ -1,754 +1,265 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import {
-  Job,
-  JobFilters,
-  JobListResponse,
-  PaginationOptions,
-  JobMetrics,
-  ResourceScope,
-} from '../types/job.types';
-import { resourceScopesService } from './resource-scopes.service';
 import { adminSupabase } from '../clients/supabase.client';
-import { feedService } from './feed.service';
+import { queueService } from './queue.service';
 
 export class JobService {
-  /**
-   * SECURITY: Verifies the Auth User actually owns the profile.
-   * This prevents User A from performing actions as User B (Spoofing).
-   */
-  private async verifyProfileOwnership(
+  private async verifyResourceScopeAccess(
     userClient: SupabaseClient,
-    profileId: string
-  ): Promise<void> {
-    const { data, error } = await userClient
-      .from('profiles')
-      .select('id')
-      .eq('id', profileId)
-      .single();
-
-    if (error || !data) {
-      throw new Error('Unauthorized: You do not own this profile');
-    }
-  }
-
-  async createJob(
-    userClient: SupabaseClient,
-    profileId: string,
-    data: {
-      id: string;
-      type: 'chat' | 'task' | 'agent';
-      input: Record<string, any>;
-      resourceScopeId: string;
-      threadId?: string; // For agent jobs
-    }
-  ): Promise<Job> {
-    // SECURITY: Verify Profile Ownership
-    await this.verifyProfileOwnership(userClient, profileId);
-
-    await this.validateResourceScopeAccess(
-      userClient,
-      data.resourceScopeId,
-      profileId
-    );
-    const jobData: any = {
-      id: data.id,
-      type: data.type,
-      status: 'queued',
-      input: data.input || {},
-      resource_scope_id: data.resourceScopeId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    // Add thread_id for agent jobs
-    if (data.type === 'agent' && data.threadId) {
-      jobData.thread_id = data.threadId;
-    }
-
-    const { data: job, error } = await adminSupabase
-      .from('jobs')
-      .insert(jobData)
-      .select(
-        `
-          *,
-          resource_scopes!jobs_resource_scope_id_fkey(
-            id,
-            space_id,
-            conversation_id
-          )
-        `
-      )
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create job: ${error.message}`);
-    }
-
-    return this.transformFromDatabase(job);
-  }
-
-  /**
-   * Validates access to a specific resource scope
-   */
-  private async validateResourceScopeAccess(
-    userClient: SupabaseClient,
-    resourceScopeId: string,
-    profileId: string
-  ): Promise<void> {
-    // Get resource scope details
-    const { data: resourceScope, error } = await userClient
+    resourceScopeId: string
+  ) {
+    const { data: scope } = await userClient
       .from('resource_scopes')
       .select('space_id, conversation_id')
       .eq('id', resourceScopeId)
       .single();
 
-    if (error || !resourceScope) {
-      throw new Error('Resource scope not found');
+    if (!scope) throw new Error('Resource scope not found');
+
+    if (scope.space_id) {
+      const { data: member } = await userClient
+        .from('space_members')
+        .select('id')
+        .eq('space_id', scope.space_id)
+        .single();
+      if (!member) throw new Error('Not a member of this space');
+    } else if (scope.conversation_id) {
+      const { data: member } = await userClient
+        .from('conversation_members')
+        .select('id')
+        .eq('conversation_id', scope.conversation_id)
+        .single();
+      if (!member) throw new Error('Not a member of this conversation');
     }
-
-    // Validate access based on scope type
-    if (resourceScope.space_id) {
-      await this.validateSpaceAccess(
-        userClient,
-        resourceScope.space_id,
-        profileId
-      );
-    } else if (resourceScope.conversation_id) {
-      await this.validateConversationAccess(
-        userClient,
-        resourceScope.conversation_id,
-        profileId
-      );
-    } else {
-      throw new Error('Invalid resource scope configuration');
-    }
-  }
-
-  /**
-   * Validates space access (simplified version for direct validation)
-   */
-  private async validateSpaceAccess(
-    userClient: SupabaseClient,
-    spaceId: string,
-    profileId: string
-  ): Promise<void> {
-    const { data: spaceMember, error } = await userClient
-      .from('space_members')
-      .select('space_id')
-      .eq('space_id', spaceId)
-      .eq('profile_id', profileId)
-      .single();
-
-    if (error || !spaceMember) {
-      throw new Error('Unauthorized: You are not a member of this space');
-    }
-  }
-
-  /**
-   * Validates conversation access (simplified version for direct validation)
-   */
-  private async validateConversationAccess(
-    userClient: SupabaseClient,
-    conversationId: string,
-    profileId: string
-  ): Promise<void> {
-    const { data: conversationMember, error } = await userClient
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('conversation_id', conversationId)
-      .eq('profile_id', profileId)
-      .single();
-
-    if (error || !conversationMember) {
-      throw new Error(
-        'Unauthorized: You are not a member of this conversation'
-      );
-    }
-  }
-
-  /**
-   * Validates space access and gets resource scope (following established pattern)
-   */
-  private async validateSpaceAccessAndGetScope(
-    userClient: SupabaseClient,
-    spaceId: string,
-    profileId: string
-  ): Promise<ResourceScope> {
-    // Validate that user is a member of the space
-    const { data: spaceMember, error } = await userClient
-      .from('space_members')
-      .select('space_id')
-      .eq('space_id', spaceId)
-      .eq('profile_id', profileId)
-      .single();
-
-    if (error || !spaceMember) {
-      throw new Error('Unauthorized: You are not a member of this space');
-    }
-
-    // Get or create the resource scope
-    const resourceScope =
-      await resourceScopesService.getOrCreateSpaceResourceScope(
-        userClient,
-        spaceId
-      );
-
-    return resourceScope;
-  }
-
-  /**
-   * Validates conversation access and gets resource scope (following established pattern)
-   */
-  private async validateConversationAccessAndGetScope(
-    userClient: SupabaseClient,
-    conversationId: string,
-    profileId: string
-  ): Promise<ResourceScope> {
-    // Validate that user is a member of the conversation
-    const { data: conversationMember, error } = await userClient
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('conversation_id', conversationId)
-      .eq('profile_id', profileId)
-      .single();
-
-    if (error || !conversationMember) {
-      throw new Error(
-        'Unauthorized: You are not a member of this conversation'
-      );
-    }
-
-    // Get or create the resource scope
-    const resourceScope =
-      await resourceScopesService.getOrCreateConversationResourceScope(
-        userClient,
-        conversationId
-      );
-
-    return resourceScope;
   }
 
   async listJobs(
     userClient: SupabaseClient,
-    filters: JobFilters = {},
-    pagination: PaginationOptions = { page: 1, limit: 20 }
-  ): Promise<JobListResponse> {
-    let query = userClient.from('jobs').select(
-      `
-        *,
-        resource_scopes!jobs_resource_scope_id_fkey(
-          id,
-          space_id,
-          conversation_id
-        )
-      `,
-      { count: 'exact' }
-    );
-
-    // Apply filters
-    if (filters.status) {
-      query = query.eq('status', filters.status);
+    filters: {
+      spaceId?: string;
+      conversationId?: string;
+      status?: string;
+      type?: string;
     }
-
-    if (filters.type) {
-      query = query.eq('type', filters.type);
-    }
-
-    // Thread ID filter for agent jobs
-    if (filters.threadId) {
-      query = query.eq('thread_id', filters.threadId);
-    }
-
-    if (filters.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
-    }
-
-    if (filters.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
-    }
-
-    // Apply resource scope filters
-    if (filters.spaceId) {
-      query = query.eq('resource_scopes.space_id', filters.spaceId);
-    }
-
+  ) {
+    let viewName = 'get_jobs_for_space';
     if (filters.conversationId) {
-      query = query.eq(
-        'resource_scopes.conversation_id',
-        filters.conversationId
-      );
+      viewName = 'get_jobs_for_conversation';
     }
 
-    // Apply sorting (newest first)
-    query = query.order('created_at', { ascending: false });
+    let q = userClient.from(viewName).select('*');
 
-    // Apply pagination
-    const offset = (pagination.page - 1) * pagination.limit;
-    query = query.range(offset, offset + pagination.limit - 1);
+    if (filters.spaceId) q = q.eq('space_id', filters.spaceId);
+    if (filters.conversationId)
+      q = q.eq('conversation_id', filters.conversationId);
+    if (filters.status) q = q.eq('status', filters.status);
+    if (filters.type) q = q.eq('type', filters.type);
 
-    const { data, error, count } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch jobs: ${error.message}`);
-    }
-
-    const jobs = (data || []).map(this.transformFromDatabase);
-    const total = count || 0;
-    const totalPages = Math.ceil(total / pagination.limit);
-    const hasMore = pagination.page < totalPages;
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
 
     return {
-      jobs,
-      total,
-      page: pagination.page,
-      limit: pagination.limit,
-      hasMore,
+      jobs: (data || []).map((row) => ({
+        id: row.id,
+        type: row.type,
+        status: row.status,
+        input: row.input,
+        output: row.output,
+        errorMessage: row.error_message,
+        resourceScopeId: row.resource_scope_id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        startedAt: row.started_at,
+        completedAt: row.completed_at,
+        spaceId: row.space_id,
+        conversationId: row.conversation_id,
+      })),
+      total: data?.length || 0,
+      page: 1,
+      limit: 20,
+      hasMore: false,
     };
   }
 
-  /**
-   * Lists jobs for a specific space (with access validation - following established pattern)
-   */
-  async listSpaceJobs(
+  async getJobsForUser(
     userClient: SupabaseClient,
-    spaceId: string,
-    profileId: string,
-    filters: Omit<JobFilters, 'spaceId' | 'conversationId'> = {},
-    pagination: PaginationOptions = { page: 1, limit: 20 }
-  ): Promise<JobListResponse> {
-    // Validate access FIRST (following established pattern)
-    await this.validateSpaceAccessAndGetScope(userClient, spaceId, profileId);
+    filters: { status?: string; type?: string }
+  ) {
+    let q = userClient.from('get_jobs_for_current_user').select('*');
+    if (filters.status) q = q.eq('status', filters.status);
+    if (filters.type) q = q.eq('type', filters.type);
 
-    return this.listJobs(userClient, { ...filters, spaceId }, pagination);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+
+    return {
+      jobs: (data || []).map((row) => ({
+        id: row.id,
+        type: row.type,
+        status: row.status,
+        input: row.input,
+        output: row.output,
+        errorMessage: row.error_message,
+        resourceScopeId: row.resource_scope_id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        startedAt: row.started_at,
+        completedAt: row.completed_at,
+        spaceId: row.space_id,
+        conversationId: row.conversation_id,
+      })),
+      total: data?.length || 0,
+      page: 1,
+      limit: 20,
+      hasMore: false,
+    };
   }
 
-  /**
-   * Lists jobs for a specific conversation (with access validation - following established pattern)
-   */
-  async listConversationJobs(
-    userClient: SupabaseClient,
-    conversationId: string,
-    profileId: string,
-    filters: Omit<JobFilters, 'spaceId' | 'conversationId'> = {},
-    pagination: PaginationOptions = { page: 1, limit: 20 }
-  ): Promise<JobListResponse> {
-    // Validate access FIRST (following established pattern)
-    await this.validateConversationAccessAndGetScope(
-      userClient,
-      conversationId,
-      profileId
-    );
-
-    return this.listJobs(
-      userClient,
-      { ...filters, conversationId },
-      pagination
-    );
-  }
-
-  async getJob(
-    userClient: SupabaseClient,
-    id: string,
-    profileId?: string
-  ): Promise<Job> {
-    // Get job with resource scope info first
-    const { data: job, error } = await userClient
-      .from('jobs')
-      .select(
-        `
-        *,
-        resource_scopes!jobs_resource_scope_id_fkey(
-          id,
-          space_id,
-          conversation_id
-        )
-      `
-      )
-      .eq('id', id)
+  async getJob(userClient: SupabaseClient, jobId: string) {
+    const { data, error } = await userClient
+      .from('get_job_details')
+      .select('*')
+      .eq('id', jobId)
       .single();
 
-    if (error) {
-      throw new Error(`Failed to fetch job: ${error.message}`);
-    }
+    if (error || !data) throw new Error('Job not found');
 
-    // Validate access if profileId provided (following established pattern)
-    if (profileId) {
-      await this.validateJobAccess(userClient, job, profileId);
-    }
-
-    return this.transformFromDatabase(job);
+    return {
+      id: data.id,
+      type: data.type,
+      status: data.status,
+      input: data.input,
+      output: data.output,
+      errorMessage: data.error_message,
+      resourceScopeId: data.resource_scope_id,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      startedAt: data.started_at,
+      completedAt: data.completed_at,
+      spaceId: data.space_id,
+      conversationId: data.conversation_id,
+    };
   }
 
-  async cancelJob(
+  async createJob(
     userClient: SupabaseClient,
-    id: string,
-    profileId?: string
-  ): Promise<Job> {
-    // SECURITY: Verify Profile Ownership if profileId provided
-    if (profileId) {
-      await this.verifyProfileOwnership(userClient, profileId);
-    }
+    userId: string,
+    data: { type: string; input: object; resourceScopeId: string }
+  ) {
+    await this.verifyResourceScopeAccess(userClient, data.resourceScopeId);
 
-    // Get job with resource scope info for access validation
-    const job = await this.getJob(userClient, id, profileId);
+    const jobId = require('crypto').randomUUID();
 
-    if (['completed', 'failed', 'cancelled'].includes(job.status)) {
-      throw new Error(`Cannot cancel job with status: ${job.status}`);
-    }
-
-    // Use admin client for write operation (following established pattern)
-    const { data: updatedJob, error } = await adminSupabase
+    const { data: job, error } = await adminSupabase
       .from('jobs')
-      .update({
-        status: 'cancelled',
-        updated_at: new Date().toISOString(),
+      .insert({
+        id: jobId,
+        type: data.type,
+        input: data.input,
+        resource_scope_id: data.resourceScopeId,
       })
-      .eq('id', id)
-      .select(
-        `
-        *,
-        resource_scopes!jobs_resource_scope_id_fkey(
-          id,
-          space_id,
-          conversation_id
-        )
-      `
-      )
+      .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to cancel job: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
 
-    // Create feed items for job status change
-    const resourceScopeId = updatedJob.resource_scopes?.id;
-    if (resourceScopeId) {
-      feedService
-        .createFeedItemsForJob(
-          updatedJob.id,
-          updatedJob.type,
-          'cancelled',
-          resourceScopeId
-        )
-        .catch((err) => console.error('Failed to create feed items:', err));
-    }
+    await queueService.addJob('main-queue', data.type, { jobId });
 
-    return this.transformFromDatabase(updatedJob);
+    const { data: scope } = await adminSupabase
+      .from('resource_scopes')
+      .select('space_id, conversation_id')
+      .eq('id', data.resourceScopeId)
+      .single();
+
+    return {
+      jobId,
+      status: 'queued',
+      resourceScopeId: job.resource_scope_id,
+      spaceId: scope?.space_id,
+      conversationId: scope?.conversation_id,
+    };
   }
 
-  async retryJob(
-    userClient: SupabaseClient,
-    id: string,
-    profileId?: string
-  ): Promise<Job> {
-    // SECURITY: Verify Profile Ownership if profileId provided
-    if (profileId) {
-      await this.verifyProfileOwnership(userClient, profileId);
-    }
+  async cancelJob(userClient: SupabaseClient, jobId: string) {
+    await this.getJob(userClient, jobId);
 
-    // Get job with resource scope info for access validation
-    const job = await this.getJob(userClient, id, profileId);
+    const { data: job, error } = await adminSupabase
+      .from('jobs')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', jobId)
+      .eq('status', 'queued')
+      .select()
+      .single();
 
-    if (!['failed', 'cancelled'].includes(job.status)) {
-      throw new Error(`Cannot retry job with status: ${job.status}`);
-    }
+    if (error || !job) throw new Error('Cannot cancel job');
 
-    // Use admin client for write operation (following established pattern)
-    const { data: updatedJob, error } = await adminSupabase
+    return {
+      id: job.id,
+      type: job.type,
+      status: job.status,
+      updatedAt: job.updated_at,
+      completedAt: job.completed_at,
+    };
+  }
+
+  async retryJob(userClient: SupabaseClient, jobId: string) {
+    await this.getJob(userClient, jobId);
+
+    const { data: job, error } = await adminSupabase
       .from('jobs')
       .update({
         status: 'queued',
         error_message: null,
         updated_at: new Date().toISOString(),
-        // Reset timing fields
-        started_at: null,
-        completed_at: null,
       })
-      .eq('id', id)
-      .select(
-        `
-        *,
-        resource_scopes!jobs_resource_scope_id_fkey(
-          id,
-          space_id,
-          conversation_id
-        )
-      `
-      )
+      .eq('id', jobId)
+      .eq('status', 'failed')
+      .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to retry job: ${error.message}`);
-    }
+    if (error || !job) throw new Error('Cannot retry job');
 
-    return this.transformFromDatabase(updatedJob);
-  }
-
-  async deleteJob(
-    userClient: SupabaseClient,
-    id: string,
-    profileId?: string
-  ): Promise<void> {
-    // SECURITY: Verify Profile Ownership if profileId provided
-    if (profileId) {
-      await this.verifyProfileOwnership(userClient, profileId);
-    }
-
-    // Get job with resource scope info for access validation
-    const job = await this.getJob(userClient, id, profileId);
-
-    if (job.status === 'processing') {
-      throw new Error(`Cannot delete job with status: ${job.status}`);
-    }
-
-    // Use admin client for delete operation (following established pattern)
-    const { error } = await adminSupabase.from('jobs').delete().eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to delete job: ${error.message}`);
-    }
-  }
-
-  async getJobMetrics(
-    userClient: SupabaseClient,
-    profileId?: string,
-    dateFrom?: string,
-    dateTo?: string,
-    spaceId?: string,
-    conversationId?: string
-  ): Promise<JobMetrics> {
-    // Validate access if scope is provided (use lightweight validation)
-    if (spaceId && profileId) {
-      await this.validateSpaceAccess(userClient, spaceId, profileId);
-    } else if (conversationId && profileId) {
-      await this.validateConversationAccess(
-        userClient,
-        conversationId,
-        profileId
-      );
-    }
-
-    let query = userClient.from('jobs').select(`
-        status, 
-        created_at,
-        resource_scopes!jobs_resource_scope_id_fkey(space_id, conversation_id)
-      `);
-
-    if (dateFrom) {
-      query = query.gte('created_at', dateFrom);
-    }
-
-    if (dateTo) {
-      query = query.lte('created_at', dateTo);
-    }
-
-    if (spaceId) {
-      query = query.eq('resource_scopes.space_id', spaceId);
-    }
-
-    if (conversationId) {
-      query = query.eq('resource_scopes.conversation_id', conversationId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch job metrics: ${error.message}`);
-    }
-
-    const metrics: JobMetrics = {
-      total: data.length,
-      queued: 0,
-      processing: 0,
-      completed: 0,
-      failed: 0,
-      cancelled: 0,
-    };
-
-    data.forEach((job) => {
-      if (job.status in metrics) {
-        (metrics as any)[job.status]++;
-      }
-    });
-
-    return metrics;
-  }
-
-  /**
-   * Gets all jobs across all scopes the user has access to (for billing/usage)
-   */
-  async getAllJobsForProfile(
-    userClient: SupabaseClient,
-    profileId: string,
-    filters: JobFilters = {},
-    pagination: PaginationOptions = { page: 1, limit: 20 }
-  ): Promise<JobListResponse> {
-    // Get all space IDs user is a member of
-    const { data: spaceMemberships } = await userClient
-      .from('space_members')
-      .select('space_id')
-      .eq('profile_id', profileId);
-
-    const spaceIds = spaceMemberships?.map((m) => m.space_id) || [];
-
-    // Get all conversation IDs user is a member of
-    const { data: conversationMemberships } = await userClient
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('profile_id', profileId);
-
-    const conversationIds =
-      conversationMemberships?.map((m) => m.conversation_id) || [];
-
-    // If user has no memberships, return empty
-    if (spaceIds.length === 0 && conversationIds.length === 0) {
-      return {
-        jobs: [],
-        total: 0,
-        page: pagination.page,
-        limit: pagination.limit,
-        hasMore: false,
-      };
-    }
-
-    // Get resource scope IDs for those spaces and conversations
-    let scopeQuery = userClient.from('resource_scopes').select('id');
-
-    if (spaceIds.length > 0) {
-      scopeQuery = scopeQuery.in('space_id', spaceIds);
-    }
-    if (conversationIds.length > 0) {
-      scopeQuery = scopeQuery.in('conversation_id', conversationIds);
-    }
-
-    const { data: scopes } = await scopeQuery;
-    const scopeIds = scopes?.map((s) => s.id) || [];
-
-    // If no scopes found, return empty
-    if (scopeIds.length === 0) {
-      return {
-        jobs: [],
-        total: 0,
-        page: pagination.page,
-        limit: pagination.limit,
-        hasMore: false,
-      };
-    }
-
-    // Query jobs for all accessible scopes
-    let query = userClient.from('jobs').select(
-      `
-        *,
-        resource_scopes!jobs_resource_scope_id_fkey(
-          id,
-          space_id,
-          conversation_id
-        )
-      `,
-      { count: 'exact' }
-    );
-
-    // Filter by accessible scope IDs
-    query = query.in('resource_scope_id', scopeIds);
-
-    // Apply additional filters
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    }
-
-    if (filters.type) {
-      query = query.eq('type', filters.type);
-    }
-
-    if (filters.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
-    }
-
-    if (filters.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
-    }
-
-    // Apply sorting (newest first)
-    query = query.order('created_at', { ascending: false });
-
-    // Apply pagination
-    const offset = (pagination.page - 1) * pagination.limit;
-    query = query.range(offset, offset + pagination.limit - 1);
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch jobs: ${error.message}`);
-    }
-
-    const jobs = (data || []).map(this.transformFromDatabase);
-    const total = count || 0;
-    const totalPages = Math.ceil(total / pagination.limit);
-    const hasMore = pagination.page < totalPages;
+    await queueService.addJob('main-queue', job.type, { jobId });
 
     return {
-      jobs,
-      total,
-      page: pagination.page,
-      limit: pagination.limit,
-      hasMore,
+      id: job.id,
+      type: job.type,
+      status: job.status,
+      errorMessage: job.error_message,
+      updatedAt: job.updated_at,
+      startedAt: job.started_at,
+      completedAt: job.completed_at,
     };
   }
 
-  /**
-   * Validates that a user has access to a job based on its resource scope (following established pattern)
-   */
-  private async validateJobAccess(
-    userClient: SupabaseClient,
-    job: any,
-    profileId: string
-  ): Promise<void> {
-    const resourceScope = job.resource_scopes;
+  async deleteJob(userClient: SupabaseClient, jobId: string) {
+    await this.getJob(userClient, jobId);
 
-    if (!resourceScope) {
-      throw new Error('Job resource scope not found');
-    }
-
-    // Validate access based on scope type
-    if (resourceScope.space_id) {
-      await this.validateSpaceAccess(
-        userClient,
-        resourceScope.space_id,
-        profileId
-      );
-    } else if (resourceScope.conversation_id) {
-      await this.validateConversationAccess(
-        userClient,
-        resourceScope.conversation_id,
-        profileId
-      );
-    }
+    const { error } = await adminSupabase.from('jobs').delete().eq('id', jobId);
+    if (error) throw new Error('Cannot delete job');
+    return { success: true };
   }
 
-  /**
-   * Transforms database record to Job interface
-   */
-  private transformFromDatabase(dbRecord: any): Job {
-    const resourceScope = dbRecord.resource_scopes;
+  async getJobMetrics(userClient: SupabaseClient, spaceId: string) {
+    const { data, error } = await userClient
+      .from('get_jobs_for_space')
+      .select('status')
+      .eq('space_id', spaceId);
+
+    if (error) throw new Error(error.message);
+
+    const statusCounts = (data || []).reduce((acc, job: any) => {
+      acc[job.status] = (acc[job.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
     return {
-      id: dbRecord.id,
-      type: dbRecord.type,
-      status: dbRecord.status,
-      input: dbRecord.input || {},
-      output: dbRecord.output,
-      errorMessage: dbRecord.error_message,
-      resourceScopeId: dbRecord.resource_scope_id,
-      createdAt: dbRecord.created_at,
-      updatedAt: dbRecord.updated_at,
-      startedAt: dbRecord.started_at,
-      completedAt: dbRecord.completed_at,
-      // Enhanced fields
-      spaceId: resourceScope?.space_id,
-      conversationId: resourceScope?.conversation_id,
-      scopeType: resourceScope?.space_id ? 'space' : 'conversation',
-      // Agent-specific fields
-      threadId: dbRecord.thread_id,
+      total: data?.length || 0,
+      queued: statusCounts.queued || 0,
+      processing: statusCounts.processing || 0,
+      completed: statusCounts.completed || 0,
+      failed: statusCounts.failed || 0,
+      cancelled: statusCounts.cancelled || 0,
+      averageProcessingTime: 0,
     };
   }
 }

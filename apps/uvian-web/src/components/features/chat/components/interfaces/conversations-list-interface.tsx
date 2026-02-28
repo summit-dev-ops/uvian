@@ -20,7 +20,6 @@ import { Button, ItemGroup } from '@org/ui';
 import { ConversationListItem } from '../conversation-list-item';
 
 import type { PreviewData } from '~/lib/domains/chat/types';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import { chatMutations } from '~/lib/domains/chat/api';
 import { CreateConversationDialog } from '../dialogs';
 
@@ -36,13 +35,12 @@ interface ConversationWithPreview {
 
 export function ConversationsListInterface() {
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
   // Fetch conversations
   const {
     data: conversations,
     isLoading,
     error,
-  } = useQuery(chatQueries.conversations(activeProfileId));
+  } = useQuery(chatQueries.conversations());
   // Fetch latest message previews using useQueries
   const { previews } = useConversationPreviews(conversations || []);
 
@@ -54,13 +52,9 @@ export function ConversationsListInterface() {
   } = useMutation(chatMutations.createConversation(queryClient));
 
   const handleStartChatting = async (data: { title: string }) => {
-    if (!activeProfileId) {
-      return;
-    }
     createConversation({
       id: crypto.randomUUID(),
       title: data.title,
-      authProfileId: activeProfileId,
     });
   };
 

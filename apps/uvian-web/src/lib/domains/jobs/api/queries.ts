@@ -19,12 +19,11 @@ export const jobQueries = {
    * Fetch jobs for a specific space.
    */
   listBySpace: (
-    authProfileId: string | undefined,
     spaceId: string,
     filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
   ) =>
     queryOptions({
-      queryKey: jobKeys.listBySpace(authProfileId, spaceId, filters),
+      queryKey: jobKeys.listBySpace(spaceId, filters),
       queryFn: async () => {
         const { data } = await apiClient.get<JobListResponseUI>(
           `/api/spaces/${spaceId}/jobs`,
@@ -37,13 +36,12 @@ export const jobQueries = {
               page: filters?.page || 1,
               limit: filters?.limit || 20,
             },
-            headers: { 'x-profile-id': authProfileId },
           }
         );
 
         return data;
       },
-      enabled: !!authProfileId && !!spaceId,
+      enabled: !!spaceId,
       staleTime: 1000 * 30, // 30 seconds
       refetchOnWindowFocus: true,
     }),
@@ -52,16 +50,11 @@ export const jobQueries = {
    * Fetch jobs for a specific conversation.
    */
   listByConversation: (
-    authProfileId: string | undefined,
     conversationId: string,
     filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
   ) =>
     queryOptions({
-      queryKey: jobKeys.listByConversation(
-        authProfileId,
-        conversationId,
-        filters
-      ),
+      queryKey: jobKeys.listByConversation(conversationId, filters),
       queryFn: async () => {
         const { data } = await apiClient.get<JobListResponseUI>(
           `/api/conversations/${conversationId}/jobs`,
@@ -74,13 +67,12 @@ export const jobQueries = {
               page: filters?.page || 1,
               limit: filters?.limit || 20,
             },
-            headers: { 'x-profile-id': authProfileId },
           }
         );
 
         return data;
       },
-      enabled: !!authProfileId && !!conversationId,
+      enabled: !!conversationId,
       staleTime: 1000 * 30, // 30 seconds
       refetchOnWindowFocus: true,
     }),
@@ -89,11 +81,10 @@ export const jobQueries = {
    * Fetch all jobs across all scopes the user has access to (for billing/usage).
    */
   usage: (
-    authProfileId: string | undefined,
     filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
   ) =>
     queryOptions({
-      queryKey: jobKeys.usage(authProfileId, filters),
+      queryKey: jobKeys.usage(filters),
       queryFn: async () => {
         const { data } = await apiClient.get<JobListResponseUI>(
           '/api/jobs/usage',
@@ -106,13 +97,11 @@ export const jobQueries = {
               page: filters?.page || 1,
               limit: filters?.limit || 20,
             },
-            headers: { 'x-profile-id': authProfileId },
           }
         );
 
         return data;
       },
-      enabled: !!authProfileId,
       staleTime: 1000 * 30, // 30 seconds
       refetchOnWindowFocus: true,
     }),
@@ -120,47 +109,33 @@ export const jobQueries = {
   /**
    * Fetch a single job by ID.
    */
-  detail: (authProfileId: string | undefined, jobId: string) =>
+  detail: (jobId: string) =>
     queryOptions({
-      queryKey: jobKeys.detail(authProfileId, jobId),
+      queryKey: jobKeys.detail(jobId),
       queryFn: async () => {
-        const { data } = await apiClient.get<JobUI>(`/api/jobs/${jobId}`, {
-          headers: { 'x-profile-id': authProfileId },
-        });
+        const { data } = await apiClient.get<JobUI>(`/api/jobs/${jobId}`);
         return data;
       },
-      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 2, // 2 minutes
     }),
 
   /**
    * Fetch job metrics for a specific space.
    */
-  metricsBySpace: (
-    authProfileId: string | undefined,
-    spaceId: string,
-    dateFrom?: string,
-    dateTo?: string
-  ) =>
+  metricsBySpace: (spaceId: string, dateFrom?: string, dateTo?: string) =>
     queryOptions({
-      queryKey: jobKeys.metricsBySpace(
-        authProfileId,
-        spaceId,
-        dateFrom,
-        dateTo
-      ),
+      queryKey: jobKeys.metricsBySpace(spaceId, dateFrom, dateTo),
       queryFn: async () => {
-        const params: any = { spaceId };
+        const params: Record<string, string> = { spaceId };
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
 
         const { data } = await apiClient.get('/api/jobs/metrics', {
           params,
-          headers: { 'x-profile-id': authProfileId },
         });
         return data;
       },
-      enabled: !!authProfileId && !!spaceId,
+      enabled: !!spaceId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 
@@ -168,30 +143,23 @@ export const jobQueries = {
    * Fetch job metrics for a specific conversation.
    */
   metricsByConversation: (
-    authProfileId: string | undefined,
     conversationId: string,
     dateFrom?: string,
     dateTo?: string
   ) =>
     queryOptions({
-      queryKey: jobKeys.metricsByConversation(
-        authProfileId,
-        conversationId,
-        dateFrom,
-        dateTo
-      ),
+      queryKey: jobKeys.metricsByConversation(conversationId, dateFrom, dateTo),
       queryFn: async () => {
-        const params: any = { conversationId };
+        const params: Record<string, string> = { conversationId };
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
 
         const { data } = await apiClient.get('/api/jobs/metrics', {
           params,
-          headers: { 'x-profile-id': authProfileId },
         });
         return data;
       },
-      enabled: !!authProfileId && !!conversationId,
+      enabled: !!conversationId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 };

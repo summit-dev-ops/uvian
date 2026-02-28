@@ -115,7 +115,7 @@ export const profileMutations = {
     UpdateProfileContext
   > => ({
     mutationFn: async (payload) => {
-      const { data } = await apiClient.put<ProfileUI>(
+      const { data } = await apiClient.patch<ProfileUI>(
         `/api/profiles/${payload.profileId}`,
         {
           displayName: payload.displayName,

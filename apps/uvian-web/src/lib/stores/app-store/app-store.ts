@@ -38,9 +38,7 @@ export const createAppStore = () => {
       {
         name: 'app-storage',
         storage: createJSONStorage(() => localStorage),
-        partialize: (state) => ({
-          activeProfileId: state.activeProfileId,
-        }),
+        partialize: (state) => ({}),
         onRehydrateStorage: (state) => {
           return () => state.setHasHydrated(true);
         },

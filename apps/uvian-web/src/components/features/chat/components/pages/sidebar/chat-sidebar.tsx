@@ -17,7 +17,6 @@ import {
 } from '@org/ui';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { jobQueries } from '~/lib/domains/jobs/api/queries';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import type { ConversationUI } from '~/lib/domains/chat/types';
 
 interface ChatSidebarProps {
@@ -26,14 +25,11 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
   const pathname = usePathname();
-  const { activeProfileId } = useUserSessionStore();
   const [view, setView] = React.useState<'conversations' | 'jobs'>(
     'conversations'
   );
 
-  const { data: conversations = [] } = useQuery(
-    chatQueries.conversations(activeProfileId)
-  );
+  const { data: conversations = [] } = useQuery(chatQueries.conversations());
 
   const currentConversation = (conversations as ConversationUI[]).find(
     (c) => c.id === currentConversationId
@@ -44,11 +40,7 @@ export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
   );
 
   const { data: jobsData } = useQuery(
-    jobQueries.listByConversation(
-      activeProfileId ?? undefined,
-      currentConversationId,
-      { limit: 1 }
-    )
+    jobQueries.listByConversation(currentConversationId, { limit: 1 })
   );
 
   const jobCount = jobsData?.total || 0;

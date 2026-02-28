@@ -9,7 +9,6 @@ import { UserPlus, Edit, Shield, UserX, Trash2 } from 'lucide-react';
 import { spacesActions } from '~/lib/domains/spaces/actions';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
 import { executeMutation } from '~/lib/api/utils';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface UseSpaceMemberActionsProps {
   spaceId: string;
@@ -42,7 +41,6 @@ export function useSpaceMemberActions({
   isAdmin,
   setSelectedMemberIds,
 }: UseSpaceMemberActionsProps): UseSpaceMemberActionsReturn {
-  const { activeProfileId } = useUserSessionStore();
   // Action parameters
   const actionParams = {
     spaceId,
@@ -58,16 +56,15 @@ export function useSpaceMemberActions({
       group: 'primary',
       visibility: { minSelection: 0, maxSelection: 0 },
       perform: async (selection, params, context) => {
-        const profileId = prompt('Enter profile ID to invite:')?.trim();
-        if (!profileId || !activeProfileId) return;
+        const userId = prompt('Enter user ID to invite:')?.trim();
+        if (!userId) return;
 
         await executeMutation(
           context.queryClient,
           spacesMutations.inviteSpaceMember(context.queryClient),
           {
             spaceId: params.spaceId,
-            authProfileId: activeProfileId,
-            targetMemberProfileId: profileId,
+            targetMemberUserId: userId,
             role: { name: 'member' },
           }
         );
@@ -86,14 +83,13 @@ export function useSpaceMemberActions({
           'Enter new role (admin/member):',
           member.role?.name || 'member'
         ) as SpaceMemberRole['name'];
-        if (newRole && newRole !== member.role?.name && activeProfileId) {
+        if (newRole && newRole !== member.role?.name) {
           await executeMutation(
             context.queryClient,
             spacesMutations.updateSpaceMemberRole(context.queryClient),
             {
               spaceId: params.spaceId,
-              authProfileId: activeProfileId,
-              targetMemberProfileId: member.profileId,
+              targetMemberUserId: member.userId,
               role: { name: newRole },
             }
           );
@@ -116,11 +112,9 @@ export function useSpaceMemberActions({
         },
       },
       perform: async (selection, params, context) => {
-        if (!activeProfileId) return;
-        const profileIds = selection.selectedItems.map((m) => m.profileId);
+        const userIds = selection.selectedItems.map((m) => m.userId);
         await spacesActions.bulkUpdateMemberRole(
-          activeProfileId,
-          profileIds,
+          userIds,
           'admin',
           context,
           params.spaceId
@@ -144,11 +138,9 @@ export function useSpaceMemberActions({
         },
       },
       perform: async (selection, params, context) => {
-        if (!activeProfileId) return;
-        const profileIds = selection.selectedItems.map((m) => m.profileId);
+        const userIds = selection.selectedItems.map((m) => m.userId);
         await spacesActions.bulkUpdateMemberRole(
-          activeProfileId,
-          profileIds,
+          userIds,
           'member',
           context,
           params.spaceId
@@ -164,18 +156,16 @@ export function useSpaceMemberActions({
       group: 'danger',
       visibility: { minSelection: 1 },
       perform: async (selection, params, context) => {
-        if (!activeProfileId) return;
-        const profileIds = selection.selectedItems.map((m) => m.profileId);
+        const userIds = selection.selectedItems.map((m) => m.userId);
 
         // Confirm before removing
         if (
           confirm(
-            `Are you sure you want to remove ${profileIds.length} member(s) from this space?`
+            `Are you sure you want to remove ${userIds.length} member(s) from this space?`
           )
         ) {
           await spacesActions.bulkRemoveMembers(
-            activeProfileId,
-            profileIds,
+            userIds,
             context,
             params.spaceId
           );

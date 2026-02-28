@@ -9,37 +9,33 @@ import type { PostsResponse, PostUI } from '../types';
 
 export const postsQueries = {
   spacePosts: (
-    authProfileId: string | undefined,
-    spaceId: string | undefined,
+    spaceId: string,
     options: { cursor?: string; limit?: number } = {}
   ) =>
     queryOptions({
-      queryKey: postsKeys.posts(authProfileId, spaceId),
+      queryKey: postsKeys.posts(spaceId),
       queryFn: async () => {
         const params = new URLSearchParams();
         if (options.cursor) params.set('cursor', options.cursor);
         if (options.limit) params.set('limit', String(options.limit));
 
         const { data } = await apiClient.get<PostsResponse>(
-          `/api/spaces/${spaceId}/posts?${params.toString()}`,
-          { headers: { 'x-profile-id': authProfileId } }
+          `/api/spaces/${spaceId}/posts?${params.toString()}`
         );
         return data;
       },
-      enabled: !!authProfileId && !!spaceId,
+      enabled: !!spaceId,
       staleTime: 1000 * 60 * 2,
     }),
 
-  post: (authProfileId: string | undefined, postId: string | undefined) =>
+  post: (postId: string) =>
     queryOptions({
-      queryKey: postsKeys.post(authProfileId, postId),
+      queryKey: postsKeys.post(postId),
       queryFn: async () => {
-        const { data } = await apiClient.get<PostUI>(`/api/posts/${postId}`, {
-          headers: { 'x-profile-id': authProfileId },
-        });
+        const { data } = await apiClient.get<PostUI>(`/api/posts/${postId}`);
         return data;
       },
-      enabled: !!authProfileId && !!postId,
+      enabled: !!postId,
       staleTime: 1000 * 60 * 5,
     }),
 };

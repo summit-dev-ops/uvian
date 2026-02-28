@@ -6,15 +6,11 @@ import {
   PageActionProvider,
   type ActionRegistrationType,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { jobMutations } from '~/lib/domains/jobs/api';
-// TODO: Import job mutations when available
-// import { jobMutations } from '~/lib/domains/jobs/api/mutations';
 
 export interface JobPageActionContextType {
   jobId: string;
-  // Pre-defined action IDs for type safety
   readonly ACTION_RETRY_JOB: 'retry-job';
   readonly ACTION_PAUSE_JOB: 'pause-job';
   readonly ACTION_RESUME_JOB: 'resume-job';
@@ -26,7 +22,7 @@ export interface JobPageActionContextType {
 interface JobPageActionProviderProps {
   children: React.ReactNode;
   jobId: string;
-  jobStatus?: string; // To determine which actions are available
+  jobStatus?: string;
   onError?: (error: Error, actionId: string) => void;
   onSuccess?: (actionId: string) => void;
 }
@@ -49,7 +45,6 @@ export function JobPageActionProvider({
 }: JobPageActionProviderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
 
   const { mutate: deleteJob } = useMutation(
     jobMutations.deleteJob(queryClient)
@@ -59,77 +54,36 @@ export function JobPageActionProvider({
     jobMutations.cancelJob(queryClient)
   );
 
-  // Action handlers - these are the business logic for job operations
   const handleRetry = React.useCallback(async () => {
-    if (activeProfileId) {
-      try {
-        await retryJob({
-          authProfileId: activeProfileId,
-          jobId,
-        });
-
-        console.log(`Retrying job ${jobId} for profile ${activeProfileId}`);
-      } catch (error) {
-        console.error('Failed to retry job:', error);
-        throw error;
-      }
+    try {
+      await retryJob({ jobId });
+    } catch (error) {
+      console.error('Failed to retry job:', error);
+      throw error;
     }
-  }, [activeProfileId, jobId]);
+  }, [retryJob, jobId]);
 
   const handlePause = React.useCallback(async () => {
-    if (
-      activeProfileId &&
-      (jobStatus === 'running' || jobStatus === 'pending')
-    ) {
-      try {
-        // TODO: Implement actual pause logic
-        // await pauseJob({
-        //   authProfileId: activeProfileId,
-        //   jobId,
-        // });
-
-        console.log(`Pausing job ${jobId} for profile ${activeProfileId}`);
-      } catch (error) {
-        console.error('Failed to pause job:', error);
-        throw error;
-      }
+    if (jobStatus === 'running' || jobStatus === 'pending') {
+      console.log(`Pausing job ${jobId}`);
     } else {
       throw new Error('Job cannot be paused in current status');
     }
-  }, [activeProfileId, jobId, jobStatus]);
+  }, [jobId, jobStatus]);
 
   const handleResume = React.useCallback(async () => {
-    if (activeProfileId && jobStatus === 'paused') {
-      try {
-        // TODO: Implement actual resume logic
-        // await resumeJob({
-        //   authProfileId: activeProfileId,
-        //   jobId,
-        // });
-
-        console.log(`Resuming job ${jobId} for profile ${activeProfileId}`);
-      } catch (error) {
-        console.error('Failed to resume job:', error);
-        throw error;
-      }
+    if (jobStatus === 'paused') {
+      console.log(`Resuming job ${jobId}`);
     } else {
       throw new Error('Job cannot be resumed in current status');
     }
-  }, [activeProfileId, jobId, jobStatus]);
+  }, [jobId, jobStatus]);
 
   const handleCancel = React.useCallback(async () => {
-    if (
-      activeProfileId &&
-      (jobStatus === 'pending' || jobStatus === 'running')
-    ) {
+    if (jobStatus === 'pending' || jobStatus === 'running') {
       try {
-        // TODO: Implement actual cancel logic
-        await cancelJob({
-          authProfileId: activeProfileId,
-          jobId,
-        });
-
-        console.log(`Canceling job ${jobId} for profile ${activeProfileId}`);
+        await cancelJob({ jobId });
+        console.log(`Canceling job ${jobId}`);
       } catch (error) {
         console.error('Failed to cancel job:', error);
         throw error;
@@ -137,40 +91,28 @@ export function JobPageActionProvider({
     } else {
       throw new Error('Job cannot be canceled in current status');
     }
-  }, [activeProfileId, jobId, jobStatus]);
+  }, [cancelJob, jobId, jobStatus]);
 
   const handleDelete = React.useCallback(async () => {
-    if (activeProfileId) {
-      try {
-        // TODO: Implement actual delete logic
-        await deleteJob({
-          authProfileId: activeProfileId,
-          jobId,
-        });
-
-        console.log(`Deleting job ${jobId} for profile ${activeProfileId}`);
-
-        // Navigate back to jobs list after successful deletion
-        router.push('/jobs');
-      } catch (error) {
-        console.error('Failed to delete job:', error);
-        throw error;
-      }
+    try {
+      await deleteJob({ jobId });
+      console.log(`Deleting job ${jobId}`);
+      router.push('/jobs');
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+      throw error;
     }
-  }, [activeProfileId, jobId, router]);
+  }, [deleteJob, jobId, router]);
 
   const handleViewLogs = React.useCallback(async () => {
-    // Navigate to job logs view
     router.push(`/jobs/${jobId}/logs`);
   }, [jobId, router]);
 
-  // Determine which actions are available based on job status
   const isRetryable = ['failed', 'error'].includes(jobStatus);
   const isPausable = ['running', 'pending'].includes(jobStatus);
   const isResumable = jobStatus === 'paused';
   const isCancellable = ['pending', 'running'].includes(jobStatus);
 
-  // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
       id: JOB_ACTION_IDS.RETRY_JOB,

@@ -4,7 +4,6 @@ import { useQueries } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import type { ConversationUI } from '~/lib/domains/chat/types';
 import type { PreviewData } from '~/lib/domains/chat/types';
-import { useUserSessionStore } from '../../user/hooks/use-user-store';
 
 interface UseConversationPreviewsReturn {
   previews: PreviewData[];
@@ -16,10 +15,9 @@ interface UseConversationPreviewsReturn {
 export const useConversationPreviews = (
   conversations: ConversationUI[]
 ): UseConversationPreviewsReturn => {
-  const { activeProfileId } = useUserSessionStore();
   const queries = useQueries({
     queries: conversations.map((conv) => ({
-      ...chatQueries.messages(activeProfileId, conv.id),
+      ...chatQueries.messages(conv.id),
       staleTime: 1000 * 60 * 2, // 2 minutes cache for previews
       select: (messages: any[]): PreviewData => ({
         conversationId: conv.id,

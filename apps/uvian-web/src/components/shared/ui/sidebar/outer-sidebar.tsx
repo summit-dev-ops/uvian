@@ -11,7 +11,6 @@ import {
 } from '@org/ui';
 import { useQuery } from '@tanstack/react-query';
 import { spacesQueries } from '~/lib/domains/spaces/api';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface OuterSidebarProps {
   className?: string;
@@ -20,10 +19,9 @@ interface OuterSidebarProps {
 export function OuterSidebar({
   className,
 }: OuterSidebarProps): React.ReactNode {
-  const { activeProfileId } = useUserSessionStore();
   const [activeItem, setActiveItem] = React.useState<string>('home');
 
-  const { data: spaces = [] } = useQuery(spacesQueries.spaces(activeProfileId));
+  const { data: spaces = [] } = useQuery(spacesQueries.spaces());
 
   return (
     <TooltipProvider delayDuration={0}>

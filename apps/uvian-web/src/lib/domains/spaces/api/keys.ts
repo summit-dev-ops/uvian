@@ -1,21 +1,16 @@
 /**
  * Spaces Domain Query Key Factory
- *
- * Standardized query keys for cache management and invalidation.
  */
 
 export const spacesKeys = {
   all: ['spaces'] as const,
-  lists: (authProfileId: string | undefined) => [...spacesKeys.all, authProfileId, 'list'] as const,
-  list: (authProfileId: string | undefined) => [...spacesKeys.lists(authProfileId)] as const,
-  details: (authProfileId: string | undefined) =>
-    [...spacesKeys.all, authProfileId, 'detail'] as const,
-  detail: (authProfileId: string | undefined, spaceId?: string) =>
-    [...spacesKeys.details(authProfileId), spaceId] as const,
-  members: (authProfileId: string | undefined, spaceId?: string) =>
-    [...spacesKeys.detail(authProfileId, spaceId), 'members'] as const,
-  conversations: (authProfileId: string | undefined, spaceId?: string) =>
-    [...spacesKeys.detail(authProfileId, spaceId), 'conversations'] as const,
-  stats: (authProfileId: string | undefined) =>
-    [...spacesKeys.all, authProfileId, 'stats'] as const,
+  lists: () => [...spacesKeys.all, 'list'] as const,
+  list: () => [...spacesKeys.lists()] as const,
+  details: () => [...spacesKeys.all, 'detail'] as const,
+  detail: (spaceId: string) => [...spacesKeys.details(), spaceId] as const,
+  members: (spaceId: string) =>
+    [...spacesKeys.detail(spaceId), 'members'] as const,
+  conversations: (spaceId: string) =>
+    [...spacesKeys.detail(spaceId), 'conversations'] as const,
+  stats: () => [...spacesKeys.all, 'stats'] as const,
 };

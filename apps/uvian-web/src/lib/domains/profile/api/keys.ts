@@ -2,7 +2,7 @@
  * User Domain Query Key Factory
  *
  * Standardized query keys for cache management and invalidation.
- * Profiles and settings queries are unified - they work for any userId.
+ * Profiles and settings queries are unified - they work for any profileId.
  */
 
 import type { ProfileSearchParams } from '../types';

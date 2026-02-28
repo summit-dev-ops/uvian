@@ -1,14 +1,11 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { profileService } from '../services/profile.service';
 import {
   CreateProfileRequest,
+  UpdateProfileRequest,
   DeleteProfileRequest,
   GetProfileRequest,
-  ProfileSearchFilters,
-  SearchProfilesRequest,
-  UpdateProfileRequest,
 } from '../types/profile.types';
-import { userService } from '../services/user.service';
 
 export default async function profilesRoutes(fastify: FastifyInstance) {
   fastify.post<CreateProfileRequest>(
@@ -18,41 +15,37 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['displayName'],
           properties: {
-            profileId: { type: 'string' },
-            displayName: { type: 'string', minLength: 1 },
+            displayName: { type: 'string' },
             avatarUrl: { type: 'string' },
-            coverUrl: { type: 'string' },
             bio: { type: 'string' },
-            agentConfig: { type: 'object' },
-            publicFields: { type: 'object' },
-            type: {
-              type: 'string',
-              enum: ['human', 'agent', 'system', 'admin'],
-            },
           },
           additionalProperties: false,
         },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<CreateProfileRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const userId = await userService.getCurrentUserFromRequest(request);
+        const userId = request.user?.id;
         if (!userId) {
           reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
-        const data = request.body;
-        const profile = await profileService.createProfile(
+
+        const { displayName, avatarUrl, bio } = request.body || {};
+
+        const profile = await profileService.createOrUpdateProfile(
           request.supabase,
-          data.profileId,
           userId,
-          data
+          { displayName, avatarUrl, bio }
         );
+
         reply.code(201).send(profile);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to create profile' });
       }
     }
   );
@@ -73,41 +66,43 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
         body: {
           type: 'object',
           properties: {
-            displayName: { type: 'string', minLength: 1 },
+            displayName: { type: 'string' },
             avatarUrl: { type: 'string' },
-            coverUrl: { type: 'string' },
             bio: { type: 'string' },
-            agentConfig: { type: 'object' },
-            publicFields: { type: 'object' },
-            isActive: { type: 'boolean' },
           },
           additionalProperties: false,
         },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<UpdateProfileRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const userId = await userService.getCurrentUserFromRequest(request);
+        const userId = request.user?.id;
         if (!userId) {
           reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
 
         const { profileId } = request.params;
-        const data = request.body;
+        const { displayName, avatarUrl, bio } = request.body || {};
 
-        const newProfile = await profileService.updateProfile(
+        const profile = await profileService.updateProfile(
           request.supabase,
-          profileId,
           userId,
-          data
+          profileId,
+          { displayName, avatarUrl, bio }
         );
-        reply.send(newProfile);
+
+        reply.send(profile);
       } catch (error: any) {
-        if (error.message === 'User profile not found') {
-          reply.code(401).send({ error: error.message });
+        if (error.message.includes('another user')) {
+          reply
+            .code(403)
+            .send({ error: "Cannot update another user's profile" });
         } else {
-          reply.code(400).send({ error: error.message });
+          reply.code(400).send({ error: 'Failed to update profile' });
         }
       }
     }
@@ -126,30 +121,33 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
           },
           additionalProperties: false,
         },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
       },
     },
-    async (request, reply) => {
+    async (
+      request: FastifyRequest<DeleteProfileRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const userId = await userService.getCurrentUserFromRequest(request);
+        const userId = request.user?.id;
         if (!userId) {
-          return reply.code(401).send({ error: 'Unauthorized' });
+          reply.code(401).send({ error: 'Unauthorized' });
+          return;
         }
 
         const { profileId } = request.params;
 
-        await profileService.deleteProfile(request.supabase, profileId, userId);
+        await profileService.deleteProfile(request.supabase, userId, profileId);
+
         reply.code(204).send();
       } catch (error: any) {
-        if (error.message === 'User profile not found') {
-          reply.code(401).send({ error: error.message });
+        if (error.message.includes('another user')) {
+          reply
+            .code(403)
+            .send({ error: "Cannot delete another user's profile" });
+        } else if (error.message.includes('not found')) {
+          reply.code(404).send({ error: 'Profile not found' });
         } else {
-          reply.code(400).send({ error: error.message });
+          reply.code(400).send({ error: 'Failed to delete profile' });
         }
       }
     }
@@ -168,116 +166,24 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
           },
           additionalProperties: false,
         },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
       },
     },
-    async (request, reply) => {
+    async (request: FastifyRequest<GetProfileRequest>, reply: FastifyReply) => {
       try {
-        const userId = await userService.getCurrentUserFromRequest(request);
-        if (!userId) {
-          reply.code(401).send({ error: 'Unauthorized' });
-          return;
-        }
-
         const { profileId } = request.params;
+
         const profile = await profileService.getProfile(
           request.supabase,
           profileId
         );
 
-        if (!profile) {
-          reply.code(404).send({ error: 'Profile not found' });
-          return;
-        }
-
         reply.send(profile);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
-      }
-    }
-  );
-
-  fastify.get<SearchProfilesRequest>(
-    '/api/profiles/search',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        querystring: {
-          type: 'object',
-          properties: {
-            query: { type: 'string' },
-            type: {
-              anyOf: [
-                { type: 'string' },
-                {
-                  type: 'array',
-                  items: {
-                    type: 'string',
-                    enum: ['human', 'agent', 'system', 'admin'],
-                  },
-                },
-              ],
-            },
-            sortBy: { type: 'string', enum: ['relevance', 'createdAt'] },
-            sortOrder: { type: 'string', enum: ['asc', 'desc'] },
-            page: { type: 'string' },
-            limit: { type: 'string' },
-          },
-        },
-        headers: {
-          type: 'object',
-          properties: {
-            profileId: { type: 'string' },
-          },
-        },
-      },
-    },
-    async (request, reply) => {
-      try {
-        const userId = await userService.getCurrentUserFromRequest(request);
-        if (!userId) {
-          reply.code(401).send({ error: 'Unauthorized' });
-          return;
+        if (error.message.includes('not found')) {
+          reply.code(404).send({ error: 'Profile not found' });
+        } else {
+          reply.code(400).send({ error: 'Failed to fetch profile' });
         }
-
-        const {
-          query,
-          type,
-          sortBy = 'relevance',
-          sortOrder = 'desc',
-          page = '1',
-          limit = '20',
-        } = request.query;
-
-        const searchFilters: ProfileSearchFilters = {
-          query: query || '',
-          type: type
-            ? Array.isArray(type)
-              ? type
-              : [type]
-            : ['human', 'agent'],
-          sortBy:
-            sortBy === 'relevance' || sortBy === 'createdAt'
-              ? sortBy
-              : 'relevance',
-          sortOrder:
-            sortOrder === 'asc' || sortOrder === 'desc' ? sortOrder : 'desc',
-          page: Math.max(1, parseInt(page) || 1),
-          limit: Math.min(100, Math.max(1, parseInt(limit) || 20)),
-        };
-
-        const searchResults = await profileService.searchProfiles(
-          request.supabase,
-          searchFilters
-        );
-        reply.send(searchResults);
-      } catch (error: any) {
-        reply.code(400).send({ error: error.message });
       }
     }
   );

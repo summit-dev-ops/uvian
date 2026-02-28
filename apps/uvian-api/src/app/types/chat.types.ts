@@ -1,7 +1,7 @@
 export interface Conversation {
   id: string;
   title: string;
-  resourceScopeId:string;
+  resourceScopeId: string;
   spaceId?: string;
   createdAt: string;
   updatedAt: string;
@@ -19,10 +19,11 @@ export interface Message {
 }
 
 export interface ConversationMembership {
-  profileId: string;
+  userId: string;
   conversationId: string;
   role: ConversationMembershipRole;
   createdAt: string;
+  syncStatus?: 'synced' | 'pending' | 'error';
 }
 
 export interface ConversationMembershipRole {
@@ -32,11 +33,11 @@ export interface ConversationMembershipRole {
 export interface CreateConversationPayload {
   id?: string;
   title: string;
-  profileId: string;
+  spaceId?: string;
 }
 
 export interface InviteConversationMemberPayload {
-  profileId: string;
+  userId: string;
   role?: ConversationMembershipRole;
 }
 
@@ -46,7 +47,6 @@ export interface UpdateConversationMemberRolePayload {
 
 export interface CreateMessagePayload {
   id: string;
-  senderId: string;
   content: string;
   role?: 'user' | 'assistant' | 'system';
 }
@@ -55,17 +55,15 @@ export interface CreateConversationRequest {
   Body: CreateConversationPayload;
 }
 
-export interface GetConversationsRequest {
-  Headers: {
-    profileId: string;
-  };
-}
+export type GetConversationsRequest = {
+  Querystring?: Record<string, unknown>;
+  Params?: Record<string, unknown>;
+  Body?: Record<string, unknown>;
+};
+
 export interface GetConversationRequest {
   Params: {
     conversationId: string;
-  };
-  Headers: {
-    profileId: string;
   };
 }
 
@@ -73,51 +71,45 @@ export interface GetConversationMembersRequest {
   Params: {
     conversationId: string;
   };
-  Headers: {
-    profileId: string;
-  };
 }
 
 export interface InviteConversationMemberRequest {
-  Params: { conversationId: string };
-  Body: InviteConversationMemberPayload;
-  Headers: {
-    profileId: string;
+  Params: {
+    conversationId: string;
   };
+  Body: InviteConversationMemberPayload;
 }
 
 export interface DeleteConversationMemberRequest {
-  Params: { conversationId: string; profileId: string };
-  Headers: {
-    profileId: string;
+  Params: {
+    conversationId: string;
+    userId: string;
   };
 }
 
 export interface UpdateConversationMemberRoleRequest {
-  Params: { conversationId: string; profileId: string };
-  Body: UpdateConversationMemberRolePayload;
-  Headers: {
-    profileId: string;
+  Params: {
+    conversationId: string;
+    userId: string;
   };
+  Body: UpdateConversationMemberRolePayload;
 }
 
 export interface CreateMessageRequest {
-  Params: { conversationId: string };
-  Body: CreateMessagePayload;
-  Headers: {
-    profileId: string;
+  Params: {
+    conversationId: string;
   };
+  Body: CreateMessagePayload;
 }
+
 export interface GetMessagesRequest {
-  Params: { conversationId: string };
-  Headers: {
-    profileId: string;
+  Params: {
+    conversationId: string;
   };
 }
 
 export interface DeleteConversationRequest {
-  Params: { conversationId: string };
-  Headers: {
-    profileId: string;
+  Params: {
+    conversationId: string;
   };
 }

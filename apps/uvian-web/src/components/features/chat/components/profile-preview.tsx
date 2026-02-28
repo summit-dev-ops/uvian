@@ -14,22 +14,24 @@ import {
 } from '@org/ui';
 
 interface ProfilePreviewProps {
-  profileId: string;
+  profileId?: string;
   profile?: ProfileUI;
   children: React.ReactNode;
-  asChild?:boolean
+  asChild?: boolean;
 }
 
 export function ProfilePreview({
   profileId,
-  children,asChild
+  profile: passedProfile,
+  children,
+  asChild,
 }: ProfilePreviewProps) {
-  const { data: fullProfile } = useQuery({
+  const { data: fetchedProfile } = useQuery({
     ...profileQueries.profile(profileId),
-    enabled:  !!profileId,
+    enabled: !!profileId && !passedProfile,
   });
 
-  const currentProfile = fullProfile;
+  const currentProfile = passedProfile || fetchedProfile;
 
   return (
     <HoverCard>
@@ -43,7 +45,7 @@ export function ProfilePreview({
 
 interface ProfilePreviewContentProps {
   profile?: ProfileUI;
-  profileId: string;
+  profileId?: string;
 }
 
 function ProfilePreviewContent({

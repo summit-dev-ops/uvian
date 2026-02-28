@@ -9,7 +9,6 @@ import React, {
 import { io, Socket } from 'socket.io-client';
 import type { SocketEvents } from './types';
 import { useAuth } from '~/lib/auth/auth-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000'; // Add a fallback for testing
@@ -29,9 +28,8 @@ interface Props {
 }
 
 export const SocketProvider: React.FC<Props> = ({ children }) => {
-  // 1. Use useState instead of useRef so the context updates when socket is ready
+  // 1. Use use() instead of useRef so the context updates when socket is ready
   const [socket, setSocket] = useState<Socket<SocketEvents> | null>(null);
-  const { activeProfileId } = useUserSessionStore();
   const [isConnected, setIsConnected] = useState(false);
   const { session } = useAuth();
 
@@ -52,7 +50,6 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
       reconnectionAttempts: 5,
       auth: {
         token: session.access_token,
-        profileId: activeProfileId,
       },
     });
 

@@ -10,13 +10,28 @@ import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { userKeys } from './keys';
 import { SettingsUI } from '../types';
-
+import type { ProfileUI } from '~/lib/domains/profile/types';
 
 // ============================================================================
 // Query Options
 // ============================================================================
 
 export const userQueries = {
+  /**
+   * Fetch a profile by userId.
+   * Queries the profiles table by user_id column via /api/users/:userId/profile.
+   */
+  profileByUserId: (userId: string) =>
+    queryOptions({
+      queryKey: userKeys.profileByUserId(userId),
+      queryFn: async () => {
+        const { data } = await apiClient.get<ProfileUI>(
+          `/api/users/${userId}/profile`
+        );
+        return data;
+      },
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    }),
   /**
    * Fetch current user's settings.
    * Note: Settings are private to the authenticated user.
@@ -28,9 +43,8 @@ export const userQueries = {
         const { data } = await apiClient.get<SettingsUI>(
           `/api/users/me/settings`
         );
-        return data
+        return data;
       },
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
-    
 };

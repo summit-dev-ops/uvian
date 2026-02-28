@@ -18,7 +18,6 @@ import {
   AvatarFallback,
 } from '@org/ui';
 import { profileQueries } from '~/lib/domains/profile/api/queries';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import type { ProfileUI } from '~/lib/domains/profile/types';
 
 interface ProfileSidebarProps {
@@ -27,8 +26,6 @@ interface ProfileSidebarProps {
 
 export function ProfileSidebar({ profileId }: ProfileSidebarProps) {
   const pathname = usePathname();
-  const { activeProfileId } = useUserSessionStore();
-  const isOwnProfile = profileId === activeProfileId;
   const [view, setView] = React.useState<'agents' | 'spaces' | 'activity'>(
     'agents'
   );
@@ -116,18 +113,8 @@ export function ProfileSidebar({ profileId }: ProfileSidebarProps) {
                   ))
                 ) : (
                   <div className="px-4 py-2 text-sm text-muted-foreground">
-                    {isOwnProfile ? 'No agents created yet' : 'No agents'}
+                    No agents
                   </div>
-                )}
-                {isOwnProfile && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href={`/profiles/${profileId}/edit`}>
-                        <Bot className="h-4 w-4" />
-                        <span className="truncate">Create Agent</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
                 )}
               </SidebarMenu>
             </SidebarGroupContent>

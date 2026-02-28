@@ -8,65 +8,34 @@ import type { JobFilters } from '../types';
 
 export const jobKeys = {
   all: ['jobs'] as const,
-  lists: (authProfileId: string | undefined) =>
-    [...jobKeys.all, authProfileId, 'list'] as const,
-  list: (authProfileId: string | undefined, filters: JobFilters) =>
-    [...jobKeys.lists(authProfileId), filters] as const,
-  details: (authProfileId: string | undefined) =>
-    [...jobKeys.all, authProfileId, 'detail'] as const,
-  detail: (authProfileId: string | undefined, jobId: string) =>
-    [...jobKeys.details(authProfileId), jobId] as const,
+  lists: () => [...jobKeys.all, 'list'] as const,
+  list: (filters: JobFilters) => [...jobKeys.lists(), filters] as const,
+  details: () => [...jobKeys.all, 'detail'] as const,
+  detail: (jobId: string) => [...jobKeys.details(), jobId] as const,
   listBySpace: (
-    authProfileId: string | undefined,
     spaceId: string,
     filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
-  ) =>
-    [...jobKeys.all, authProfileId, 'space', spaceId, 'list', filters] as const,
+  ) => [...jobKeys.all, 'space', spaceId, 'list', filters] as const,
   listByConversation: (
-    authProfileId: string | undefined,
     conversationId: string,
     filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
   ) =>
-    [
-      ...jobKeys.all,
-      authProfileId,
-      'conversation',
-      conversationId,
-      'list',
-      filters,
-    ] as const,
+    [...jobKeys.all, 'conversation', conversationId, 'list', filters] as const,
   usage: (
-    authProfileId: string | undefined,
     filters?: Omit<JobFilters, 'spaceId' | 'conversationId' | 'authProfileId'>
-  ) => [...jobKeys.all, authProfileId, 'usage', filters] as const,
-  metrics: (authProfileId: string | undefined) =>
-    [...jobKeys.all, authProfileId, 'metrics'] as const,
-  metricsByDate: (
-    authProfileId: string | undefined,
-    dateFrom?: string,
-    dateTo?: string
-  ) => [...jobKeys.metrics(authProfileId), dateFrom, dateTo] as const,
-  metricsBySpace: (
-    authProfileId: string | undefined,
-    spaceId: string,
-    dateFrom?: string,
-    dateTo?: string
-  ) =>
-    [
-      ...jobKeys.metrics(authProfileId),
-      'space',
-      spaceId,
-      dateFrom,
-      dateTo,
-    ] as const,
+  ) => [...jobKeys.all, 'usage', filters] as const,
+  metrics: () => [...jobKeys.all, 'metrics'] as const,
+  metricsByDate: (dateFrom?: string, dateTo?: string) =>
+    [...jobKeys.metrics(), dateFrom, dateTo] as const,
+  metricsBySpace: (spaceId: string, dateFrom?: string, dateTo?: string) =>
+    [...jobKeys.metrics(), 'space', spaceId, dateFrom, dateTo] as const,
   metricsByConversation: (
-    authProfileId: string | undefined,
     conversationId: string,
     dateFrom?: string,
     dateTo?: string
   ) =>
     [
-      ...jobKeys.metrics(authProfileId),
+      ...jobKeys.metrics(),
       'conversation',
       conversationId,
       dateFrom,

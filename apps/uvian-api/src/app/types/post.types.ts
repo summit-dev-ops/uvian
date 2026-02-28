@@ -35,3 +35,9 @@ export interface GetPostRequest {
     id: string;
   };
 }
+
+export interface DeletePostRequest {
+  Params: {
+    id: string;
+  };
+}

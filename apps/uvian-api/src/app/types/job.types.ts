@@ -97,13 +97,11 @@ export interface JobMetrics {
 }
 
 export interface GetJobMetricsRequest {
-  Params?: {
-    scopeType?: 'space' | 'conversation';
-    scopeId?: string;
-  };
   Querystring?: {
     dateFrom?: string;
     dateTo?: string;
+    spaceId?: string;
+    conversationId?: string;
   };
 }
 

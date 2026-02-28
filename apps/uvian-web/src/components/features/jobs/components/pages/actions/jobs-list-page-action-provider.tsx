@@ -6,7 +6,6 @@ import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import { jobKeys, jobMutations } from '~/lib/domains/jobs/api';
 
 export interface JobsListPageActionContextType {
@@ -31,7 +30,6 @@ export function JobsListPageActionProvider({
   onSuccess,
 }: JobsListPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
 
   const { mutate: createJob } = useMutation(
     jobMutations.createJob(queryClient)
@@ -40,13 +38,8 @@ export function JobsListPageActionProvider({
   // Handler for creating a new job - called by the modal
   const handleJobCreation = React.useCallback(
     async (data: { type: string; resourceScopeId: string; input: any }) => {
-      if (!activeProfileId) {
-        throw new Error('No active profile ID');
-      }
-
       try {
         await createJob({
-          authProfileId: activeProfileId,
           type: data.type,
           input: data.input,
           resourceScopeId: data.resourceScopeId,
@@ -59,7 +52,7 @@ export function JobsListPageActionProvider({
         throw error;
       }
     },
-    [activeProfileId, createJob]
+    [createJob]
   );
 
   // Handler for refresh action

@@ -12,17 +12,13 @@ import {
   BreadcrumbSeparator,
   Skeleton,
 } from '@org/ui';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 /**
  * Simple breadcrumb for individual space page
  * Shows: Home > Spaces > [Space Name]
  */
 export function SpacePageBreadcrumb({ spaceId }: { spaceId: string }) {
-  const { activeProfileId } = useUserSessionStore();
-  const { data: space, isLoading } = useQuery(
-    spacesQueries.space(activeProfileId, spaceId)
-  );
+  const { data: space, isLoading } = useQuery(spacesQueries.space(spaceId));
 
   return (
     <Breadcrumb>

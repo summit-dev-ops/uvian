@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { spacesQueries, spacesMutations } from '~/lib/domains/spaces/api';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import {
   InterfaceLayout,
   InterfaceHeader,
@@ -48,7 +47,6 @@ interface SpaceInterfaceProps {
 export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
   const modalContext = useModalContext();
 
   const {
@@ -56,7 +54,7 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
     isLoading,
     error,
     refetch,
-  } = useQuery(spacesQueries.space(activeProfileId, spaceId));
+  } = useQuery(spacesQueries.space(spaceId));
 
   const { mutate: deleteSpace } = useMutation(
     spacesMutations.deleteSpace(queryClient)
@@ -70,21 +68,19 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
     if (!space) return;
     modalContext.openModal(MODAL_IDS.CONFIRM_DELETE, {
       onConfirm: () => {
-        if (activeProfileId) {
-          deleteSpace(
-            { authProfileId: activeProfileId, spaceId: space.id },
-            {
-              onSuccess: () => {
-                router.push('/spaces');
-              },
-            }
-          );
-        }
+        deleteSpace(
+          { spaceId: space.id },
+          {
+            onSuccess: () => {
+              router.push('/spaces');
+            },
+          }
+        );
       },
       title: 'Delete Space',
       description: `Are you sure you want to delete "${space.name}"? This will also delete all conversations in this space.`,
     });
-  }, [space, deleteSpace, modalContext, router, activeProfileId]);
+  }, [space, deleteSpace, modalContext, router]);
 
   if (isLoading) {
     return (

@@ -76,7 +76,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.send(result);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to fetch feed' });
       }
     }
   );
@@ -110,7 +110,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.send(result);
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to fetch unread count' });
       }
     }
   );
@@ -149,7 +149,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.code(204).send();
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to mark feed item as read' });
       }
     }
   );
@@ -197,7 +197,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.code(204).send();
       } catch (error: any) {
-        reply.code(400).send({ error: error.message });
+        reply.code(400).send({ error: 'Failed to mark feed items as read' });
       }
     }
   );

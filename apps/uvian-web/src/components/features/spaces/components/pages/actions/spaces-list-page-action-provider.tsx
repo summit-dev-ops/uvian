@@ -8,7 +8,6 @@ import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 export interface SpacesListPageActionContextType {
   readonly ACTION_CREATE_SPACE: 'create-space';
@@ -32,7 +31,6 @@ export function SpacesListPageActionProvider({
   onSuccess,
 }: SpacesListPageActionProviderProps) {
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
 
   const { mutate: createSpace } = useMutation(
     spacesMutations.createSpace(queryClient)
@@ -44,32 +42,29 @@ export function SpacesListPageActionProvider({
       description?: string;
       isPrivate: boolean;
     }) => {
-      if (activeProfileId) {
-        try {
-          createSpace({
-            authProfileId: activeProfileId,
-            id: crypto.randomUUID(),
-            name: data.name,
-            description: data.description,
-            isPrivate: data.isPrivate,
-          });
-        } catch (error) {
-          console.error('Failed to create space:', error);
-          throw error;
-        }
+      try {
+        createSpace({
+          id: crypto.randomUUID(),
+          name: data.name,
+          description: data.description,
+          isPrivate: data.isPrivate,
+        });
+      } catch (error) {
+        console.error('Failed to create space:', error);
+        throw error;
       }
     },
-    [createSpace, activeProfileId]
+    [createSpace]
   );
 
   const handleRefreshSpaces = React.useCallback(async () => {
     queryClient.invalidateQueries({
-      queryKey: spacesQueries.spaces(activeProfileId).queryKey,
+      queryKey: spacesQueries.spaces().queryKey,
     });
     queryClient.invalidateQueries({
-      queryKey: spacesQueries.spaceStats(activeProfileId).queryKey,
+      queryKey: spacesQueries.spaceStats().queryKey,
     });
-  }, [queryClient, activeProfileId]);
+  }, [queryClient]);
 
   const actions: ActionRegistrationType[] = [
     {

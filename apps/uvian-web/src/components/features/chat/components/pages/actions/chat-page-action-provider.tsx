@@ -4,13 +4,11 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
-import { useConversationMembers } from '../../../hooks/use-conversation-members';
 
 import {
   PageActionProvider,
   type ActionRegistrationType,
 } from '../../../../../shared/ui/pages/page-actions/page-action-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 export interface ChatPageActionContextType {
   conversationId: string;
@@ -44,8 +42,6 @@ export function ChatPageActionProvider({
 }: ChatPageActionProviderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
-  const { role, removeMember } = useConversationMembers(conversationId);
 
   // Mutation for deleting conversations
   const { mutate: deleteConversation } = useMutation(
@@ -54,32 +50,12 @@ export function ChatPageActionProvider({
 
   // Action handlers - these are the business logic that was in the original component
   const handleLeave = React.useCallback(async () => {
-    if (activeProfileId)
-      try {
-        await removeMember(activeProfileId);
-        router.push('/chats');
-      } catch (error) {
-        console.error('Failed to leave conversation:', error);
-        throw error;
-      }
-  }, [activeProfileId, removeMember, router]);
+    router.push('/chats');
+  }, [router]);
 
   const handleDelete = React.useCallback(async () => {
-    if (!(role?.name === 'owner' || role?.name === 'admin')) {
-      throw new Error('Only administrators can delete conversations.');
-    }
-    if (activeProfileId)
-      try {
-        await deleteConversation({
-          authProfileId: activeProfileId,
-          conversationId,
-        });
-        router.push('/chats');
-      } catch (error) {
-        console.error('Failed to delete conversation:', error);
-        throw error;
-      }
-  }, [role, deleteConversation, activeProfileId, conversationId, router]);
+    throw new Error('Only administrators can delete conversations.');
+  }, [deleteConversation, conversationId, router]);
 
   const handleExport = React.useCallback(async () => {
     // Export action opens the export modal - actual export happens in the modal
@@ -108,7 +84,6 @@ export function ChatPageActionProvider({
       id: CHAT_ACTION_IDS.SHOW_MEMBERS,
       label: 'Manage Members',
       handler: handleShowMembers,
-      disabled: !(role?.name === 'owner' || role?.name === 'admin'),
     },
     {
       id: CHAT_ACTION_IDS.DELETE_CONVERSATION,
@@ -116,7 +91,6 @@ export function ChatPageActionProvider({
       handler: handleDelete,
       destructive: true,
       loadingLabel: 'Deleting...',
-      disabled: !(role?.name === 'owner' || role?.name === 'admin'),
     },
   ];
 

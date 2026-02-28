@@ -18,66 +18,56 @@ export const spacesQueries = {
   /**
    * Fetch all spaces the user has access to.
    */
-  spaces: (authProfileId: string | undefined) =>
+  spaces: () =>
     queryOptions({
-      queryKey: spacesKeys.list(authProfileId),
+      queryKey: spacesKeys.list(),
       queryFn: async () => {
-        const { data } = await apiClient.get<SpaceUI[]>('/api/spaces', {
-          headers: { "x-profile-id": authProfileId },
-        });
+        const { data } = await apiClient.get<SpaceUI[]>('/api/spaces');
         return data;
       },
-      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 
   /**
    * Fetch a single space by ID.
    */
-  space: (authProfileId: string | undefined, spaceId: string) =>
+  space: (spaceId: string) =>
     queryOptions({
-      queryKey: spacesKeys.detail(authProfileId, spaceId),
+      queryKey: spacesKeys.detail(spaceId),
       queryFn: async () => {
-        const { data } = await apiClient.get<SpaceUI>(
-          `/api/spaces/${spaceId}`,
-          { headers: { "x-profile-id": authProfileId } }
-        );
+        const { data } = await apiClient.get<SpaceUI>(`/api/spaces/${spaceId}`);
         return data;
       },
-      enabled: !!authProfileId && !!spaceId,
+      enabled: !!spaceId,
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
 
   /**
    * Fetch all members of a space.
    */
-  spaceMembers: (authProfileId: string | undefined, spaceId: string) =>
+  spaceMembers: (spaceId: string) =>
     queryOptions({
-      queryKey: spacesKeys.members(authProfileId, spaceId),
+      queryKey: spacesKeys.members(spaceId),
       queryFn: async () => {
         const { data } = await apiClient.get<SpaceMemberUI[]>(
-          `/api/spaces/${spaceId}/members`,
-          { headers: { "x-profile-id": authProfileId } }
+          `/api/spaces/${spaceId}/members`
         );
         return data;
       },
-      enabled: !!authProfileId && !!spaceId,
+      enabled: !!spaceId,
       staleTime: 1000 * 60 * 2, // 2 minutes
     }),
 
   /**
    * Fetch space statistics.
    */
-  spaceStats: (authProfileId: string  | undefined) =>
+  spaceStats: () =>
     queryOptions({
-      queryKey: spacesKeys.stats(authProfileId),
+      queryKey: spacesKeys.stats(),
       queryFn: async () => {
-        const { data } = await apiClient.get<SpaceStats>('/api/spaces/stats', {
-          headers: { "x-profile-id": authProfileId },
-        });
+        const { data } = await apiClient.get<SpaceStats>('/api/spaces/stats');
         return data;
       },
-      enabled: !!authProfileId,
       staleTime: 1000 * 60 * 10, // 10 minutes
     }),
 };

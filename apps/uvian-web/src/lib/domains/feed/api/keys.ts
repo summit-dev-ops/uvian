@@ -6,7 +6,6 @@
 
 export const feedKeys = {
   all: ['feed'] as const,
-  feed: (profileId?: string) => [...feedKeys.all, profileId, 'feed'] as const,
-  unreadCount: (profileId?: string) =>
-    [...feedKeys.all, profileId, 'unread-count'] as const,
+  feed: () => [...feedKeys.all, 'feed'] as const,
+  unreadCount: () => [...feedKeys.all, 'unread-count'] as const,
 };

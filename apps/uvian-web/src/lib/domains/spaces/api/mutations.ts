@@ -15,7 +15,6 @@ import type { SpaceUI, SpaceMemberUI, SpaceMemberRole } from '../types';
 // ============================================================================
 
 export type CreateSpacePayload = {
-  authProfileId: string;
   id?: string;
   name: string;
   description?: string;
@@ -27,26 +26,22 @@ export type CreateSpacePayload = {
 
 export type UpdateSpacePayload = {
   id: string;
-  authProfileId: string;
 } & Partial<CreateSpacePayload>;
 
 export type InviteSpaceMemberPayload = {
-  authProfileId: string;
   spaceId: string;
-  targetMemberProfileId: string;
+  targetMemberUserId: string;
   role?: SpaceMemberRole;
 };
 
 export type RemoveSpaceMemberPayload = {
-  authProfileId: string;
   spaceId: string;
-  targetMemberProfileId: string;
+  targetMemberUserId: string;
 };
 
 export type UpdateSpaceMemberRolePayload = {
-  authProfileId: string;
   spaceId: string;
-  targetMemberProfileId: string;
+  targetMemberUserId: string;
   role: SpaceMemberRole;
 };
 
@@ -89,8 +84,7 @@ export const spacesMutations = {
       };
       const { data } = await apiClient.post<SpaceUI>(
         '/api/spaces',
-        payloadWithId,
-        { headers: { 'x-profile-id': payload.authProfileId } }
+        payloadWithId
       );
       return data;
     },
@@ -98,12 +92,12 @@ export const spacesMutations = {
     onMutate: async (payload) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: spacesKeys.list(payload.authProfileId),
+        queryKey: spacesKeys.list(),
       });
 
       // Snapshot previous value
       const previousSpaces = queryClient.getQueryData<SpaceUI[]>(
-        spacesKeys.list(payload.authProfileId)
+        spacesKeys.list()
       );
 
       // Generate UUID for optimistic update (consistent with server)
@@ -124,9 +118,8 @@ export const spacesMutations = {
         syncStatus: 'pending',
       };
 
-      queryClient.setQueryData<SpaceUI[]>(
-        spacesKeys.list(payload.authProfileId),
-        (old) => (old ? [optimisticSpace, ...old] : [optimisticSpace])
+      queryClient.setQueryData<SpaceUI[]>(spacesKeys.list(), (old) =>
+        old ? [optimisticSpace, ...old] : [optimisticSpace]
       );
 
       return { previousSpaces };
@@ -135,20 +128,17 @@ export const spacesMutations = {
     onError: (_err, _payload, context) => {
       // Rollback on error
       if (context?.previousSpaces) {
-        queryClient.setQueryData(
-          spacesKeys.list(_payload.authProfileId),
-          context.previousSpaces
-        );
+        queryClient.setQueryData(spacesKeys.list(), context.previousSpaces);
       }
     },
 
     onSuccess: (newSpace, _payload) => {
       // Invalidate to refetch with server data
       queryClient.invalidateQueries({
-        queryKey: spacesKeys.list(_payload.authProfileId),
+        queryKey: spacesKeys.list(),
       });
       queryClient.invalidateQueries({
-        queryKey: spacesKeys.stats(_payload.authProfileId),
+        queryKey: spacesKeys.stats(),
       });
     },
   }),
@@ -167,8 +157,7 @@ export const spacesMutations = {
     mutationFn: async (payload) => {
       const { data } = await apiClient.patch<SpaceUI>(
         `/api/spaces/${payload.id}`,
-        payload,
-        { headers: { 'x-profile-id': payload.authProfileId } }
+        payload
       );
       return data;
     },
@@ -176,12 +165,12 @@ export const spacesMutations = {
     onMutate: async (payload) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: spacesKeys.detail(payload.authProfileId, payload.id),
+        queryKey: spacesKeys.detail(payload.id),
       });
 
       // Snapshot previous value
       const previousSpace = queryClient.getQueryData<SpaceUI>(
-        spacesKeys.detail(payload.authProfileId, payload.id)
+        spacesKeys.detail(payload.id)
       );
 
       // Optimistically update
@@ -200,9 +189,8 @@ export const spacesMutations = {
       updatedSpace.updatedAt = new Date().toISOString();
       updatedSpace.syncStatus = 'pending';
 
-      queryClient.setQueryData<SpaceUI>(
-        spacesKeys.detail(payload.authProfileId, payload.id),
-        (old) => (old ? { ...old, ...updatedSpace } : old)
+      queryClient.setQueryData<SpaceUI>(spacesKeys.detail(payload.id), (old) =>
+        old ? { ...old, ...updatedSpace } : old
       );
 
       return { previousSpace };
@@ -212,7 +200,7 @@ export const spacesMutations = {
       // Rollback on error
       if (context?.previousSpace) {
         queryClient.setQueryData(
-          spacesKeys.detail(_payload.authProfileId, _payload.id),
+          spacesKeys.detail(_payload.id),
           context.previousSpace
         );
       }
@@ -221,17 +209,15 @@ export const spacesMutations = {
     onSuccess: (updatedSpace, payload) => {
       // Update specific space cache
       queryClient.setQueryData(
-        spacesKeys.detail(payload.authProfileId, updatedSpace.id),
+        spacesKeys.detail(updatedSpace.id),
         updatedSpace
       );
 
       // Update spaces list cache
-      queryClient.setQueryData(
-        spacesKeys.list(payload.authProfileId),
-        (old: SpaceUI[] = []) =>
-          old.map((space) =>
-            space.id === updatedSpace.id ? updatedSpace : space
-          )
+      queryClient.setQueryData(spacesKeys.list(), (old: SpaceUI[] = []) =>
+        old.map((space) =>
+          space.id === updatedSpace.id ? updatedSpace : space
+        )
       );
     },
   }),
@@ -241,32 +227,25 @@ export const spacesMutations = {
    */
   deleteSpace: (
     queryClient: QueryClient
-  ): MutationOptions<
-    void,
-    Error,
-    { spaceId: string; authProfileId: string },
-    DeleteSpaceContext
-  > => ({
+  ): MutationOptions<void, Error, { spaceId: string }, DeleteSpaceContext> => ({
     mutationFn: async (payload) => {
-      await apiClient.delete(`/api/spaces/${payload.spaceId}`, {
-        headers: { 'x-profile-id': payload.authProfileId },
-      });
+      await apiClient.delete(`/api/spaces/${payload.spaceId}`);
     },
 
     onMutate: async (payload) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: spacesKeys.list(payload.authProfileId),
+        queryKey: spacesKeys.list(),
       });
 
       // Snapshot previous conversations
       const previousSpaces = queryClient.getQueryData<SpaceUI[]>(
-        spacesKeys.list(payload.authProfileId)
+        spacesKeys.list()
       );
 
       // Optimistically remove from list
       queryClient.setQueryData<SpaceUI[]>(
-        spacesKeys.list(payload.authProfileId),
+        spacesKeys.list(),
         (old) => old?.filter((space) => space.id !== payload.spaceId) || []
       );
 
@@ -276,31 +255,25 @@ export const spacesMutations = {
     onError: (_err, _payload, context) => {
       // Rollback on error
       if (context?.previousSpaces) {
-        queryClient.setQueryData(
-          spacesKeys.list(_payload.authProfileId),
-          context.previousSpaces
-        );
+        queryClient.setQueryData(spacesKeys.list(), context.previousSpaces);
       }
     },
 
     onSuccess: (_data, payload) => {
       // Remove space-specific caches
       queryClient.removeQueries({
-        queryKey: spacesKeys.detail(payload.authProfileId, payload.spaceId),
+        queryKey: spacesKeys.detail(payload.spaceId),
       });
       queryClient.removeQueries({
-        queryKey: spacesKeys.members(payload.authProfileId, payload.spaceId),
+        queryKey: spacesKeys.members(payload.spaceId),
       });
       queryClient.removeQueries({
-        queryKey: spacesKeys.conversations(
-          payload.authProfileId,
-          payload.spaceId
-        ),
+        queryKey: spacesKeys.conversations(payload.spaceId),
       });
 
       // Invalidate stats
       queryClient.invalidateQueries({
-        queryKey: spacesKeys.stats(payload.authProfileId),
+        queryKey: spacesKeys.stats(),
       });
     },
   }),
@@ -315,10 +288,9 @@ export const spacesMutations = {
       const { data } = await apiClient.post<SpaceMemberUI>(
         `/api/spaces/${payload.spaceId}/members/invite`,
         {
-          profile_id: payload.targetMemberProfileId,
+          userId: payload.targetMemberUserId,
           role: payload.role || { name: 'member' },
-        },
-        { headers: { 'x-profile-id': payload.authProfileId } }
+        }
       );
       return data;
     },
@@ -326,12 +298,12 @@ export const spacesMutations = {
     onSuccess: (_, payload) => {
       // Invalidate members list
       queryClient.invalidateQueries({
-        queryKey: spacesKeys.members(payload.authProfileId, payload.spaceId),
+        queryKey: spacesKeys.members(payload.spaceId),
       });
 
       // Update space member count
       queryClient.setQueryData(
-        spacesKeys.detail(payload.authProfileId, payload.spaceId),
+        spacesKeys.detail(payload.spaceId),
         (old: SpaceUI | undefined) => {
           if (!old) return old;
           return { ...old, memberCount: (old.memberCount || 0) + 1 };
@@ -348,20 +320,19 @@ export const spacesMutations = {
   ): MutationOptions<void, Error, RemoveSpaceMemberPayload> => ({
     mutationFn: async (payload) => {
       await apiClient.delete(
-        `/api/spaces/${payload.spaceId}/members/${payload.targetMemberProfileId}`,
-        { headers: { 'x-profile-id': payload.authProfileId } }
+        `/api/spaces/${payload.spaceId}/members/${payload.targetMemberUserId}`
       );
     },
 
     onSuccess: (_, payload) => {
       // Invalidate members list
       queryClient.invalidateQueries({
-        queryKey: spacesKeys.members(payload.authProfileId, payload.spaceId),
+        queryKey: spacesKeys.members(payload.spaceId),
       });
 
       // Update space member count
       queryClient.setQueryData(
-        spacesKeys.detail(payload.authProfileId, payload.spaceId),
+        spacesKeys.detail(payload.spaceId),
         (old: SpaceUI | undefined) => {
           if (!old) return old;
           return {
@@ -381,16 +352,15 @@ export const spacesMutations = {
   ): MutationOptions<SpaceMemberUI, Error, UpdateSpaceMemberRolePayload> => ({
     mutationFn: async (payload) => {
       const { data } = await apiClient.patch<SpaceMemberUI>(
-        `/api/spaces/${payload.spaceId}/members/${payload.targetMemberProfileId}/role`,
-        { role: payload.role },
-        { headers: { 'x-profile-id': payload.authProfileId } }
+        `/api/spaces/${payload.spaceId}/members/${payload.targetMemberUserId}/role`,
+        { role: payload.role }
       );
       return data;
     },
     onSuccess: (_, payload) => {
       // Invalidate members list
       queryClient.invalidateQueries({
-        queryKey: spacesKeys.members(payload.authProfileId, payload.spaceId),
+        queryKey: spacesKeys.members(payload.spaceId),
       });
     },
   }),

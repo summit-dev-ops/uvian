@@ -8,7 +8,6 @@ import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 export interface SpaceEditPageActionContextType {
   spaceId: string;
@@ -36,7 +35,6 @@ export function SpaceEditPageActionProvider({
 }: SpaceEditPageActionProviderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { activeProfileId } = useUserSessionStore();
 
   // Mutation for deleting spaces
   const { mutate: deleteSpace } = useMutation(
@@ -55,15 +53,14 @@ export function SpaceEditPageActionProvider({
 
   // Handler for deleting space
   const handleDeleteSpace = React.useCallback(async () => {
-    if (activeProfileId)
-      try {
-        await deleteSpace({ authProfileId: activeProfileId, spaceId });
-        router.push('/spaces');
-      } catch (error) {
-        console.error('Failed to delete space:', error);
-        throw error;
-      }
-  }, [deleteSpace, activeProfileId, router, spaceId]);
+    try {
+      await deleteSpace({ spaceId });
+      router.push('/spaces');
+    } catch (error) {
+      console.error('Failed to delete space:', error);
+      throw error;
+    }
+  }, [deleteSpace, router, spaceId]);
 
   // Success and error handlers for the PageActionProvider
   const handleActionSuccess = React.useCallback(

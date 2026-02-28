@@ -151,3 +151,21 @@ export interface GetTicketRequest {
 export interface GetTicketsRequest {
   Querystring: TicketFilters & PaginationOptions;
 }
+
+export interface UpdateTicketRequest {
+  Params: {
+    id: string;
+  };
+  Body: {
+    title?: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+  };
+}
+
+export interface DeleteTicketRequest {
+  Params: {
+    id: string;
+  };
+}

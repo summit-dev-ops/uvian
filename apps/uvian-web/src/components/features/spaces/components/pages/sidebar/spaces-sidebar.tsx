@@ -18,7 +18,6 @@ import {
 import { spacesQueries } from '~/lib/domains/spaces/api';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { jobQueries } from '~/lib/domains/jobs/api/queries';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import type { ConversationUI } from '~/lib/domains/chat/types';
 import type { SpaceMemberUI } from '~/lib/domains/spaces/types';
 
@@ -28,29 +27,22 @@ interface SpacesSidebarProps {
 
 export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
   const pathname = usePathname();
-  const { activeProfileId } = useUserSessionStore();
   const [view, setView] = React.useState<'conversations' | 'members' | 'jobs'>(
     'conversations'
   );
 
-  const { data: space } = useQuery(
-    spacesQueries.space(activeProfileId, spaceId)
-  );
+  const { data: space } = useQuery(spacesQueries.space(spaceId));
 
-  const { data: allConversations = [] } = useQuery(
-    chatQueries.conversations(activeProfileId)
-  );
+  const { data: allConversations = [] } = useQuery(chatQueries.conversations());
 
   const conversations = allConversations.filter(
     (c: ConversationUI) => c.resourceScopeId === spaceId
   );
 
-  const { data: members = [] } = useQuery(
-    spacesQueries.spaceMembers(activeProfileId, spaceId)
-  );
+  const { data: members = [] } = useQuery(spacesQueries.spaceMembers(spaceId));
 
   const { data: jobsData } = useQuery(
-    jobQueries.listBySpace(activeProfileId ?? undefined, spaceId, {
+    jobQueries.listBySpace(spaceId, {
       limit: 1,
       page: 1,
     })
@@ -141,9 +133,13 @@ export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
               <SidebarMenu>
                 {(members as SpaceMemberUI[]).length > 0 ? (
                   (members as SpaceMemberUI[]).map((member) => (
-                    <SidebarMenuItem key={member.profileId}>
+                    <SidebarMenuItem key={member.userId}>
                       <SidebarMenuButton asChild>
-                        <Link href={`/profiles/${member.profileId}`}>
+                        <Link
+                          href={`/profiles/${
+                            member.profile?.id || member.userId
+                          }`}
+                        >
                           <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs">
                             {member.profile?.displayName?.[0]?.toUpperCase() ||
                               '?'}

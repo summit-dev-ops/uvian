@@ -6,7 +6,7 @@
 
 export interface FeedItemUI {
   id: string;
-  profileId: string;
+  userId: string;
   type: 'post' | 'message' | 'job' | 'ticket';
   eventType: string;
   sourceId: string;

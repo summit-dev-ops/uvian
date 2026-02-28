@@ -14,12 +14,10 @@ import type { SettingsDraft } from '../types';
 // ============================================================================
 
 export interface UserSlice {
-  activeProfileId?: string;
   // State
   settingsDraft: SettingsDraft;
   isEditingSettings: boolean;
 
-  setActiveProfile: (newProfileId: string) => void;
   // Actions
   setSettingsDraft: (draft: SettingsDraft) => void;
   clearSettingsDraft: () => void;
@@ -33,12 +31,6 @@ const DEFAULT_SETTINGS_DRAFT: SettingsDraft = {};
 // ============================================================================
 
 export const createUserSlice: StateCreator<UserSlice> = (set, get) => ({
-  activeProfileId: undefined,
-  // Actions
-  setActiveProfile: (newProfileId) => {
-    console.log({newProfileId})
-    set({ activeProfileId: newProfileId });
-  },
   // Initial state
   settingsDraft: DEFAULT_SETTINGS_DRAFT,
   isEditingSettings: false,

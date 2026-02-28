@@ -2,9 +2,6 @@
 
 import React, { useState } from 'react';
 import { UserPlus } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { spacesQueries } from '~/lib/domains/spaces/api';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 import {
   InterfaceLayout,
   InterfaceHeader,
@@ -28,32 +25,28 @@ import {
   ItemTitle,
 } from '@org/ui';
 import { useSpaceMemberActions } from '../../hooks/use-space-member-actions';
+import { useSpaceMembers } from '../../hooks/use-space-members';
 import { createArraySelectionState } from '~/components/shared/actions/utils/create-selection-state';
 import { ActionManagerProvider } from '~/components/shared/actions/hocs/with-action-manager';
 import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
+import { useQuery } from '@tanstack/react-query';
+import { spacesQueries } from '~/lib/domains/spaces/api';
 
 interface SpaceMembersInterfaceProps {
   spaceId: string;
 }
 
 export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
-  const { activeProfileId } = useUserSessionStore();
   const modalContext = useModalContext();
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
-  const { data: space } = useQuery(
-    spacesQueries.space(activeProfileId, spaceId)
-  );
-  const {
-    data: members,
-    isLoading,
-    error,
-  } = useQuery(spacesQueries.spaceMembers(activeProfileId, spaceId));
+  const { data: space } = useQuery(spacesQueries.space(spaceId));
+  const { members, isLoading, error } = useSpaceMembers(spaceId);
 
   const isAdmin = space?.userRole === 'owner' || space?.userRole === 'admin';
 
   const selectedMembers = (members || []).filter((member) =>
-    selectedMemberIds.includes(member.profileId)
+    selectedMemberIds.includes(member.userId)
   );
   const selectionState = createArraySelectionState(selectedMembers);
 
@@ -66,17 +59,17 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedMemberIds(members?.map((m) => m.profileId) || []);
+      setSelectedMemberIds(members?.map((m) => m.userId) || []);
     } else {
       setSelectedMemberIds([]);
     }
   };
 
-  const handleSelectMember = (profileId: string, checked: boolean) => {
+  const handleSelectMember = (userId: string, checked: boolean) => {
     if (checked) {
-      setSelectedMemberIds((prev) => [...prev, profileId]);
+      setSelectedMemberIds((prev) => [...prev, userId]);
     } else {
-      setSelectedMemberIds((prev) => prev.filter((id) => id !== profileId));
+      setSelectedMemberIds((prev) => prev.filter((id) => id !== userId));
     }
   };
 
@@ -190,17 +183,17 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
 
                 {members?.map((member) => (
                   <Item
-                    key={member.profileId}
+                    key={member.userId}
                     className={`flex items-center gap-3 ${
-                      selectedMemberIds.includes(member.profileId)
+                      selectedMemberIds.includes(member.userId)
                         ? 'bg-primary/5'
                         : ''
                     }`}
                   >
                     <Checkbox
-                      checked={selectedMemberIds.includes(member.profileId)}
+                      checked={selectedMemberIds.includes(member.userId)}
                       onCheckedChange={(checked) =>
-                        handleSelectMember(member.profileId, !!checked)
+                        handleSelectMember(member.userId, !!checked)
                       }
                     />
                     <Avatar className="h-9 w-9">

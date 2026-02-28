@@ -12,7 +12,6 @@ import {
 } from '@org/ui';
 import { useQuery } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 /**
  * Simple breadcrumb for conversation members page
@@ -23,9 +22,8 @@ export function MembersPageBreadcrumb({
 }: {
   conversationId: string;
 }) {
-  const { activeProfileId } = useUserSessionStore();
   const { data: conversation, isLoading } = useQuery(
-    chatQueries.conversation(activeProfileId, conversationId)
+    chatQueries.conversation(conversationId)
   );
   return (
     <Breadcrumb>

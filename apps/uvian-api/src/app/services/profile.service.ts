@@ -1,491 +1,150 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import {
-  CreateProfilePayload,
-  Profile,
-  ProfileSearchFilters,
-  ProfileSearchResponse,
-  SearchableField,
-  UpdateProfilePayload,
-} from '../types/profile.types';
 import { adminSupabase } from '../clients/supabase.client';
-
-// Search configuration - easily extensible
-const SEARCH_CONFIG = {
-  fields: [
-    { name: 'display_name', weight: 2.0, boost: 2.0 }, // High priority
-    { name: 'bio', weight: 1.0, boost: 1.0 }, // Lower priority
-    // Future additions: skills, location, etc.
-  ],
-  maxResultsPerPage: 100,
-  defaultPageSize: 20,
-};
+import type { Profile } from '../types/profile.types';
 
 export class ProfileService {
+  // Helper to get user ID from request (for backward compatibility)
   async getCurrentProfileFromRequest(request: any): Promise<string> {
-    if (!request.headers || !request.headers['x-profile-id']) {
-      throw new Error('No profileId provided');
+    if (!request.user || !request.user.id) {
+      throw new Error('User not authenticated');
     }
-    return request.headers['x-profile-id'];
+    return request.user.id;
   }
 
-  // Profile CRUD operations
-  async getProfile(
-    supabaseClient: SupabaseClient,
-    profileId: string
-  ): Promise<Profile | undefined> {
-    const { data, error } = await supabaseClient
+  async getProfile(userClient: SupabaseClient, profileId: string) {
+    const { data, error } = await userClient
       .from('profiles')
       .select('*')
       .eq('id', profileId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw new Error(`Failed to fetch profile: ${error.message}`);
+    if (error || !data) {
+      throw new Error('Profile not found');
     }
 
-    if (!data) {
-      return undefined;
-    }
-
-    // Transform database format to interface format
-    return {
-      id: data.id,
-      userId: data.user_id,
-      type: data.type,
-      displayName: data.display_name,
-      avatarUrl: data.avatar_url,
-      coverUrl: data.cover_url,
-      bio: data.bio,
-      agentConfig: data.agent_config,
-      publicFields: data.public_fields,
-      isActive: data.is_active,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-    };
+    return this.transformFromDatabase(data);
   }
 
-  async getProfileByAuthUserId(
-    supabaseClient: SupabaseClient,
-    userId: string
-  ): Promise<Profile | undefined> {
-    const { data, error } = await supabaseClient
+  async getProfileByUserId(userClient: SupabaseClient, userId: string) {
+    const { data, error } = await userClient
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      throw new Error(`Failed to fetch profile: ${error.message}`);
+    if (error || !data) {
+      throw new Error('Profile not found');
     }
 
-    if (!data) {
-      return undefined;
-    }
+    return this.transformFromDatabase(data);
+  }
 
-    // Transform database format to interface format
+  private transformFromDatabase(record: Profile) {
     return {
-      id: data.id,
-      userId: data.user_id,
-      type: data.type,
-      displayName: data.display_name,
-      avatarUrl: data.avatar_url,
-      coverUrl: data.cover_url,
-      bio: data.bio,
-      agentConfig: data.agent_config,
-      publicFields: data.public_fields,
-      isActive: data.is_active,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
+      id: record.id,
+      userId: record.user_id,
+      displayName: record.display_name || '',
+      avatarUrl: record.avatar_url || undefined,
+      bio: record.bio || null,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
     };
   }
 
-  async getProfilesByAuthUserId(
-    supabaseClient: SupabaseClient,
-    userId: string
-  ): Promise<Profile[]> {
-    const { data, error } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error && error.code !== 'PGRST116') {
-      throw new Error(`Failed to fetch profiles: ${error.message}`);
-    }
-
-    if (!data) {
-      return [];
-    }
-
-    // Transform database format to interface format
-    return data.map((profile) => ({
-      id: profile.id,
-      userId: profile.user_id,
-      type: profile.type,
-      displayName: profile.display_name,
-      avatarUrl: profile.avatar_url,
-      coverUrl: profile.cover_url,
-      bio: profile.bio,
-      agentConfig: profile.agent_config,
-      publicFields: profile.public_fields,
-      isActive: profile.is_active,
-      createdAt: profile.created_at,
-      updatedAt: profile.updated_at,
-    }));
-  }
-
-  async createProfile(
-    supabaseClient: SupabaseClient,
-    profileId: string,
+  async createOrUpdateProfile(
+    userClient: SupabaseClient,
     userId: string,
-    data: CreateProfilePayload
-  ): Promise<Profile> {
-    // Validate required fields
-    if (!data.displayName || data.displayName.trim().length === 0) {
-      throw new Error('Display name is required');
-    }
-
-    const profileData = {
-      id: profileId,
+    data: { displayName?: string; avatarUrl?: string; bio?: string }
+  ) {
+    const updateData: any = {
       user_id: userId,
-      type: data.type || 'human',
-      display_name: data.displayName.trim(),
-      avatar_url: data.avatarUrl || null,
-      cover_url: data.coverUrl || null,
-      bio: data.bio || null,
-      agent_config: data.agentConfig || null,
-      public_fields: data.publicFields || {},
+      updated_at: new Date().toISOString(),
     };
+
+    if (data.displayName !== undefined)
+      updateData.display_name = data.displayName;
+    if (data.avatarUrl !== undefined) updateData.avatar_url = data.avatarUrl;
+    if (data.bio !== undefined) updateData.bio = data.bio;
 
     const { data: profile, error } = await adminSupabase
       .from('profiles')
-      .insert(profileData)
+      .upsert(updateData)
       .select()
       .single();
 
     if (error) {
-      throw new Error(`Failed to create profile: ${error.message}`);
+      throw new Error(error.message);
     }
 
-    // Transform database format to interface format
-    return {
-      id: profile.id,
-      userId: profile.user_id,
-      type: profile.type,
-      displayName: profile.display_name,
-      avatarUrl: profile.avatar_url,
-      coverUrl: profile.cover_url,
-      bio: profile.bio,
-      agentConfig: profile.agent_config,
-      publicFields: profile.public_fields,
-      isActive: profile.is_active,
-      createdAt: profile.created_at,
-      updatedAt: profile.updated_at,
-    };
+    return profile;
   }
 
   async updateProfile(
-    supabaseClient: SupabaseClient,
-    profileId: string,
+    userClient: SupabaseClient,
     userId: string,
-    data: UpdateProfilePayload
-  ): Promise<Profile> {
-    const updateData: any = {};
+    profileId: string,
+    data: { displayName?: string; avatarUrl?: string; bio?: string }
+  ) {
+    // Verify ownership via RLS
+    const { data: existing } = await userClient
+      .from('profiles')
+      .select('user_id')
+      .eq('id', profileId)
+      .single();
 
-    if (data.displayName !== undefined) {
-      if (!data.displayName || data.displayName.trim().length === 0) {
-        throw new Error('Display name cannot be empty');
-      }
-      updateData.display_name = data.displayName.trim();
+    if (!existing || existing.user_id !== userId) {
+      throw new Error("Cannot update another user's profile");
     }
 
-    if (data.avatarUrl !== undefined) {
-      updateData.avatar_url = data.avatarUrl || null;
-    }
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
 
-    if (data.coverUrl !== undefined) {
-      updateData.cover_url = data.coverUrl || null;
-    }
-
-    if (data.bio !== undefined) {
-      updateData.bio = data.bio || null;
-    }
-
-    if (data.agentConfig !== undefined) {
-      updateData.agent_config = data.agentConfig || null;
-    }
-
-    if (data.publicFields !== undefined) {
-      updateData.public_fields = data.publicFields || {};
-    }
-
-    if (data.isActive !== undefined) {
-      updateData.is_active = data.isActive;
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      throw new Error('No valid fields to update');
-    }
+    if (data.displayName !== undefined)
+      updateData.display_name = data.displayName;
+    if (data.avatarUrl !== undefined) updateData.avatar_url = data.avatarUrl;
+    if (data.bio !== undefined) updateData.bio = data.bio;
 
     const { data: profile, error } = await adminSupabase
       .from('profiles')
       .update(updateData)
       .eq('id', profileId)
-      .eq('user_id', userId)
       .select()
       .single();
 
     if (error) {
-      throw new Error(`Failed to update profile: ${error.message}`);
+      throw new Error(error.message);
     }
 
-    // Transform database format to interface format
-    return {
-      id: profile.id,
-      userId: profile.user_id,
-      type: profile.type,
-      displayName: profile.display_name,
-      avatarUrl: profile.avatar_url,
-      coverUrl: profile.cover_url,
-      bio: profile.bio,
-      agentConfig: profile.agent_config,
-      publicFields: profile.public_fields,
-      isActive: profile.is_active,
-      createdAt: profile.created_at,
-      updatedAt: profile.updated_at,
-    };
+    return profile;
   }
 
   async deleteProfile(
-    supabaseClient: SupabaseClient,
-    profileId: string,
-    userId: string
-  ): Promise<void> {
+    userClient: SupabaseClient,
+    userId: string,
+    profileId: string
+  ) {
+    // Verify ownership via RLS
+    const { data: existing } = await userClient
+      .from('profiles')
+      .select('user_id')
+      .eq('id', profileId)
+      .single();
+
+    if (!existing || existing.user_id !== userId) {
+      throw new Error("Cannot delete another user's profile");
+    }
+
     const { error } = await adminSupabase
       .from('profiles')
       .delete()
-      .eq('user_id', userId)
       .eq('id', profileId);
 
     if (error) {
-      throw new Error(`Failed to delete profile: ${error.message}`);
-    }
-  }
-
-  async validateProfileExists(profileId: string): Promise<boolean> {
-    try {
-      const { data, error } = await adminSupabase
-        .from('profiles')
-        .select('id')
-        .eq('id', profileId)
-        .single();
-
-      return !error && !!data;
-    } catch {
-      return false;
-    }
-  }
-
-  async validateProfileIsOwnedByUser(
-    profileId: string,
-    userId: string
-  ): Promise<boolean> {
-    try {
-      const { data, error } = await adminSupabase
-        .from('profiles')
-        .select('id')
-        .eq('id', profileId)
-        .eq('user_id', userId)
-        .single();
-
-      return !error && !!data;
-    } catch {
-      return false;
-    }
-  }
-
-  // Search functionality for profiles
-  async searchProfiles(
-    supabaseClient: SupabaseClient,
-    filters: ProfileSearchFilters
-  ): Promise<ProfileSearchResponse> {
-    // Apply defaults
-    const searchFilters = {
-      query: filters.query?.trim() || '',
-      type: filters.type || ['human', 'agent'],
-      sortBy: filters.sortBy || 'relevance',
-      sortOrder: filters.sortOrder || 'desc',
-      page: Math.max(1, filters.page || 1),
-      limit: Math.min(
-        SEARCH_CONFIG.maxResultsPerPage,
-        Math.max(1, filters.limit || SEARCH_CONFIG.defaultPageSize)
-      ),
-    };
-
-    const offset = (searchFilters.page - 1) * searchFilters.limit;
-
-    // Base query - only public, active profiles
-    let query = supabaseClient
-      .from('profiles')
-      .select('*', { count: 'exact' })
-      .eq('is_active', true)
-      .in('type', searchFilters.type);
-
-    // Apply text search if query provided
-    if (searchFilters.query) {
-      const searchTerm = `%${searchFilters.query}%`;
-      query = query.or(
-        `display_name.ilike.${searchTerm},bio.ilike.${searchTerm}`
-      );
+      throw new Error(error.message);
     }
 
-    // Apply sorting
-    if (searchFilters.sortBy === 'createdAt') {
-      query = query.order('created_at', {
-        ascending: searchFilters.sortOrder === 'asc',
-      });
-    } else {
-      // For relevance search, we'll get all matches and sort by relevance score
-      query = query.order('created_at', { ascending: false }); // Temporary, will be re-sorted
-    }
-
-    // Apply pagination
-    query = query.range(offset, offset + searchFilters.limit - 1);
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      throw new Error(`Failed to search profiles: ${error.message}`);
-    }
-
-    // Transform database results to Profile interface
-    let profiles: Profile[] = data.map((profile) => ({
-      id: profile.id,
-      userId: profile.user_id || undefined,
-      type: profile.type,
-      displayName: profile.display_name,
-      avatarUrl: profile.avatar_url,
-      coverUrl: profile.cover_url,
-      bio: profile.bio,
-      agentConfig: profile.agent_config,
-      publicFields: profile.public_fields,
-      isActive: profile.is_active,
-      createdAt: profile.created_at,
-      updatedAt: profile.updated_at,
-    }));
-
-    // Apply relevance scoring if needed
-    if (searchFilters.sortBy === 'relevance' && searchFilters.query) {
-      profiles = this.applyRelevanceScoring(profiles, searchFilters.query);
-    }
-
-    // Calculate pagination info
-    const total = count || 0;
-    const hasMore = offset + profiles.length < total;
-
-    return {
-      profiles,
-      pagination: {
-        total,
-        page: searchFilters.page,
-        limit: searchFilters.limit,
-        hasMore,
-      },
-      filters: {
-        query: searchFilters.query,
-        sortBy: searchFilters.sortBy,
-        searchFields: SEARCH_CONFIG.fields.map((f) => f.name),
-      },
-    };
-  }
-
-  // Calculate relevance scores for search results
-  private applyRelevanceScoring(profiles: Profile[], query: string): Profile[] {
-    const searchTerms = query
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((term) => term.length > 0);
-
-    const scoredProfiles = profiles.map((profile) => {
-      let score = 0;
-      const matchedFields: string[] = [];
-
-      // Score based on search fields configuration
-      for (const field of SEARCH_CONFIG.fields) {
-        const fieldValue = this.getFieldValue(profile, field.name);
-        if (fieldValue && typeof fieldValue === 'string') {
-          const fieldScore = this.calculateFieldScore(
-            fieldValue,
-            searchTerms,
-            field
-          );
-          if (fieldScore > 0) {
-            score += fieldScore * field.weight;
-            matchedFields.push(field.name);
-          }
-        }
-      }
-
-      return {
-        profile,
-        score,
-        matchedFields,
-      };
-    });
-
-    // Sort by relevance score (descending), then by creation date for ties
-    return scoredProfiles
-      .sort((a, b) => {
-        if (Math.abs(a.score - b.score) < 0.01) {
-          // If scores are very close, sort by creation date
-          return (
-            new Date(b.profile.createdAt).getTime() -
-            new Date(a.profile.createdAt).getTime()
-          );
-        }
-        return b.score - a.score;
-      })
-      .map((item) => item.profile);
-  }
-
-  // Get field value from profile object
-  private getFieldValue(profile: Profile, fieldName: string): string | null {
-    switch (fieldName) {
-      case 'display_name':
-        return profile.displayName || null;
-      case 'bio':
-        return profile.bio || null;
-      default:
-        return null;
-    }
-  }
-
-  // Calculate score for a specific field
-  private calculateFieldScore(
-    fieldValue: string,
-    searchTerms: string[],
-    field: SearchableField
-  ): number {
-    const fieldText = fieldValue.toLowerCase();
-    let score = 0;
-
-    for (const term of searchTerms) {
-      // Exact phrase match (highest weight)
-      if (fieldText.includes(term)) {
-        score += 10 * (field.boost || 1);
-
-        // Bonus for exact word matches
-        const exactMatch = new RegExp(
-          `\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
-          'i'
-        );
-        if (exactMatch.test(fieldText)) {
-          score += 5 * (field.boost || 1);
-        }
-      }
-    }
-
-    return score;
+    return { success: true };
   }
 }
 

@@ -6,17 +6,11 @@
 
 export const chatKeys = {
   all: ['chat'] as const,
-  conversations: (profileId?: string) =>
-    [...chatKeys.all, profileId, 'conversations'] as const,
-  conversation: (profileId?: string, conversationId?: string) =>
-    [...chatKeys.all, profileId, 'conversation', conversationId] as const,
-  messages: (profileId?: string, conversationId?: string) =>
-    [...chatKeys.all, profileId, 'messages', conversationId] as const,
-  conversationMembers: (profileId?: string, conversationId?: string) =>
-    [
-      ...chatKeys.all,
-      profileId,
-      'conversation-members',
-      conversationId,
-    ] as const,
+  conversations: () => [...chatKeys.all, 'conversations'] as const,
+  conversation: (conversationId: string) =>
+    [...chatKeys.all, 'conversation', conversationId] as const,
+  messages: (conversationId: string) =>
+    [...chatKeys.all, 'messages', conversationId] as const,
+  conversationMembers: (conversationId: string) =>
+    [...chatKeys.all, 'conversation-members', conversationId] as const,
 };

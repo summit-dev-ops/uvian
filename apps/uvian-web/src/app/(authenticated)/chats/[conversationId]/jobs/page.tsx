@@ -15,7 +15,6 @@ import {
 } from '~/components/features/jobs/components/pages/actions';
 import { JobDataTable } from '~/components/features/jobs/components/job-data-table';
 import { ConversationJobsBreadcrumb } from './breadcrumb';
-import { useUserSessionStore } from '~/components/features/user/hooks/use-user-store';
 
 interface ConversationJobsPageProps {
   params: Promise<{ conversationId: string }>;
@@ -25,7 +24,6 @@ export default function ConversationJobsPage({
   params,
 }: ConversationJobsPageProps) {
   const { conversationId } = React.use(params);
-  const { activeProfileId } = useUserSessionStore();
 
   return (
     <ModalProvider>
@@ -43,7 +41,6 @@ export default function ConversationJobsPage({
           <PageContent className="flex flex-1 flex-col min-h-0 relative">
             <JobDataTable
               filters={{
-                authProfileId: activeProfileId ?? '',
                 conversationId,
               }}
             />

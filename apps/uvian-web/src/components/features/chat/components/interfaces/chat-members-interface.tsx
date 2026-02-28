@@ -19,10 +19,15 @@ interface ChatMembersInterfaceProps {
 export function ChatMembersInterface({
   conversationId,
 }: ChatMembersInterfaceProps) {
-  const { members, isLoading, role, removeMember, updateRole } =
+  const { members, isLoading, removeMember, updateRole } =
     useConversationMembers(conversationId);
 
-  const isAdmin = role?.name === 'owner' || role?.name === 'admin';
+  const currentUserMember = members?.find(
+    (m) => m.role.name === 'owner' || m.role.name === 'admin'
+  );
+  const isAdmin =
+    currentUserMember?.role.name === 'owner' ||
+    currentUserMember?.role.name === 'admin';
 
   // Early return for loading state
   if (isLoading) {
@@ -61,9 +66,7 @@ export function ChatMembersInterface({
             isAdmin={isAdmin}
             conversationId={conversationId}
             onRemove={removeMember}
-            onUpdateRole={(profileId, role) =>
-              updateRole(profileId, { name: role })
-            }
+            onUpdateRole={(userId, role) => updateRole(userId, { name: role })}
           />
         </InterfaceContent>
       </InterfaceContainer>
