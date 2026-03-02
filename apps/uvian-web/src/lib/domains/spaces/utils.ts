@@ -20,23 +20,20 @@ export function addSpaceToCache(
   authProfileId: string,
   space: SpaceUI
 ): void {
-  queryClient.setQueryData<SpaceUI[]>(
-    spacesKeys.list(authProfileId),
-    (oldSpaces) => {
-      if (!oldSpaces) return [space];
+  queryClient.setQueryData<SpaceUI[]>(spacesKeys.list(), (oldSpaces) => {
+    if (!oldSpaces) return [space];
 
-      // Check if space already exists
-      const existingIndex = oldSpaces.findIndex((s) => s.id === space.id);
+    // Check if space already exists
+    const existingIndex = oldSpaces.findIndex((s) => s.id === space.id);
 
-      if (existingIndex !== -1) {
-        // Update existing space
-        return oldSpaces.map((s, idx) => (idx === existingIndex ? space : s));
-      }
-
-      // Add new space to the beginning
-      return [space, ...oldSpaces];
+    if (existingIndex !== -1) {
+      // Update existing space
+      return oldSpaces.map((s, idx) => (idx === existingIndex ? space : s));
     }
-  );
+
+    // Add new space to the beginning
+    return [space, ...oldSpaces];
+  });
 }
 
 /**
@@ -49,21 +46,18 @@ export function updateSpaceInCache(
 ): void {
   // Update specific space detail cache
   queryClient.setQueryData<SpaceUI>(
-    spacesKeys.detail(authProfileId, updatedSpace.id),
+    spacesKeys.detail(updatedSpace.id),
     updatedSpace
   );
 
   // Update in spaces list cache
-  queryClient.setQueryData<SpaceUI[]>(
-    spacesKeys.list(authProfileId),
-    (oldSpaces) => {
-      if (!oldSpaces) return [updatedSpace];
+  queryClient.setQueryData<SpaceUI[]>(spacesKeys.list(), (oldSpaces) => {
+    if (!oldSpaces) return [updatedSpace];
 
-      return oldSpaces.map((space) =>
-        space.id === updatedSpace.id ? updatedSpace : space
-      );
-    }
-  );
+    return oldSpaces.map((space) =>
+      space.id === updatedSpace.id ? updatedSpace : space
+    );
+  });
 }
 
 /**
@@ -76,19 +70,19 @@ export function removeSpaceFromCache(
 ): void {
   // Remove from spaces list cache
   queryClient.setQueryData<SpaceUI[]>(
-    spacesKeys.list(authProfileId),
+    spacesKeys.list(),
     (oldSpaces) => oldSpaces?.filter((space) => space.id !== spaceId) || []
   );
 
   // Remove specific space cache
   queryClient.removeQueries({
-    queryKey: spacesKeys.detail(authProfileId, spaceId),
+    queryKey: spacesKeys.detail(spaceId),
   });
   queryClient.removeQueries({
-    queryKey: spacesKeys.members(authProfileId, spaceId),
+    queryKey: spacesKeys.members(spaceId),
   });
   queryClient.removeQueries({
-    queryKey: spacesKeys.conversations(authProfileId, spaceId),
+    queryKey: spacesKeys.conversations(spaceId),
   });
 }
 
@@ -102,12 +96,14 @@ export function updateMemberInCache(
   updatedMember: SpaceMemberUI
 ): void {
   queryClient.setQueryData<SpaceMemberUI[]>(
-    spacesKeys.members(authProfileId, spaceId),
+    spacesKeys.members(spaceId),
     (oldMembers) => {
       if (!oldMembers) return [updatedMember];
 
       return oldMembers.map((member) =>
-        member.profileId === updatedMember.profileId ? updatedMember : member
+        member.profile?.id === updatedMember.profile?.id
+          ? updatedMember
+          : member
       );
     }
   );
@@ -123,9 +119,9 @@ export function removeMemberFromCache(
   profileId: string
 ): void {
   queryClient.setQueryData<SpaceMemberUI[]>(
-    spacesKeys.members(authProfileId, spaceId),
+    spacesKeys.members(spaceId),
     (oldMembers) =>
-      oldMembers?.filter((member) => member.profileId !== profileId) || []
+      oldMembers?.filter((member) => member.profile?.id !== profileId) || []
   );
 }
 
@@ -139,19 +135,19 @@ export function addMemberToCache(
   newMember: SpaceMemberUI
 ): void {
   queryClient.setQueryData<SpaceMemberUI[]>(
-    spacesKeys.members(authProfileId, spaceId),
+    spacesKeys.members(spaceId),
     (oldMembers) => {
       if (!oldMembers) return [newMember];
 
       // Check if member already exists
       const exists = oldMembers.some(
-        (member) => member.profileId === newMember.profileId
+        (member) => member.profile?.id === newMember.profile?.id
       );
 
       if (exists) {
         // Update existing member
         return oldMembers.map((member) =>
-          member.profileId === newMember.profileId ? newMember : member
+          member.profile?.id === newMember.profile?.id ? newMember : member
         );
       }
 
@@ -169,7 +165,7 @@ export function updateSpaceStatsCache(
   authProfileId: string,
   stats: any
 ): void {
-  queryClient.setQueryData(spacesKeys.stats(authProfileId), stats);
+  queryClient.setQueryData(spacesKeys.stats(), stats);
 }
 
 // ============================================================================

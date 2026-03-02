@@ -13,6 +13,7 @@ import type {
   MessageUI,
   ConversationMemberUI,
   ConversationMemberRole,
+  Attachment,
 } from '../types';
 
 // ============================================================================
@@ -30,6 +31,7 @@ export type SendMessagePayload = {
   content: string;
   role?: 'user' | 'assistant' | 'system';
   senderId?: string; // For optimistic updates
+  attachments?: Attachment[];
 };
 
 export type DeleteConversationPayload = {
@@ -164,6 +166,7 @@ export const chatMutations = {
           id: payload.id,
           content: payload.content,
           role: payload.role || 'user',
+          attachments: payload.attachments,
         }
       );
       return data;
@@ -187,6 +190,7 @@ export const chatMutations = {
         syncStatus: 'pending',
         isStreaming: false,
         senderId: payload.senderId || '',
+        attachments: payload.attachments,
       };
 
       queryClient.setQueryData<MessageUI[]>(

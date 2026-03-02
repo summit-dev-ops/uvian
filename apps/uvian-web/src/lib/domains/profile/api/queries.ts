@@ -1,11 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { apiClient } from '~/lib/api/api-clients';
 import { profileKeys } from './keys';
-import type {
-  ProfileSearchParams,
-  ProfileSearchResults,
-  ProfileUI,
-} from '../types';
+import type { ProfileUI, UserSearchParams, UserSearchResults } from '../types';
 
 // ============================================================================
 // Query Options
@@ -43,16 +39,22 @@ export const profileQueries = {
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
   /**
-   * Search profiles for user discovery.
-   * Returns public profiles with search and filtering capabilities.
+   * Search users (merged with profiles) for user discovery.
+   * Returns users with their profile data.
    */
-  searchProfiles: (params: ProfileSearchParams = {}) =>
+  searchUsers: (params: UserSearchParams = {}) =>
     queryOptions({
-      queryKey: profileKeys.search(params),
+      queryKey: profileKeys.search({
+        query: params.query,
+        page: params.page,
+        limit: params.limit,
+      }),
       queryFn: async () => {
-        const { data } = await apiClient.get<ProfileSearchResults>(
-          '/api/profiles/search',
-          { params }
+        const { data } = await apiClient.get<UserSearchResults>(
+          '/api/users/search',
+          {
+            params: { q: params.query, page: params.page, limit: params.limit },
+          }
         );
         return data;
       },

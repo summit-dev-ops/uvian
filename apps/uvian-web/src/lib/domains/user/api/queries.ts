@@ -33,6 +33,33 @@ export const userQueries = {
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),
   /**
+   * Fetch multiple profiles by userIds.
+   */
+  profilesByUserIds: (userIds: string[]) =>
+    queryOptions({
+      queryKey: userKeys.profilesByUserIds(userIds),
+      queryFn: async () => {
+        const results: Record<string, ProfileUI> = {};
+        await Promise.all(
+          userIds.map(async (userId) => {
+            try {
+              const { data } = await apiClient.get<ProfileUI>(
+                `/api/users/${userId}/profile`
+              );
+              if (data) {
+                results[userId] = data;
+              }
+            } catch {
+              // Skip failed fetches
+            }
+          })
+        );
+        return results;
+      },
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      enabled: userIds.length > 0,
+    }),
+  /**
    * Fetch current user's settings.
    * Note: Settings are private to the authenticated user.
    */

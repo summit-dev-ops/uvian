@@ -16,4 +16,6 @@ export const userKeys = {
     userId
       ? ([...userKeys.all, 'profile-by-user', userId] as const)
       : ([...userKeys.all, 'profile-by-user'] as const),
+  profilesByUserIds: (userIds: string[]) =>
+    [...userKeys.all, 'profiles-by-user-ids', ...userIds.sort()] as const,
 };

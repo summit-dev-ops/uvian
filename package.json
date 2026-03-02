@@ -87,6 +87,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
     "bullmq": "^5.67.2",
+    "embla-carousel-react": "^8.6.0",
     "fastify": "^4.29.1",
     "fastify-plugin": "^4.0.0",
     "input-otp": "^1.4.2",

@@ -3,11 +3,7 @@
 import * as React from 'react';
 import { InviteMembersDialog } from '../../dialogs';
 import { usePageActionContext } from '../../pages/page-actions/page-action-context';
-
-export type InviteMemberData = {
-  email: string;
-  role: 'admin' | 'member';
-};
+import type { InviteMemberData } from '~/lib/domains/profile/types';
 
 export interface InviteMembersModalProps {
   open: boolean;

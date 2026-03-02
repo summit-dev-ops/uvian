@@ -5,7 +5,16 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@org/ui';
 import { Copy, RefreshCcw, MoreHorizontal } from 'lucide-react';
 import { ProfilePreview } from './profile-preview';
-import type { MessageUI } from '~/lib/domains/chat/types';
+import { MentionChips } from './mention-chips';
+import { ImageGallery } from './image-gallery';
+import { LinkList } from './link-list';
+import type {
+  MessageUI,
+  Attachment,
+  FileAttachment,
+  MentionAttachment,
+  LinkAttachment,
+} from '~/lib/domains/chat/types';
 import Markdown from 'react-markdown';
 
 interface MessageRowProps {
@@ -15,6 +24,26 @@ interface MessageRowProps {
 }
 
 const MENTION_REGEX = /\[@ id="([^"]+)" label="([^"]+)"\]/g;
+
+function isImageAttachment(
+  attachment: Attachment
+): attachment is FileAttachment {
+  return (
+    attachment.type === 'file' && !!attachment.mimeType?.startsWith('image/')
+  );
+}
+
+function isMentionAttachment(
+  attachment: Attachment
+): attachment is MentionAttachment {
+  return attachment.type === 'mention';
+}
+
+function isLinkAttachment(
+  attachment: Attachment
+): attachment is LinkAttachment {
+  return attachment.type === 'link';
+}
 
 export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
   const profile = message.senderProfile;
@@ -32,6 +61,31 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
     });
   }, [message.content]);
 
+  const attachments = message.attachments || [];
+
+  const mentions = useMemo(
+    () => attachments.filter(isMentionAttachment),
+    [attachments]
+  );
+
+  const images = useMemo(
+    () => attachments.filter(isImageAttachment),
+    [attachments]
+  );
+
+  const links = useMemo(
+    () => attachments.filter(isLinkAttachment),
+    [attachments]
+  );
+
+  const files = useMemo(
+    () =>
+      attachments.filter(
+        (a) => a.type === 'file' && !isImageAttachment(a)
+      ) as FileAttachment[],
+    [attachments]
+  );
+
   return (
     <div
       className={`flex flex-1 py-2 px-6 min-w-0 relative ${
@@ -39,7 +93,7 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
       }`}
     >
       <div className="flex flex-1 flex-col gap-2 min-w-0 relative">
-        <div className="flex flex-row items-center gap-2">
+        <div className="flex flex-row items-center gap-2 flex-wrap">
           <ProfilePreview
             profileId={message?.senderProfile?.id}
             profile={profile}
@@ -58,6 +112,8 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
               {displayName}
             </Link>
           </ProfilePreview>
+
+          <MentionChips mentions={mentions} />
 
           <div className="flex-1 text-sm font-semibold flex items-center gap-2">
             {message.isStreaming && (
@@ -113,6 +169,9 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
           {message.isStreaming && (
             <span className="inline-block w-1.5 h-4 ml-1 bg-primary animate-pulse align-middle" />
           )}
+
+          <ImageGallery images={images} />
+          <LinkList links={links} files={files} />
         </div>
 
         {/* Actions - only for non-system, non-streaming messages */}

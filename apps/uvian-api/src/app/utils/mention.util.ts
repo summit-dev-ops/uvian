@@ -1,4 +1,5 @@
 import { adminSupabase } from '../clients/supabase.client';
+import type { Attachment, MentionAttachment } from '../types/chat.types';
 
 /**
  * Utility for parsing and processing mentions in chat messages
@@ -8,6 +9,12 @@ import { adminSupabase } from '../clients/supabase.client';
 export interface Mention {
   id: string;
   label: string;
+}
+
+export interface ExtractedMention {
+  userId: string;
+  label: string;
+  source: 'inline' | 'attachment';
 }
 
 export interface AgentMention extends Mention {
@@ -101,5 +108,34 @@ export class MentionUtil {
     const agentIds = await this.validateAgentMentions(mentionIds);
 
     return agentIds;
+  }
+
+  /**
+   * Extract all mentions from both inline text and attachments
+   */
+  static extractAllMentions(
+    content: string,
+    attachments: Attachment[] = []
+  ): ExtractedMention[] {
+    const mentions: ExtractedMention[] = [];
+
+    // From inline text
+    const inlineMentions = this.parseMentions(content);
+    inlineMentions.forEach((m) =>
+      mentions.push({ userId: m.id, label: m.label, source: 'inline' })
+    );
+
+    // From attachments
+    attachments
+      .filter((a): a is MentionAttachment => a.type === 'mention')
+      .forEach((a) =>
+        mentions.push({
+          userId: a.userId,
+          label: a.label,
+          source: 'attachment',
+        })
+      );
+
+    return mentions;
   }
 }

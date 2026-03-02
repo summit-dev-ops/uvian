@@ -1,7 +1,31 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
+import { assetService } from './asset.service';
+import type { Attachment } from '../types/chat.types';
 
 export class ChatService {
+  private async resolveAttachment(attachment: Attachment): Promise<Attachment> {
+    if (attachment.type === 'file' && attachment.url?.startsWith('accounts/')) {
+      const resolved = await assetService.resolveAssetByUrl(attachment.url);
+      if (resolved) {
+        return {
+          ...attachment,
+          url: resolved.url,
+          mimeType: resolved.mimeType || attachment.mimeType,
+          size: resolved.fileSizeBytes || attachment.size,
+          filename: resolved.filename || attachment.filename,
+        };
+      }
+    }
+    return attachment;
+  }
+
+  private async resolveAttachments(
+    attachments: Attachment[]
+  ): Promise<Attachment[]> {
+    return Promise.all(attachments.map((a) => this.resolveAttachment(a)));
+  }
+
   async getConversations(userClient: SupabaseClient) {
     const { data, error } = await userClient
       .from('get_conversations_for_current_user')
@@ -61,16 +85,21 @@ export class ChatService {
 
     if (error) throw new Error(error.message);
 
-    return (data || []).map((row) => ({
-      id: row.id,
-      conversationId: row.conversation_id,
-      senderId: row.sender_id,
-      content: row.content,
-      role: row.role,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      syncStatus: 'synced' as const,
-    }));
+    const messages = await Promise.all(
+      (data || []).map(async (row) => ({
+        id: row.id,
+        conversationId: row.conversation_id,
+        senderId: row.sender_id,
+        content: row.content,
+        role: row.role,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        attachments: await this.resolveAttachments(row.attachments || []),
+        syncStatus: 'synced' as const,
+      }))
+    );
+
+    return messages;
   }
 
   async createConversation(
@@ -115,7 +144,12 @@ export class ChatService {
     userClient: SupabaseClient,
     userId: string,
     conversationId: string,
-    data: { id: string; content: string; role?: string }
+    data: {
+      id: string;
+      content: string;
+      role?: string;
+      attachments?: Attachment[];
+    }
   ) {
     // Check membership
     const { data: memberCheck } = await userClient
@@ -128,6 +162,11 @@ export class ChatService {
       throw new Error('You are not a member of this conversation');
     }
 
+    // Resolve attachments to get full URLs and mimeTypes before storing
+    const resolvedAttachments = await this.resolveAttachments(
+      data.attachments || []
+    );
+
     const { data: message, error } = await adminSupabase
       .from('messages')
       .insert({
@@ -136,6 +175,7 @@ export class ChatService {
         sender_id: userId,
         content: data.content,
         role: data.role || 'user',
+        attachments: resolvedAttachments,
       })
       .select()
       .single();
@@ -155,6 +195,7 @@ export class ChatService {
       role: message.role,
       createdAt: message.created_at,
       updatedAt: message.updated_at,
+      attachments: await this.resolveAttachments(message.attachments || []),
       syncStatus: 'synced' as const,
     };
   }

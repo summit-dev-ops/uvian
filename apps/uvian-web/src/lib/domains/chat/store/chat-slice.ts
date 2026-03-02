@@ -6,7 +6,11 @@
  */
 
 import type { StateCreator } from 'zustand';
-import type { ConversationCacheEntry, ConversationMode } from '../types';
+import type {
+  Attachment,
+  ConversationCacheEntry,
+  ConversationMode,
+} from '../types';
 
 // ============================================================================
 // Slice State
@@ -23,6 +27,10 @@ export interface ChatSlice {
   setConversationMessageDraft: (
     conversationId: string,
     messageDraft: string
+  ) => void;
+  setConversationAttachments: (
+    conversationId: string,
+    attachments: Attachment[]
   ) => void;
   setConversationMode: (conversationId: string, mode: ConversationMode) => void;
   clearConversationCache: (conversationId: string) => void;
@@ -71,6 +79,27 @@ export const createChatSlice: StateCreator<ChatSlice> = (set, get) => ({
             composition: {
               ...entry.composition,
               messageDraft,
+            },
+          },
+        },
+      };
+    });
+  },
+
+  setConversationAttachments: (conversationId, attachments) => {
+    set((state) => {
+      const entry = state.conversationCache[conversationId] || {
+        ...DEFAULT_CACHE_ENTRY,
+      };
+
+      return {
+        conversationCache: {
+          ...state.conversationCache,
+          [conversationId]: {
+            ...entry,
+            composition: {
+              ...entry.composition,
+              attachments,
             },
           },
         },

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { InviteProfileDialog } from '../../dialogs';
 import { usePageActionContext } from '../../pages/page-actions/page-action-context';
-import type { ProfileUI } from '~/lib/domains/profile/types';
+import type { UserSearchResult } from '~/lib/domains/profile/types';
 import type { ConversationMemberRole } from '~/lib/domains/chat/types';
 
 export type InviteProfileData = {
@@ -30,60 +30,54 @@ export function InviteProfileModal({
 }: InviteProfileModalProps) {
   const { executeAction, isActionExecuting } = usePageActionContext();
 
-  const [selectedProfiles, setSelectedProfiles] = React.useState<ProfileUI[]>(
-    []
-  );
+  const [selectedProfiles, setSelectedProfiles] = React.useState<
+    UserSearchResult[]
+  >([]);
   const [selectedRole, setSelectedRole] =
     React.useState<ConversationMemberRole['name']>(defaultRole);
 
   const isLoading = isActionExecuting(onConfirmActionId);
 
-  const handleProfileSelect = (profile: ProfileUI) => {
-    const isAlreadySelected = selectedProfiles.some((p) => p.id === profile.id);
+  const handleProfileSelect = (profile: UserSearchResult) => {
+    const isAlreadySelected = selectedProfiles.some(
+      (p) => p.profileId === profile.profileId
+    );
     if (isAlreadySelected) {
-      setSelectedProfiles((prev) => prev.filter((p) => p.id !== profile.id));
+      setSelectedProfiles((prev) =>
+        prev.filter((p) => p.profileId !== profile.profileId)
+      );
     } else {
       setSelectedProfiles((prev) => [...prev, profile]);
     }
   };
 
   const handleRemoveProfile = (profileId: string) => {
-    setSelectedProfiles((prev) => prev.filter((p) => p.id !== profileId));
+    setSelectedProfiles((prev) =>
+      prev.filter((p) => p.profileId !== profileId)
+    );
   };
 
   const handleSubmit = async () => {
-    console.log('[INVITE_MODAL] handleSubmit called');
-    console.log('[INVITE_MODAL] selectedProfiles:', selectedProfiles);
-    console.log('[INVITE_MODAL] conversationId:', conversationId);
-    console.log('[INVITE_MODAL] selectedRole:', selectedRole);
-
     if (selectedProfiles.length === 0) {
-      console.log('[INVITE_MODAL] No profiles selected, returning');
       return;
     }
 
     try {
       const invitations = selectedProfiles.map((profile) => ({
         conversationId: conversationId!,
-        targetMemberUserId: profile.id,
+        targetMemberUserId: profile.userId,
         role: { name: selectedRole },
       }));
 
-      console.log('[INVITE_MODAL] Created invitations:', invitations);
-
       for (const invitation of invitations) {
-        console.log('[INVITE_MODAL] Calling executeAction with:', invitation);
         await executeAction(onConfirmActionId, invitation);
-        console.log('[INVITE_MODAL] executeAction completed for:', invitation);
       }
-
-      console.log('[INVITE_MODAL] All invitations sent successfully');
 
       setSelectedProfiles([]);
       setSelectedRole(defaultRole);
       onOpenChange(false);
     } catch (error) {
-      console.error('[INVITE_MODAL] Failed to invite members:', error);
+      console.error('Failed to invite members:', error);
     }
   };
 

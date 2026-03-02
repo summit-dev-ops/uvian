@@ -334,6 +334,7 @@ export default async function (fastify: FastifyInstance) {
             id: { type: 'string' },
             content: { type: 'string' },
             role: { type: 'string', enum: ['user', 'assistant', 'system'] },
+            attachments: { type: 'array' },
           },
           additionalProperties: false,
         },
@@ -350,12 +351,12 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId } = request.params;
-        const { id, content, role } = request.body || {};
+        const { id, content, role, attachments } = request.body || {};
         const message = await chatService.createMessage(
           request.supabase,
           userId,
           conversationId,
-          { id, content, role }
+          { id, content, role, attachments }
         );
 
         fastify.io.to(conversationId).emit('new_message', {

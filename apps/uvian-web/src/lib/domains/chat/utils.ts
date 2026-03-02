@@ -23,7 +23,7 @@ export function appendTokenToCache(
   token: string
 ): void {
   queryClient.setQueryData<MessageUI[]>(
-    chatKeys.messages(profileId, conversationId),
+    chatKeys.messages(conversationId),
     (oldMessages) => {
       if (!oldMessages) return oldMessages;
 
@@ -53,7 +53,7 @@ export function finalizeStreamingMessage(
   messageId: string
 ): void {
   queryClient.setQueryData<MessageUI[]>(
-    chatKeys.messages(profileId, conversationId),
+    chatKeys.messages(conversationId),
     (oldMessages) => {
       if (!oldMessages) return oldMessages;
 
@@ -82,7 +82,7 @@ export function addMessageToCache(
   isDelta = false
 ): void {
   queryClient.setQueryData<MessageUI[]>(
-    chatKeys.messages(authProfileId, conversationId),
+    chatKeys.messages(conversationId),
     (oldMessages) => {
       if (!oldMessages) return [message];
 

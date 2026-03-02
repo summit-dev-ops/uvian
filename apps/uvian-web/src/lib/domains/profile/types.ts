@@ -42,17 +42,27 @@ export type ProfileDraft = {
   type?: ProfileType;
 };
 
-export type ProfileSearchParams = {
+// ============================================================================
+// User Search Types (merged user + profile)
+// ============================================================================
+
+export type UserSearchResult = {
+  userId: string;
+  profileId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  type: 'human' | 'agent';
+};
+
+export type UserSearchParams = {
   query?: string;
   type?: ('human' | 'agent')[];
-  sortBy?: 'relevance' | 'createdAt';
-  sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
 };
 
-export type ProfileSearchResults = {
-  profiles: ProfileUI[];
+export type UserSearchResults = {
+  users: UserSearchResult[];
   pagination: {
     total: number;
     page: number;
@@ -61,7 +71,17 @@ export type ProfileSearchResults = {
   };
   filters: {
     query: string;
-    sortBy: 'relevance' | 'createdAt';
     searchFields: string[];
   };
+};
+
+// ============================================================================
+// Invite Types
+// ============================================================================
+
+export type InviteMemberData = {
+  userId: string;
+  profileId: string;
+  displayName: string;
+  role: 'admin' | 'member';
 };

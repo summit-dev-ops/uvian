@@ -19,7 +19,8 @@ import { ScrollArea } from '@org/ui';
 export function ChatInterface({ conversationId }: { conversationId: string }) {
   const { socket, isConnected } = useSocket();
   const { messages, sendMessage, isLoading } = useChat(conversationId);
-  const { messageDraft, setMessageDraft } = useChatStore(conversationId);
+  const { messageDraft, setMessageDraft, attachments, setAttachments } =
+    useChatStore(conversationId);
   const { userId: currentUserId } = useCurrentUser();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,9 +52,11 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
       content: cleanedMessageDraft,
       role: 'user',
       senderId: currentUserId,
+      attachments: attachments.length > 0 ? attachments : undefined,
     });
 
     setMessageDraft('');
+    setAttachments([]);
   };
 
   return (
@@ -103,6 +106,8 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
         value={messageDraft}
         onChange={setMessageDraft}
         onSend={handleSend}
+        attachments={attachments}
+        onAttachmentsChange={setAttachments}
         disabled={!isConnected}
       />
     </InterfaceContainer>

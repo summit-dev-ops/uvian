@@ -22,6 +22,29 @@ export type ConversationMemberRole = {
   name: 'owner' | 'admin' | 'member';
 };
 
+export type AttachmentType = 'mention' | 'file' | 'link';
+
+export type MentionAttachment = {
+  type: 'mention';
+  userId: string;
+  label: string;
+};
+
+export type FileAttachment = {
+  type: 'file';
+  url: string;
+  filename?: string;
+  mimeType?: string;
+  size?: number;
+};
+
+export type LinkAttachment = {
+  type: 'link';
+  url: string;
+};
+
+export type Attachment = MentionAttachment | FileAttachment | LinkAttachment;
+
 export type MessageUI = {
   id: string; // UUID
   conversationId: string; // UUID
@@ -33,6 +56,7 @@ export type MessageUI = {
   isStreaming?: boolean; // True if message is receiving tokens
   tokens?: string[]; // Array of tokens for streaming messages
   senderProfile?: ProfileUI;
+  attachments?: Attachment[];
 };
 
 export type ConversationUI = {
@@ -53,7 +77,7 @@ export type ConversationMode = 'chat' | 'edit' | 'debug';
 
 export type ConversationComposition = {
   messageDraft: string; // Draft message content
-  attachments: any[]; // Placeholder for attachments
+  attachments: Attachment[];
 };
 
 export type ConversationCacheEntry = {
