@@ -6,7 +6,7 @@
  */
 
 import type { ProfileUI } from '~/lib/domains/profile/types';
-
+import { Attachment } from '../posts/types';
 export type DataSyncStatus = 'synced' | 'pending' | 'error';
 
 export type ConversationMemberUI = {
@@ -21,29 +21,6 @@ export type ConversationMemberUI = {
 export type ConversationMemberRole = {
   name: 'owner' | 'admin' | 'member';
 };
-
-export type AttachmentType = 'mention' | 'file' | 'link';
-
-export type MentionAttachment = {
-  type: 'mention';
-  userId: string;
-  label: string;
-};
-
-export type FileAttachment = {
-  type: 'file';
-  url: string;
-  filename?: string;
-  mimeType?: string;
-  size?: number;
-};
-
-export type LinkAttachment = {
-  type: 'link';
-  url: string;
-};
-
-export type Attachment = MentionAttachment | FileAttachment | LinkAttachment;
 
 export type MessageUI = {
   id: string; // UUID

@@ -1,19 +1,19 @@
 export interface Asset {
   id: string;
-  account_id: string;
-  uploader_user_id: string | null;
+  accountId: string;
+  uploaderUserId: string | null;
   type: string;
   url: string;
   filename: string | null;
-  mime_type: string | null;
-  file_size_bytes: number | null;
-  storage_type: 'supabase' | 'external';
+  mimeType: string | null;
+  fileSizeBytes: number | null;
+  storageType: 'supabase' | 'external';
   metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  uploader_name?: string | null;
-  uploader_avatar?: string | null;
-  account_name?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  uploaderName?: string | null;
+  uploaderAvatar?: string | null;
+  accountName?: string | null;
 }
 
 export interface CreateAssetInput {

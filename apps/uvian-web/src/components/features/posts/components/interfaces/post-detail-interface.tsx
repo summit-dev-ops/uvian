@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Avatar, AvatarFallback, AvatarImage, Badge } from '@org/ui';
+import { Avatar, AvatarFallback, AvatarImage } from '@org/ui';
 import { usePost } from '../../hooks/use-posts';
 import { useProfilesByUserId } from '~/components/features/profiles/hooks/use-profiles-by-user';
 import {
@@ -11,6 +11,7 @@ import {
   InterfaceLoading,
   InterfaceError,
 } from '~/components/shared/ui/interfaces';
+import { PostDetailCarousel } from '../post-item/post-detail-carousel';
 
 interface PostDetailInterfaceProps {
   spaceId: string;
@@ -37,8 +38,6 @@ function formatTimestamp(dateString: string): string {
   });
 }
 
-const MOCK_TAGS = ['General', 'Announcement'];
-
 export function PostDetailInterface({
   spaceId,
   postId,
@@ -47,7 +46,6 @@ export function PostDetailInterface({
 
   const userIds = post?.userId ? [post.userId] : [];
   const { profiles } = useProfilesByUserId(userIds);
-  const profile = post?.userId ? profiles[post.userId] : undefined;
 
   if (isLoading) {
     return (
@@ -72,6 +70,7 @@ export function PostDetailInterface({
     );
   }
 
+  const profile = profiles[post.userId];
   const displayName = profile?.displayName ?? 'Unknown';
   const initials = getInitials(profile?.displayName ?? 'U');
 
@@ -79,55 +78,38 @@ export function PostDetailInterface({
     <InterfaceLayout>
       <InterfaceContainer variant="minimal">
         <InterfaceContent>
-          <div className="p-6 space-y-6">
-            {/* Content */}
-            <div className="text-xl whitespace-pre-wrap">{post.content}</div>
-
-            {/* Header: Avatar, Name, Timestamp */}
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                {profile?.avatarUrl && (
-                  <AvatarImage src={profile.avatarUrl} alt={displayName} />
-                )}
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">{displayName}</div>
-                <div className="text-sm text-muted-foreground">
-                  {formatTimestamp(post.createdAt)}
+          <div className="flex flex-col gap-4">
+            <div className='space-y-4'>
+              <PostDetailCarousel
+                spaceId={spaceId}
+                contents={post.contents || []}
+              />
+              <div className="flex items-center gap-3 max-w-3xl mx-auto">
+                <Avatar className="h-10 w-10">
+                  {profile?.avatarUrl && (
+                    <AvatarImage src={profile.avatarUrl} alt={displayName} />
+                  )}
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{displayName}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatTimestamp(post.createdAt)}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Tags */}
-            <div className="flex gap-2">
-              {MOCK_TAGS.map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-
-            {/* Description */}
-            <div className="text-muted-foreground text-sm">
-              Add a description...
-            </div>
-
-            {/* Divider */}
-            <div className="border-t" />
-
-            {/* Conversation Placeholder */}
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <span className="text-2xl">💬</span>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">
-                  Conversation coming soon
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  Discussion thread will be available here
-                </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <span className="text-2xl">💬</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    Conversation coming soon
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    Discussion thread will be available here
+                  </p>
+                </div>
               </div>
             </div>
           </div>

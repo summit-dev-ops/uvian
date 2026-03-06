@@ -1,5 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { postService } from '../services/post.service';
+import { noteService } from '../services/note.service';
+import { adminSupabase } from '../clients/supabase.client';
 import {
   GetSpacePostsRequest,
   GetPostRequest,
@@ -93,13 +95,30 @@ export default async function (fastify: FastifyInstance) {
         },
         body: {
           type: 'object',
-          required: ['content'],
+          required: ['contents'],
           properties: {
-            content: { type: 'string', minLength: 1 },
-            contentType: {
-              type: 'string',
-              enum: ['text', 'url'],
-              default: 'text',
+            id: { type: 'string' },
+            contents: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  type: { type: 'string', enum: ['note', 'asset', 'external'] },
+                  note: {
+                    type: 'object',
+                    properties: {
+                      title: { type: 'string', minLength: 1 },
+                      body: { type: 'string' },
+                      attachments: { type: 'array' },
+                    },
+                    required: ['title'],
+                  },
+                  noteId: { type: 'string' },
+                  assetId: { type: 'string' },
+                  url: { type: 'string' },
+                },
+                required: ['type'],
+              },
             },
           },
           additionalProperties: false,
@@ -115,16 +134,94 @@ export default async function (fastify: FastifyInstance) {
         }
 
         const { spaceId } = request.params;
-        const { content, contentType } = request.body || {};
+        const body = request.body as
+          | {
+              id?: string;
+              contents: Array<{
+                type: 'note' | 'asset' | 'external';
+                note?: { title: string; body?: string; attachments?: any[] };
+                noteId?: string;
+                assetId?: string;
+                url?: string;
+              }>;
+            }
+          | undefined;
 
-        const post = await postService.createPost(request.supabase, {
-          spaceId,
-          userId,
-          content,
-          contentType: contentType || 'text',
-        });
+        const { id, contents } = body || {};
 
-        reply.code(201).send(post);
+        if (!contents || contents.length === 0) {
+          reply
+            .code(400)
+            .send({ error: 'Post must have at least one content item' });
+          return;
+        }
+
+        // Create the post first
+        const { data: post, error: postError } = await adminSupabase
+          .from('posts')
+          .insert({
+            id,
+            space_id: spaceId,
+            author_id: userId,
+          })
+          .select()
+          .single();
+
+        if (postError || !post) {
+          throw new Error(postError?.message || 'Failed to create post');
+        }
+
+        // Process each content item
+        for (let i = 0; i < contents.length; i++) {
+          const item = contents[i];
+
+          if (item.type === 'note') {
+            let noteId = item.noteId;
+
+            // Create note if provided
+            if (item.note?.title) {
+              const createdNote = await noteService.createNote(
+                request.supabase,
+                userId,
+                {
+                  id: item.noteId,
+                  spaceId,
+                  title: item.note.title,
+                  body: item.note.body,
+                  attachments: item.note.attachments,
+                }
+              );
+              noteId = createdNote.id;
+            }
+
+            // Insert into post_contents
+            await adminSupabase.from('post_contents').insert({
+              post_id: post.id,
+              content_type: 'note',
+              note_id: noteId,
+              position: i,
+            });
+          } else if (item.type === 'asset') {
+            await adminSupabase.from('post_contents').insert({
+              post_id: post.id,
+              content_type: 'asset',
+              asset_id: item.assetId,
+              position: i,
+            });
+          } else if (item.type === 'external') {
+            await adminSupabase.from('post_contents').insert({
+              post_id: post.id,
+              content_type: 'external',
+              url: item.url,
+              position: i,
+            });
+          }
+        }
+
+        // Fetch the complete post with contents
+        const fullPost = await postService.getPost(request.supabase, post.id);
+
+        reply.code(201).send(fullPost);
       } catch (error: any) {
         if (error.message.includes('Not a member')) {
           reply.code(403).send({ error: 'Not a member of this space' });

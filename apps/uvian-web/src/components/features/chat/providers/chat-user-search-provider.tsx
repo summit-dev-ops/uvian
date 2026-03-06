@@ -1,77 +1,43 @@
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  useDeferredValue,
-  useCallback,
-} from 'react';
+import React, { useMemo, useState, useDeferredValue, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { chatQueries } from '~/lib/domains/chat/api';
+import {
+  SearchContext,
+  SearchContextValue,
+} from '~/components/shared/ui/search/contexts';
+import { SearchResultItemData } from '~/components/shared/ui/search/types';
 import { userQueries } from '~/lib/domains/user/api';
-import type { ProfileUI } from '~/lib/domains/profile/types';
-
-interface ChatUserSearchContextValue {
-  query: string;
-  setQuery: (q: string) => void;
-  debouncedQuery: string;
-  results: ProfileUI[];
-  isLoading: boolean;
-  error: Error | null;
-  page: number;
-  totalPages: number;
-  hasMore: boolean;
-  goToPage: (page: number) => void;
-  nextPage: () => void;
-  prevPage: () => void;
-  setPage: (page: number) => void;
-  selected: ProfileUI[];
-  toggleSelected: (item: ProfileUI) => void;
-  isSelected: (item: ProfileUI) => boolean;
-  clearSelection: () => void;
-  setSelected: (items: ProfileUI[]) => void;
-}
-
-const ChatUserSearchContext = createContext<ChatUserSearchContextValue | null>(
-  null
-);
-
-export function useChatUserSearch() {
-  const context = useContext(ChatUserSearchContext);
-  if (!context) {
-    throw new Error(
-      'useChatUserSearch must be used within ChatUserSearchProvider'
-    );
-  }
-  return context;
-}
+import { chatQueries } from '~/lib/domains/chat/api';
+import { ProfileUI } from '~/lib/domains/profile/types';
 
 interface ChatUserSearchProviderProps {
   conversationId: string;
   children: React.ReactNode;
-  initialSelected?: ProfileUI[];
 }
 
 export function ChatUserSearchProvider({
   conversationId,
   children,
-  initialSelected = [],
 }: ChatUserSearchProviderProps) {
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<ProfileUI[]>(initialSelected);
   const [page, setPage] = useState(1);
 
   const debouncedQuery = useDeferredValue(query);
 
-  const { data: members, isLoading: isLoadingMembers } = useQuery(
-    chatQueries.conversationMembers(conversationId)
-  );
+  const {
+    data: members,
+    isLoading: isLoadingMembers,
+    error: errorMembers,
+  } = useQuery(chatQueries.conversationMembers(conversationId));
 
   const userIds = members?.map((m) => m.userId) ?? [];
 
-  const { data: profilesData, isLoading: isLoadingProfiles } = useQuery({
+  const {
+    data: profilesData,
+    isLoading: isLoadingProfiles,
+    error: errorProfiles,
+  } = useQuery({
     ...userQueries.profilesByUserIds(userIds),
     enabled: userIds.length > 0,
   });
@@ -91,35 +57,51 @@ export function ChatUserSearchProvider({
     );
   }, [allProfiles, debouncedQuery]);
 
-  const toggleSelected = useCallback((item: ProfileUI) => {
-    setSelected((prev) => {
-      const exists = prev.some((s) => s.id === item.id);
-      if (exists) {
-        return prev.filter((s) => s.id !== item.id);
-      }
-      return [...prev, item];
-    });
-  }, []);
+  const results = useMemo<SearchResultItemData[]>(() => {
+    return filteredProfiles.map<SearchResultItemData>((profile) => ({
+      url: '',
+      key: profile.userId,
+      type: 'user',
+      content: {
+        avatarUrl: profile.avatarUrl ?? null,
+        displayName: profile.displayName,
+        userType: profile.type,
+        profileId: profile.id,
+      },
+    }));
+  }, [filteredProfiles]);
 
-  const isSelected = useCallback(
-    (item: ProfileUI) => {
-      return selected.some((s) => s.id === item.id);
+  const search = useCallback(
+    async (q: string): Promise<SearchResultItemData[]> => {
+      const profiles = !q.trim()
+        ? allProfiles
+        : allProfiles.filter((profile) =>
+            profile.displayName?.toLowerCase().includes(q.toLowerCase())
+          );
+
+      return profiles.map((profile) => ({
+        url: '',
+        key: profile.userId,
+        type: 'user',
+        content: {
+          avatarUrl: profile.avatarUrl ?? null,
+          displayName: profile.displayName,
+          userType: profile.type,
+          profileId: profile.id,
+        },
+      }));
     },
-    [selected]
+    [allProfiles]
   );
 
-  const clearSelection = useCallback(() => {
-    setSelected([]);
-  }, []);
-
-  const contextValue = useMemo<ChatUserSearchContextValue>(
+  const contextValue = useMemo<SearchContextValue>(
     () => ({
       query,
       setQuery,
       debouncedQuery,
-      results: filteredProfiles,
+      results,
       isLoading: isLoadingMembers || isLoadingProfiles,
-      error: null,
+      error: errorMembers ?? errorProfiles,
       page,
       totalPages: 1,
       hasMore: false,
@@ -127,29 +109,24 @@ export function ChatUserSearchProvider({
       nextPage: () => setPage((p) => p + 1),
       prevPage: () => setPage((p) => Math.max(1, p - 1)),
       setPage: (p) => setPage(p),
-      selected,
-      toggleSelected,
-      isSelected,
-      clearSelection,
-      setSelected,
+      search,
     }),
     [
       query,
       debouncedQuery,
-      filteredProfiles,
-      isLoadingMembers,
+      results,
       isLoadingProfiles,
+      isLoadingMembers,
+      errorMembers,
+      errorProfiles,
       page,
-      selected,
-      toggleSelected,
-      isSelected,
-      clearSelection,
+      search,
     ]
   );
 
   return (
-    <ChatUserSearchContext.Provider value={contextValue}>
+    <SearchContext.Provider value={contextValue}>
       {children}
-    </ChatUserSearchContext.Provider>
+    </SearchContext.Provider>
   );
 }

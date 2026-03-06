@@ -18,6 +18,24 @@ function truncateContent(content: string, maxLength: number = 30): string {
   return content.slice(0, maxLength) + '...';
 }
 
+function getPostTitle(
+  contents?: Array<{ contentType: string; url?: string | null }>
+): string {
+  if (!contents || contents.length === 0) return 'Post';
+
+  const first = contents[0];
+  switch (first.contentType) {
+    case 'note':
+      return 'Note';
+    case 'asset':
+      return 'File';
+    case 'external':
+      return first.url ? truncateContent(first.url, 20) : 'Link';
+    default:
+      return 'Post';
+  }
+}
+
 export function PostDetailPageBreadcrumb({
   spaceId,
   postId,
@@ -59,7 +77,7 @@ export function PostDetailPageBreadcrumb({
             {isLoading ? (
               <Skeleton className="h-4 w-24" />
             ) : (
-              truncateContent(post?.content || 'Post')
+              truncateContent(getPostTitle(post?.contents) || 'Post')
             )}
           </BreadcrumbPage>
         </BreadcrumbItem>

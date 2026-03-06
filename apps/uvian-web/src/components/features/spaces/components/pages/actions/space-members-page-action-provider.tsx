@@ -1,13 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { ActionRegistrationType, PageActionProvider } from '~/components/shared/ui/pages/page-actions/page-action-context';
-
+import {
+  ActionRegistrationType,
+  PageActionProvider,
+} from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 export interface SpaceMembersPageActionContextType {
   spaceId: string;
   // Pre-defined action IDs for type safety
-  readonly ACTION_INVITE_PROFILES: 'invite-profiles';
+  readonly ACTION_INVITE_USER_AS_MEMBER: 'invite-user-as-member';
 }
 
 interface SpaceMembersPageActionProviderProps {
@@ -18,7 +20,7 @@ interface SpaceMembersPageActionProviderProps {
 }
 
 const MEMBERS_ACTION_IDS = {
-  INVITE_PROFILES: 'invite-profiles',
+  INVITE_USER_AS_MEMBER: 'invite-user-as-member',
 } as const;
 
 export function SpaceMembersPageActionProvider({
@@ -34,7 +36,7 @@ export function SpaceMembersPageActionProvider({
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
-      id: MEMBERS_ACTION_IDS.INVITE_PROFILES,
+      id: MEMBERS_ACTION_IDS.INVITE_USER_AS_MEMBER,
       label: 'Invite',
       handler: handleInviteMembers,
     },

@@ -14,7 +14,7 @@ export type ProfileType = 'human' | 'agent' | 'system' | 'admin';
 
 export type ProfileUI = {
   id: string;
-  userId?: string | null;
+  userId: string;
   type: ProfileType;
   displayName: string;
   avatarUrl?: string;
@@ -59,6 +59,10 @@ export type UserSearchParams = {
   type?: ('human' | 'agent')[];
   page?: number;
   limit?: number;
+  searchContext?: {
+    type: 'space' | 'conversation';
+    id: string;
+  };
 };
 
 export type UserSearchResults = {

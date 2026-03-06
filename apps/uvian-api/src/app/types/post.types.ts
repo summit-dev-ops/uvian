@@ -1,16 +1,40 @@
+import type {
+  Attachment,
+  AttachmentType,
+  MentionAttachment,
+  FileAttachment,
+  LinkAttachment,
+} from './shared/attachment.types';
+
+export type {
+  Attachment,
+  AttachmentType,
+  MentionAttachment,
+  FileAttachment,
+  LinkAttachment,
+};
+
+export type PostType = 'asset' | 'note' | 'external';
+
 export interface Post {
   id: string;
   spaceId: string;
-  profileId: string;
-  contentType: 'text' | 'url';
-  content: string;
+  authorId: string;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface PostContentItem {
+  type: 'note' | 'asset' | 'external';
+  note?: { title: string; body?: string; attachments?: any[] };
+  noteId?: string;
+  assetId?: string;
+  url?: string;
+}
+
 export interface CreatePostPayload {
-  contentType: 'text' | 'url';
-  content: string;
+  id?: string;
+  contents: PostContentItem[];
 }
 
 export interface CreatePostRequest {

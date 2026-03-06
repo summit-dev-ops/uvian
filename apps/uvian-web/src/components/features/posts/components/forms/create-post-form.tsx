@@ -1,31 +1,31 @@
 'use client';
 
 import * as React from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Paperclip } from 'lucide-react';
-
+import { FileText, Link as LinkIcon, Image, X, Plus } from 'lucide-react';
 import { Button } from '@org/ui';
-import { Textarea } from '@org/ui';
-import { Field, FieldError, FieldGroup, FieldLabel } from '@org/ui';
-import { AssetPickerDialog, AssetPreview } from '~/components/features/assets';
+import { FieldGroup } from '@org/ui';
+import { NotePostForm } from './note-post-form';
+import { AssetPostForm } from './asset-post-form';
+import { ExternalPostForm } from './external-post-form';
 import type { AssetUI } from '~/lib/domains/assets';
+import { assetToAttachment } from '~/lib/domains/shared/attachments/utils';
 
-const postSchema = z.object({
-  content: z
-    .string()
-    .min(1, 'Content is required')
-    .max(2000, 'Content must be 2000 characters or less')
-    .trim(),
-});
+export type ContentItemType = 'note' | 'asset' | 'external';
 
-type PostFormData = z.infer<typeof postSchema>;
+export interface ContentItem {
+  id: string;
+  type: ContentItemType;
+  title?: string;
+  body?: string;
+  attachments?: AssetUI[];
+  assetId?: string;
+  asset?: AssetUI;
+  url?: string;
+}
 
 export interface CreatePostFormProps {
-  onSubmit: (
-    data: PostFormData & { attachments?: AssetUI[] }
-  ) => void | Promise<void>;
+  spaceId: string;
+  onSubmit: (data: { contents: ContentItem[] }) => void | Promise<void>;
   onCancel?: () => void;
   isLoading?: boolean;
   showCancel?: boolean;
@@ -33,98 +33,243 @@ export interface CreatePostFormProps {
 }
 
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({
+  spaceId,
   onSubmit,
   onCancel,
   isLoading = false,
   showCancel = true,
   className,
 }) => {
-  const [showAssetPicker, setShowAssetPicker] = React.useState(false);
-  const [attachments, setAttachments] = React.useState<AssetUI[]>([]);
+  const [contentItems, setContentItems] = React.useState<ContentItem[]>([]);
 
-  const form = useForm<PostFormData>({
-    resolver: zodResolver(postSchema),
-    defaultValues: {
-      content: '',
-    },
-  });
-
-  const handleSubmit = (data: PostFormData) => {
-    onSubmit({ ...data, attachments });
+  const addNote = () => {
+    setContentItems((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type: 'note',
+        title: '',
+        body: '',
+        attachments: [],
+      },
+    ]);
   };
 
-  const handleAssetSelect = (asset: AssetUI) => {
-    setAttachments((prev) => [...prev, asset]);
-    setShowAssetPicker(false);
+  const addAsset = () => {
+    setContentItems((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type: 'asset',
+        assetId: '',
+        asset: undefined,
+      },
+    ]);
   };
 
-  const handleRemoveAttachment = (assetId: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== assetId));
+  const addExternal = () => {
+    setContentItems((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), type: 'external', url: '' },
+    ]);
+  };
+
+  const removeItem = (id: string) => {
+    setContentItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const updateNoteContent = (
+    id: string,
+    data: {
+      title: string;
+      body?: string;
+      attachments: ReturnType<typeof assetToAttachment>[];
+    }
+  ) => {
+    setContentItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              title: data.title,
+              body: data.body,
+              attachments: data.attachments.map((a) => a as unknown as AssetUI),
+            }
+          : item
+      )
+    );
+  };
+
+  const updateAssetContent = (
+    id: string,
+    data: { assetId: string; asset: AssetUI }
+  ) => {
+    setContentItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              assetId: data.assetId,
+              asset: data.asset,
+            }
+          : item
+      )
+    );
+  };
+
+  const updateExternalContent = (id: string, data: { url: string }) => {
+    setContentItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, url: data.url } : item))
+    );
+  };
+
+  const handleSubmit = () => {
+    onSubmit({ contents: contentItems });
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className={className}>
-      <Field>
-        <FieldLabel>Content</FieldLabel>
-        <Controller
-          name="content"
-          control={form.control}
-          render={({ field }) => (
-            <>
-              <Textarea
-                {...field}
-                placeholder="What's on your mind?"
-                rows={4}
-                disabled={isLoading}
-              />
-              {form.formState.errors.content && (
-                <FieldError>{form.formState.errors.content.message}</FieldError>
-              )}
-            </>
-          )}
-        />
-      </Field>
+    <div className={className}>
+      <div className="flex gap-2 mb-4">
+        <Button type="button" variant="outline" size="sm" onClick={addNote}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add Note
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={addAsset}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add File
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={addExternal}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add Link
+        </Button>
+      </div>
 
-      {attachments.length > 0 && (
-        <div className="mt-2 space-y-2">
-          {attachments.map((asset) => (
-            <AssetPreview
-              key={asset.id}
-              asset={asset}
-              onRemove={() => handleRemoveAttachment(asset.id)}
+      {contentItems.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          Add content to your post using the buttons above
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {contentItems.map((item) => (
+            <ContentItemCard
+              key={item.id}
+              item={item}
+              onNoteChange={(data) => updateNoteContent(item.id, data)}
+              onAssetChange={(data) => updateAssetContent(item.id, data)}
+              onExternalChange={(data) => updateExternalContent(item.id, data)}
+              onRemove={() => removeItem(item.id)}
             />
           ))}
         </div>
       )}
 
-      <FieldGroup className="justify-between gap-2 mt-4">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowAssetPicker(true)}
-        >
-          <Paperclip className="h-4 w-4 mr-2" />
-          Attach
-        </Button>
-
+      <FieldGroup className="justify-end gap-2 mt-6">
         <div className="flex gap-2">
           {showCancel && onCancel && (
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={isLoading}>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading || contentItems.length === 0}
+          >
             {isLoading ? 'Posting...' : 'Post'}
           </Button>
         </div>
       </FieldGroup>
-
-      <AssetPickerDialog
-        open={showAssetPicker}
-        onOpenChange={setShowAssetPicker}
-        onSelect={handleAssetSelect}
-      />
-    </form>
+    </div>
   );
 };
+
+interface ContentItemCardProps {
+  item: ContentItem;
+  onNoteChange: (data: {
+    title: string;
+    body?: string;
+    attachments: ReturnType<typeof assetToAttachment>[];
+  }) => void;
+  onAssetChange: (data: { assetId: string; asset: AssetUI }) => void;
+  onExternalChange: (data: { url: string }) => void;
+  onRemove: () => void;
+}
+
+function ContentItemCard({
+  item,
+  onNoteChange,
+  onAssetChange,
+  onExternalChange,
+  onRemove,
+}: ContentItemCardProps) {
+  if (item.type === 'note') {
+    return (
+      <div className="p-3 border rounded-md space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="text-sm font-medium">Note</span>
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <NotePostForm
+          initialValues={{
+            title: item.title,
+            body: item.body,
+            attachments: item.attachments,
+          }}
+          onChange={onNoteChange}
+          showAttachments={true}
+        />
+      </div>
+    );
+  }
+
+  if (item.type === 'asset') {
+    return (
+      <div className="p-3 border rounded-md space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            <span className="text-sm font-medium">File</span>
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <AssetPostForm
+          initialValues={{
+            asset: item.asset,
+          }}
+          onChange={onAssetChange}
+        />
+      </div>
+    );
+  }
+
+  if (item.type === 'external') {
+    return (
+      <div className="p-3 border rounded-md space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <LinkIcon className="h-4 w-4" />
+            <span className="text-sm font-medium">Link</span>
+          </div>
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <ExternalPostForm
+          initialValues={{
+            url: item.url,
+          }}
+          onChange={onExternalChange}
+        />
+      </div>
+    );
+  }
+
+  return null;
+}

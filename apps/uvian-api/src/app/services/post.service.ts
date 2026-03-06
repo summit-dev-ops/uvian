@@ -1,6 +1,14 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
 
+interface PostContent {
+  id: string;
+  contentType: 'note' | 'asset' | 'external';
+  noteId: string | null;
+  assetId: string | null;
+  url: string | null;
+}
+
 export class PostService {
   async getPostsBySpace(
     userClient: SupabaseClient,
@@ -26,48 +34,89 @@ export class PostService {
     const hasMore = (data || []).length > limit;
     const items = hasMore ? data.slice(0, -1) : data;
 
+    // Fetch post_contents for all posts
+    const postIds = (items || []).map((item) => item.id);
+    let contentsMap: Record<string, PostContent[]> = {};
+
+    if (postIds.length > 0) {
+      const { data: contents } = await adminSupabase
+        .from('post_contents')
+        .select('*')
+        .in('post_id', postIds)
+        .order('position', { ascending: true });
+
+      if (contents) {
+        for (const content of contents) {
+          if (!contentsMap[content.post_id]) {
+            contentsMap[content.post_id] = [];
+          }
+          contentsMap[content.post_id].push({
+            id: content.id,
+            contentType: content.content_type,
+            noteId: content.note_id,
+            assetId: content.asset_id,
+            url: content.url,
+          });
+        }
+      }
+    }
+
+    const resolvedItems = (items || []).map((row) => ({
+      id: row.id,
+      spaceId: row.space_id,
+      userId: row.author_id,
+      contents: contentsMap[row.id] || [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
     return {
-      items: (items || []).map((row) => ({
-        id: row.id,
-        spaceId: row.space_id,
-        userId: row.user_id,
-        contentType: row.content_type,
-        content: row.content,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      })),
+      items: resolvedItems,
       nextCursor: hasMore ? items[items.length - 1]?.id : null,
       hasMore,
     };
   }
 
   async getPost(userClient: SupabaseClient, postId: string) {
-    const { data, error } = await userClient
+    const { data: post, error: postError } = await userClient
       .from('get_post_details')
       .select('*')
       .eq('id', postId)
       .single();
 
-    if (error || !data) throw new Error('Post not found');
+    if (postError || !post) throw new Error('Post not found');
+
+    // Fetch post_contents
+    const { data: contents } = await adminSupabase
+      .from('post_contents')
+      .select('*')
+      .eq('post_id', postId)
+      .order('position', { ascending: true });
+
+    const resolvedContents: PostContent[] = (contents || []).map((content) => ({
+      id: content.id,
+      contentType: content.content_type,
+      noteId: content.note_id,
+      assetId: content.asset_id,
+      url: content.url,
+    }));
 
     return {
-      id: data.id,
-      spaceId: data.space_id,
-      userId: data.user_id,
-      contentType: data.content_type,
-      content: data.content,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
+      id: post.id,
+      spaceId: post.space_id,
+      userId: post.author_id,
+      contents: resolvedContents,
+      createdAt: post.created_at,
+      updatedAt: post.updated_at,
     };
   }
 
   async createPost(
     userClient: SupabaseClient,
     data: {
+      id?: string;
       spaceId: string;
       userId: string;
-      contentType: 'text' | 'url';
-      content: string;
     }
   ) {
     const { data: member } = await userClient
@@ -82,10 +131,9 @@ export class PostService {
     const { data: post, error } = await adminSupabase
       .from('posts')
       .insert({
+        id: data.id,
         space_id: data.spaceId,
-        user_id: data.userId,
-        content_type: data.contentType,
-        content: data.content,
+        author_id: data.userId,
       })
       .select()
       .single();
@@ -97,7 +145,7 @@ export class PostService {
   async deletePost(userClient: SupabaseClient, postId: string, userId: string) {
     const { data: post, error: fetchError } = await adminSupabase
       .from('posts')
-      .select('user_id')
+      .select('author_id')
       .eq('id', postId)
       .single();
 
@@ -105,9 +153,12 @@ export class PostService {
       throw new Error('Post not found');
     }
 
-    if (post.user_id !== userId) {
+    if (post.author_id !== userId) {
       throw new Error("Cannot delete another user's post");
     }
+
+    // Delete post_contents first (handled by CASCADE, but being explicit)
+    await adminSupabase.from('post_contents').delete().eq('post_id', postId);
 
     const { error } = await adminSupabase
       .from('posts')

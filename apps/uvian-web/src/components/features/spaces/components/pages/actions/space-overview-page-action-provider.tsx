@@ -5,17 +5,22 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
 import {
+  postsMutations,
+  type PostContentPayload,
+} from '~/lib/domains/posts/api/mutations';
+import { useCurrentUser } from '~/components/features/user/hooks/use-current-user';
+import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
 
 export interface SpaceOverviewPageActionContextType {
   spaceId: string;
-  // Pre-defined action IDs for type safety
   readonly ACTION_EDIT_SPACE: 'edit-space';
-  readonly ACTION_INVITE_PROFILES: 'invite-profiles';
+  readonly ACTION_INVITE_USER_AS_MEMBER: 'invite-user-as-member';
   readonly ACTION_MANAGE_MEMBERS: 'manage-members';
   readonly ACTION_DELETE_SPACE: 'delete-space';
+  readonly ACTION_CREATE_POST: 'create-post';
 }
 
 interface SpaceOverviewPageActionProviderProps {
@@ -27,9 +32,10 @@ interface SpaceOverviewPageActionProviderProps {
 
 const SPACE_ACTION_IDS = {
   EDIT_SPACE: 'edit-space',
-  INVITE_PROFILES: 'invite-profiles',
+  INVITE_USER_AS_MEMBER: 'invite-user-as-member',
   MANAGE_MEMBERS: 'manage-members',
   DELETE_SPACE: 'delete-space',
+  CREATE_POST: 'create-post',
 } as const;
 
 export function SpaceOverviewPageActionProvider({
@@ -40,10 +46,37 @@ export function SpaceOverviewPageActionProvider({
 }: SpaceOverviewPageActionProviderProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
 
   // Mutation for deleting spaces
   const { mutate: deleteSpace } = useMutation(
     spacesMutations.deleteSpace(queryClient)
+  );
+
+  // Mutation for creating posts
+  const { mutate: createPost } = useMutation(
+    postsMutations.createPost(queryClient)
+  );
+
+  // Handler for creating post
+  const handleCreatePost = React.useCallback(
+    async (data: { spaceId: string; contents: PostContentPayload[] }) => {
+      return new Promise<void>((resolve, reject) => {
+        createPost(
+          {
+            id: crypto.randomUUID(),
+            spaceId: data.spaceId,
+            userId: userId || '',
+            contents: data.contents,
+          },
+          {
+            onSuccess: () => resolve(),
+            onError: (error) => reject(error),
+          }
+        );
+      });
+    },
+    [createPost]
   );
 
   // Handler for editing space
@@ -86,12 +119,17 @@ export function SpaceOverviewPageActionProvider({
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
+      id: SPACE_ACTION_IDS.CREATE_POST,
+      label: 'Create Post',
+      handler: handleCreatePost,
+    },
+    {
       id: SPACE_ACTION_IDS.EDIT_SPACE,
       label: 'Edit Space',
       handler: handleEditSpace,
     },
     {
-      id: SPACE_ACTION_IDS.INVITE_PROFILES,
+      id: SPACE_ACTION_IDS.INVITE_USER_AS_MEMBER,
       label: 'Invite',
       handler: handleInviteMembers,
     },
@@ -126,20 +164,32 @@ export function SpaceOverviewPageActionProvider({
   );
 
   return (
-    <PageActionProvider
-      actions={actions}
-      onActionError={handleActionError}
-      onActionSuccess={handleActionSuccess}
+    <SpaceOverviewPageActionContext.Provider
+      value={{
+        spaceId,
+        ACTION_EDIT_SPACE: 'edit-space',
+        ACTION_INVITE_USER_AS_MEMBER: 'invite-user-as-member',
+        ACTION_MANAGE_MEMBERS: 'manage-members',
+        ACTION_DELETE_SPACE: 'delete-space',
+        ACTION_CREATE_POST: 'create-post',
+      }}
     >
-      {children}
-    </PageActionProvider>
+      <PageActionProvider
+        actions={actions}
+        onActionError={handleActionError}
+        onActionSuccess={handleActionSuccess}
+      >
+        {children}
+      </PageActionProvider>
+    </SpaceOverviewPageActionContext.Provider>
   );
 }
 
+const SpaceOverviewPageActionContext =
+  React.createContext<SpaceOverviewPageActionContextType | null>(null);
+
 export function useSpaceOverviewPageActionContext() {
-  const context = React.useContext(
-    React.createContext<SpaceOverviewPageActionContextType | null>(null)
-  );
+  const context = React.useContext(SpaceOverviewPageActionContext);
   if (!context) {
     throw new Error(
       'useSpaceOverviewPageActionContext must be used within a SpaceOverviewPageActionProvider'

@@ -12,7 +12,7 @@ import type { InviteConversationMemberPayload } from '~/lib/domains/chat/api/mut
 
 export interface ChatMembersPageActionContextType {
   conversationId: string;
-  readonly ACTION_INVITE_PROFILE: 'invite-profile';
+  readonly ACTION_INVITE_USER_AS_MEMBER: 'invite-user-as-member';
 }
 
 interface ChatMembersPageActionProviderProps {
@@ -23,7 +23,7 @@ interface ChatMembersPageActionProviderProps {
 }
 
 export const MEMBERS_ACTION_IDS = {
-  INVITE_PROFILES: 'invite-profiles',
+  INVITE_USER_AS_MEMBER: 'invite-user-as-member',
 } as const;
 
 export function ChatMembersPageActionProvider({
@@ -61,7 +61,7 @@ export function ChatMembersPageActionProvider({
   // Register the actions with the PageActionProvider
   const actions: ActionRegistrationType[] = [
     {
-      id: MEMBERS_ACTION_IDS.INVITE_PROFILES,
+      id: MEMBERS_ACTION_IDS.INVITE_USER_AS_MEMBER,
       label: 'Invite',
       handler: handleInviteMember,
     },

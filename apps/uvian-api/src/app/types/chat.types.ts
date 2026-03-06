@@ -1,3 +1,19 @@
+import type {
+  Attachment,
+  AttachmentType,
+  MentionAttachment,
+  FileAttachment,
+  LinkAttachment,
+} from './shared/attachment.types';
+
+export type {
+  Attachment,
+  AttachmentType,
+  MentionAttachment,
+  FileAttachment,
+  LinkAttachment,
+};
+
 export interface Conversation {
   id: string;
   title: string;
@@ -18,29 +34,6 @@ export interface Message {
   updatedAt: string;
   attachments: Attachment[];
 }
-
-export type AttachmentType = 'mention' | 'file' | 'link';
-
-export interface MentionAttachment {
-  type: 'mention';
-  userId: string;
-  label: string;
-}
-
-export interface FileAttachment {
-  type: 'file';
-  url: string;
-  filename?: string;
-  mimeType?: string;
-  size?: number;
-}
-
-export interface LinkAttachment {
-  type: 'link';
-  url: string;
-}
-
-export type Attachment = MentionAttachment | FileAttachment | LinkAttachment;
 
 export interface ConversationMembership {
   userId: string;

@@ -83,11 +83,7 @@ export function ImageCarousel({
       <DialogPortal>
         <DialogOverlay className="bg-black/90" />
         <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 bg-transparent border-none shadow-none">
-          <DialogHeader className="absolute top-0 left-0 right-0 z-10 flex justify-center pt-4">
-            <DialogTitle className="bg-black/50 text-white px-3 py-1 rounded-full text-sm">
-              Image Gallery ({currentIndex + 1} / {images.length})
-            </DialogTitle>
-          </DialogHeader>
+          <DialogTitle className="sr-only">Image carousel</DialogTitle>
           <div className="relative w-full h-full flex items-center justify-center">
             <Button
               variant="ghost"

@@ -1,8 +1,8 @@
-export type BaseSearchResultItemData = {
-    type: string,
-    label : string,
-    url: string
-}
-export type BaseSearchResultItemProps = {
-    data: BaseSearchResultItemData
-}
+import { SearchResultItemContent } from "./components/items";
+
+export type SearchResultItemData = {
+  type: string;
+  key: string;
+  url: string;
+  content: SearchResultItemContent;
+};

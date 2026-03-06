@@ -48,12 +48,20 @@ export const profileQueries = {
         query: params.query,
         page: params.page,
         limit: params.limit,
+        searchContext: params.searchContext,
       }),
       queryFn: async () => {
         const { data } = await apiClient.get<UserSearchResults>(
           '/api/users/search',
           {
-            params: { q: params.query, page: params.page, limit: params.limit },
+            params: {
+              q: params.query,
+              page: params.page,
+              limit: params.limit,
+              searchContext: params.searchContext
+                ? JSON.stringify(params.searchContext)
+                : undefined,
+            },
           }
         );
         return data;

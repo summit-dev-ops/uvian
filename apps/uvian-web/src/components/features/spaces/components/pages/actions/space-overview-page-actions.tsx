@@ -1,16 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { Edit, Users, Trash2 } from 'lucide-react';
+import { Edit, Users, Trash2, Plus } from 'lucide-react';
 import { DropdownMenuItem } from '@org/ui';
 import { MODAL_IDS } from '~/components/shared/ui/modals/modal-registry';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { useModalContext } from '~/components/shared/ui/modals';
+import { useSpaceOverviewPageActionContext } from './space-overview-page-action-provider';
+
 const SPACE_ACTION_IDS = {
   EDIT_SPACE: 'edit-space',
-  INVITE_PROFILES: 'invite-profiles',
+  INVITE_USER_AS_MEMBER: 'invite-user-as-member',
   MANAGE_MEMBERS: 'manage-members',
   DELETE_SPACE: 'delete-space',
+  CREATE_POST: 'create-post',
 } as const;
 
 /**
@@ -20,6 +23,14 @@ const SPACE_ACTION_IDS = {
 export function SpaceOverviewPageActions() {
   const actionContext = usePageActionContext();
   const modalContext = useModalContext();
+  const { spaceId } = useSpaceOverviewPageActionContext();
+
+  const handleCreatePost = React.useCallback(() => {
+    modalContext.openModal(MODAL_IDS.CREATE_POST, {
+      onConfirmActionId: SPACE_ACTION_IDS.CREATE_POST,
+      spaceId,
+    });
+  }, [modalContext, spaceId]);
 
   const handleEditSpace = React.useCallback(async () => {
     await actionContext.executeAction(SPACE_ACTION_IDS.EDIT_SPACE);
@@ -27,10 +38,11 @@ export function SpaceOverviewPageActions() {
 
   const handleInviteMembers = React.useCallback(async () => {
     // Open the invite members modal
-    modalContext.openModal(MODAL_IDS.INVITE_MEMBERS, {
-      onConfirmActionId: SPACE_ACTION_IDS.INVITE_PROFILES,
+    modalContext.openModal(MODAL_IDS.INVITE_USER_AS_MEMBER, {
+      onConfirmActionId: SPACE_ACTION_IDS.INVITE_USER_AS_MEMBER,
+      searchContext: { type: 'space', id: spaceId },
     });
-  }, [modalContext]);
+  }, [modalContext, spaceId]);
 
   const handleManageMembers = React.useCallback(async () => {
     await actionContext.executeAction(SPACE_ACTION_IDS.MANAGE_MEMBERS);
@@ -45,6 +57,11 @@ export function SpaceOverviewPageActions() {
 
   return (
     <>
+      <DropdownMenuItem onClick={handleCreatePost} className="cursor-pointer">
+        <Plus className="mr-2 h-4 w-4" />
+        <span>Create Post</span>
+      </DropdownMenuItem>
+
       <DropdownMenuItem
         onClick={handleEditSpace}
         className="cursor-pointer"
@@ -58,7 +75,7 @@ export function SpaceOverviewPageActions() {
         onClick={handleInviteMembers}
         className="cursor-pointer"
         disabled={actionContext.isActionExecuting(
-          SPACE_ACTION_IDS.INVITE_PROFILES
+          SPACE_ACTION_IDS.INVITE_USER_AS_MEMBER
         )}
       >
         <Users className="mr-2 h-4 w-4" />

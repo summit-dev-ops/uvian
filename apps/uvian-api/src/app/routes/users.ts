@@ -12,6 +12,7 @@ interface UserSearchParams {
     type?: string;
     page?: number;
     limit?: number;
+    searchContext?: string;
   };
 }
 
@@ -21,6 +22,11 @@ interface UserSearchResult {
   displayName: string;
   avatarUrl: string | null;
   type: 'human' | 'agent';
+}
+
+interface SearchContext {
+  type: 'space' | 'conversation';
+  id: string;
 }
 
 export default async function usersRoutes(fastify: FastifyInstance) {
@@ -59,7 +65,39 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest<UserSearchParams>, reply: FastifyReply) => {
       try {
-        const { q, page = 1, limit = 10 } = request.query || {};
+        const { q, page = 1, limit = 10, searchContext } = request.query || {};
+
+        const currentUserId = request.user?.id;
+
+        let excludeUserIds: string[] = [];
+
+        if (searchContext) {
+          try {
+            const context: SearchContext = JSON.parse(searchContext);
+
+            if (context.type === 'conversation') {
+              const { data: members } = await adminSupabase
+                .from('conversation_members')
+                .select('user_id')
+                .eq('conversation_id', context.id);
+
+              excludeUserIds = (members || []).map((m) => m.user_id);
+            } else if (context.type === 'space') {
+              const { data: members } = await adminSupabase
+                .from('space_members')
+                .select('user_id')
+                .eq('space_id', context.id);
+
+              excludeUserIds = (members || []).map((m) => m.user_id);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse searchContext:', parseError);
+          }
+        }
+
+        if (currentUserId) {
+          excludeUserIds.push(currentUserId);
+        }
 
         let query = adminSupabase
           .from('profiles')
@@ -67,6 +105,10 @@ export default async function usersRoutes(fastify: FastifyInstance) {
 
         if (q) {
           query = query.ilike('display_name', `%${q}%`);
+        }
+
+        if (excludeUserIds.length > 0) {
+          query = query.not('user_id', 'in', `(${excludeUserIds.join(',')})`);
         }
 
         const from = (page - 1) * limit;

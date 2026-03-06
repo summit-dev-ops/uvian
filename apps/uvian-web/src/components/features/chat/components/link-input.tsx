@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import normalizeUrl from 'normalize-url';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@org/ui';
 import { Input } from '@org/ui';
 import { Button } from '@org/ui';
@@ -16,7 +17,8 @@ export function LinkInput({ open, onOpenChange, onAdd }: LinkInputProps) {
 
   const handleAdd = () => {
     if (url.trim()) {
-      onAdd(url.trim());
+      const normalized = normalizeUrl(url.trim());
+      onAdd(normalized);
       setUrl('');
       onOpenChange(false);
     }

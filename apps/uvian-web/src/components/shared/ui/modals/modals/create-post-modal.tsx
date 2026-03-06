@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { usePageActionContext } from '../../pages/page-actions/page-action-context';
 import { CreatePostDialog } from '~/components/features/posts/components/dialogs';
+import type { PostContentPayload } from '~/lib/domains/posts/api/mutations';
 
 export interface CreatePostModalProps {
   open: boolean;
@@ -21,9 +22,12 @@ export function CreatePostModal({
   const { executeAction, isActionExecuting } = usePageActionContext();
   const isLoading = isActionExecuting(onConfirmActionId);
 
-  const handleSubmit = async (data: { content: string }) => {
+  const handleSubmit = async (data: { contents: PostContentPayload[] }) => {
     try {
-      await executeAction(onConfirmActionId, { spaceId, ...data });
+      await executeAction(onConfirmActionId, {
+        spaceId,
+        contents: data.contents,
+      });
     } catch (error) {
       console.error('Failed to create post:', error);
     }
@@ -36,6 +40,7 @@ export function CreatePostModal({
 
   return (
     <CreatePostDialog
+      spaceId={spaceId}
       open={open}
       onOpenChange={onOpenChange}
       onSubmit={handleSubmit}

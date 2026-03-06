@@ -11,19 +11,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@org/ui';
 import { ImageLightbox } from './image-lightbox';
-import type { Attachment } from '~/lib/domains/chat/types';
+import { Attachment } from '~/lib/domains/posts/types';
+import { formatFileSize } from '~/lib/domains/shared/attachments/utils';
 
 interface AttachmentItemProps {
   attachment: Attachment;
   onRemove?: () => void;
   showRemove?: boolean;
-}
-
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function isImageAttachment(attachment: Attachment): boolean {

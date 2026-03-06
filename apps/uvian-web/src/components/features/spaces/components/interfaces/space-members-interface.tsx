@@ -74,10 +74,11 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
   };
 
   const handleInviteMembers = React.useCallback(() => {
-    modalContext.openModal(MODAL_IDS.INVITE_PROFILES, {
-      onConfirmActionId: 'invite-profiles',
+    modalContext.openModal(MODAL_IDS.INVITE_USER_AS_MEMBER, {
+      onConfirmActionId: 'invite-user-as-member',
+      searchContext: { type: 'space', id: spaceId },
     });
-  }, [modalContext]);
+  }, [modalContext, spaceId]);
 
   if (error) {
     return (

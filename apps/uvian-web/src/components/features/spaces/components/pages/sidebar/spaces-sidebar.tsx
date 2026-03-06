@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, Users, ListChecks } from 'lucide-react';
+import { MessageSquare, Users, ListChecks, FileText, Send } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import {
   SidebarContent,
@@ -27,9 +27,9 @@ interface SpacesSidebarProps {
 
 export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
   const pathname = usePathname();
-  const [view, setView] = React.useState<'conversations' | 'members' | 'jobs'>(
-    'conversations'
-  );
+  const [view, setView] = React.useState<
+    'conversations' | 'members' | 'jobs' | 'notes' | 'posts'
+  >('conversations');
 
   const { data: space } = useQuery(spacesQueries.space(spaceId));
 
@@ -92,6 +92,24 @@ export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
           >
             <ListChecks className="h-4 w-4 mr-1" />
             Jobs
+          </Button>
+          <Button
+            variant={view === 'notes' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="flex-1"
+            onClick={() => setView('notes')}
+          >
+            <FileText className="h-4 w-4 mr-1" />
+            Notes
+          </Button>
+          <Button
+            variant={view === 'posts' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="flex-1"
+            onClick={() => setView('posts')}
+          >
+            <Send className="h-4 w-4 mr-1" />
+            Posts
           </Button>
         </div>
       </SidebarHeader>
@@ -180,6 +198,54 @@ export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
                     >
                       <ListChecks className="h-4 w-4" />
                       <span className="truncate">View all {jobCount} jobs</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {view === 'notes' && (
+          <SidebarGroup className="mt-2">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link
+                      href={`/spaces/${spaceId}/notes`}
+                      className={
+                        pathname === `/spaces/${spaceId}/notes`
+                          ? 'bg-accent'
+                          : ''
+                      }
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate">View all notes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {view === 'posts' && (
+          <SidebarGroup className="mt-2">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link
+                      href={`/spaces/${spaceId}/posts`}
+                      className={
+                        pathname === `/spaces/${spaceId}/posts`
+                          ? 'bg-accent'
+                          : ''
+                      }
+                    >
+                      <Send className="h-4 w-4" />
+                      <span className="truncate">View all posts</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

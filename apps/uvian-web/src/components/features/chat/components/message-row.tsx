@@ -5,9 +5,17 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@org/ui';
 import { Copy, RefreshCcw, MoreHorizontal } from 'lucide-react';
 import { ProfilePreview } from './profile-preview';
-import { MentionChips } from './mention-chips';
-import { ImageGallery } from './image-gallery';
-import { LinkList } from './link-list';
+import {
+  MentionChips,
+  ImageGallery,
+  LinkList,
+} from '~/components/shared/ui/attachments';
+import { MarkdownView } from '~/components/shared/ui/markdown';
+import {
+  isImageAttachment,
+  isMentionAttachment,
+  isLinkAttachment,
+} from '~/lib/domains/shared/attachments/utils';
 import type {
   MessageUI,
   Attachment,
@@ -15,7 +23,6 @@ import type {
   MentionAttachment,
   LinkAttachment,
 } from '~/lib/domains/chat/types';
-import Markdown from 'react-markdown';
 
 interface MessageRowProps {
   message: MessageUI;
@@ -25,24 +32,16 @@ interface MessageRowProps {
 
 const MENTION_REGEX = /\[@ id="([^"]+)" label="([^"]+)"\]/g;
 
-function isImageAttachment(
-  attachment: Attachment
-): attachment is FileAttachment {
-  return (
-    attachment.type === 'file' && !!attachment.mimeType?.startsWith('image/')
-  );
+function isImage(attachment: Attachment): attachment is FileAttachment {
+  return isImageAttachment(attachment);
 }
 
-function isMentionAttachment(
-  attachment: Attachment
-): attachment is MentionAttachment {
-  return attachment.type === 'mention';
+function isMention(attachment: Attachment): attachment is MentionAttachment {
+  return isMentionAttachment(attachment);
 }
 
-function isLinkAttachment(
-  attachment: Attachment
-): attachment is LinkAttachment {
-  return attachment.type === 'link';
+function isLink(attachment: Attachment): attachment is LinkAttachment {
+  return isLinkAttachment(attachment);
 }
 
 export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
@@ -63,26 +62,14 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
 
   const attachments = message.attachments || [];
 
-  const mentions = useMemo(
-    () => attachments.filter(isMentionAttachment),
-    [attachments]
-  );
+  const mentions = useMemo(() => attachments.filter(isMention), [attachments]);
 
-  const images = useMemo(
-    () => attachments.filter(isImageAttachment),
-    [attachments]
-  );
+  const images = useMemo(() => attachments.filter(isImage), [attachments]);
 
-  const links = useMemo(
-    () => attachments.filter(isLinkAttachment),
-    [attachments]
-  );
+  const links = useMemo(() => attachments.filter(isLink), [attachments]);
 
   const files = useMemo(
-    () =>
-      attachments.filter(
-        (a) => a.type === 'file' && !isImageAttachment(a)
-      ) as FileAttachment[],
+    () => attachments.filter((a) => a.type === 'file' && !isImage(a)),
     [attachments]
   );
 
@@ -135,41 +122,7 @@ export function MessageRow({ message, onRetry, onCopy }: MessageRowProps) {
         </div>
 
         <div className="leading-relaxed">
-          <article className="prose prose dark:prose-invert max-w-none">
-            <Markdown
-              components={{
-                p: ({ children }) => (
-                  <p className="break-words mb-2 last:mb-0">{children}</p>
-                ),
-
-                pre: ({ children }) => (
-                  <div className="w-full overflow-x-auto my-3 rounded-lg">
-                    <pre className="p-4 whitespace-pre-wrap break-all">
-                      {children}
-                    </pre>
-                  </div>
-                ),
-
-                ul: ({ children }) => (
-                  <ul className="list-disc ml-4 mb-2 break-words">
-                    {children}
-                  </ul>
-                ),
-                a: ({ href, children }) => (
-                  <a href={href} className="text-primary underline break-all">
-                    {children}
-                  </a>
-                ),
-              }}
-            >
-              {processedContent}
-            </Markdown>
-          </article>
-
-          {message.isStreaming && (
-            <span className="inline-block w-1.5 h-4 ml-1 bg-primary animate-pulse align-middle" />
-          )}
-
+          <MarkdownView content={processedContent} />
           <ImageGallery images={images} />
           <LinkList links={links} files={files} />
         </div>

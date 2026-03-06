@@ -61,9 +61,9 @@ export function MemberDataTable({
   const [rowSelection, setRowSelection] = React.useState({});
 
   const handleInviteMember = React.useCallback(async () => {
-    modalContext.openModal(MODAL_IDS.INVITE_PROFILES, {
-      onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_PROFILES,
-      conversationId: conversationId,
+    modalContext.openModal(MODAL_IDS.INVITE_USER_AS_MEMBER, {
+      onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_USER_AS_MEMBER,
+      searchContext: { type: 'conversation', id: conversationId },
     });
   }, [modalContext, conversationId]);
 

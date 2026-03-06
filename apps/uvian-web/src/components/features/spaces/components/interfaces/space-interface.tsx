@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@org/ui';
 import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
+import { PostList } from '~/components/features/posts/components/post-list';
 
 interface SpaceInterfaceProps {
   spaceId: string;
@@ -238,6 +239,10 @@ export function SpaceInterface({ spaceId }: SpaceInterfaceProps) {
               <span>Created {createdDate}</span>
             </div>
           </div>
+        </InterfaceContent>
+
+        <InterfaceContent spacing="default">
+          <PostList spaceId={spaceId} />
         </InterfaceContent>
       </InterfaceContainer>
     </InterfaceLayout>

@@ -79,13 +79,16 @@ export class AssetService {
 
     const accountId = accountData;
 
+    // Convert storage path to full public URL for permanent access
+    const publicUrl = this.getPublicUrl(input.url);
+
     const { data, error } = await adminSupabase
       .from('assets')
       .insert({
         account_id: accountId,
         uploader_user_id: userId,
         type: input.type,
-        url: input.url,
+        url: publicUrl,
         filename: input.filename,
         mime_type: input.mimeType,
         file_size_bytes: input.fileSizeBytes,
@@ -147,7 +150,7 @@ export class AssetService {
     if (hardDelete) {
       // Hard delete: remove from storage and database
       const storagePath = this.extractStoragePath(asset.url);
-      if (storagePath && asset.storage_type === 'supabase') {
+      if (storagePath && asset.storageType === 'supabase') {
         await adminSupabase.storage.from('assets').remove([storagePath]);
       }
 
@@ -203,6 +206,14 @@ export class AssetService {
     };
   }
 
+  private getPublicUrl(storagePath: string): string {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error('SUPABASE_URL not configured');
+    }
+    return `${supabaseUrl}/storage/v1/object/public/assets/${storagePath}`;
+  }
+
   async resolveAssets(assetIds: string[]) {
     if (!assetIds || assetIds.length === 0) {
       return [];
@@ -218,7 +229,7 @@ export class AssetService {
     }
 
     const resolved = await Promise.all(
-      (data || []).map(async (asset) => {
+      (data || []).map(async (asset: any) => {
         let accessUrl = asset.url;
 
         if (asset.storage_type === 'supabase') {
@@ -251,7 +262,7 @@ export class AssetService {
     }
 
     const totalBytes = (data || []).reduce(
-      (sum, asset) => sum + (asset.file_size_bytes || 0),
+      (sum: number, asset: any) => sum + (asset.file_size_bytes || 0),
       0
     );
 
@@ -274,7 +285,7 @@ export class AssetService {
       return null;
     }
 
-    const { data: asset, error } = await adminSupabase
+    const { data: asset, error }: any = await adminSupabase
       .from('assets')
       .select('url, mime_type, file_size_bytes, storage_type, filename')
       .eq('url', storagePath)
@@ -317,20 +328,20 @@ export class AssetService {
   private transformFromDatabase(record: any): Asset {
     return {
       id: record.id,
-      account_id: record.account_id,
-      uploader_user_id: record.uploader_user_id,
+      accountId: record.account_id,
+      uploaderUserId: record.uploader_user_id,
       type: record.type,
       url: record.url,
       filename: record.filename,
-      mime_type: record.mime_type,
-      file_size_bytes: record.file_size_bytes,
-      storage_type: record.storage_type,
+      mimeType: record.mime_type,
+      fileSizeBytes: record.file_size_bytes,
+      storageType: record.storage_type,
       metadata: record.metadata,
-      created_at: record.created_at,
-      updated_at: record.updated_at,
-      uploader_name: record.uploader_name,
-      uploader_avatar: record.uploader_avatar,
-      account_name: record.account_name,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at,
+      uploaderName: record.uploader_name,
+      uploaderAvatar: record.uploader_avatar,
+      accountName: record.account_name,
     };
   }
 }

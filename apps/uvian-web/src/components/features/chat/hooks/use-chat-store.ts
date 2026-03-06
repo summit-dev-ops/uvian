@@ -2,7 +2,7 @@
 
 import { useAppStore } from '~/components/providers/store/store-provider';
 import { useCallback } from 'react';
-import type { Attachment } from '~/lib/domains/chat/types';
+import { Attachment } from '~/lib/domains/posts/types';
 
 const EMPTY_ATTACHMENTS: Attachment[] = [];
 

@@ -6,7 +6,7 @@ import { DropdownMenuItem } from '@org/ui';
 import { usePageActionContext } from '~/components/shared/ui/pages/page-actions/page-action-context';
 import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 const MEMBERS_ACTION_IDS = {
-  INVITE_PROFILES: 'invite-profiles',
+  INVITE_USER_AS_MEMBER: 'invite-user-as-member',
 } as const;
 
 /**
@@ -19,8 +19,8 @@ export function SpaceMembersPageActions() {
 
   const handleInviteMembers = React.useCallback(async () => {
     // Open the invite members modal
-    modalContext.openModal(MODAL_IDS.INVITE_PROFILES, {
-      onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_PROFILES,
+    modalContext.openModal(MODAL_IDS.INVITE_USER_AS_MEMBER, {
+      onConfirmActionId: MEMBERS_ACTION_IDS.INVITE_USER_AS_MEMBER,
     });
   }, [modalContext]);
 
@@ -30,7 +30,7 @@ export function SpaceMembersPageActions() {
         onClick={handleInviteMembers}
         className="cursor-pointer"
         disabled={actionContext.isActionExecuting(
-          MEMBERS_ACTION_IDS.INVITE_PROFILES
+          MEMBERS_ACTION_IDS.INVITE_USER_AS_MEMBER
         )}
       >
         <UserPlus className="mr-2 h-4 w-4" />

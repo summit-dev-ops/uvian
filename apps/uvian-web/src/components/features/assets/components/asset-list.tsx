@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Image, FileText, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, FileText, Trash2 } from 'lucide-react';
 import { Button } from '@org/ui';
 import { Skeleton } from '@org/ui';
 import { Empty, EmptyTitle, EmptyDescription } from '@org/ui';
@@ -20,7 +20,7 @@ interface AssetListProps {
 function getAssetIcon(type: AssetType) {
   switch (type) {
     case 'image':
-      return Image;
+      return ImageIcon;
     case 'text':
     case 'document':
     default:

@@ -6,7 +6,10 @@ import {
   ActionRegistrationType,
   PageActionProvider,
 } from '~/components/shared/ui/pages/page-actions/page-action-context';
-import { postsMutations } from '~/lib/domains/posts/api/mutations';
+import {
+  postsMutations,
+  type PostContentPayload,
+} from '~/lib/domains/posts/api/mutations';
 import { useCurrentUser } from '~/components/features/user/hooks/use-current-user';
 
 export interface PostsPageActionContextType {
@@ -45,14 +48,14 @@ export function PostsPageActionProvider({
   );
 
   const handleCreatePost = React.useCallback(
-    async (data: { spaceId: string; content: string }) => {
+    async (data: { spaceId: string; contents: PostContentPayload[] }) => {
       return new Promise<void>((resolve, reject) => {
         createPost(
           {
             id: crypto.randomUUID(),
             spaceId: data.spaceId,
-            content: data.content,
             userId: userId || '',
+            contents: data.contents,
           },
           {
             onSuccess: () => resolve(),
@@ -61,7 +64,7 @@ export function PostsPageActionProvider({
         );
       });
     },
-    [createPost, userId]
+    [createPost]
   );
 
   const handleDeletePost = React.useCallback(

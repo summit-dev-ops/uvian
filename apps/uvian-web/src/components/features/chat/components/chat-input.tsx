@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from 'react';
 import { Button, InputGroup, InputGroupAddon, InputGroupButton } from '@org/ui';
 import {
   SendHorizontal,
@@ -9,12 +15,15 @@ import {
   Link as LinkIcon,
   X,
 } from 'lucide-react';
-import { RichTextArea } from './rich-text-area';
+import { RichTextArea } from '~/components/shared/ui/rich-input';
 import { AssetPickerDialog } from '~/components/features/assets';
-import { MentionPicker } from './mention-picker';
+import { MentionPickerDialog } from './mention-picker-dialog';
 import { LinkInput } from './link-input';
+import { useQueryClient } from '@tanstack/react-query';
+import { chatQueries } from '~/lib/domains/chat/api';
+import { userQueries } from '~/lib/domains/user/api';
 import type { AssetUI } from '~/lib/domains/assets';
-import type { Attachment } from '~/lib/domains/chat/types';
+import { Attachment, MentionAttachment } from '~/lib/domains/posts/types';
 
 interface ChatInputProps {
   value: string;
@@ -36,9 +45,74 @@ export function ChatInput({
   disabled,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const queryClient = useQueryClient();
   const [showAssetPicker, setShowAssetPicker] = useState(false);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
+
+  const fetchMembers = useMemo(
+    () => async () => {
+      return queryClient.fetchQuery(
+        chatQueries.conversationMembers(context.conversationId)
+      );
+    },
+    [queryClient, context.conversationId]
+  );
+
+  const fetchProfiles = useMemo(
+    () => async (userIds: string[]) => {
+      const result = await queryClient.fetchQuery(
+        userQueries.profilesByUserIds(userIds)
+      );
+      return result || {};
+    },
+    [queryClient]
+  );
+
+  const mentionSearchFn = useCallback(
+    async (query: string) => {
+      const members = await fetchMembers();
+      const profilesMap = await fetchProfiles(
+        members.map((m: any) => m.userId)
+      );
+      const membersWithProfiles = members.map((member: any) => ({
+        ...member,
+        profile: profilesMap[member.userId],
+      }));
+
+      if (!query.trim()) {
+        return membersWithProfiles.map((m: any) => ({
+          key: m.userId,
+          type: 'user',
+          url: '',
+          content: {
+            displayName: m.profile?.displayName || '',
+            avatarUrl: m.profile?.avatarUrl || null,
+            userType: m.profile?.type || 'human',
+            profileId: m.profile?.id || '',
+          },
+        }));
+      }
+
+      const q = query.toLowerCase();
+      const filtered = membersWithProfiles.filter((m: any) =>
+        m.profile?.displayName?.toLowerCase().includes(q)
+      );
+
+      return filtered.map((m: any) => ({
+        key: m.userId,
+        type: 'user',
+        url: '',
+        content: {
+          displayName: m.profile?.displayName || '',
+          avatarUrl: m.profile?.avatarUrl || null,
+          userType: m.profile?.type || 'human',
+          profileId: m.profile?.id || '',
+        },
+      }));
+    },
+    [fetchMembers, fetchProfiles]
+  );
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -59,6 +133,7 @@ export function ChatInput({
 
   const handleAssetSelect = (asset: AssetUI) => {
     const fileAttachment: Attachment = {
+      key: asset.url,
       type: 'file',
       url: asset.url,
       filename: asset.filename || undefined,
@@ -69,25 +144,26 @@ export function ChatInput({
     setShowAssetPicker(false);
   };
 
-  const handleMentionSelect = (userId: string, label: string) => {
-    const mentionAttachment: Attachment = {
-      type: 'mention',
-      userId,
-      label,
-    };
-    onAttachmentsChange?.([...attachments, mentionAttachment]);
+  const handleMentionConfirm = (mentions: MentionAttachment[]) => {
+    const nonMentions = attachments.filter((a) => a.type !== 'mention');
+    onAttachmentsChange?.([...nonMentions, ...mentions]);
+  };
+
+  const handleMentionCancel = () => {
+    setShowMentionPicker(false);
   };
 
   const handleLinkAdd = (url: string) => {
     const linkAttachment: Attachment = {
+      key: url,
       type: 'link',
       url,
     };
     onAttachmentsChange?.([...attachments, linkAttachment]);
   };
 
-  const removeAttachment = (index: number) => {
-    const newAttachments = attachments.filter((_, i) => i !== index);
+  const removeAttachment = (key: string) => {
+    const newAttachments = attachments.filter((a) => a.key !== key);
     onAttachmentsChange?.(newAttachments);
   };
 
@@ -100,9 +176,9 @@ export function ChatInput({
         >
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 items-center justify-start">
-              {attachments.map((attachment, index) => (
+              {attachments.map((attachment) => (
                 <div
-                  key={index}
+                  key={attachment.key}
                   className="flex items-center gap-1 px-2 py-1 bg-muted rounded-md text-sm"
                 >
                   {attachment.type === 'mention' && (
@@ -125,7 +201,7 @@ export function ChatInput({
                     variant={'ghost'}
                     size={'icon'}
                     className="h-4 w-4"
-                    onClick={() => removeAttachment(index)}
+                    onClick={() => removeAttachment(attachment.key)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -142,7 +218,7 @@ export function ChatInput({
           placeholder="Type your message..."
           className="py-3.5 px-4 max-h-[200px] overflow-y-auto"
           disabled={disabled}
-          context={context}
+          mentionSearch={mentionSearchFn}
         />
 
         <InputGroupAddon
@@ -196,11 +272,12 @@ export function ChatInput({
         onOpenChange={setShowAssetPicker}
         onSelect={handleAssetSelect}
       />
-      <MentionPicker
+      <MentionPickerDialog
         conversationId={context.conversationId}
         open={showMentionPicker}
         onOpenChange={setShowMentionPicker}
-        onSelect={handleMentionSelect}
+        onConfirm={handleMentionConfirm}
+        onCancel={handleMentionCancel}
       />
       <LinkInput
         open={showLinkInput}
