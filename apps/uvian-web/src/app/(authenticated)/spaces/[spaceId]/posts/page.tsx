@@ -3,6 +3,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
+  PageWrapper,
+  PageWrapperContent,
+  PageWrapperSidebar
 } from '~/components/shared/ui/pages/page-container';
 import { PageModals } from '~/components/shared/ui/modals/page-modals';
 import { SpacePostsPageBreadcrumb } from '~/components/features/posts/components/pages/breadcrumbs/space-posts-page-breadcrumb';
@@ -24,23 +27,28 @@ export default async function SpacePostsPage({
   return (
     <ModalProvider>
       <PostsPageActionProvider spaceId={spaceId}>
-        <PageContainer
-          size={'full'}
-          className="flex flex-1 flex-col min-h-0 relative"
-        >
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
-            <SpacePostsPageBreadcrumb spaceId={spaceId} />
-            <PageActions>
-              <PostsPageActions spaceId={spaceId} />
-            </PageActions>
-          </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
-            <Suspense fallback={<div>Loading posts...</div>}>
-              <PostsInterface spaceId={spaceId} />
-            </Suspense>
-          </PageContent>
-          <PageModals />
-        </PageContainer>
+        <PageWrapper>
+          <PageWrapperSidebar/>
+          <PageWrapperContent>
+            <PageContainer
+              size={'full'}
+              className="flex flex-1 flex-col min-h-0 relative"
+            >
+              <PageHeader className="flex flex-row flex-1 items-center justify-between">
+                <SpacePostsPageBreadcrumb spaceId={spaceId} />
+                <PageActions>
+                  <PostsPageActions spaceId={spaceId} />
+                </PageActions>
+              </PageHeader>
+              <PageContent className="flex flex-1 flex-col min-h-0 relative">
+                <Suspense fallback={<div>Loading posts...</div>}>
+                  <PostsInterface spaceId={spaceId} />
+                </Suspense>
+              </PageContent>
+              <PageModals />
+            </PageContainer>
+          </PageWrapperContent>
+        </PageWrapper>
       </PostsPageActionProvider>
     </ModalProvider>
   );

@@ -3,6 +3,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
+  PageWrapper,
+  PageWrapperContent,
+  PageWrapperSidebar
 } from '~/components/shared/ui/pages/page-container';
 import { PageModals } from '~/components/shared/ui/modals/page-modals';
 import { PostDetailPageBreadcrumb } from '~/components/features/posts/components/pages/breadcrumbs/post-detail-page-breadcrumb';
@@ -24,23 +27,28 @@ export default async function PostDetailPage({
   return (
     <ModalProvider>
       <PostDetailPageActionProvider spaceId={spaceId} postId={postId}>
-        <PageContainer
-          size={'full'}
-          className="flex flex-1 flex-col min-h-0 relative"
-        >
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
-            <PostDetailPageBreadcrumb spaceId={spaceId} postId={postId} />
-            <PageActions>
-              <PostDetailPageActions />
-            </PageActions>
-          </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
-            <Suspense fallback={<div>Loading post...</div>}>
-              <PostDetailInterface spaceId={spaceId} postId={postId} />
-            </Suspense>
-          </PageContent>
-          <PageModals />
-        </PageContainer>
+        <PageWrapper>
+          <PageWrapperSidebar/>
+          <PageWrapperContent>
+            <PageContainer
+              size={'full'}
+              className="flex flex-1 flex-col min-h-0 relative"
+            >
+              <PageHeader className="flex flex-row flex-1 items-center justify-between">
+                <PostDetailPageBreadcrumb spaceId={spaceId} postId={postId} />
+                <PageActions>
+                  <PostDetailPageActions />
+                </PageActions>
+              </PageHeader>
+              <PageContent className="flex flex-1 flex-col min-h-0 relative">
+                <Suspense fallback={<div>Loading post...</div>}>
+                  <PostDetailInterface spaceId={spaceId} postId={postId} />
+                </Suspense>
+              </PageContent>
+              <PageModals />
+            </PageContainer>
+          </PageWrapperContent>
+        </PageWrapper>
       </PostDetailPageActionProvider>
     </ModalProvider>
   );

@@ -4,6 +4,7 @@
 
 import type { ProfileUI } from '~/lib/domains/profile/types';
 import type { Attachment } from '~/lib/domains/shared/attachments/types';
+export type { Attachment };
 
 export interface NoteUI {
   id: string;

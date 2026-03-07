@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ImageCarousel } from './image-carousel';
-import type { FileAttachment } from '~/lib/domains/chat/types';
+import type { FileAttachment } from '~/lib/domains/posts/types';
 
 interface ImageGalleryProps {
   images: FileAttachment[];

@@ -8,14 +8,12 @@ import {
   FileText,
   Image,
   Link as LinkIcon,
-  Loader2,
 } from 'lucide-react';
 import { Button, Spinner } from '@org/ui';
 import { notesQueries } from '~/lib/domains/notes/api';
 import { assetsQueries } from '~/lib/domains/assets/api';
 import { MarkdownView } from '~/components/shared/ui/markdown';
 import {
-  ImageGallery,
   ImageChips,
   FileChips,
 } from '~/components/shared/ui/attachments/display';

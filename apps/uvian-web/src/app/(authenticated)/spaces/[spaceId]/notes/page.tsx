@@ -3,6 +3,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
+  PageWrapper,
+  PageWrapperContent,
+  PageWrapperSidebar
 } from '~/components/shared/ui/pages/page-container';
 import { PageModals } from '~/components/shared/ui/modals/page-modals';
 import { SpaceNotesPageBreadcrumb } from './breadcrumbs/space-notes-page-breadcrumb';
@@ -24,23 +27,28 @@ export default async function SpaceNotesPage({
   return (
     <ModalProvider>
       <NotesPageActionProvider spaceId={spaceId}>
-        <PageContainer
-          size={'full'}
-          className="flex flex-1 flex-col min-h-0 relative"
-        >
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
-            <SpaceNotesPageBreadcrumb spaceId={spaceId} />
-            <PageActions>
-              <NotesPageActions spaceId={spaceId} />
-            </PageActions>
-          </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
-            <Suspense fallback={<div>Loading notes...</div>}>
-              <NotesInterface spaceId={spaceId} />
-            </Suspense>
-          </PageContent>
-          <PageModals />
-        </PageContainer>
+        <PageWrapper>
+          <PageWrapperSidebar/>
+          <PageWrapperContent>
+            <PageContainer
+              size={'full'}
+              className="flex flex-1 flex-col min-h-0 relative"
+            >
+              <PageHeader className="flex flex-row flex-1 items-center justify-between">
+                <SpaceNotesPageBreadcrumb spaceId={spaceId} />
+                <PageActions>
+                  <NotesPageActions spaceId={spaceId} />
+                </PageActions>
+              </PageHeader>
+              <PageContent className="flex flex-1 flex-col min-h-0 relative">
+                <Suspense fallback={<div>Loading notes...</div>}>
+                  <NotesInterface spaceId={spaceId} />
+                </Suspense>
+              </PageContent>
+              <PageModals />
+            </PageContainer>
+          </PageWrapperContent>
+        </PageWrapper>
       </NotesPageActionProvider>
     </ModalProvider>
   );

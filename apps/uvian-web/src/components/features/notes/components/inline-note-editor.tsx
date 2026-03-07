@@ -9,7 +9,6 @@ import { Button } from '@org/ui';
 import { Field, FieldLabel, FieldError } from '@org/ui';
 import { RichTextArea } from '~/components/shared/ui/rich-input';
 import { notesMutations } from '~/lib/domains/notes/api';
-import { notesKeys } from '~/lib/domains/notes/api';
 
 const noteSchema = z.object({
   title: z

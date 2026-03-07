@@ -3,6 +3,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
+  PageWrapper,
+  PageWrapperContent,
+  PageWrapperSidebar
 } from '~/components/shared/ui/pages/page-container';
 
 import { JobsPageBreadcrumb } from '~/components/features/jobs/components/pages/breadcrumbs/jobs-page-breadcrumb';
@@ -18,21 +21,26 @@ export default async function Page() {
   return (
     <ModalProvider>
       <JobsListPageActionProvider>
-        <PageContainer
-          size={'full'}
-          className="flex flex-1 flex-col min-h-0 relative"
-        >
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
-            <JobsPageBreadcrumb />
-            <PageActions>
-              <JobsListPageActions />
-            </PageActions>
-          </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
-            <JobDataTable />
-          </PageContent>
-          <PageModals />
-        </PageContainer>
+        <PageWrapper>
+          <PageWrapperSidebar/>
+          <PageWrapperContent>
+            <PageContainer
+              size={'full'}
+              className="flex flex-1 flex-col min-h-0 relative"
+            >
+              <PageHeader className="flex flex-row flex-1 items-center justify-between">
+                <JobsPageBreadcrumb />
+                <PageActions>
+                  <JobsListPageActions />
+                </PageActions>
+              </PageHeader>
+              <PageContent className="flex flex-1 flex-col min-h-0 relative">
+                <JobDataTable />
+              </PageContent>
+              <PageModals />
+            </PageContainer>
+          </PageWrapperContent>
+        </PageWrapper>
       </JobsListPageActionProvider>
     </ModalProvider>
   );

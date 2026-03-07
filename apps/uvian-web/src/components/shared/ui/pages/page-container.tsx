@@ -4,10 +4,18 @@ import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 
-import { Button, cn, Separator, SidebarTrigger } from '@org/ui';
+import {
+  Button,
+  cn,
+  Separator,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@org/ui';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ProfileMenu } from './page-header/profile-menu';
+import { MergedSidebar } from '../sidebar/merged-sidebar';
 
 // ============================================================================
 // PAGE CONTAINER
@@ -268,8 +276,70 @@ const PageFooter = React.forwardRef<HTMLDivElement, PageFooterProps>(
 );
 PageFooter.displayName = 'PageFooter';
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
+interface PageWrapperInnerSidebarProps {
+  children?: React.ReactNode;
+  className?: string;
+}
 
-export { PageContainer, PageHeader, PageContent, PageFooter };
+const PageWrapperSidebar = ({
+  children,
+  className,
+}: PageWrapperInnerSidebarProps) => {
+  return (
+    <MergedSidebar>
+      {children && (
+        <div data-page-wrapper-inner-sidebar className={className}>
+          {children}
+        </div>
+      )}
+    </MergedSidebar>
+  );
+};
+
+interface PageWrapperContentProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const PageWrapperContent = ({
+  children,
+  className,
+}: PageWrapperContentProps) => {
+  return (
+    <SidebarInset
+      className={`flex flex-1 min-h-0 min-w-0 relative ${className || ''}`}
+    >
+      {children}
+    </SidebarInset>
+  );
+};
+
+interface PageWrapperProps {
+  children: React.ReactNode;
+}
+
+function PageWrapper({ children }: PageWrapperProps) {
+  return (
+    <SidebarProvider
+      className="[--dynamic-width:3rem] [&:has([data-page-wrapper-inner-sidebar])]:[--dynamic-width:16rem]"
+      style={
+        {
+          '--sidebar-width': 'var(--dynamic-width)',
+          '--sidebar-width-icon': '3rem',
+        } as React.CSSProperties
+      }
+    >
+      {children}
+    </SidebarProvider>
+  );
+}
+
+export {
+  PageContainer,
+  PageHeader,
+  PageContent,
+  PageFooter,
+  PageWrapper,
+  PageWrapperSidebar,
+  PageWrapperContent,
+};

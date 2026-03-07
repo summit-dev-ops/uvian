@@ -58,6 +58,7 @@ export const profileMutations = {
       // Optimistically update
       const optimisticProfile: ProfileUI = {
         id: payload.profileId,
+        userId: payload.profileId,
         type: payload.type || 'human',
         displayName: payload.displayName,
         avatarUrl: payload.avatarUrl ?? undefined,

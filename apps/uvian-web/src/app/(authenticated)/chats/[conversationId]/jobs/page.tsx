@@ -5,6 +5,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
+  PageWrapper,
+  PageWrapperContent,
+  PageWrapperSidebar,
 } from '~/components/shared/ui/pages/page-container';
 
 import { ModalProvider, PageModals } from '~/components/shared/ui/modals';
@@ -28,25 +31,30 @@ export default function ConversationJobsPage({
   return (
     <ModalProvider>
       <JobsListPageActionProvider>
-        <PageContainer
-          size={'full'}
-          className="flex flex-1 flex-col min-h-0 relative"
-        >
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
-            <ConversationJobsBreadcrumb conversationId={conversationId} />
-            <PageActions>
-              <JobsListPageActions />
-            </PageActions>
-          </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
-            <JobDataTable
-              filters={{
-                conversationId,
-              }}
-            />
-          </PageContent>
-          <PageModals />
-        </PageContainer>
+        <PageWrapper>
+          <PageWrapperSidebar />
+          <PageWrapperContent>
+            <PageContainer
+              size={'full'}
+              className="flex flex-1 flex-col min-h-0 relative"
+            >
+              <PageHeader className="flex flex-row flex-1 items-center justify-between">
+                <ConversationJobsBreadcrumb conversationId={conversationId} />
+                <PageActions>
+                  <JobsListPageActions />
+                </PageActions>
+              </PageHeader>
+              <PageContent className="flex flex-1 flex-col min-h-0 relative">
+                <JobDataTable
+                  filters={{
+                    conversationId,
+                  }}
+                />
+              </PageContent>
+              <PageModals />
+            </PageContainer>
+          </PageWrapperContent>
+        </PageWrapper>
       </JobsListPageActionProvider>
     </ModalProvider>
   );

@@ -6,6 +6,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
+  PageWrapper,
+  PageWrapperContent,
+  PageWrapperSidebar
 } from '~/components/shared/ui/pages/page-container';
 import { PageActions } from '~/components/shared/ui/pages/page-header/page-actions';
 import { PageModals } from '~/components/shared/ui/modals/page-modals';
@@ -26,18 +29,23 @@ export default function SettingsPage({
   return (
     <ModalProvider>
       <SettingsPageActionProvider>
-        <PageContainer className="flex flex-1 flex-col min-h-0 relative">
-          <PageHeader className="flex flex-row flex-1 items-center justify-between">
-            <SettingsPageBreadcrumb />
-            <PageActions>
-              <SettingsPageActions />
-            </PageActions>
-          </PageHeader>
-          <PageContent className="flex flex-1 flex-col min-h-0 relative">
-            <SettingsInterface />
-          </PageContent>
-          <PageModals />
-        </PageContainer>
+        <PageWrapper>
+          <PageWrapperSidebar/>
+          <PageWrapperContent>
+            <PageContainer className="flex flex-1 flex-col min-h-0 relative">
+              <PageHeader className="flex flex-row flex-1 items-center justify-between">
+                <SettingsPageBreadcrumb />
+                <PageActions>
+                  <SettingsPageActions />
+                </PageActions>
+              </PageHeader>
+              <PageContent className="flex flex-1 flex-col min-h-0 relative">
+                <SettingsInterface />
+              </PageContent>
+              <PageModals />
+            </PageContainer>
+          </PageWrapperContent>
+        </PageWrapper>
       </SettingsPageActionProvider>
     </ModalProvider>
   );

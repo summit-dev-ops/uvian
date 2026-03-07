@@ -40,6 +40,7 @@ export function AttachmentInput({
   const handleLinkAdd = (url: string) => {
     const linkAttachment: Attachment = {
       type: 'link',
+      key: `link-${Date.now()}`,
       url,
     };
     onAttachmentsChange([...attachments, linkAttachment]);

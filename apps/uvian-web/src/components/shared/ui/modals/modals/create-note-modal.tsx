@@ -4,9 +4,11 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { usePageActionContext } from '../../pages/page-actions/page-action-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { CreateNoteDialog } from '../../../../features/notes/components/dialogs';
+import {
+  CreateNoteDialog,
+  type NoteFormData,
+} from '../../../../features/notes/components/dialogs';
 import { notesKeys } from '~/lib/domains/notes/api';
-import type { NoteFormData } from '../../../../features/notes/components/dialogs/create-note-dialog';
 
 export interface CreateNoteModalProps {
   open: boolean;

@@ -6,14 +6,12 @@ import {
   DialogContent,
   DialogPortal,
   DialogOverlay,
-  DialogHeader,
   DialogTitle,
   Carousel,
   CarouselContent,
   CarouselItem,
   CarouselPrevious,
   CarouselNext,
-  type CarouselApi,
 } from '@org/ui';
 import { X, Download, Loader2 } from 'lucide-react';
 import { Button } from '@org/ui';
@@ -31,12 +29,10 @@ export function ImageCarousel({
   open,
   onOpenChange,
 }: ImageCarouselProps) {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (open) {
-      setCurrentIndex(initialIndex);
       setLoadedImages(new Set());
       document.body.style.overflow = 'hidden';
     } else {
@@ -46,7 +42,7 @@ export function ImageCarousel({
     return () => {
       document.body.style.overflow = '';
     };
-  }, [open, initialIndex]);
+  }, [open]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -94,14 +90,7 @@ export function ImageCarousel({
               <X className="h-5 w-5" />
             </Button>
 
-            <Carousel
-              className="w-full max-w-4xl"
-              setApi={(api: CarouselApi) => {
-                api?.on('select', () => {
-                  setCurrentIndex(api.selectedScrollSnap());
-                });
-              }}
-            >
+            <Carousel className="w-full max-w-4xl">
               <CarouselContent>
                 {images.map((image, index) => (
                   <CarouselItem key={index}>

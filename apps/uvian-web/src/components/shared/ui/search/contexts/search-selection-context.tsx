@@ -5,10 +5,7 @@ import {
   ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
 } from 'react';
 import type { SelectionContextValue, SelectionMode } from './types';
 
@@ -58,7 +55,9 @@ export function SelectionProvider<T>({
         }
       } else {
         if (exists) {
-          const newItems = selectedItems.filter((s) => keyExtractor(s) !== itemKey);
+          const newItems = selectedItems.filter(
+            (s) => keyExtractor(s) !== itemKey
+          );
           setSelectedItems([...newItems]);
         } else {
           setSelectedItems([...selectedItems, item]);
@@ -81,7 +80,13 @@ export function SelectionProvider<T>({
   }, [setSelectedItems]);
 
   const value = useMemo<SelectionContextValue<T>>(() => {
-    return { isSelected, clearSelection, toggleSelected, selected: selectedItems, mode };
+    return {
+      isSelected,
+      clearSelection,
+      toggleSelected,
+      selected: selectedItems,
+      mode,
+    };
   }, [isSelected, clearSelection, toggleSelected, selectedItems, mode]);
 
   return (

@@ -5,6 +5,9 @@ import {
   PageContainer,
   PageContent,
   PageHeader,
+  PageWrapper,
+  PageWrapperContent,
+  PageWrapperSidebar,
 } from '~/components/shared/ui/pages/page-container';
 import { PageActions } from '~/components/shared/ui/pages/page-header/page-actions';
 import { ModalProvider } from '~/components/shared/ui/modals';
@@ -18,15 +21,20 @@ export default async function ProfilePage({
 
   return (
     <ModalProvider>
-      <PageContainer className="flex flex-1 flex-col min-h-0 relative">
-        <PageHeader className="flex flex-row flex-1 items-center justify-between">
-          <ProfileEditPageBreadcrumb profileId={profileId} />
-          <PageActions></PageActions>
-        </PageHeader>
-        <PageContent className="flex flex-1 flex-col min-h-0 relative">
-          <ProfileEditInterface profileId={profileId} />
-        </PageContent>
-      </PageContainer>
+      <PageWrapper>
+        <PageWrapperSidebar />
+        <PageWrapperContent>
+          <PageContainer className="flex flex-1 flex-col min-h-0 relative">
+            <PageHeader className="flex flex-row flex-1 items-center justify-between">
+              <ProfileEditPageBreadcrumb profileId={profileId} />
+              <PageActions></PageActions>
+            </PageHeader>
+            <PageContent className="flex flex-1 flex-col min-h-0 relative">
+              <ProfileEditInterface profileId={profileId} />
+            </PageContent>
+          </PageContainer>
+        </PageWrapperContent>
+      </PageWrapper>
     </ModalProvider>
   );
 }

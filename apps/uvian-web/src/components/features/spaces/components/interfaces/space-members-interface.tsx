@@ -24,10 +24,7 @@ import {
   ItemContent,
   ItemTitle,
 } from '@org/ui';
-import { useSpaceMemberActions } from '../../hooks/use-space-member-actions';
 import { useSpaceMembers } from '../../hooks/use-space-members';
-import { createArraySelectionState } from '~/components/shared/actions/utils/create-selection-state';
-import { ActionManagerProvider } from '~/components/shared/actions/hocs/with-action-manager';
 import { MODAL_IDS, useModalContext } from '~/components/shared/ui/modals';
 import { useQuery } from '@tanstack/react-query';
 import { spacesQueries } from '~/lib/domains/spaces/api';
@@ -44,18 +41,6 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
   const { members, isLoading, error } = useSpaceMembers(spaceId);
 
   const isAdmin = space?.userRole === 'owner' || space?.userRole === 'admin';
-
-  const selectedMembers = (members || []).filter((member) =>
-    selectedMemberIds.includes(member.userId)
-  );
-  const selectionState = createArraySelectionState(selectedMembers);
-
-  const { actionParams, actionConfig } = useSpaceMemberActions({
-    spaceId,
-    members,
-    isAdmin,
-    setSelectedMemberIds,
-  });
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -115,25 +100,35 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
   }
 
   return (
-    <ActionManagerProvider
-      selectionState={selectionState}
-      actionConfig={actionConfig}
-      params={actionParams}
-      showToolbar={true}
-      toolbarProps={{
-        className: 'mb-4',
-        layout: 'horizontal',
-      }}
-    >
-      <InterfaceLayout>
-        <InterfaceContainer>
-          <InterfaceHeader>
-            <InterfaceHeaderContent
-              title="Space Members"
-              subtitle={`${members?.length || 0} members in ${
-                space?.name || 'this space'
-              }`}
-              actions={
+    <InterfaceLayout>
+      <InterfaceContainer>
+        <InterfaceHeader>
+          <InterfaceHeaderContent
+            title="Space Members"
+            subtitle={`${members?.length || 0} members in ${
+              space?.name || 'this space'
+            }`}
+            actions={
+              isAdmin ? (
+                <Button onClick={handleInviteMembers}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Invite Members
+                </Button>
+              ) : undefined
+            }
+          />
+        </InterfaceHeader>
+
+        <InterfaceContent spacing="default">
+          {members?.length === 0 ? (
+            <InterfaceEmpty
+              title="No members yet"
+              message={
+                isAdmin
+                  ? 'Invite your team to start collaborating.'
+                  : 'You are the only member so far.'
+              }
+              action={
                 isAdmin ? (
                   <Button onClick={handleInviteMembers}>
                     <UserPlus className="mr-2 h-4 w-4" />
@@ -142,89 +137,68 @@ export function SpaceMembersInterface({ spaceId }: SpaceMembersInterfaceProps) {
                 ) : undefined
               }
             />
-          </InterfaceHeader>
-
-          <InterfaceContent spacing="default">
-            {members?.length === 0 ? (
-              <InterfaceEmpty
-                title="No members yet"
-                message={
-                  isAdmin
-                    ? 'Invite your team to start collaborating.'
-                    : 'You are the only member so far.'
-                }
-                action={
-                  isAdmin ? (
-                    <Button onClick={handleInviteMembers}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Invite Members
-                    </Button>
-                  ) : undefined
-                }
-              />
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 py-2 px-3 rounded-md bg-muted/50">
-                  <Checkbox
-                    checked={
-                      !!members &&
-                      members.length > 0 &&
-                      selectedMemberIds.length === members.length
-                    }
-                    onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {selectedMemberIds.length > 0
-                      ? `${selectedMemberIds.length} of ${
-                          members?.length || 0
-                        } selected`
-                      : 'Select all'}
-                  </span>
-                </div>
-
-                {members?.map((member) => (
-                  <Item
-                    key={member.userId}
-                    className={`flex items-center gap-3 ${
-                      selectedMemberIds.includes(member.userId)
-                        ? 'bg-primary/5'
-                        : ''
-                    }`}
-                  >
-                    <Checkbox
-                      checked={selectedMemberIds.includes(member.userId)}
-                      onCheckedChange={(checked) =>
-                        handleSelectMember(member.userId, !!checked)
-                      }
-                    />
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                        {member.profile?.displayName?.[0] || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <ItemContent className="flex-1">
-                      <ItemTitle className="text-sm">
-                        {member.profile?.displayName || 'Unknown Member'}
-                      </ItemTitle>
-                    </ItemContent>
-                    <Badge
-                      variant={
-                        member.role?.name === 'admin' ||
-                        member.role?.name === 'owner'
-                          ? 'default'
-                          : 'secondary'
-                      }
-                      className="capitalize"
-                    >
-                      {member.role?.name || 'member'}
-                    </Badge>
-                  </Item>
-                ))}
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 py-2 px-3 rounded-md bg-muted/50">
+                <Checkbox
+                  checked={
+                    !!members &&
+                    members.length > 0 &&
+                    selectedMemberIds.length === members.length
+                  }
+                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedMemberIds.length > 0
+                    ? `${selectedMemberIds.length} of ${
+                        members?.length || 0
+                      } selected`
+                    : 'Select all'}
+                </span>
               </div>
-            )}
-          </InterfaceContent>
-        </InterfaceContainer>
-      </InterfaceLayout>
-    </ActionManagerProvider>
+
+              {members?.map((member) => (
+                <Item
+                  key={member.userId}
+                  className={`flex items-center gap-3 ${
+                    selectedMemberIds.includes(member.userId)
+                      ? 'bg-primary/5'
+                      : ''
+                  }`}
+                >
+                  <Checkbox
+                    checked={selectedMemberIds.includes(member.userId)}
+                    onCheckedChange={(checked) =>
+                      handleSelectMember(member.userId, !!checked)
+                    }
+                  />
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                      {member.profile?.displayName?.[0] || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <ItemContent className="flex-1">
+                    <ItemTitle className="text-sm">
+                      {member.profile?.displayName || 'Unknown Member'}
+                    </ItemTitle>
+                  </ItemContent>
+                  <Badge
+                    variant={
+                      member.role?.name === 'admin' ||
+                      member.role?.name === 'owner'
+                        ? 'default'
+                        : 'secondary'
+                    }
+                    className="capitalize"
+                  >
+                    {member.role?.name || 'member'}
+                  </Badge>
+                </Item>
+              ))}
+            </div>
+          )}
+        </InterfaceContent>
+      </InterfaceContainer>
+    </InterfaceLayout>
   );
 }

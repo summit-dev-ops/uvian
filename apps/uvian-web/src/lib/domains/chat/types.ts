@@ -6,7 +6,20 @@
  */
 
 import type { ProfileUI } from '~/lib/domains/profile/types';
-import { Attachment } from '../posts/types';
+import type {
+  Attachment,
+  AttachmentType,
+  FileAttachment,
+  MentionAttachment,
+  LinkAttachment,
+} from '../posts/types';
+export type {
+  Attachment,
+  AttachmentType,
+  FileAttachment,
+  MentionAttachment,
+  LinkAttachment,
+};
 export type DataSyncStatus = 'synced' | 'pending' | 'error';
 
 export type ConversationMemberUI = {
