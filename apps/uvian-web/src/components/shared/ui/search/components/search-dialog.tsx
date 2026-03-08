@@ -15,7 +15,6 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
 } from '@org/ui';
 import { SearchInterface } from './search-interface';
 import { SearchResultItemData } from '../types';
