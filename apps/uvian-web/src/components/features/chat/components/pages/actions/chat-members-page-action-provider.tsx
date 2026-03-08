@@ -22,6 +22,9 @@ interface ChatMembersPageActionProviderProps {
   onSuccess?: (actionId: string) => void;
 }
 
+const ChatMembersPageActionContext =
+  React.createContext<ChatMembersPageActionContextType | null>(null);
+
 export const MEMBERS_ACTION_IDS = {
   INVITE_USER_AS_MEMBER: 'invite-user-as-member',
 } as const;
@@ -34,17 +37,20 @@ export function ChatMembersPageActionProvider({
 }: ChatMembersPageActionProviderProps) {
   const queryClient = useQueryClient();
 
+  const contextValue = React.useMemo<ChatMembersPageActionContextType>(
+    () => ({
+      conversationId,
+      ACTION_INVITE_USER_AS_MEMBER: 'invite-user-as-member',
+    }),
+    [conversationId]
+  );
+
   // Handler for inviting members - now actually makes API calls
   const handleInviteMember = React.useCallback(
     async (data: InviteConversationMemberPayload) => {
       console.log(
         '[ACTION_PROVIDER] handleInviteMember called with data:',
         data
-      );
-      console.log('[ACTION_PROVIDER] queryClient available:', !!queryClient);
-      console.log(
-        '[ACTION_PROVIDER] chatMutations available:',
-        !!chatMutations
       );
 
       await executeMutation(
@@ -84,20 +90,20 @@ export function ChatMembersPageActionProvider({
   );
 
   return (
-    <PageActionProvider
-      actions={actions}
-      onActionError={handleActionError}
-      onActionSuccess={handleActionSuccess}
-    >
-      {children}
-    </PageActionProvider>
+    <ChatMembersPageActionContext.Provider value={contextValue}>
+      <PageActionProvider
+        actions={actions}
+        onActionError={handleActionError}
+        onActionSuccess={handleActionSuccess}
+      >
+        {children}
+      </PageActionProvider>
+    </ChatMembersPageActionContext.Provider>
   );
 }
 
 export function useChatMembersPageActionContext() {
-  const context = React.useContext(
-    React.createContext<ChatMembersPageActionContextType | null>(null)
-  );
+  const context = React.useContext(ChatMembersPageActionContext);
   if (!context) {
     throw new Error(
       'useChatMembersPageActionContext must be used within a ChatMembersPageActionProvider'

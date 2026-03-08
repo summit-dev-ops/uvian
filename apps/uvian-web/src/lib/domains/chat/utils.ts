@@ -17,7 +17,6 @@ import { chatKeys } from './api/keys';
  */
 export function appendTokenToCache(
   queryClient: QueryClient,
-  profileId: string,
   conversationId: string,
   messageId: string,
   token: string
@@ -48,7 +47,6 @@ export function appendTokenToCache(
  */
 export function finalizeStreamingMessage(
   queryClient: QueryClient,
-  profileId: string,
   conversationId: string,
   messageId: string
 ): void {
@@ -76,7 +74,6 @@ export function finalizeStreamingMessage(
  */
 export function addMessageToCache(
   queryClient: QueryClient,
-  authProfileId: string,
   conversationId: string,
   message: MessageUI,
   isDelta = false

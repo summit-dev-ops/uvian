@@ -59,14 +59,13 @@ export default fp(async (fastify) => {
     conversationId: string
   ): Promise<boolean> {
     try {
-      // Check if user is a member of the conversation via their profile
       const { data, error } = await client
         .from('conversation_members')
-        .select('profile_id')
+        .select('conversation_id')
         .eq('conversation_id', conversationId)
-        .eq('profile_id', userId) // Now using user ID directly (user = profile after simplification)
+        .eq('user_id', userId)
         .single();
-
+        
       return !error && !!data;
     } catch {
       return false;
@@ -127,10 +126,10 @@ export default fp(async (fastify) => {
         async (payload: { conversationId: string }) => {
           try {
             const { conversationId } = payload;
+            console.log('join_conversation', { conversationId });
 
-            // Pass the SCOPED client to the helper
             const hasAccess = await checkConversationAccess(
-              supabase, // <--- Using socket.supabase
+              supabase,
               user.id,
               conversationId
             );
@@ -168,11 +167,6 @@ export default fp(async (fastify) => {
               socket.emit('error', { message: 'Access denied' });
               return;
             }
-
-            // 2. Broadcast
-            // Note: If you want to persist the message to DB here,
-            // ensure you use `socket.supabase` for the INSERT too!
-            // await supabase.from('messages').insert({ ... })
 
             const messagePayload = {
               conversationId,

@@ -3,7 +3,10 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { spacesMutations } from '~/lib/domains/spaces/api/mutations';
+import {
+  spacesMutations,
+  type InviteSpaceMemberPayload,
+} from '~/lib/domains/spaces/api/mutations';
 import {
   postsMutations,
   type PostContentPayload,
@@ -58,6 +61,11 @@ export function SpaceOverviewPageActionProvider({
     postsMutations.createPost(queryClient)
   );
 
+  // Mutation for inviting space members
+  const { mutate: inviteSpaceMember } = useMutation(
+    spacesMutations.inviteSpaceMember(queryClient)
+  );
+
   // Handler for creating post
   const handleCreatePost = React.useCallback(
     async (data: { spaceId: string; contents: PostContentPayload[] }) => {
@@ -90,10 +98,35 @@ export function SpaceOverviewPageActionProvider({
   }, [router, spaceId]);
 
   // Handler for inviting members
-  const handleInviteMembers = React.useCallback(async () => {
-    // This will be handled by opening the modal via UI component
-    console.log('Opening invite members modal for space:', spaceId);
-  }, [spaceId]);
+  const handleInviteMembers = React.useCallback(
+    async (
+      members: Array<{
+        userId: string;
+        profileId: string;
+        displayName: string;
+        role: 'admin' | 'member';
+      }>
+    ) => {
+      console.log('[SPACE_ACTION_PROVIDER] Inviting members:', members);
+
+      const invitePromises = members.map((member) => {
+        return new Promise<void>((resolve, reject) => {
+          const payload: InviteSpaceMemberPayload = {
+            spaceId,
+            targetMemberUserId: member.userId,
+            role: { name: member.role },
+          };
+          inviteSpaceMember(payload, {
+            onSuccess: () => resolve(),
+            onError: (error) => reject(error),
+          });
+        });
+      });
+
+      await Promise.all(invitePromises);
+    },
+    [spaceId, inviteSpaceMember]
+  );
 
   // Handler for managing members
   const handleManageMembers = React.useCallback(async () => {

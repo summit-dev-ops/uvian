@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useChat } from '../../hooks/use-chat';
 import { useChatStore } from '../../hooks/use-chat-store';
 import { useSocket } from '~/components/providers/socket/socket-provider';
@@ -8,6 +9,8 @@ import { useCurrentUser } from '~/components/features/user/hooks/use-current-use
 import { MessageRow } from '../message-row';
 import { ChatInput } from '../chat-input';
 import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
+import { chatUtils } from '~/lib/domains/chat/utils';
+import type { SocketMessageEvent } from '~/lib/domains/chat/types';
 
 // Import new layout components (will use InterfaceContent with scrollType="never")
 import {
@@ -17,6 +20,7 @@ import {
 import { ScrollArea } from '@org/ui';
 
 export function ChatInterface({ conversationId }: { conversationId: string }) {
+  const queryClient = useQueryClient();
   const { socket, isConnected } = useSocket();
   const { messages, sendMessage, isLoading } = useChat(conversationId);
   const { messageDraft, setMessageDraft, attachments, setAttachments } =
@@ -42,6 +46,29 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
       socket.emit('join_conversation', { conversationId });
     }
   }, [socket, isConnected, conversationId]);
+
+  // Listen for incoming messages from other users
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+    const handleNewMessage = (event: unknown) => {
+    console.log(event)
+      const e = event as SocketMessageEvent;
+      // Only handle messages for this conversation
+      if (e.conversationId !== conversationId) return;
+
+      // Don't add our own messages - React Query already updated the cache
+      if (e.message.senderId === currentUserId) return;
+
+      // Add the new message to the React Query cache using the domain utility
+      chatUtils.addMessageToCache(queryClient, conversationId, e.message);
+    };
+
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [socket, isConnected, conversationId, currentUserId, queryClient]);
   const handleSend = () => {
     if (!messageDraft.trim() || !isConnected) return;
     const cleanedMessageDraft = messageDraft.replace(/&nbsp;/g, ' ').trim();

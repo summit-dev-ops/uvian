@@ -19,10 +19,13 @@ export interface SocketMessageEvent {
   message: {
     id: string;
     conversationId: string;
+    senderId: string;
     content: string;
     role: 'user' | 'assistant' | 'system';
     createdAt: string;
     updatedAt: string;
+    attachments?: Array<{ url: string; type: string }>;
+    syncStatus: 'synced' | 'pending' | 'error';
   };
   isDelta?: boolean;
   isComplete?: boolean;
