@@ -8,6 +8,16 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from '@org/ui';
 import { NoteForm, type NoteFormData } from '../forms/note-form';
 
@@ -34,6 +44,8 @@ export function CreateNoteDialog({
   cancelPending,
   cancelError,
 }: CreateNoteDialogProps) {
+  const isMobile = useIsMobile();
+
   const handleSubmit = async (data: NoteFormData) => {
     await onSubmit(data);
   };
@@ -44,6 +56,44 @@ export function CreateNoteDialog({
     }
     onOpenChange?.(false);
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {open === undefined && (
+          <DrawerTrigger asChild>{children}</DrawerTrigger>
+        )}
+        <DrawerContent className="max-h-[70vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Create Note</DrawerTitle>
+            <DrawerDescription>
+              Create a new note in this space.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1">
+            <NoteForm
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              isLoading={submitPending}
+            />
+          </div>
+
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={submitPending}
+              >
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

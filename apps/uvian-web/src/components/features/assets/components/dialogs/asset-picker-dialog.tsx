@@ -7,6 +7,15 @@ import {
   DialogDescription,
   DialogTitle,
   DialogTrigger,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerTitle,
+  DrawerTrigger,
+  Button,
 } from '@org/ui';
 import { AssetPicker } from '../asset-picker';
 import type { AssetUI } from '~/lib/domains/assets';
@@ -28,6 +37,7 @@ export function AssetPickerDialog({
   selectedAssetId,
   className,
 }: AssetPickerDialogProps) {
+  const isMobile = useIsMobile();
   const [internalOpen, setInternalOpen] = React.useState(false);
 
   const isControlled = open !== undefined;
@@ -49,6 +59,37 @@ export function AssetPickerDialog({
   const handleClose = () => {
     handleOpenChange(false);
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={handleOpenChange}>
+        {!isControlled && <DrawerTrigger asChild>{children}</DrawerTrigger>}
+        <DrawerContent className="max-h-[80vh]">
+          <DrawerTitle className="sr-only">Attach Asset</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Select an image or file to attach
+          </DrawerDescription>
+
+          <div className="overflow-y-auto flex-1">
+            <AssetPicker
+              onSelect={handleSelect}
+              onClose={handleClose}
+              selectedAssetId={selectedAssetId}
+              className={className}
+            />
+          </div>
+
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>

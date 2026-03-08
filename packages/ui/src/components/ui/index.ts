@@ -11,6 +11,7 @@ export * from './carousel';
 export * from './empty';
 export * from './input-group';
 export * from './input';
+export * from './drawer'
 export * from './scroll-area';
 export * from './separator';
 export * from './table';

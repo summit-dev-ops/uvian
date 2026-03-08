@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from core.config import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, QUEUE_NAME, WORKER_CONCURRENCY
+from core.config import REDIS_HOST, REDIS_FAMILY, REDIS_PORT, REDIS_PASSWORD, QUEUE_NAME, WORKER_CONCURRENCY
 from repositories.jobs import job_repository, DatabaseError
 from core.events import events
 from bullmq import Worker
@@ -99,6 +99,7 @@ async def main():
         "host": REDIS_HOST, 
         "port": REDIS_PORT, 
         "password": REDIS_PASSWORD,
+        "family": REDIS_FAMILY,
         "db": 0
     }
 

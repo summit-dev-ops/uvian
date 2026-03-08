@@ -11,8 +11,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from '@org/ui';
-import { Button } from '@org/ui';
 
 export interface ConfirmDialogProps {
   children?: React.ReactNode;
@@ -41,6 +50,8 @@ export function ConfirmDialog({
   onCancel,
   isLoading = false,
 }: ConfirmDialogProps) {
+  const isMobile = useIsMobile();
+
   const handleConfirm = async () => {
     try {
       await onConfirm();
@@ -62,6 +73,47 @@ export function ConfirmDialog({
       }
     }
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {open === undefined && (
+          <DrawerTrigger asChild>{children}</DrawerTrigger>
+        )}
+        <DrawerContent className="max-h-[50vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              {variant === 'destructive' && (
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              )}
+              {title}
+            </DrawerTitle>
+            <DrawerDescription className="text-left">
+              {description}
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="flex-row justify-end gap-2">
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isLoading}
+              >
+                {cancelText}
+              </Button>
+            </DrawerClose>
+            <Button
+              variant={variant === 'destructive' ? 'destructive' : 'default'}
+              onClick={handleConfirm}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Processing...' : confirmText}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

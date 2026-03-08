@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from '@org/ui';
 import { ProfileForm, ProfileFormData } from '../forms/profile-form';
 
@@ -36,6 +46,8 @@ export function CreateProfileDialog({
   cancelPending,
   cancelError,
 }: CreateProfileDialogProps) {
+  const isMobile = useIsMobile();
+
   const handleSubmit = async (data: ProfileFormData) => {
     try {
       await onSubmit(data);
@@ -57,6 +69,47 @@ export function CreateProfileDialog({
       }
     }
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {open === undefined && (
+          <DrawerTrigger asChild>{children}</DrawerTrigger>
+        )}
+        <DrawerContent className="max-h-[70vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Create New Profile
+            </DrawerTitle>
+            <DrawerDescription>Human or Agent?</DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1">
+            <ProfileForm
+              mode="create"
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              isLoading={submitPending}
+              showCancel={false}
+            />
+          </div>
+
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={submitPending}
+              >
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -2,9 +2,22 @@
 
 import React, { useState } from 'react';
 import normalizeUrl from 'normalize-url';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@org/ui';
-import { Input } from '@org/ui';
-import { Button } from '@org/ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@org/ui';
 
 interface LinkInputProps {
   open: boolean;
@@ -13,6 +26,7 @@ interface LinkInputProps {
 }
 
 export function LinkInput({ open, onOpenChange, onAdd }: LinkInputProps) {
+  const isMobile = useIsMobile();
   const [url, setUrl] = useState('');
 
   const handleAdd = () => {
@@ -30,6 +44,49 @@ export function LinkInput({ open, onOpenChange, onAdd }: LinkInputProps) {
       handleAdd();
     }
   };
+
+  const handleCancel = () => {
+    setUrl('');
+    onOpenChange(false);
+  };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[50vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Add Link</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Enter a URL to add as a link
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto">
+            <div className="grid gap-4 py-4">
+              <Input
+                placeholder="https://example.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={handleKeyDown}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <DrawerFooter className="flex-row justify-end gap-2">
+            <DrawerClose asChild>
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+            </DrawerClose>
+            <Button onClick={handleAdd} disabled={!url.trim()}>
+              Add
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

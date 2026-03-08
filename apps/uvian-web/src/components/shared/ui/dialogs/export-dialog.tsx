@@ -11,8 +11,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from '@org/ui';
-import { Button } from '@org/ui';
 
 export interface ExportDialogProps {
   children?: React.ReactNode;
@@ -29,6 +38,7 @@ export function ExportDialog({
   conversationId,
   onExport,
 }: ExportDialogProps) {
+  const isMobile = useIsMobile();
   const [isExporting, setIsExporting] = React.useState(false);
   const [selectedFormat, setSelectedFormat] = React.useState('json');
 
@@ -74,6 +84,88 @@ export function ExportDialog({
       onOpenChange?.(false);
     }
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {open === undefined && (
+          <DrawerTrigger asChild>{children}</DrawerTrigger>
+        )}
+        <DrawerContent className="max-h-[50vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Export Conversation
+            </DrawerTitle>
+            <DrawerDescription>
+              Choose the format for exporting this conversation.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1">
+            <div className="py-4">
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Export Format</label>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="json"
+                      checked={selectedFormat === 'json'}
+                      onChange={(e) => setSelectedFormat(e.target.value)}
+                      className="form-radio"
+                      disabled={isExporting}
+                    />
+                    <span className="text-sm">JSON (recommended)</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="txt"
+                      checked={selectedFormat === 'txt'}
+                      onChange={(e) => setSelectedFormat(e.target.value)}
+                      className="form-radio"
+                      disabled={isExporting}
+                    />
+                    <span className="text-sm">Plain Text</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="csv"
+                      checked={selectedFormat === 'csv'}
+                      onChange={(e) => setSelectedFormat(e.target.value)}
+                      className="form-radio"
+                      disabled={isExporting}
+                    />
+                    <span className="text-sm">CSV (messages only)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DrawerFooter className="flex-row justify-end gap-2">
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isExporting}
+              >
+                Cancel
+              </Button>
+            </DrawerClose>
+            <Button
+              onClick={() => handleExport(selectedFormat)}
+              disabled={isExporting}
+            >
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

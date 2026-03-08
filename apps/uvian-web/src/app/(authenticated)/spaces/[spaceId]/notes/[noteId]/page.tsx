@@ -5,10 +5,10 @@ import {
   PageHeader,
   PageWrapper,
   PageWrapperContent,
-  PageWrapperSidebar
+  PageWrapperSidebar,
 } from '~/components/shared/ui/pages/page-container';
 import { PageModals } from '~/components/shared/ui/modals/page-modals';
-import { NoteDetailPageBreadcrumb } from './breadcrumbs/note-detail-page-breadcrumb';
+import { NoteDetailPageBreadcrumb } from '~/components/features/notes/components/pages/breadcrumbs/note-detail-page-breadcrumb';
 import { NoteDetailInterface } from '~/components/features/notes/components/interfaces/note-detail-interface';
 import { ModalProvider } from '~/components/shared/ui/modals';
 import {
@@ -28,7 +28,7 @@ export default async function NoteDetailPage({
     <ModalProvider>
       <NoteDetailPageActionProvider spaceId={spaceId} noteId={noteId}>
         <PageWrapper>
-          <PageWrapperSidebar/>
+          <PageWrapperSidebar />
           <PageWrapperContent>
             <PageContainer
               size={'full'}

@@ -20,6 +20,7 @@ export default fp(async (fastify) => {
   const redisConfig = {
     host: process.env.REDIS_HOST || 'localhost',
     port: Number(process.env.REDIS_PORT) || 6379,
+    family: Number(process.env.REDIS_FAMILY) || 0,
   };
 
   const pubClient = new Redis(redisConfig);

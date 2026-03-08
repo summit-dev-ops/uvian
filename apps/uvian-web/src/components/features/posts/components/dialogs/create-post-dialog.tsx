@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from '@org/ui';
 import { CreatePostForm, type ContentItem } from '../forms/create-post-form';
 import type { PostContentPayload } from '~/lib/domains/posts/api/mutations';
@@ -74,6 +84,8 @@ export function CreatePostDialog({
   submitError,
   onCancel,
 }: CreatePostDialogProps) {
+  const isMobile = useIsMobile();
+
   const handleSubmit = async (data: { contents: ContentItem[] }) => {
     try {
       const transformedContents = transformToPostContentPayload(data.contents);
@@ -96,6 +108,49 @@ export function CreatePostDialog({
       }
     }
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {open === undefined && children && (
+          <DrawerTrigger asChild>{children}</DrawerTrigger>
+        )}
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Create Post
+            </DrawerTitle>
+            <DrawerDescription>
+              Share something with your space members.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1">
+            <CreatePostForm
+              spaceId={spaceId}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              isLoading={submitPending}
+              showCancel={true}
+            />
+          </div>
+
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={submitPending}
+              >
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from '@org/ui';
 import { ConversationForm } from '../forms/conversation-form';
 
@@ -36,6 +46,8 @@ export function CreateConversationDialog({
   cancelPending,
   cancelError,
 }: CreateConversationDialogProps) {
+  const isMobile = useIsMobile();
+
   const handleSubmit = async (data: { title: string }) => {
     try {
       await onSubmit(data);
@@ -57,6 +69,48 @@ export function CreateConversationDialog({
       }
     }
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {open === undefined && (
+          <DrawerTrigger asChild>{children}</DrawerTrigger>
+        )}
+        <DrawerContent className="max-h-[70vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Create New Conversation
+            </DrawerTitle>
+            <DrawerDescription>
+              Enter a title for your new conversation.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1">
+            <ConversationForm
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              isLoading={submitPending}
+              showCancel={false}
+            />
+          </div>
+
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={submitPending}
+              >
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

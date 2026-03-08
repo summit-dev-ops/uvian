@@ -1,8 +1,22 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@org/ui';
-import { Button } from '@org/ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@org/ui';
 import { SearchInterface } from './search-interface';
 import { SearchResultItemData } from '../types';
 
@@ -23,6 +37,7 @@ export function SearchDialog({
   onOpenChange,
   onSubmit,
 }: SearchDialogProps) {
+  const isMobile = useIsMobile();
   const [localSelected, setLocalSelected] = React.useState<
     SearchResultItemData[]
   >([]);
@@ -39,6 +54,36 @@ export function SearchDialog({
     }
     onOpenChange?.(isOpen);
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{'Search'}</DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Search and select items
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1">
+            <SearchInterfaceWithActions
+              localSelected={localSelected}
+              setLocalSelected={setLocalSelected}
+              onSubmit={handleSubmit}
+              submitLabel={'Done'}
+            />
+          </div>
+
+          <DrawerFooter className="pt-2">
+            <DrawerClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

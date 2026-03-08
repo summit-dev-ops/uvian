@@ -10,8 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Button,
+  useIsMobile,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
 } from '@org/ui';
-import { Button } from '@org/ui';
 import { GlobalUserSearchProvider } from '~/components/features/search/providers';
 import { SearchInterface } from '../search/components';
 import { SelectionProvider } from '../search/contexts/search-selection-context';
@@ -47,6 +56,7 @@ export function InviteUserAsMemberDialog({
   submitPending = false,
   searchContext,
 }: InviteUserAsMemberDialogProps) {
+  const isMobile = useIsMobile();
   const [selectedItems, setSelectedItems] = React.useState<
     SearchResultItemData[]
   >([]);
@@ -82,6 +92,97 @@ export function InviteUserAsMemberDialog({
       await onCancel();
     }
   };
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange}>
+        {open === undefined && (
+          <DrawerTrigger asChild>{children}</DrawerTrigger>
+        )}
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Invite Members
+            </DrawerTitle>
+            <DrawerDescription>
+              Search for users and select them to invite as members.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1 py-4 space-y-6">
+            {hasSelectedMembers && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Role</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={selectedRole === 'member' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedRole('member')}
+                    disabled={submitPending}
+                  >
+                    Member
+                  </Button>
+                  <Button
+                    variant={selectedRole === 'admin' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedRole('admin')}
+                    disabled={submitPending}
+                  >
+                    Admin
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <GlobalUserSearchProvider searchContext={searchContext}>
+              <SelectionProvider
+                selectedItems={selectedItems}
+                setSelectedItems={setSelectedItems}
+                keyExtractor={(item: SearchResultItemData) => item.key}
+                mode="multiple-choice"
+              >
+                <SearchInterface>
+                  <SelectionDisplay />
+                </SearchInterface>
+              </SelectionProvider>
+            </GlobalUserSearchProvider>
+
+            {hasSelectedMembers && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">
+                  Selected: {selectedItems.length} member
+                  {selectedItems.length !== 1 ? 's' : ''}
+                </h4>
+              </div>
+            )}
+          </div>
+
+          <DrawerFooter className="flex-row justify-end gap-2">
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={submitPending}
+              >
+                Cancel
+              </Button>
+            </DrawerClose>
+            <Button
+              onClick={handleSubmit}
+              disabled={!hasSelectedMembers || submitPending}
+            >
+              {submitPending
+                ? 'Inviting...'
+                : `Invite ${selectedItems.length} Member${
+                    selectedItems.length !== 1 ? 's' : ''
+                  }`}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

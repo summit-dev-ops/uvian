@@ -5,10 +5,10 @@ import {
   PageHeader,
   PageWrapper,
   PageWrapperContent,
-  PageWrapperSidebar
+  PageWrapperSidebar,
 } from '~/components/shared/ui/pages/page-container';
 import { PageModals } from '~/components/shared/ui/modals/page-modals';
-import { SpaceNotesPageBreadcrumb } from './breadcrumbs/space-notes-page-breadcrumb';
+import { SpaceNotesPageBreadcrumb } from '~/components/features/notes/components/pages/breadcrumbs/space-notes-page-breadcrumb';
 import { NotesInterface } from '~/components/features/notes/components/interfaces/notes-interface';
 import { ModalProvider } from '~/components/shared/ui/modals';
 import { PageActions } from '~/components/shared/ui/pages/page-header/page-actions';
@@ -28,7 +28,7 @@ export default async function SpaceNotesPage({
     <ModalProvider>
       <NotesPageActionProvider spaceId={spaceId}>
         <PageWrapper>
-          <PageWrapperSidebar/>
+          <PageWrapperSidebar />
           <PageWrapperContent>
             <PageContainer
               size={'full'}
