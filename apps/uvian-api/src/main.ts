@@ -13,6 +13,7 @@ const server = Fastify({
 server.register(cors, {
   origin: process.env.FRONTEND_URL || '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  credentials: true, 
 });
 
 // Register your application as a normal plugin.
