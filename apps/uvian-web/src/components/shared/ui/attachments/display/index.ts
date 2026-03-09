@@ -1,4 +1,5 @@
 export { ImageGallery } from './image-gallery';
+export { ImageCarousel } from './image-carousel';
 export { ImageChips } from './image-chips';
 export { LinkList } from './link-list';
 export { LinkChips } from './link-chips';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ImageCarousel } from '../../../../features/chat/components/image-carousel';
+import { ImageCarousel } from './image-carousel';
 import type { FileAttachment } from '~/lib/domains/shared/attachments/types';
 
 interface ImageGalleryProps {
@@ -33,7 +33,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
           <img
             src={images[0].url}
             alt={images[0].filename || 'Image'}
-            className="max-w-xs max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+            className="w-full md:max-w-xs max-h-48 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
             loading="lazy"
             onClick={() => handleImageClick(0)}
           />
@@ -57,7 +57,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
               key={index}
               src={image.url}
               alt={image.filename || 'Image'}
-              className="w-32 h-32 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              className="w-1/2 aspect-square rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
               loading="lazy"
               onClick={() => handleImageClick(index)}
             />

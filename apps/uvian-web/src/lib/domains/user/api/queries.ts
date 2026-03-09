@@ -18,6 +18,21 @@ import type { ProfileUI } from '~/lib/domains/profile/types';
 
 export const userQueries = {
   /**
+   * Fetch list of users in the current user's account.
+   * Returns user IDs and roles - profile data is injected via React Query.
+   */
+  userList: () =>
+    queryOptions({
+      queryKey: userKeys.list(),
+      queryFn: async () => {
+        const { data } = await apiClient.get<{
+          users: { userId: string; role: { name: string } }[];
+        }>('/api/users');
+        return data.users;
+      },
+      staleTime: 1000 * 60 * 5,
+    }),
+  /**
    * Fetch a profile by userId.
    * Queries the profiles table by user_id column via /api/users/:userId/profile.
    */

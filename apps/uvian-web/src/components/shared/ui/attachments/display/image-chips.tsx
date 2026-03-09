@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ImageCarousel } from '../../../../features/chat/components/image-carousel';
+import { ImageCarousel } from './image-carousel';
 import type { FileAttachment } from '~/lib/domains/shared/attachments/types';
 
 interface ImageChipsProps {

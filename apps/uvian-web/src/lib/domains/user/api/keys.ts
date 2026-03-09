@@ -7,6 +7,7 @@
 
 export const userKeys = {
   all: ['user'] as const,
+  list: () => [...userKeys.all, 'list'] as const,
   settings: (userId?: string) =>
     userId
       ? ([...userKeys.all, 'settings', userId] as const)

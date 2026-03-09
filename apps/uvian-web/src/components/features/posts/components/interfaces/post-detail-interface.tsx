@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@org/ui';
 import { usePost } from '../../hooks/use-posts';
-import { useProfilesByUserId } from '~/components/features/profiles/hooks/use-profiles-by-user';
+import { useProfilesByUserId } from '~/components/features/user/hooks/use-profiles-by-user';
 import {
   InterfaceLayout,
   InterfaceContainer,
@@ -79,7 +79,7 @@ export function PostDetailInterface({
       <InterfaceContainer variant="minimal">
         <InterfaceContent>
           <div className="flex flex-col gap-4">
-            <div className='space-y-4'>
+            <div className="space-y-4">
               <PostDetailCarousel
                 spaceId={spaceId}
                 contents={post.contents || []}

@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { spacesQueries } from '~/lib/domains/spaces/api/queries';
-import { useProfilesByUserId } from '~/components/features/profiles/hooks/use-profiles-by-user';
 import type { SpaceMemberUI } from '~/lib/domains/spaces/types';
+import { useProfilesByUserId } from '../../user/hooks/use-profiles-by-user';
 
 export function useSpaceMembers(spaceId: string) {
   const {

@@ -32,10 +32,10 @@ const navItems = [
     description: 'Manage your spaces',
   },
   {
-    title: 'Profiles',
-    href: '/profiles',
+    title: 'Users',
+    href: '/users',
     icon: User,
-    description: 'Manage your profiles',
+    description: 'Users in your account',
   },
   {
     title: 'Jobs',

@@ -31,10 +31,10 @@ export const profileQueries = {
     queryOptions({
       queryKey: profileKeys.userProfiles(),
       queryFn: async () => {
-        const { data } = await apiClient.get<{ profiles: ProfileUI[] }>(
-          '/api/users/me/profiles'
+        const { data } = await apiClient.get<ProfileUI>(
+          '/api/users/me/profile'
         );
-        return data.profiles;
+        return [data];
       },
       staleTime: 1000 * 60 * 5, // 5 minutes
     }),

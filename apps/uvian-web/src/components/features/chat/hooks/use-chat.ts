@@ -2,8 +2,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
 import { chatMutations } from '~/lib/domains/chat/api/mutations';
-import { useProfilesByUserId } from '~/components/features/profiles/hooks/use-profiles-by-user';
 import type { MessageUI } from '~/lib/domains/chat/types';
+import { useProfilesByUserId } from '../../user/hooks/use-profiles-by-user';
 
 export const useChat = (conversationId: string) => {
   const queryClient = useQueryClient();

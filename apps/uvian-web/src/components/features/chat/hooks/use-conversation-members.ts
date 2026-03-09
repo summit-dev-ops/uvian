@@ -7,7 +7,7 @@ import {
   ConversationMemberRole,
   type ConversationMemberUI,
 } from '~/lib/domains/chat/types';
-import { useProfilesByUserId } from '~/components/features/profiles/hooks/use-profiles-by-user';
+import { useProfilesByUserId } from '../../user/hooks/use-profiles-by-user';
 
 export const useConversationMembers = (conversationId: string) => {
   const queryClient = useQueryClient();

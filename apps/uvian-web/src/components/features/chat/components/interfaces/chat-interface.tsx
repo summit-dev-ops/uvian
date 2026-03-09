@@ -9,7 +9,7 @@ import { useCurrentUser } from '~/components/features/user/hooks/use-current-use
 import { MessageRow } from '../message-row';
 import { ChatInput } from '../chat-input';
 import { InterfaceLoading } from '~/components/shared/ui/interfaces/interface-loading';
-import { chatUtils } from '~/lib/domains/chat/utils';
+import { chatUtils, shouldShowMessageHeader } from '~/lib/domains/chat/utils';
 import type { SocketMessageEvent } from '~/lib/domains/chat/types';
 
 // Import new layout components (will use InterfaceContent with scrollType="never")
@@ -51,7 +51,7 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
   useEffect(() => {
     if (!socket || !isConnected) return;
     const handleNewMessage = (event: unknown) => {
-    console.log(event)
+      console.log(event);
       const e = event as SocketMessageEvent;
       // Only handle messages for this conversation
       if (e.conversationId !== conversationId) return;
@@ -104,13 +104,18 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
         ) : (
           <div className="flex flex-col items-stretch flex-1 min-w-0 relative">
             {Array.isArray(messages) &&
-              messages.map((msg) => (
-                <MessageRow
-                  key={msg.id}
-                  message={msg}
-                  onCopy={() => undefined} // TODO: Could add a toast here later
-                />
-              ))}
+              messages.map((msg, index) => {
+                const prevMsg = index > 0 ? messages[index - 1] : undefined;
+                const showHeaderFlag = shouldShowMessageHeader(msg, prevMsg);
+                return (
+                  <MessageRow
+                    key={msg.id}
+                    message={msg}
+                    showHeader={showHeaderFlag}
+                    onRetry={() => undefined}
+                  />
+                );
+              })}
             {(!messages || messages.length === 0) && !isLoading && (
               <div className="flex-1 flex flex-col items-center justify-center pt-24 space-y-4 px-4 text-center">
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">

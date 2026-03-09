@@ -153,11 +153,7 @@ export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
                   (members as SpaceMemberUI[]).map((member) => (
                     <SidebarMenuItem key={member.userId}>
                       <SidebarMenuButton asChild>
-                        <Link
-                          href={`/profiles/${
-                            member.profile?.id || member.userId
-                          }`}
-                        >
+                        <Link href={`/users/${member.userId}`}>
                           <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs">
                             {member.profile?.displayName?.[0]?.toUpperCase() ||
                               '?'}

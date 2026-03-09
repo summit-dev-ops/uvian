@@ -29,7 +29,59 @@ interface SearchContext {
   id: string;
 }
 
+interface AccountUser {
+  userId: string;
+  role: {
+    name: string;
+    permissions?: string[];
+  };
+}
+
 export default async function usersRoutes(fastify: FastifyInstance) {
+  fastify.get(
+    '/api/users',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+
+        const { data: accountData, error: accountError } =
+          await request.supabase.from('get_my_account').select('id').single();
+
+        if (accountError || !accountData) {
+          reply.code(404).send({ error: 'Account not found' });
+          return;
+        }
+
+        const { data: members, error: membersError } = await adminSupabase
+          .from('account_members')
+          .select('user_id, role')
+          .eq('account_id', accountData.id);
+
+        if (membersError) {
+          throw new Error(membersError.message);
+        }
+
+        const users: AccountUser[] = (members || []).map((m) => ({
+          userId: m.user_id,
+          role: m.role || { name: 'member' },
+        }));
+
+        reply.send({ users });
+      } catch (error: any) {
+        reply
+          .code(400)
+          .send({ error: error.message || 'Failed to fetch users' });
+      }
+    }
+  );
+
   fastify.get<{ Params: GetUserProfileParams }>(
     '/api/users/:userId/profile',
     {

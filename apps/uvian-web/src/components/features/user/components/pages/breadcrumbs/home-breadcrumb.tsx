@@ -26,7 +26,7 @@ const quickLinks = [
   { href: '/home', label: 'Home', icon: HomeIcon },
   { href: '/explore', label: 'Explore', icon: Compass },
   { href: '/chats', label: 'Chats', icon: MessageSquare },
-  { href: '/profiles', label: 'Profiles', icon: User },
+  { href: '/users', label: 'Users', icon: User },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/support', label: 'Support', icon: HelpCircle },
 ];

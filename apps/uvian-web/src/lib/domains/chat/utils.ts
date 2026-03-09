@@ -112,6 +112,37 @@ export function addMessageToCache(
 }
 
 // ============================================================================
+// Message Coalescing Utilities
+// ============================================================================
+
+const COALESCE_TIME_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Determines whether a message should display its full header (avatar, name, timestamp)
+ * or be coalesced with the previous message.
+ *
+ * Returns true if the message should show a full header, false if it should be coalesced.
+ * A message shows its header when:
+ * - It's the first message in the conversation
+ * - The sender is different from the previous message
+ * - The time gap between messages exceeds the threshold
+ */
+export function shouldShowMessageHeader(
+  currentMessage: MessageUI,
+  previousMessage: MessageUI | undefined
+): boolean {
+  if (!previousMessage) return true;
+
+  if (currentMessage.senderId !== previousMessage.senderId) return true;
+
+  const currentTime = new Date(currentMessage.createdAt).getTime();
+  const previousTime = new Date(previousMessage.createdAt).getTime();
+  const timeDiff = currentTime - previousTime;
+
+  return timeDiff > COALESCE_TIME_THRESHOLD_MS;
+}
+
+// ============================================================================
 // Exported Utilities Object
 // ============================================================================
 
@@ -119,4 +150,5 @@ export const chatUtils = {
   appendTokenToCache,
   finalizeStreamingMessage,
   addMessageToCache,
+  shouldShowMessageHeader,
 };
