@@ -33,7 +33,7 @@ function ImageCarouselMobile({
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(initialIndex);
-  console.log(current)
+  console.log({current})
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
