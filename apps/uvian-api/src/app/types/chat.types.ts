@@ -149,3 +149,17 @@ export interface UpdateMessageRequest {
     attachments?: Attachment[];
   };
 }
+
+export interface SearchMessagesRequest {
+  Params: {
+    conversationId: string;
+  };
+  Querystring: {
+    q?: string;
+    senderId?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  };
+}

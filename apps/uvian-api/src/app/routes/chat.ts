@@ -13,6 +13,7 @@ import {
   DeleteConversationRequest,
   DeleteMessageRequest,
   UpdateMessageRequest,
+  SearchMessagesRequest,
 } from '../types/chat.types';
 
 export default async function (fastify: FastifyInstance) {
@@ -403,6 +404,51 @@ export default async function (fastify: FastifyInstance) {
         reply.send(messages);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch messages' });
+      }
+    }
+  );
+
+  fastify.get<SearchMessagesRequest>(
+    '/api/conversations/:conversationId/messages/search',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['conversationId'],
+          properties: { conversationId: { type: 'string' } },
+          additionalProperties: false,
+        },
+        querystring: {
+          type: 'object',
+          properties: {
+            q: { type: 'string' },
+            senderId: { type: 'string' },
+            from: { type: 'string' },
+            to: { type: 'string' },
+            limit: { type: 'number', default: 20 },
+            offset: { type: 'number', default: 0 },
+          },
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<SearchMessagesRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { conversationId } = request.params;
+        const { q, senderId, from, to, limit, offset } = request.query || {};
+
+        const messages = await chatService.searchMessages(
+          request.supabase,
+          conversationId,
+          { q, senderId, from, to, limit, offset }
+        );
+
+        reply.send(messages);
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to search messages' });
       }
     }
   );

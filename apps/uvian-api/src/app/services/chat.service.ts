@@ -77,6 +77,61 @@ export class ChatService {
     return messages;
   }
 
+  async searchMessages(
+    userClient: SupabaseClient,
+    conversationId: string,
+    options: {
+      q?: string;
+      senderId?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ) {
+    let query = userClient
+      .from('get_conversation_messages')
+      .select('*')
+      .eq('conversation_id', conversationId);
+
+    if (options.q) {
+      query = query.ilike('content', `%${options.q}%`);
+    }
+    if (options.senderId) {
+      query = query.eq('sender_id', options.senderId);
+    }
+    if (options.from) {
+      query = query.gte('created_at', options.from);
+    }
+    if (options.to) {
+      query = query.lte('created_at', options.to);
+    }
+
+    const limit = options.limit || 20;
+    const offset = options.offset || 0;
+    query = query
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) throw new Error(error.message);
+
+    const messages = (data || []).map((row) => ({
+      id: row.id,
+      conversationId: row.conversation_id,
+      senderId: row.sender_id,
+      content: row.content,
+      role: row.role,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      attachments: row.attachments || [],
+      syncStatus: 'synced' as const,
+    }));
+
+    return messages;
+  }
+
   async createConversation(
     userId: string,
     data: { id?: string; title: string; spaceId?: string }
@@ -315,6 +370,17 @@ export class ChatService {
     conversationId: string,
     messageId: string
   ) {
+    // Check membership
+    const { data: memberCheck } = await userClient
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .single();
+    if (!memberCheck) {
+      throw new Error('You are not a member of this conversation');
+    }
+
     const { data: message, error: fetchError } = await adminSupabase
       .from('messages')
       .select('sender_id')
@@ -349,6 +415,17 @@ export class ChatService {
     content: string,
     attachments?: Attachment[]
   ) {
+    // Check membership
+    const { data: memberCheck } = await userClient
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .single();
+    if (!memberCheck) {
+      throw new Error('You are not a member of this conversation');
+    }
+
     const { data: message, error: fetchError } = await adminSupabase
       .from('messages')
       .select('sender_id')
