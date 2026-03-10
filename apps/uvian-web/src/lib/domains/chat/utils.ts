@@ -7,6 +7,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { MessageUI } from './types';
 import { chatKeys } from './api/keys';
+import { isMentionAttachment } from '~/lib/domains/shared/attachments/utils';
 
 // ============================================================================
 // Cache Update Utilities
@@ -87,7 +88,6 @@ export function addMessageToCache(
       const existingIndex = oldMessages.findIndex(
         (msg) => msg.id === message.id
       );
-      console.log({ message, isDelta });
       if (existingIndex !== -1) {
         if (isDelta) {
           // Update existing message with delta content
@@ -132,6 +132,9 @@ export function shouldShowMessageHeader(
   previousMessage: MessageUI | undefined
 ): boolean {
   if (!previousMessage) return true;
+
+  // Always show header if message has mention attachments
+  if (currentMessage.attachments?.some(isMentionAttachment)) return true;
 
   if (currentMessage.senderId !== previousMessage.senderId) return true;
 

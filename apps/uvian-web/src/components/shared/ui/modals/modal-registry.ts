@@ -9,6 +9,8 @@ import {
   ContactSupportModal,
   CreatePostModal,
   CreateNoteModal,
+  MessageSelectionModal,
+  ImageCarouselModal,
 } from './modals';
 import { ModalRegistration } from './types';
 
@@ -29,6 +31,8 @@ export const MODAL_IDS = {
   CREATE_POST: 'create-post',
   DELETE_POST: 'delete-post',
   CREATE_NOTE: 'create-note',
+  MESSAGE_SELECTION: 'message-selection',
+  IMAGE_CAROUSEL: 'image-carousel',
 } as const;
 
 // Modal Registry - Maps modal IDs to their components and default props
@@ -93,5 +97,13 @@ export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
   'create-note': {
     id: 'create-note',
     Component: CreateNoteModal,
+  },
+  'message-selection': {
+    id: 'message-selection',
+    Component: MessageSelectionModal,
+  },
+  'image-carousel': {
+    id: 'image-carousel',
+    Component: ImageCarouselModal,
   },
 };

@@ -51,7 +51,6 @@ export function ChatInterface({ conversationId }: { conversationId: string }) {
   useEffect(() => {
     if (!socket || !isConnected) return;
     const handleNewMessage = (event: unknown) => {
-      console.log(event);
       const e = event as SocketMessageEvent;
       // Only handle messages for this conversation
       if (e.conversationId !== conversationId) return;

@@ -55,6 +55,18 @@ export type UpdateConversationMemberRolePayload = {
   role: ConversationMemberRole;
 };
 
+export type DeleteMessagePayload = {
+  conversationId: string;
+  messageId: string;
+};
+
+export type EditMessagePayload = {
+  conversationId: string;
+  messageId: string;
+  content: string;
+  attachments?: Attachment[];
+};
+
 // ============================================================================
 // Mutation Context Types
 // ============================================================================
@@ -77,6 +89,14 @@ type InviteConversationMemberContext = {
 
 type RemoveConversationMemberContext = {
   previousMembers?: ConversationMemberUI[];
+};
+
+type DeleteMessageContext = {
+  previousMessages?: MessageUI[];
+};
+
+type EditMessageContext = {
+  previousMessages?: MessageUI[];
 };
 
 // ============================================================================
@@ -375,6 +395,112 @@ export const chatMutations = {
     onSuccess: (_, payload) => {
       queryClient.invalidateQueries({
         queryKey: chatKeys.conversationMembers(payload.conversationId),
+      });
+    },
+  }),
+
+  /**
+   * Delete a message.
+   */
+  deleteMessage: (
+    queryClient: QueryClient
+  ): MutationOptions<
+    void,
+    Error,
+    DeleteMessagePayload,
+    DeleteMessageContext
+  > => ({
+    mutationFn: async (payload) => {
+      await apiClient.delete(
+        `/api/conversations/${payload.conversationId}/messages/${payload.messageId}`
+      );
+    },
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({
+        queryKey: chatKeys.messages(payload.conversationId),
+      });
+
+      const previousMessages = queryClient.getQueryData<MessageUI[]>(
+        chatKeys.messages(payload.conversationId)
+      );
+
+      queryClient.setQueryData<MessageUI[]>(
+        chatKeys.messages(payload.conversationId),
+        (old) => old?.filter((msg) => msg.id !== payload.messageId) || []
+      );
+
+      return { previousMessages };
+    },
+    onError: (_err, payload, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          chatKeys.messages(payload.conversationId),
+          context.previousMessages
+        );
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(),
+      });
+    },
+  }),
+
+  /**
+   * Edit a message.
+   */
+  editMessage: (
+    queryClient: QueryClient
+  ): MutationOptions<
+    MessageUI,
+    Error,
+    EditMessagePayload,
+    EditMessageContext
+  > => ({
+    mutationFn: async (payload) => {
+      const { data } = await apiClient.patch<MessageUI>(
+        `/api/conversations/${payload.conversationId}/messages/${payload.messageId}`,
+        { content: payload.content, attachments: payload.attachments }
+      );
+      return data;
+    },
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({
+        queryKey: chatKeys.messages(payload.conversationId),
+      });
+
+      const previousMessages = queryClient.getQueryData<MessageUI[]>(
+        chatKeys.messages(payload.conversationId)
+      );
+
+      queryClient.setQueryData<MessageUI[]>(
+        chatKeys.messages(payload.conversationId),
+        (old) =>
+          old?.map((msg) =>
+            msg.id === payload.messageId
+              ? {
+                  ...msg,
+                  content: payload.content,
+                  attachments: payload.attachments ?? msg.attachments,
+                  syncStatus: 'pending' as const,
+                }
+              : msg
+          ) || []
+      );
+
+      return { previousMessages };
+    },
+    onError: (_err, payload, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(
+          chatKeys.messages(payload.conversationId),
+          context.previousMessages
+        );
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.conversations(),
       });
     },
   }),

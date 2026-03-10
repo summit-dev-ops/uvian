@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import Link from 'next/link';
+import { useLongPress } from '@reactuses/core';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@org/ui';
 import { Copy, RefreshCcw, MoreHorizontal } from 'lucide-react';
 import { ProfilePreview } from './profile-preview';
@@ -11,18 +11,9 @@ import {
   LinkList,
 } from '~/components/shared/ui/attachments';
 import { MarkdownView } from '~/components/shared/ui/markdown';
-import {
-  isImageAttachment,
-  isMentionAttachment,
-  isLinkAttachment,
-} from '~/lib/domains/shared/attachments/utils';
-import type {
-  MessageUI,
-  Attachment,
-  FileAttachment,
-  MentionAttachment,
-  LinkAttachment,
-} from '~/lib/domains/chat/types';
+import type { MessageUI } from '~/lib/domains/chat/types';
+import { useModalContext, MODAL_IDS } from '~/components/shared/ui/modals';
+import { useProcessedMessage } from '../hooks/use-processed-message';
 
 interface MessageRowProps {
   message: MessageUI;
@@ -30,55 +21,60 @@ interface MessageRowProps {
   showHeader: boolean;
 }
 
-const MENTION_REGEX = /\[@ id="([^"]+)" label="([^"]+)"\]/g;
-
-function isImage(attachment: Attachment): attachment is FileAttachment {
-  return isImageAttachment(attachment);
-}
-
-function isMention(attachment: Attachment): attachment is MentionAttachment {
-  return isMentionAttachment(attachment);
-}
-
-function isLink(attachment: Attachment): attachment is LinkAttachment {
-  return isLinkAttachment(attachment);
-}
-
 export function MessageRow({ message, onRetry, showHeader }: MessageRowProps) {
   const profile = message.senderProfile;
+  const modalContext = useModalContext();
 
   const isAI = message.role === 'assistant';
   const isSystem = message.role === 'system';
 
-  const displayName = useMemo(() => {
-    return profile?.displayName || 'Unknown Profile';
-  }, [profile?.displayName]);
-
-  const attachments = message.attachments || [];
-
-  const mentions = useMemo(() => attachments.filter(isMention), [attachments]);
-
-  const processedContent = useMemo(() => {
-    const labelToUserId = new Map(mentions.map((m) => [m.label, m.userId]));
-
-    return message.content.replace(MENTION_REGEX, (_, id, label) => {
-      const userId = labelToUserId.get(label) || id;
-      return `[${label}](/users/${userId})`;
+  const { processedContent, mentions, images, links, files } =
+    useProcessedMessage({
+      content: message.content,
+      attachments: message.attachments,
     });
-  }, [message.content, mentions]);
 
-  const images = useMemo(() => attachments.filter(isImage), [attachments]);
+  const handleLongPress = () => {
+    modalContext.openModal(MODAL_IDS.MESSAGE_SELECTION, {
+      message,
+      onRetry,
+    });
+  };
 
-  const links = useMemo(() => attachments.filter(isLink), [attachments]);
+  const longPressEvent = useLongPress(handleLongPress);
 
-  const files = useMemo(
-    () => attachments.filter((a) => a.type === 'file' && !isImage(a)),
-    [attachments]
-  );
+  // 1. Create a helper to intercept the starting events
+  const filterInteractiveElements = (
+    e: React.MouseEvent | React.TouchEvent | React.PointerEvent,
+    originalHandler?: any
+  ) => {
+    const target = e.target as HTMLElement;
+
+    // If the user clicks on a link, image, or button, ignore the long press
+    if (target.closest('a, img, button, [role="button"]')) {
+      return;
+    }
+
+    // Otherwise, start the long press
+    originalHandler?.(e);
+  };
+
+  const longPressProps = {
+    ...longPressEvent,
+    onMouseDown: (e: React.MouseEvent) =>
+      filterInteractiveElements(e, longPressEvent.onMouseDown),
+    onTouchStart: (e: React.TouchEvent) =>
+      filterInteractiveElements(e, longPressEvent.onTouchStart),
+    onPointerDown: (e: React.PointerEvent) =>
+      filterInteractiveElements(e, (longPressEvent as any).onPointerDown),
+  };
+
+  const displayName = profile?.displayName || 'Unknown Profile';
 
   return (
     <div
-      className={`flex flex-1 py-1 px-6 min-w-0 relative group hover:bg-accent/50 rounded-sm border border-transparent hover:border-border ${
+      {...longPressProps}
+      className={`flex flex-1 py-1 px-6 min-w-0 relative group  hover:bg-accent/50  rounded-sm border border-transparent hover:border-border  active:bg-accent/50 ${
         isSystem ? 'opacity-60' : ''
       }`}
     >

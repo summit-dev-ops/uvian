@@ -6,3 +6,4 @@ export { LinkChips } from './link-chips';
 export { FileChips } from './file-chips';
 export { MentionChips } from './mention-chips';
 export { AttachmentList } from './attachment-list';
+export { AttachmentChips } from './attachment-chips';

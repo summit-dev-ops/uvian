@@ -11,6 +11,8 @@ import {
   CreateMessageRequest,
   GetMessagesRequest,
   DeleteConversationRequest,
+  DeleteMessageRequest,
+  UpdateMessageRequest,
 } from '../types/chat.types';
 
 export default async function (fastify: FastifyInstance) {
@@ -442,6 +444,106 @@ export default async function (fastify: FastifyInstance) {
             .send({ error: 'Only conversation owners can delete' });
         } else {
           reply.code(400).send({ error: 'Failed to delete conversation' });
+        }
+      }
+    }
+  );
+
+  fastify.delete<DeleteMessageRequest>(
+    '/api/conversations/:conversationId/messages/:messageId',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['conversationId', 'messageId'],
+          properties: {
+            conversationId: { type: 'string' },
+            messageId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<DeleteMessageRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+        const { conversationId, messageId } = request.params;
+        await chatService.deleteMessage(
+          request.supabase,
+          userId,
+          conversationId,
+          messageId
+        );
+        reply.code(204).send();
+      } catch (error: any) {
+        if (error.message.includes('only your own')) {
+          reply.code(403).send({ error: error.message });
+        } else {
+          reply.code(400).send({ error: 'Failed to delete message' });
+        }
+      }
+    }
+  );
+
+  fastify.patch<UpdateMessageRequest>(
+    '/api/conversations/:conversationId/messages/:messageId',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['conversationId', 'messageId'],
+          properties: {
+            conversationId: { type: 'string' },
+            messageId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          required: ['content'],
+          properties: {
+            content: { type: 'string', minLength: 1 },
+            attachments: { type: 'array' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<UpdateMessageRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+        const { conversationId, messageId } = request.params;
+        const { content, attachments } = request.body || {};
+        const message = await chatService.updateMessage(
+          request.supabase,
+          userId,
+          conversationId,
+          messageId,
+          content,
+          attachments
+        );
+        reply.send(message);
+      } catch (error: any) {
+        if (error.message.includes('only your own')) {
+          reply.code(403).send({ error: error.message });
+        } else {
+          reply.code(400).send({ error: 'Failed to update message' });
         }
       }
     }

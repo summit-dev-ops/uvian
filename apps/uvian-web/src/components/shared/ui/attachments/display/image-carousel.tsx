@@ -33,7 +33,7 @@ function ImageCarouselMobile({
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(initialIndex);
-
+  console.log(current)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -54,7 +54,6 @@ function ImageCarouselMobile({
   const handleImageLoad = (index: number) => {
     setLoadedImages((prev) => new Set(prev).add(index));
   };
-  console.log(current)
   useEffect(() => {
     if (!api) {
       return;

@@ -14,4 +14,6 @@ export type {
   InviteConversationMemberPayload,
   RemoveConversationMemberPayload,
   UpdateConversationMemberRolePayload,
+  DeleteMessagePayload,
+  EditMessagePayload,
 } from './mutations';

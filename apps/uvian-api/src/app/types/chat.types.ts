@@ -131,3 +131,21 @@ export interface DeleteConversationRequest {
     conversationId: string;
   };
 }
+
+export interface DeleteMessageRequest {
+  Params: {
+    conversationId: string;
+    messageId: string;
+  };
+}
+
+export interface UpdateMessageRequest {
+  Params: {
+    conversationId: string;
+    messageId: string;
+  };
+  Body: {
+    content: string;
+    attachments?: Attachment[];
+  };
+}

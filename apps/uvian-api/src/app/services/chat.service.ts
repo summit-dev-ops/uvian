@@ -308,6 +308,88 @@ export class ChatService {
 
     return { success: true };
   }
+
+  async deleteMessage(
+    userClient: SupabaseClient,
+    userId: string,
+    conversationId: string,
+    messageId: string
+  ) {
+    const { data: message, error: fetchError } = await adminSupabase
+      .from('messages')
+      .select('sender_id')
+      .eq('id', messageId)
+      .eq('conversation_id', conversationId)
+      .single();
+
+    if (fetchError || !message) {
+      throw new Error('Message not found');
+    }
+
+    if (message.sender_id !== userId) {
+      throw new Error('You can only delete your own messages');
+    }
+
+    const { error } = await adminSupabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('conversation_id', conversationId);
+
+    if (error) throw new Error(error.message);
+
+    return { success: true };
+  }
+
+  async updateMessage(
+    userClient: SupabaseClient,
+    userId: string,
+    conversationId: string,
+    messageId: string,
+    content: string,
+    attachments?: Attachment[]
+  ) {
+    const { data: message, error: fetchError } = await adminSupabase
+      .from('messages')
+      .select('sender_id')
+      .eq('id', messageId)
+      .eq('conversation_id', conversationId)
+      .single();
+
+    if (fetchError || !message) {
+      throw new Error('Message not found');
+    }
+
+    if (message.sender_id !== userId) {
+      throw new Error('You can only edit your own messages');
+    }
+
+    const { data: updatedMessage, error } = await adminSupabase
+      .from('messages')
+      .update({
+        content,
+        attachments: attachments ?? [],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', messageId)
+      .eq('conversation_id', conversationId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return {
+      id: updatedMessage.id,
+      conversationId: updatedMessage.conversation_id,
+      senderId: updatedMessage.sender_id,
+      content: updatedMessage.content,
+      role: updatedMessage.role,
+      createdAt: updatedMessage.created_at,
+      updatedAt: updatedMessage.updated_at,
+      attachments: updatedMessage.attachments || [],
+      syncStatus: 'synced' as const,
+    };
+  }
 }
 
 export const chatService = new ChatService();
