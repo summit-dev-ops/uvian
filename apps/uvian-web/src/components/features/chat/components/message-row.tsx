@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { useLongPress } from '@reactuses/core';
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@org/ui';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Badge,
+  Button,
+  useIsMobile,
+} from '@org/ui';
 import { Copy, RefreshCcw, MoreHorizontal } from 'lucide-react';
 import { ProfilePreview } from './profile-preview';
 import {
@@ -24,6 +31,7 @@ interface MessageRowProps {
 export function MessageRow({ message, onRetry, showHeader }: MessageRowProps) {
   const profile = message.senderProfile;
   const modalContext = useModalContext();
+  const isMobile = useIsMobile();
 
   const isAI = message.role === 'assistant';
   const isSystem = message.role === 'system';
@@ -74,7 +82,9 @@ export function MessageRow({ message, onRetry, showHeader }: MessageRowProps) {
   return (
     <div
       {...longPressProps}
-      className={`flex flex-1 py-1 px-6 min-w-0 relative group  hover:bg-accent/50  rounded-sm border border-transparent hover:border-border  active:bg-accent/50 ${
+      className={`flex flex-1 py-1 px-6 min-w-0 relative group ${
+        !isMobile ? 'hover:bg-accent/50 hover:border-border' : ''
+      } rounded-sm border border-transparent active:bg-accent/50 ${
         isSystem ? 'opacity-60' : ''
       }`}
     >
@@ -128,7 +138,7 @@ export function MessageRow({ message, onRetry, showHeader }: MessageRowProps) {
           <LinkList links={links} files={files} />
         </div>
 
-        {!isSystem && !message.isStreaming && (
+        {!isSystem && !message.isStreaming && !isMobile && (
           <div className="absolute -top-6 right-4 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center gap-0.5 bg-accent/50 rounded-md px-1 group-hover:shadow-md">
             <Button
               variant="ghost"
