@@ -44,6 +44,11 @@ RETURNS TRIGGER AS $$
 DECLARE
   new_account_id UUID;
 BEGIN
+  -- Skip account creation for agent users - they will be added to existing accounts manually
+  IF NEW.raw_user_meta_data->>'is_agent' = 'true' THEN
+    RETURN NEW;
+  END IF;
+
   -- Create account for new user
   INSERT INTO accounts (name)
   VALUES (COALESCE(

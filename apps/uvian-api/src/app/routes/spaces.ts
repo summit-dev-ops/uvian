@@ -141,6 +141,15 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           userId,
           request.body || {}
         );
+        fastify.services.eventEmitter.emitSpaceCreated(
+          {
+            spaceId: space.id,
+            name: space.name,
+            createdBy: userId,
+            memberIds: [userId],
+          },
+          userId
+        );
         reply.code(201).send(space);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to create space' });
@@ -190,6 +199,10 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           spaceId,
           request.body || {}
         );
+        fastify.services.eventEmitter.emitSpaceUpdated(
+          { spaceId, updatedBy: userId, name: space.name },
+          userId
+        );
         reply.send(space);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
@@ -228,6 +241,10 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         }
         const { spaceId } = request.params;
         await spacesService.deleteSpace(request.supabase, userId, spaceId);
+        fastify.services.eventEmitter.emitSpaceDeleted(
+          { spaceId, deletedBy: userId },
+          userId
+        );
         reply.code(204).send();
       } catch (error: any) {
         if (error.message.includes('Only the owner')) {
@@ -289,6 +306,15 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           targetUserId,
           role || { name: 'member' }
         );
+        fastify.services.eventEmitter.emitSpaceMemberJoined(
+          {
+            spaceId,
+            userId: targetUserId,
+            role: (role?.name as 'member' | 'moderator' | 'admin') || 'member',
+            invitedBy: userId,
+          },
+          userId
+        );
         reply.code(201).send(membership);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
@@ -334,6 +360,10 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           userId,
           spaceId,
           targetUserId
+        );
+        fastify.services.eventEmitter.emitSpaceMemberLeft(
+          { spaceId, userId: targetUserId, removedBy: userId },
+          userId
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -395,6 +425,17 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           spaceId,
           targetUserId,
           role
+        );
+        fastify.services.eventEmitter.emitSpaceMemberRoleChanged(
+          {
+            spaceId,
+            userId: targetUserId,
+            oldRole: 'member',
+            newRole:
+              (role?.name as 'member' | 'moderator' | 'admin') || 'member',
+            changedBy: userId,
+          },
+          userId
         );
         reply.send(membership);
       } catch (error: any) {

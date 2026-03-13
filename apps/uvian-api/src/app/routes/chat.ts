@@ -142,6 +142,15 @@ export default async function (fastify: FastifyInstance) {
           userId,
           request.body || {}
         );
+        fastify.services.eventEmitter.emitConversationCreated(
+          {
+            conversationId: conversation.id,
+            spaceId: conversation.spaceId,
+            createdBy: userId,
+            memberIds: [userId],
+          },
+          userId
+        );
         reply.code(201).send(conversation);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to create conversation' });
@@ -195,6 +204,10 @@ export default async function (fastify: FastifyInstance) {
           targetUserId,
           role || { name: 'member' }
         );
+        fastify.services.eventEmitter.emitConversationMemberJoined(
+          { conversationId, userId: targetUserId, invitedBy: userId },
+          userId
+        );
         reply.code(201).send(membership);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
@@ -242,6 +255,10 @@ export default async function (fastify: FastifyInstance) {
           userId,
           conversationId,
           targetUserId
+        );
+        fastify.services.eventEmitter.emitConversationMemberLeft(
+          { conversationId, userId: targetUserId, removedBy: userId },
+          userId
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -360,6 +377,16 @@ export default async function (fastify: FastifyInstance) {
           userId,
           conversationId,
           { id, content, role, attachments }
+        );
+
+        fastify.services.eventEmitter.emitMessageCreated(
+          {
+            messageId: message.id,
+            conversationId,
+            content: message.content,
+            senderId: message.senderId,
+          },
+          userId
         );
 
         fastify.io.to(conversationId).emit('new_message', {
@@ -482,6 +509,10 @@ export default async function (fastify: FastifyInstance) {
           userId,
           conversationId
         );
+        fastify.services.eventEmitter.emitConversationDeleted(
+          { conversationId, deletedBy: userId },
+          userId
+        );
         reply.code(204).send();
       } catch (error: any) {
         if (error.message.includes('Only owners')) {
@@ -527,6 +558,10 @@ export default async function (fastify: FastifyInstance) {
           userId,
           conversationId,
           messageId
+        );
+        fastify.services.eventEmitter.emitMessageDeleted(
+          { messageId, conversationId, deletedBy: userId },
+          userId
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -583,6 +618,10 @@ export default async function (fastify: FastifyInstance) {
           messageId,
           content,
           attachments
+        );
+        fastify.services.eventEmitter.emitMessageUpdated(
+          { messageId, conversationId, content, updatedBy: userId },
+          userId
         );
         reply.send(message);
       } catch (error: any) {

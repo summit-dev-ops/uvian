@@ -10,3 +10,4 @@ export * from './create-post-modal';
 export * from './create-note-modal';
 export * from './message-selection-modal';
 export * from './image-carousel-modal';
+export * from './create-agent-modal';

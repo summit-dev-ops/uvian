@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
-import { Button, ItemGroup } from '@org/ui';
+import { ItemGroup } from '@org/ui';
 import { useQuery } from '@tanstack/react-query';
 import { accountQueries } from '~/lib/domains/accounts';
 import type { AccountUI } from '~/lib/domains/accounts/types';
@@ -27,10 +26,6 @@ export function AccountsListInterface() {
     error,
     refetch,
   } = useQuery(accountQueries.list());
-
-  const handleCreateAccount = React.useCallback(() => {
-    router.push('/accounts/new');
-  }, [router]);
 
   const handleViewAccount = React.useCallback(
     (account: AccountUI) => {
@@ -86,12 +81,6 @@ export function AccountsListInterface() {
             subtitle={`${accounts.length} account${
               accounts.length !== 1 ? 's' : ''
             }`}
-            actions={
-              <Button onClick={handleCreateAccount}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Account
-              </Button>
-            }
           />
         </InterfaceHeader>
 
@@ -109,13 +98,7 @@ export function AccountsListInterface() {
           ) : (
             <InterfaceEmpty
               title="No accounts found"
-              message="Create your first account to get started."
-              action={
-                <Button onClick={handleCreateAccount}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Account
-                </Button>
-              }
+              message="You don't have any accounts yet."
             />
           )}
         </InterfaceContent>

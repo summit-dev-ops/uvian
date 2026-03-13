@@ -11,6 +11,12 @@
     },
     {
       "path": "./packages/ui"
-    }
+    },
+    {
+      "path": "./apps/uvian-automation-api"
+    },
+    {
+      "path": "./packages/uvian-events"
+    },
   ]
 }

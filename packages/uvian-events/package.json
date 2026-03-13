@@ -1,0 +1,32 @@
+{
+  "name": "@org/uvian-events",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/esbuild:esbuild",
+        "outputs": [
+          "{workspaceRoot}/packages/uvian-events/dist"
+        ],
+        "options": {
+          "outputPath": "packages/uvian-events/dist",
+          "main": "packages/uvian-events/src/index.ts",
+          "tsConfig": "packages/uvian-events/tsconfig.lib.json",
+          "format": [
+            "cjs"
+          ],
+          "declarationRootDir": "packages/uvian-events/src",
+          "esbuildOptions": {
+            "outExtension": {
+              ".js": ".js"
+            }
+          }
+        }
+      }
+    }
+  },
+  "dependencies": {}
+}

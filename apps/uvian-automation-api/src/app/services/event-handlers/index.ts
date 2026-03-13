@@ -1,0 +1,27 @@
+import { webhookHandlerService } from '../webhook-handler.service';
+import { registerChatHandlers } from './chat.handlers';
+import { registerAutomationHandlers } from './automation.handlers';
+import { registerContentHandlers } from './content.handlers';
+import { registerTicketHandlers } from './ticket.handlers';
+import { registerSpaceHandlers } from './space.handlers';
+import { registerConversationEventHandlers } from './conversation.handlers';
+
+export function registerAllEventHandlers() {
+  registerChatHandlers(webhookHandlerService);
+  registerAutomationHandlers(webhookHandlerService);
+  registerContentHandlers(webhookHandlerService);
+  registerTicketHandlers(webhookHandlerService);
+  registerSpaceHandlers(webhookHandlerService);
+
+  const conversationHandlers = registerConversationEventHandlers();
+  for (const { eventType, handler } of conversationHandlers) {
+    webhookHandlerService.registerHandler(eventType, handler);
+  }
+}
+
+export * from './chat.handlers';
+export * from './automation.handlers';
+export * from './content.handlers';
+export * from './ticket.handlers';
+export * from './space.handlers';
+export * from './conversation.handlers';

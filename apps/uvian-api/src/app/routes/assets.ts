@@ -110,6 +110,17 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
 
         const asset = await assetService.createAsset(userId, request.body);
 
+        fastify.services.eventEmitter.emitAssetUploaded(
+          {
+            assetId: asset.id,
+            filename: asset.filename || '',
+            mimeType: asset.mimeType || '',
+            sizeBytes: asset.fileSizeBytes || 0,
+            uploadedBy: userId,
+          },
+          userId
+        );
+
         reply.code(201).send(asset);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to create asset' });
@@ -159,6 +170,11 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
           userId,
           assetId,
           hardDelete
+        );
+
+        fastify.services.eventEmitter.emitAssetDeleted(
+          { assetId, deletedBy: userId },
+          userId
         );
 
         reply.code(204).send();

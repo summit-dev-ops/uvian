@@ -221,6 +221,16 @@ export default async function (fastify: FastifyInstance) {
         // Fetch the complete post with contents
         const fullPost = await postService.getPost(request.supabase, post.id);
 
+        fastify.services.eventEmitter.emitPostCreated(
+          {
+            postId: post.id,
+            content: JSON.stringify(contents),
+            authorId: userId,
+            spaceId,
+          },
+          userId
+        );
+
         reply.code(201).send(fullPost);
       } catch (error: any) {
         if (error.message.includes('Not a member')) {
@@ -256,6 +266,11 @@ export default async function (fastify: FastifyInstance) {
         const { id } = request.params;
 
         await postService.deletePost(request.supabase, id, userId);
+
+        fastify.services.eventEmitter.emitPostDeleted(
+          { postId: id, deletedBy: userId },
+          userId
+        );
 
         reply.code(204).send();
       } catch (error: any) {

@@ -95,6 +95,16 @@ export default async function (fastify: FastifyInstance) {
           attachments,
         });
 
+        fastify.services.eventEmitter.emitNoteCreated(
+          {
+            noteId: note.id,
+            title: note.title,
+            content: note.body || '',
+            createdBy: userId,
+          },
+          userId
+        );
+
         reply.code(201).send(note);
       } catch (error: any) {
         reply
@@ -127,6 +137,11 @@ export default async function (fastify: FastifyInstance) {
           { title, body, attachments }
         );
 
+        fastify.services.eventEmitter.emitNoteUpdated(
+          { noteId, updatedBy: userId, title, content: body },
+          userId
+        );
+
         reply.send(note);
       } catch (error: any) {
         reply
@@ -152,6 +167,11 @@ export default async function (fastify: FastifyInstance) {
         const { noteId } = request.params;
 
         await noteService.deleteNote(request.supabase, userId, noteId);
+
+        fastify.services.eventEmitter.emitNoteDeleted(
+          { noteId, deletedBy: userId },
+          userId
+        );
 
         reply.send({ success: true });
       } catch (error: any) {

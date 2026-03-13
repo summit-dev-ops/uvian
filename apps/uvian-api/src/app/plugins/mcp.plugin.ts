@@ -1,0 +1,547 @@
+import { FastifyPluginAsync } from 'fastify';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { createUserClient, adminSupabase } from '../clients/supabase.client';
+import { randomUUID } from 'crypto';
+import { z } from 'zod';
+import { Services } from './services';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    mcpServer: McpServer;
+    services: Services;
+  }
+}
+
+type ToolResult = {
+  content: Array<{ type: 'text'; text: string }>;
+  isError?: boolean;
+};
+
+export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
+  async function createAuthenticatedServer(token: string): Promise<McpServer> {
+    const userClient = createUserClient(token);
+
+    const server = new McpServer(
+      {
+        name: 'uvian-hub',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {},
+        },
+      }
+    );
+
+    server.registerTool(
+      'search_messages',
+      {
+        inputSchema: z.object({
+          query: z.string(),
+          conversationId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const results = await fastify.services.chat.searchMessages(
+            userClient,
+            args.conversationId,
+            { q: args.query }
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(results) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool('list_spaces', {}, async (): Promise<ToolResult> => {
+      try {
+        const results = await fastify.services.spaces.getSpaces(userClient);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(results) }],
+        };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error}` }],
+          isError: true,
+        };
+      }
+    });
+
+    server.registerTool(
+      'get_space',
+      {
+        inputSchema: z.object({ spaceId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const space = await fastify.services.spaces.getSpace(
+            userClient,
+            args.spaceId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(space) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_note',
+      {
+        inputSchema: z.object({ noteId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const note = await fastify.services.note.getNote(
+            userClient,
+            args.noteId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(note) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_ticket',
+      {
+        inputSchema: z.object({ ticketId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const ticket = await fastify.services.ticket.getTicket(
+            userClient,
+            args.ticketId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(ticket) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    // READ TOOLS - Conversations
+    server.registerTool(
+      'list_conversations',
+      {
+        inputSchema: z.object({ spaceId: z.string().optional() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const results = await fastify.services.chat.getConversations(
+            userClient
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(results) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_conversation',
+      {
+        inputSchema: z.object({ conversationId: z.string() }),
+      },
+      async ({ conversationId }): Promise<ToolResult> => {
+        try {
+          const result = await fastify.services.chat.getConversation(
+            userClient,
+            conversationId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'list_messages',
+      {
+        inputSchema: z.object({
+          conversationId: z.string(),
+          limit: z.number().optional(),
+          cursor: z.string().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const result = await fastify.services.chat.getMessages(
+            userClient,
+            args.conversationId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    // READ TOOLS - Posts
+    server.registerTool(
+      'list_posts',
+      {
+        inputSchema: z.object({
+          spaceId: z.string(),
+          limit: z.number().optional(),
+          cursor: z.string().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const result = await fastify.services.post.getPostsBySpace(
+            userClient,
+            args.spaceId,
+            { limit: args.limit, cursor: args.cursor }
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_post',
+      {
+        inputSchema: z.object({
+          postId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const result = await fastify.services.post.getPost(
+            userClient,
+            args.postId
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    // WRITE TOOLS - Conversations
+    server.registerTool(
+      'create_conversation',
+      {
+        inputSchema: z.object({
+          title: z.string(),
+          spaceId: z.string().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const {
+            data: { user },
+          } = await userClient.auth.getUser();
+          if (!user) throw new Error('User not authenticated');
+
+          const result = await fastify.services.chat.createConversation(
+            user.id,
+            { title: args.title, spaceId: args.spaceId }
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'send_message',
+      {
+        inputSchema: z.object({
+          conversationId: z.string(),
+          content: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const {
+            data: { user },
+          } = await userClient.auth.getUser();
+          if (!user) throw new Error('User not authenticated');
+          const id = randomUUID();
+          const result = await fastify.services.chat.createMessage(
+            userClient,
+            user.id,
+            args.conversationId,
+            { id, content: args.content }
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    // WRITE TOOLS - Spaces
+    server.registerTool(
+      'create_space',
+      {
+        inputSchema: z.object({
+          name: z.string(),
+          description: z.string().optional(),
+          isPrivate: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const {
+            data: { user },
+          } = await userClient.auth.getUser();
+          if (!user) throw new Error('User not authenticated');
+
+          const result = await fastify.services.spaces.createSpace(user.id, {
+            name: args.name,
+            description: args.description,
+            isPrivate: args.isPrivate,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    // WRITE TOOLS - Posts
+    server.registerTool(
+      'create_post',
+      {
+        inputSchema: z.object({
+          spaceId: z.string(),
+          contents: z
+            .array(
+              z.object({
+                type: z.enum(['note', 'asset', 'external']),
+                note: z
+                  .object({
+                    title: z.string(),
+                    body: z.string(),
+                  })
+                  .optional(),
+                noteId: z.string().optional(),
+                assetId: z.string().optional(),
+                url: z.string().optional(),
+              })
+            )
+            .optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const {
+            data: { user },
+          } = await userClient.auth.getUser();
+          if (!user) throw new Error('User not authenticated');
+
+          // Create base post
+          const post = await fastify.services.post.createPost(userClient, {
+            spaceId: args.spaceId,
+            userId: user.id,
+          });
+
+          // Process contents
+          const contents = args.contents || [];
+          for (let i = 0; i < contents.length; i++) {
+            const item = contents[i];
+            let noteId = item.noteId;
+
+            if (item.type === 'note' && item.note?.title) {
+              const createdNote = await fastify.services.note.createNote(
+                userClient,
+                user.id,
+                {
+                  id: item.noteId, // Optional ID passing
+                  spaceId: args.spaceId,
+                  title: item.note.title,
+                  body: item.note.body,
+                }
+              );
+              noteId = createdNote.id;
+            }
+
+            await adminSupabase.from('post_contents').insert({
+              post_id: post.id,
+              content_type: item.type,
+              note_id: noteId,
+              asset_id: item.assetId,
+              url: item.url,
+              position: i,
+            });
+          }
+
+          // Return full post
+          const fullPost = await fastify.services.post.getPost(
+            userClient,
+            post.id
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(fullPost) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    console.log('[MCP] Server created with tools');
+    return server;
+  }
+
+  function extractToken(authHeader: string | undefined): string | null {
+    if (!authHeader) return null;
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') return null;
+    return parts[1];
+  }
+
+  // ==========================================
+  // POST /v1/mcp - Receives JSON-RPC Messages (Stateless)
+  // ==========================================
+  fastify.post('/v1/mcp', async (request, reply) => {
+    console.log('[MCP] ========== POST /v1/mcp START ==========');
+
+    try {
+      const authHeader = request.headers.authorization;
+      const token = extractToken(authHeader);
+
+      if (!token) {
+        console.log('[MCP] No token, returning 401');
+        return reply
+          .code(401)
+          .send({ error: 'Unauthorized', message: 'Missing token' });
+      }
+
+      console.log('[MCP] Validating token...');
+      const userClient = createUserClient(token);
+      const {
+        data: { user },
+        error: authError,
+      } = await userClient.auth.getUser();
+
+      if (authError || !user) {
+        console.log('[MCP] Auth failed:', authError?.message);
+        return reply
+          .code(401)
+          .send({ error: 'Unauthorized', message: 'Invalid token' });
+      }
+
+      console.log('[MCP] Auth OK, user:', user.id);
+
+      // Create server and stateless transport for each request
+      const server = await createAuthenticatedServer(token);
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined, // stateless mode
+      });
+
+      console.log('[MCP] Connecting server to transport...');
+      await server.connect(transport);
+
+      console.log('[MCP] Handling request...');
+      await transport.handleRequest(request.raw, reply.raw, request.body);
+
+      console.log(
+        '[MCP] handleRequest returned, status:',
+        reply.raw.statusCode
+      );
+      console.log('[MCP] ========== POST /v1/mcp END ==========');
+    } catch (error) {
+      console.log('[MCP] POST Error:', error);
+      fastify.log.error(error, 'MCP POST error');
+      try {
+        if (!reply.raw.writableEnded) {
+          reply.code(500).send({ error: 'MCP POST failed: ' + String(error) });
+        }
+      } catch {
+        // Response already sent
+      }
+    }
+  });
+
+  // GET /v1/mcp - Not supported in stateless mode
+  fastify.get('/v1/mcp', async (request, reply) => {
+    console.log('[MCP] ========== GET /v1/mcp START ==========');
+    console.log('[MCP] GET not supported in stateless mode');
+    reply
+      .code(405)
+      .header('Allow', 'POST')
+      .send('Method Not Allowed - Use POST for stateless MCP');
+    console.log('[MCP] ========== GET /v1/mcp END ==========');
+  });
+
+  fastify.decorate('mcpServer', null);
+
+  fastify.log.info('MCP plugin registered');
+};

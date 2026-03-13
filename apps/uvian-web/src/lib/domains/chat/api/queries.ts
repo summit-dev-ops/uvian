@@ -56,8 +56,7 @@ export const chatQueries = {
         const { data } = await apiClient.get<MessageUI[]>(
           `/api/conversations/${conversationId}/messages`
         );
-        // Ensure we always return an array, even if API returns null/undefined
-        return data;
+        return data
       },
       enabled: !!conversationId,
       staleTime: 1000 * 60, // 1 minute

@@ -11,7 +11,6 @@ export const useChat = (conversationId: string) => {
   const { data: messages, isLoading } = useQuery(
     chatQueries.messages(conversationId)
   );
-
   // 2. Fetch profiles for all message senders by userId
   const senderIds = messages?.map((m) => m.senderId) ?? [];
   const { profiles, isLoading: isLoadingProfiles } =

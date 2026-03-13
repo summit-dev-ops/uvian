@@ -65,6 +65,14 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           name,
           settings,
         });
+        fastify.services.eventEmitter.emitAccountCreated(
+          {
+            accountId: account.id,
+            name: account.name || '',
+            createdBy: userId,
+          },
+          userId
+        );
         reply.code(201).send(account);
       } catch (error: any) {
         reply
@@ -155,6 +163,10 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           name,
           settings,
         });
+        fastify.services.eventEmitter.emitAccountUpdated(
+          { accountId, updatedBy: userId, name },
+          userId
+        );
         reply.send(account);
       } catch (error: any) {
         if (error.message.includes('access denied')) {
@@ -204,11 +216,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         if (error.message.includes('access denied')) {
           reply.code(403).send({ error: error.message });
         } else {
-          reply
-            .code(400)
-            .send({
-              error: error.message || 'Failed to fetch account members',
-            });
+          reply.code(400).send({
+            error: error.message || 'Failed to fetch account members',
+          });
         }
       }
     }
@@ -257,6 +267,15 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           userId,
           newMemberUserId,
           role || { name: 'member', permissions: [] }
+        );
+        fastify.services.eventEmitter.emitAccountMemberAdded(
+          {
+            accountId,
+            userId: newMemberUserId,
+            role: (role?.name as 'member' | 'admin') || 'member',
+            addedBy: userId,
+          },
+          userId
         );
         reply.code(201).send(member);
       } catch (error: any) {
@@ -315,16 +334,24 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           targetUserId,
           role
         );
+        fastify.services.eventEmitter.emitAccountMemberRoleChanged(
+          {
+            accountId,
+            userId: targetUserId,
+            oldRole: 'member',
+            newRole: (role?.name as 'member' | 'admin') || 'member',
+            changedBy: userId,
+          },
+          userId
+        );
         reply.send(member);
       } catch (error: any) {
         if (error.message.includes('access denied')) {
           reply.code(403).send({ error: error.message });
         } else {
-          reply
-            .code(400)
-            .send({
-              error: error.message || 'Failed to update account member',
-            });
+          reply.code(400).send({
+            error: error.message || 'Failed to update account member',
+          });
         }
       }
     }
@@ -363,16 +390,18 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           userId,
           targetUserId
         );
+        fastify.services.eventEmitter.emitAccountMemberRemoved(
+          { accountId, userId: targetUserId, removedBy: userId },
+          userId
+        );
         reply.code(204).send();
       } catch (error: any) {
         if (error.message.includes('access denied')) {
           reply.code(403).send({ error: error.message });
         } else {
-          reply
-            .code(400)
-            .send({
-              error: error.message || 'Failed to remove account member',
-            });
+          reply.code(400).send({
+            error: error.message || 'Failed to remove account member',
+          });
         }
       }
     }

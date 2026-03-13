@@ -56,6 +56,12 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+
         const result = await ticketService.createTicket(request.supabase, {
           threadId,
           resourceScopeId,
@@ -65,6 +71,17 @@ export default async function (fastify: FastifyInstance) {
           assignedTo,
           requesterJobId,
         });
+
+        fastify.services.eventEmitter.emitTicketCreated(
+          {
+            ticketId: result.ticketId,
+            title,
+            description: description || '',
+            priority: priority || 'medium',
+            createdBy: userId,
+          },
+          userId
+        );
 
         reply.code(201).send(result);
       } catch (error: any) {
@@ -174,6 +191,16 @@ export default async function (fastify: FastifyInstance) {
           userId
         );
 
+        fastify.services.eventEmitter.emitTicketUpdated(
+          {
+            ticketId: id,
+            status: updates.status,
+            priority: updates.priority,
+            updatedBy: userId,
+          },
+          userId
+        );
+
         reply.send(ticket);
       } catch (error: any) {
         if (error.message.includes('access denied')) {
@@ -221,6 +248,11 @@ export default async function (fastify: FastifyInstance) {
           request.supabase,
           id,
           body.resolutionPayload || {},
+          userId
+        );
+
+        fastify.services.eventEmitter.emitTicketResolved(
+          { ticketId: id, resolvedBy: userId },
           userId
         );
 
@@ -278,6 +310,11 @@ export default async function (fastify: FastifyInstance) {
           userId
         );
 
+        fastify.services.eventEmitter.emitTicketAssigned(
+          { ticketId: id, assignedTo: assignedTo || '', assignedBy: userId },
+          userId
+        );
+
         reply.send(ticket);
       } catch (error: any) {
         if (
@@ -329,11 +366,9 @@ export default async function (fastify: FastifyInstance) {
           error.message.includes('Only admins') ||
           error.message.includes('Only conversation owners')
         ) {
-          reply
-            .code(403)
-            .send({
-              error: 'Only admins or conversation owners can delete tickets',
-            });
+          reply.code(403).send({
+            error: 'Only admins or conversation owners can delete tickets',
+          });
         } else if (error.message.includes('access denied')) {
           reply.code(403).send({ error: 'Access denied' });
         } else {
