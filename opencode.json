@@ -5,6 +5,14 @@
       "type": "local",
       "command": ["npx", "nx", "mcp"],
       "enabled": true
+    },
+    "supabase": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com/mcp?read_only=true&features=docs%2Cdatabase%2Cdebugging%2Cdevelopment",
+      "headers": {
+        "Authorization": "Bearer sbp_87588d3bad0dc4c87b8ad50a9c6d4440848ac9d7"
+      },
+      "enabled": true
     }
   }
 }

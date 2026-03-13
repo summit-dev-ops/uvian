@@ -1,5 +1,5 @@
 {
-    "python.analysis.extraPaths": [
-        "./apps/uvian-worker/apps/uvian_worker"
-    ]
+  "python.analysis.extraPaths": [
+    "./apps/uvian-automation-worker/apps/uvian_automation_worker"
+  ]
 }

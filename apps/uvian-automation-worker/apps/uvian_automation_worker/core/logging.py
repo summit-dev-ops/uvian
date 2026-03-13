@@ -38,7 +38,7 @@ def setup_worker_logging(level: str = "INFO", format_string: Optional[str] = Non
     )
     
     # Create worker-specific logger
-    worker_logger = logging.getLogger('uvian.worker')
+    worker_logger = logging.getLogger('uvian.automation_worker')
     worker_logger.setLevel(getattr(logging, level.upper()))
     
     return worker_logger
@@ -48,7 +48,7 @@ class WorkerLogger:
     Structured logger for worker operations with job context.
     """
     
-    def __init__(self, name: str = "uvian.worker"):
+    def __init__(self, name: str = "uvian.automation_worker"):
         self.logger = logging.getLogger(name)
         self.name = name
     

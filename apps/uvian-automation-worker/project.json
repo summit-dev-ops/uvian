@@ -1,8 +1,8 @@
 {
-  "name": "apps/uvian-worker",
+  "name": "apps/uvian-automation-worker",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "sourceRoot": "apps/uvian-worker/apps/uvian_worker",
+  "sourceRoot": "apps/uvian-automation-worker/apps/uvian_automation_worker",
   "targets": {
     "lock": {
       "executor": "@nxlv/python:lock",
@@ -70,7 +70,7 @@
     "serve": {
       "executor": "@nxlv/python:run-commands",
       "options": {
-        "command": "poetry run python apps/uvian_worker/main.py",
+        "command": "poetry run python apps/uvian_automation_worker/main.py",
         "cwd": "{projectRoot}"
       }
     }

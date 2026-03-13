@@ -8,6 +8,26 @@ import {
   DeleteTicketRequest,
 } from '../types/ticket.types';
 
+const VALID_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
+const VALID_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
+
+type ValidPriority = (typeof VALID_PRIORITIES)[number];
+type ValidStatus = (typeof VALID_STATUSES)[number];
+
+function toValidPriority(p?: string): ValidPriority | undefined {
+  if (!p) return undefined;
+  return VALID_PRIORITIES.includes(p as ValidPriority)
+    ? (p as ValidPriority)
+    : undefined;
+}
+
+function toValidStatus(s?: string): ValidStatus | undefined {
+  if (!s) return undefined;
+  return VALID_STATUSES.includes(s as ValidStatus)
+    ? (s as ValidStatus)
+    : undefined;
+}
+
 export default async function (fastify: FastifyInstance) {
   fastify.post<CreateTicketRequest>(
     '/api/tickets',
@@ -194,8 +214,8 @@ export default async function (fastify: FastifyInstance) {
         fastify.services.eventEmitter.emitTicketUpdated(
           {
             ticketId: id,
-            status: updates.status,
-            priority: updates.priority,
+            status: toValidStatus(updates.status),
+            priority: toValidPriority(updates.priority),
             updatedBy: userId,
           },
           userId

@@ -10,7 +10,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 
-**Uvian** is a creative collaboration platform with a ingrained AI solutions. It aims to provide a comprehnsive ecosystem of tools that cater to a varied user base of creators, artists, community organisers. 
+**Uvian** is a creative collaboration platform with a ingrained AI solutions. It aims to provide a comprehnsive ecosystem of tools that cater to a varied user base of creators, artists, community organisers.
 
 ---
 
@@ -40,7 +40,7 @@ cd uvian
 npm install
 
 # Install Python dependencies
-cd apps/uvian-worker
+cd apps/uvian-automation-worker
 poetry install --with dev
 cd ../../
 ```
@@ -53,12 +53,12 @@ Each app needs its own env files.
 
 ```bash
 # Start all applications
-npx nx run-many -t serve -p=uvian-api,uvian-web,uvian-worker
+npx nx run-many -t serve -p=uvian-api,uvian-web,uvian-automation-worker
 
 # Or start individual services
 npx nx serve uvian-web    # Frontend on http://localhost:3000
 npx nx serve uvian-api    # API on http://localhost:8000
-npx nx serve uvian-worker # Worker (no web interface)
+npx nx serve uvian-automation-worker # Worker (no web interface)
 ```
 
 ---
@@ -69,7 +69,7 @@ npx nx serve uvian-worker # Worker (no web interface)
 📁 apps/                    # 3 applications
   ├── uvian-api/           # Fastify API server (Node.js)
   ├── uvian-web/           # Next.js web application (React)
-  └── uvian-worker/        # Python background worker
+  └── uvian-automation-worker/        # Python background worker
 
 📁 packages/               # Shared libraries
   └── ui/                  # shadcn/ui component library
@@ -85,36 +85,35 @@ npx nx serve uvian-worker # Worker (no web interface)
 
 ```bash
 # Start all applications
-npx nx run-many -t serve -p=uvian-api,uvian-web,uvian-worker
+npx nx run-many -t serve -p=uvian-api,uvian-web,uvian-automation-worker
 
 # Or start individual services
 npx nx serve uvian-web    # Frontend on http://localhost:3000
 npx nx serve uvian-api    # API on http://localhost:8000
-npx nx serve uvian-worker # Worker (no web interface)
+npx nx serve uvian-automation-worker # Worker (no web interface)
 ```
-
 
 ### Building & Testing
 
 ```bash
 # Build all applications
-npx nx run-many -t build -p=uvian-api,uvian-web,uvian-worker
+npx nx run-many -t build -p=uvian-api,uvian-web,uvian-automation-worker
 
 # Build specific application
 npx nx build uvian-web
 npx nx build uvian-api
-npx nx build uvian-worker
+npx nx build uvian-automation-worker
 
 # Run tests
 npx nx test uvian-web        # All tests for web
 npx nx test uvian-api        # All tests for API
-npx nx test uvian-worker     # All tests for worker
+npx nx test uvian-automation-worker     # All tests for worker
 
 # Run specific test file
 npx nx test uvian-api --testPathPattern=app.spec.ts
 
 # Type checking
-npx nx run-many -t typecheck -p=uvian-api,uvian-web,uvian-worker
+npx nx run-many -t typecheck -p=uvian-api,uvian-web,uvian-automation-worker
 
 # Linting
 npx nx lint uvian-web        # Lint web app
@@ -126,13 +125,13 @@ npx nx lint                  # Lint all projects
 
 ```bash
 # Install Python dependencies
-npx nx install uvian-worker
+npx nx install uvian-automation-worker
 
 # Run Python tests with Poetry
-cd apps/uvian-worker && poetry run pytest
+cd apps/uvian-automation-worker && poetry run pytest
 
 # Run with coverage
-poetry run pytest --cov=apps.uvian_worker
+poetry run pytest --cov=apps.uvian_automation_worker
 
 # Poetry shell for development
 poetry shell
