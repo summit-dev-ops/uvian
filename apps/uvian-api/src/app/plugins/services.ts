@@ -4,7 +4,6 @@ import { accountService } from '../services/account.service';
 import { noteService } from '../services/note.service.js';
 import { postService } from '../services/post.service.js';
 import { assetService } from '../services/asset.service.js';
-import { ticketService } from '../services/ticket.service.js';
 import { profileService } from '../services/profile.service.js';
 import { spacesService } from '../services/spaces.service.js';
 import { feedService } from '../services/feed.service.js';
@@ -17,7 +16,6 @@ export interface Services {
   note: typeof noteService;
   post: typeof postService;
   asset: typeof assetService;
-  ticket: typeof ticketService;
   profile: typeof profileService;
   spaces: typeof spacesService;
   feed: typeof feedService;
@@ -38,7 +36,6 @@ export default fp(async (fastify) => {
     note: noteService,
     post: postService,
     asset: assetService,
-    ticket: ticketService,
     profile: profileService,
     spaces: spacesService,
     feed: feedService,

@@ -12,8 +12,9 @@ Uses dependency injection to delegate to specialized components for:
 This refactored version is significantly smaller and more maintainable
 than the original monolith.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from executors.base import BaseExecutor, JobData, JobResult
+from executors.triggers import TriggerRegistry
 from core.events import events
 from core.agents.universal_agent.agent import build_agent
 from clients.mcp import create_mcp_registry
@@ -25,6 +26,7 @@ from langgraph.types import Command
 from langchain.messages import HumanMessage
 import uuid
 
+
 class AgentExecutor(BaseExecutor):
     """Refactored executor for agent-based jobs using modular components."""
     
@@ -35,31 +37,73 @@ class AgentExecutor(BaseExecutor):
     async def execute(self, job_data: JobData) -> JobResult:
         """Execute an agent job using modular component architecture."""
         job_id = job_data["id"]
-        resource_scope_id = job_data.get("resource_scope_id")
         inputs = job_data.get("input", {})
         
         worker_logger.info_job(job_id, "AgentExecutor: Starting agent job")
         
-        agent_user_id = inputs.get("agent_user_id")
+        # Check inputType - only handle 'event' type
+        input_type = inputs.get("inputType")
+        if input_type != "event":
+            raise ValueError(f"AgentExecutor only handles 'event' inputType, got: {input_type}")
+        
+        # Extract event data from standardized structure
+        event_type = inputs.get("eventType")
+        if not event_type:
+            raise ValueError("eventType is required in job input")
+        
+        worker_logger.info_job(job_id, f"Processing event: {event_type}")
+        
+        # Get agent info from standardized structure
+        agent_user_id = inputs.get("agentId")
+        if not agent_user_id:
+            # Fallback to legacy location
+            agent_user_id = inputs.get("agent_user_id") or job_data.get("agent_id")
+        
+        if not agent_user_id:
+            raise ValueError("agentId is required in job input")
+        
+        # Create trigger message from standardized event data
+        worker_logger.info_job(job_id, f"Deriving message from trigger for event: {event_type}")
+        trigger_message = TriggerRegistry.create_message(event_type, inputs)
+        
+        if trigger_message:
+            message_content = trigger_message.content
+            event_metadata = trigger_message.metadata
+            worker_logger.info_job(job_id, f"Trigger message derived: {message_content[:100]}...")
+        else:
+            worker_logger.warning_job(job_id, f"No trigger found for event type: {event_type}")
+            message_content = f"Event received: {event_type}"
+            event_metadata = {}
+        
+        # Extract context from standardized structure
+        context = inputs.get("context", {})
+        conversation_id = context.get("conversationId")
+        resource = inputs.get("resource", {})
+        resource_id = resource.get("id")
+        
+        # If no conversationId, derive from resource type
+        if not conversation_id and resource.get("type") == "conversation":
+            conversation_id = resource_id
+        
+        # Get optional fields
         thread_id = inputs.get("threadId")
         is_resume = inputs.get("isResume", False)
         resolution_payload = inputs.get("resolutionPayload")
-        conversation_id = inputs.get("conversationId")
 
-        message_id: str = str(uuid.uuid4())
-        if not agent_user_id:
-            raise ValueError("agent_user_id is required in job input")
-        
-        if not resource_scope_id:
-            raise ValueError("resourceScopeId is required in job input")
-        
-        if not conversation_id:
-            raise ValueError("conversationId is required in job input")
-        
+        # Create or use existing thread
         if not thread_id:
-            process_thread = await process_thread_repository.create_thread(str(uuid.uuid4()), agent_profile_id, resource_scope_id)
-            thread_id = process_thread["id"]
-
+            worker_logger.info_job(job_id, "Creating new thread for agent execution")
+            thread_id = str(uuid.uuid4())
+            
+            created_thread = await process_thread_repository.create_thread(
+                thread_id=thread_id,
+                agent_profile_id=agent_user_id,
+                resource_scope_id=None
+            )
+            
+            if not created_thread:
+                worker_logger.warning_job(job_id, "Failed to create thread in DB, continuing with in-memory thread")
+        
         worker_logger.info_job(job_id, "Loading MCP tools...")
 
         mcp_list = UVIAN_MCP_LIST.split(",")
@@ -69,23 +113,24 @@ class AgentExecutor(BaseExecutor):
             auth_context={"agent_user_id": agent_user_id}
         )
 
-        channel: str = f"conversation:{conversation_id}:messages"
+        channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
         agent_input = None
-
         if not is_resume:
             agent_input = {
                 "messages": [
-                    HumanMessage(content=f"Hi!")
+                    HumanMessage(content=message_content)
                 ],
                 "skills": [],
                 "custom_instructions": "",
-                "agent_name": "Test",
+                "agent_name": "Agent",
                 "loaded_skills": [],
                 "llm_calls": 0,
                 "channel_id": channel,
                 "conversation_id": conversation_id,
                 "agent_user_id": agent_user_id,
-                "message_id": message_id,
+                "message_id": str(uuid.uuid4()),
+                "event_type": event_type,
+                "event_metadata": event_metadata,
             }
         else:
             resolution_payload = inputs.get("resolutionPayload")
@@ -97,7 +142,6 @@ class AgentExecutor(BaseExecutor):
 
         config = {"configurable": {"thread_id": thread_id}}
         full_response: List[Any] = []
-
         try:
             agent = build_agent(mcp_tools)
             async for chunk,_m in agent.astream(
@@ -106,22 +150,23 @@ class AgentExecutor(BaseExecutor):
                 stream_mode="messages" 
             ):
                 full_response.append(chunk)
-                # print(chunk)
 
-            # print(full_response)
             return {
                 "status": "completed",
                 "result": {
-                    "conversationId": conversation_id, 
-                    "messageId": message_id
+                    "event_type": event_type,
+                    "conversationId": conversation_id,
+                    "resourceId": resource_id,
                 }
             }
 
-        # Validate required parameters
         except Exception as e:
             worker_logger.error(f"Error executing agent: {e}", exception=e)
             return {
                 "status": "failed",
-                "error": str(e)
+                "result": {
+                    "error": str(e),
+                    "event_type": event_type,
+                }
             }
             

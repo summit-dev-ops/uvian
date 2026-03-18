@@ -3,7 +3,10 @@ import { WebhookEnvelope, WebhookResponse } from '@org/uvian-events';
 
 const PROCESSED_EVENTS_TTL = 24 * 60 * 60;
 
-export type EventHandler = (envelope: WebhookEnvelope) => Promise<void>;
+export type EventHandler = (
+  envelope: WebhookEnvelope,
+  agentId?: string
+) => Promise<void>;
 
 export class WebhookHandlerService {
   private handlers: Map<string, EventHandler> = new Map();
@@ -23,7 +26,10 @@ export class WebhookHandlerService {
     this.handlers.set(eventType, handler);
   }
 
-  async handleEvent(envelope: WebhookEnvelope): Promise<WebhookResponse> {
+  async handleEvent(
+    envelope: WebhookEnvelope,
+    agentId?: string
+  ): Promise<WebhookResponse> {
     const alreadyProcessed = await this.isEventProcessed(envelope.id);
 
     if (alreadyProcessed) {
@@ -48,7 +54,7 @@ export class WebhookHandlerService {
     }
 
     try {
-      await handler(envelope);
+      await handler(envelope, agentId);
       return {
         accepted: true,
         event_id: envelope.id,

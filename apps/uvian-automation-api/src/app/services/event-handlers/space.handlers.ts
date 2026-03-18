@@ -1,4 +1,4 @@
-import { queueService } from '../queue.service';
+import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
   SpaceEvents,
@@ -10,26 +10,36 @@ import {
 export function registerSpaceHandlers(webhookHandler: any) {
   webhookHandler.registerHandler(
     SpaceEvents.SPACE_MEMBER_JOINED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as SpaceMemberJoinedData;
 
       console.log('Space member joined:', {
         spaceId: payload.spaceId,
         userId: payload.userId,
+        agentId,
       });
 
-      await queueService.addJob('main-queue', 'space.member_joined', {
-        eventId: envelope.id,
-        spaceId: payload.spaceId,
-        userId: payload.userId,
-        role: payload.role,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'space.member_joined',
+          actor: { id: payload.userId, type: 'user' },
+          resource: {
+            type: 'space',
+            id: payload.spaceId,
+            data: { role: payload.role },
+          },
+          context: { spaceId: payload.spaceId },
+          agentId,
+        },
       });
     }
   );
 
   webhookHandler.registerHandler(
     SpaceEvents.SPACE_MEMBER_ROLE_CHANGED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as SpaceMemberRoleChangedData;
 
       console.log('Space member role changed:', {
@@ -37,33 +47,52 @@ export function registerSpaceHandlers(webhookHandler: any) {
         userId: payload.userId,
         oldRole: payload.oldRole,
         newRole: payload.newRole,
+        agentId,
       });
 
-      await queueService.addJob('main-queue', 'space.member_role_changed', {
-        eventId: envelope.id,
-        spaceId: payload.spaceId,
-        userId: payload.userId,
-        oldRole: payload.oldRole,
-        newRole: payload.newRole,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'space.member_role_changed',
+          actor: { id: payload.userId, type: 'user' },
+          resource: {
+            type: 'space',
+            id: payload.spaceId,
+            data: { oldRole: payload.oldRole, newRole: payload.newRole },
+          },
+          context: { spaceId: payload.spaceId },
+          agentId,
+        },
       });
     }
   );
 
   webhookHandler.registerHandler(
     SpaceEvents.SPACE_CREATED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as SpaceCreatedData;
 
       console.log('Space created:', {
         spaceId: payload.spaceId,
         name: payload.name,
+        agentId,
       });
 
-      await queueService.addJob('main-queue', 'space.created', {
-        eventId: envelope.id,
-        spaceId: payload.spaceId,
-        createdBy: payload.createdBy,
-        name: payload.name,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'space.created',
+          actor: { id: payload.createdBy, type: 'user' },
+          resource: {
+            type: 'space',
+            id: payload.spaceId,
+            data: { name: payload.name },
+          },
+          context: { spaceId: payload.spaceId },
+          agentId,
+        },
       });
     }
   );

@@ -7,7 +7,6 @@ export default fp(async (fastify) => {
     port: Number(process.env.REDIS_PORT) || 6379,
     password: process.env.REDIS_PASSWORD,
     username: process.env.REDIS_USERNAME,
-    family: Number(process.env.REDIS_FAMILY) || 0,
   };
 
   const subscriber = new Redis({ ...redisConfig, family: 6 });

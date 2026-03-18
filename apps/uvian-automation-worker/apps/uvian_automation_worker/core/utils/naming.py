@@ -69,7 +69,7 @@ def convert_keys_to_camel(data: Any) -> Any:
 DB_FIELD_MAPPINGS = {
     'process_threads': {
         'id': 'id',
-        'agentProfileId': 'profile_id',
+        'agentProfileId': 'user_id',
         'resourceScopeId': 'resource_scope_id',
         'currentStatus': 'current_status',
         'createdAt': 'created_at',

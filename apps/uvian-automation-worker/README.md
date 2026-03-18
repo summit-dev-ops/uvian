@@ -25,7 +25,6 @@ Clean data access with dedicated repositories for each entity:
 Modular job processing with specialized executors:
 
 - **BaseExecutor**: Abstract base class defining the executor interface
-- **ChatExecutor**: Specialized executor for AI chat processing
 
 ### **3. Event-Driven Architecture**
 

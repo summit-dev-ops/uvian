@@ -12,7 +12,7 @@ async def get_agent_api_key(agent_user_id: str) -> str:
         raise ValueError("INTERNAL_API_KEY environment variable is required")
     
     url = f"{UVIAN_AUTOMATION_API_URL}/api/agents/{agent_user_id}/api-key"
-    headers = {"x-internal-api-key": INTERNAL_API_KEY}
+    headers = {"x-api-key": INTERNAL_API_KEY}
     
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=headers)

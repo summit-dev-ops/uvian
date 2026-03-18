@@ -5,6 +5,7 @@ import { createUserClient, adminSupabase } from '../clients/supabase.client';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { Services } from './services';
+import jwt from 'jsonwebtoken';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -19,7 +20,8 @@ type ToolResult = {
 };
 
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
-  async function createAuthenticatedServer(token: string): Promise<McpServer> {
+  // Now accepts both token AND userId from the validated JWT
+  async function createAuthenticatedServer(token: string, userId: string): Promise<McpServer> {
     const userClient = createUserClient(token);
 
     const server = new McpServer(
@@ -37,70 +39,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     );
 
     server.registerTool(
-      'search_messages',
-      {
-        inputSchema: z.object({
-          query: z.string(),
-          conversationId: z.string(),
-        }),
-      },
-      async (args): Promise<ToolResult> => {
-        try {
-          const results = await fastify.services.chat.searchMessages(
-            userClient,
-            args.conversationId,
-            { q: args.query }
-          );
-          return {
-            content: [{ type: 'text', text: JSON.stringify(results) }],
-          };
-        } catch (error) {
-          return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
-            isError: true,
-          };
-        }
-      }
-    );
-
-    server.registerTool('list_spaces', {}, async (): Promise<ToolResult> => {
-      try {
-        const results = await fastify.services.spaces.getSpaces(userClient);
-        return {
-          content: [{ type: 'text', text: JSON.stringify(results) }],
-        };
-      } catch (error) {
-        return {
-          content: [{ type: 'text', text: `Error: ${error}` }],
-          isError: true,
-        };
-      }
-    });
-
-    server.registerTool(
-      'get_space',
-      {
-        inputSchema: z.object({ spaceId: z.string() }),
-      },
-      async (args): Promise<ToolResult> => {
-        try {
-          const space = await fastify.services.spaces.getSpace(
-            userClient,
-            args.spaceId
-          );
-          return {
-            content: [{ type: 'text', text: JSON.stringify(space) }],
-          };
-        } catch (error) {
-          return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
-            isError: true,
-          };
-        }
-      }
-    );
-
-    server.registerTool(
       'get_note',
       {
         inputSchema: z.object({ noteId: z.string() }),
@@ -112,30 +50,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             args.noteId
           );
           return {
-            content: [{ type: 'text', text: JSON.stringify(note) }],
-          };
-        } catch (error) {
-          return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
-            isError: true,
-          };
-        }
-      }
-    );
-
-    server.registerTool(
-      'get_ticket',
-      {
-        inputSchema: z.object({ ticketId: z.string() }),
-      },
-      async (args): Promise<ToolResult> => {
-        try {
-          const ticket = await fastify.services.ticket.getTicket(
-            userClient,
-            args.ticketId
-          );
-          return {
-            content: [{ type: 'text', text: JSON.stringify(ticket) }],
+            content:[{ type: 'text', text: JSON.stringify(note) }],
           };
         } catch (error) {
           return {
@@ -158,11 +73,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient
           );
           return {
-            content: [{ type: 'text', text: JSON.stringify(results) }],
+            content:[{ type: 'text', text: JSON.stringify(results) }],
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -175,15 +90,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         inputSchema: z.object({ conversationId: z.string() }),
       },
       async ({ conversationId }): Promise<ToolResult> => {
+        console.log({ conversationId })
         try {
           const result = await fastify.services.chat.getConversation(
             userClient,
             conversationId
           );
           return {
-            content: [{ type: 'text', text: JSON.stringify(result) }],
+            content:[{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
+          console.log({ error })
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
@@ -208,11 +125,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             args.conversationId
           );
           return {
-            content: [{ type: 'text', text: JSON.stringify(result) }],
+            content:[{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -241,7 +158,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -266,7 +183,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -284,21 +201,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const {
-            data: { user },
-          } = await userClient.auth.getUser();
-          if (!user) throw new Error('User not authenticated');
-
+          // Bypassed getUser() - using injected userId directly
           const result = await fastify.services.chat.createConversation(
-            user.id,
+            userId,
             { title: args.title, spaceId: args.spaceId }
           );
           return {
-            content: [{ type: 'text', text: JSON.stringify(result) }],
+            content:[{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -315,14 +228,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const {
-            data: { user },
-          } = await userClient.auth.getUser();
-          if (!user) throw new Error('User not authenticated');
+          // Bypassed getUser() - using injected userId directly
           const id = randomUUID();
           const result = await fastify.services.chat.createMessage(
             userClient,
-            user.id,
+            userId, 
             args.conversationId,
             { id, content: args.content }
           );
@@ -331,7 +241,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -350,12 +260,8 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const {
-            data: { user },
-          } = await userClient.auth.getUser();
-          if (!user) throw new Error('User not authenticated');
-
-          const result = await fastify.services.spaces.createSpace(user.id, {
+          // Bypassed getUser() - using injected userId directly
+          const result = await fastify.services.spaces.createSpace(userId, {
             name: args.name,
             description: args.description,
             isPrivate: args.isPrivate,
@@ -365,7 +271,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -398,19 +304,14 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const {
-            data: { user },
-          } = await userClient.auth.getUser();
-          if (!user) throw new Error('User not authenticated');
-
-          // Create base post
+          // Bypassed getUser() - using injected userId directly
           const post = await fastify.services.post.createPost(userClient, {
             spaceId: args.spaceId,
-            userId: user.id,
+            userId: userId,
           });
 
           // Process contents
-          const contents = args.contents || [];
+          const contents = args.contents ||[];
           for (let i = 0; i < contents.length; i++) {
             const item = contents[i];
             let noteId = item.noteId;
@@ -418,7 +319,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             if (item.type === 'note' && item.note?.title) {
               const createdNote = await fastify.services.note.createNote(
                 userClient,
-                user.id,
+                userId, // Injected userId
                 {
                   id: item.noteId, // Optional ID passing
                   spaceId: args.spaceId,
@@ -445,11 +346,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             post.id
           );
           return {
-            content: [{ type: 'text', text: JSON.stringify(fullPost) }],
+            content:[{ type: 'text', text: JSON.stringify(fullPost) }],
           };
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content:[{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -485,23 +386,41 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       }
 
       console.log('[MCP] Validating token...');
-      const userClient = createUserClient(token);
-      const {
-        data: { user },
-        error: authError,
-      } = await userClient.auth.getUser();
 
-      if (authError || !user) {
-        console.log('[MCP] Auth failed:', authError?.message);
+      // Local JWT verification - no database check needed for RLS
+      const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+      if (!jwtSecret) {
+        console.log('[MCP] JWT_SECRET not configured');
+        return reply
+          .code(500)
+          .send({
+            error: 'Internal server error',
+            message: 'JWT_SECRET not configured',
+          });
+      }
+
+      let decoded: jwt.JwtPayload;
+      try {
+        decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
+      } catch (err) {
+        console.log('[MCP] JWT verification failed:', err);
         return reply
           .code(401)
           .send({ error: 'Unauthorized', message: 'Invalid token' });
       }
 
-      console.log('[MCP] Auth OK, user:', user.id);
+      if (!decoded.sub || decoded.role !== 'authenticated') {
+        console.log('[MCP] Invalid JWT claims');
+        return reply
+          .code(401)
+          .send({ error: 'Unauthorized', message: 'Invalid token claims' });
+      }
 
-      // Create server and stateless transport for each request
-      const server = await createAuthenticatedServer(token);
+      const userId = decoded.sub;
+      console.log('[MCP] Auth OK, user:', userId);
+
+      // Create server and pass BOTH the token and the validated userId
+      const server = await createAuthenticatedServer(token, userId);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless mode
       });
@@ -545,3 +464,5 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
   fastify.log.info('MCP plugin registered');
 };
+
+export default mcpPlugin;

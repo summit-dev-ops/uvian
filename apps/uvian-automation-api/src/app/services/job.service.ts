@@ -32,6 +32,45 @@ export class JobService {
     }
   }
 
+  async createEventJob(data: {
+    type: string;
+    input: object;
+    executor?: string;
+  }) {
+    const { randomUUID } = await import('crypto');
+    const jobId = randomUUID();
+
+    const input = data.input as Record<string, unknown>;
+    const agentId = input.agentId as string | undefined;
+
+    const { data: job, error } = await adminSupabase
+      .from('jobs')
+      .insert({
+        id: jobId,
+        type: data.type,
+        input_type: 'event',
+        input: {
+          inputType: 'event',
+          ...data.input,
+        },
+        resource_scope_id: null,
+        agent_id: agentId || null,
+      })
+      .select()
+      .single();
+
+    if (error || !job) {
+      console.error('Failed to create job in DB:', error);
+      throw new Error(
+        `Failed to create job: ${error?.message || 'Unknown error'}`
+      );
+    }
+
+    await queueService.addJob('main-queue', data.type, { jobId });
+
+    return jobId;
+  }
+
   async listJobs(
     userClient: SupabaseClient,
     filters: {
@@ -61,6 +100,7 @@ export class JobService {
       jobs: (data || []).map((row) => ({
         id: row.id,
         type: row.type,
+        inputType: row.input_type,
         status: row.status,
         input: row.input,
         output: row.output,
@@ -95,6 +135,7 @@ export class JobService {
       jobs: (data || []).map((row) => ({
         id: row.id,
         type: row.type,
+        inputType: row.input_type,
         status: row.status,
         input: row.input,
         output: row.output,
@@ -126,6 +167,7 @@ export class JobService {
     return {
       id: data.id,
       type: data.type,
+      inputType: data.input_type,
       status: data.status,
       input: data.input,
       output: data.output,
@@ -195,6 +237,7 @@ export class JobService {
     return {
       id: job.id,
       type: job.type,
+      inputType: job.input_type,
       status: job.status,
       updatedAt: job.updated_at,
       completedAt: job.completed_at,
@@ -223,6 +266,7 @@ export class JobService {
     return {
       id: job.id,
       type: job.type,
+      inputType: job.input_type,
       status: job.status,
       errorMessage: job.error_message,
       updatedAt: job.updated_at,

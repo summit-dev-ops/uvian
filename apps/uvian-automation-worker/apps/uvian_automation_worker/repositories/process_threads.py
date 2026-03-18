@@ -19,7 +19,7 @@ class ProcessThreadRepository:
         self,
         thread_id: str,
         agent_profile_id: str,
-        resource_scope_id: str,
+        resource_scope_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """Create a new process thread."""

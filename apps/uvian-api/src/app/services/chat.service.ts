@@ -22,12 +22,14 @@ export class ChatService {
   }
 
   async getConversation(userClient: SupabaseClient, conversationId: string) {
+    console.log("getConversation")
     const { data, error } = await userClient
       .from('get_conversation_details')
       .select('*')
       .eq('id', conversationId)
       .single();
 
+    console.log("getConversation", error)
     if (error || !data) {
       throw new Error('Conversation not found');
     }

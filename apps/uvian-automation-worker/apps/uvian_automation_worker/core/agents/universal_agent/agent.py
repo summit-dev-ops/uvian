@@ -2,7 +2,7 @@ from typing import List, Any, Optional
 from core.agents.utils.state import MessagesState
 from langgraph.graph import StateGraph, START, END
 from core.agents.utils.tools.base_tools import tools as base_tools
-from core.agents.utils.models.base_models import base_assistant_model
+from core.agents.utils.models import minimax_model
 from core.agents.utils.nodes.model_node import create_model_node
 from core.agents.utils.nodes.response_node import create_response_node
 from core.agents.utils.tokens import check_context
@@ -27,9 +27,9 @@ def build_agent(mcp_tools: Optional[List[BaseTool]] = None) -> Any:
     checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
 
-    model_node = create_model_node(base_assistant_model, tools)
-    response_node = create_response_node(base_assistant_model)
-    summarize_node = create_summarize_node(base_assistant_model, agent_name="DataBot")
+    model_node = create_model_node(minimax_model, tools)
+    response_node = create_response_node(minimax_model, tools)
+    summarize_node = create_summarize_node(minimax_model, agent_name="DataBot")
     tool_node = ToolNode(tools)
 
     def check_context_node(state: MessagesState) -> MessagesState:

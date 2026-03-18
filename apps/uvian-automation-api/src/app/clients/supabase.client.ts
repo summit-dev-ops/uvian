@@ -78,6 +78,17 @@ export type Database = {
           output: any;
           created_at: string;
           updated_at: string;
+          agent_id: string | null;
+          resource_scope_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          type: string;
+          status?: string;
+          input?: any;
+          output?: any;
+          agent_id?: string | null;
+          resource_scope_id?: string | null;
         };
       };
       profiles: {

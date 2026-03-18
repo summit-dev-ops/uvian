@@ -6,7 +6,11 @@ from core.events import events
 from bullmq import Worker
 from core.dependency_injection import get_executor_factory, setup_default_executors
 from core.logging import worker_logger
-from executors.base import  JobResult
+from executors.base import JobResult
+from executors.triggers import TriggerRegistry
+
+# Import all triggers to register them
+import executors.triggers
 
 # Configure standardized logging
 logging.basicConfig(
@@ -15,9 +19,43 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Event type prefixes that should be handled as agent events
+EVENT_PREFIXES = ['message.', 'ticket.', 'post.', 'note.', 'asset.', 'space.', 'conversation.', 'job.']
+
+
+def is_event_job(job_type: str) -> bool:
+    """Check if job type is an event-based job."""
+    return any(job_type.startswith(prefix) for prefix in EVENT_PREFIXES)
+
+
+def transform_event_to_agent_message(job_record: dict) -> dict:
+    """
+    Transform event job data into agent format.
+    Simply ensures the job type is set to 'agent' - message derivation happens in agent_executor.
+    
+    Args:
+        job_record: The job record from the database
+        
+    Returns:
+        Updated job_record ready for agent executor
+    """
+    job_type = job_record.get("type", "")
+    input_data = job_record.get("input", {})
+    event_type = input_data.get("eventType", job_type)
+    
+    worker_logger.info_job(job_record.get("id"), f"Preparing event job: {event_type}")
+    
+    # Just ensure type is 'agent' - the executor will derive the message from TriggerRegistry
+    job_record["type"] = "agent"
+    
+    return job_record
+
+
 # Initialize dependency injection container and executor factory
 factory = get_executor_factory()
 setup_default_executors()
+
+worker_logger.info(f"Registered event triggers: {TriggerRegistry.list_registered()}")
 
 async def process_job(job, token):
     """
@@ -54,6 +92,13 @@ async def process_job(job, token):
 
     job_type: str = job_record.get("type", "unknown")
     worker_logger.info_job(job_id, f"Job type: {job_type}")
+    
+    # 2.5. Transform event jobs to agent format
+    if is_event_job(job_type):
+        worker_logger.info_job(job_id, f"Event job detected: {job_type}. Transforming to agent message...")
+        job_record = transform_event_to_agent_message(job_record)
+        job_type = "agent"
+        worker_logger.info_job(job_id, f"Transformed to job type: {job_type}")
     
     # 3. Resolve executor using dependency injection
     try:
@@ -99,7 +144,6 @@ async def main():
         "host": REDIS_HOST, 
         "port": REDIS_PORT, 
         "password": REDIS_PASSWORD,
-        "family": REDIS_FAMILY,
         "db": 0
     }
 

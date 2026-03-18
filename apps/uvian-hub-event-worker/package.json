@@ -1,0 +1,106 @@
+{
+  "name": "@org/uvian-hub-event-worker",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/esbuild:esbuild",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "defaultConfiguration": "production",
+        "options": {
+          "platform": "node",
+          "outputPath": "apps/uvian-hub-event-worker/dist",
+          "format": [
+            "cjs"
+          ],
+          "bundle": false,
+          "main": "apps/uvian-hub-event-worker/src/main.ts",
+          "tsConfig": "apps/uvian-hub-event-worker/tsconfig.app.json",
+          "assets": [
+            "apps/uvian-hub-event-worker/src/assets"
+          ],
+          "esbuildOptions": {
+            "sourcemap": true,
+            "outExtension": {
+              ".js": ".js"
+            }
+          }
+        },
+        "configurations": {
+          "development": {},
+          "production": {
+            "esbuildOptions": {
+              "sourcemap": false,
+              "outExtension": {
+                ".js": ".js"
+              }
+            }
+          }
+        }
+      },
+      "prune-lockfile": {
+        "dependsOn": [
+          "build"
+        ],
+        "cache": true,
+        "executor": "@nx/js:prune-lockfile",
+        "outputs": [
+          "{workspaceRoot}/apps/uvian-hub-event-worker/dist/package.json",
+          "{workspaceRoot}/apps/uvian-hub-event-worker/dist/package-lock.json"
+        ],
+        "options": {
+          "buildTarget": "build"
+        }
+      },
+      "copy-workspace-modules": {
+        "dependsOn": [
+          "build"
+        ],
+        "cache": true,
+        "outputs": [
+          "{workspaceRoot}/apps/uvian-hub-event-worker/dist/workspace_modules"
+        ],
+        "executor": "@nx/js:copy-workspace-modules",
+        "options": {
+          "buildTarget": "build"
+        }
+      },
+      "prune": {
+        "dependsOn": [
+          "prune-lockfile",
+          "copy-workspace-modules"
+        ],
+        "executor": "nx:noop"
+      },
+      "start": {
+        "continuous": true,
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@org/uvian-hub-event-worker:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@org/uvian-hub-event-worker:build:development"
+          },
+          "production": {
+            "buildTarget": "@org/uvian-hub-event-worker:build:production"
+          }
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@org/uvian-events": "*",
+    "@supabase/supabase-js": "^2.47.0",
+    "bullmq": "^5.67.2",
+    "ioredis": "^5.9.2"
+  }
+}

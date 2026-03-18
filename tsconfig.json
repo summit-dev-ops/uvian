@@ -18,5 +18,8 @@
     {
       "path": "./packages/uvian-events"
     },
+    {
+      "path": "./apps/uvian-hub-event-worker"
+    }
   ]
 }

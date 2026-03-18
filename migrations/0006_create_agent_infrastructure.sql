@@ -43,6 +43,7 @@ CREATE TABLE jobs (
   input JSONB,
   output JSONB,
   error_message TEXT,
+  agent_id UUID,
   resource_scope_id UUID REFERENCES resource_scopes(id) ON DELETE SET NULL,
   thread_id UUID REFERENCES process_threads(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now(),

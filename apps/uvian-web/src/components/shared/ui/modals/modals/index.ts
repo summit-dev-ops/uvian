@@ -4,7 +4,6 @@ export * from './create-conversation-modal';
 export * from './create-profile-modal';
 export * from './create-space-modal';
 export * from './invite-user-as-member-modal';
-export * from './create-job-modal';
 export * from './contact-support-modal';
 export * from './create-post-modal';
 export * from './create-note-modal';

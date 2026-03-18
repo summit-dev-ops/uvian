@@ -1,4 +1,4 @@
-import { queueService } from '../queue.service';
+import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
   ContentEvents,
@@ -10,53 +10,82 @@ import {
 export function registerContentHandlers(webhookHandler: any) {
   webhookHandler.registerHandler(
     ContentEvents.POST_CREATED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as PostCreatedData;
 
-      console.log('Post published:', { postId: payload.postId });
+      console.log('Post published:', { postId: payload.postId, agentId });
 
-      await queueService.addJob('main-queue', 'post.created', {
-        eventId: envelope.id,
-        postId: payload.postId,
-        content: payload.content,
-        authorId: payload.authorId,
-        spaceId: payload.spaceId,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'post.created',
+          actor: { id: payload.authorId, type: 'user' },
+          resource: {
+            type: 'post',
+            id: payload.postId,
+            data: { content: payload.content },
+          },
+          context: { spaceId: payload.spaceId },
+          agentId,
+        },
       });
     }
   );
 
   webhookHandler.registerHandler(
     ContentEvents.NOTE_UPDATED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as NoteUpdatedData;
 
-      console.log('Note updated:', { noteId: payload.noteId });
+      console.log('Note updated:', { noteId: payload.noteId, agentId });
 
-      await queueService.addJob('main-queue', 'note.updated', {
-        eventId: envelope.id,
-        noteId: payload.noteId,
-        title: payload.title,
-        content: payload.content,
-        updatedBy: payload.updatedBy,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'note.updated',
+          actor: { id: payload.updatedBy, type: 'user' },
+          resource: {
+            type: 'note',
+            id: payload.noteId,
+            data: { title: payload.title, content: payload.content },
+          },
+          context: {},
+          agentId,
+        },
       });
     }
   );
 
   webhookHandler.registerHandler(
     ContentEvents.ASSET_UPLOADED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as AssetUploadedData;
 
-      console.log('Asset uploaded:', { assetId: payload.assetId });
+      console.log('Asset uploaded:', { assetId: payload.assetId, agentId });
 
-      await queueService.addJob('main-queue', 'asset.uploaded', {
-        eventId: envelope.id,
-        assetId: payload.assetId,
-        filename: payload.filename,
-        mimeType: payload.mimeType,
-        sizeBytes: payload.sizeBytes,
-        spaceId: payload.spaceId,
-        conversationId: payload.conversationId,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'asset.uploaded',
+          actor: { id: 'system', type: 'system' },
+          resource: {
+            type: 'asset',
+            id: payload.assetId,
+            data: {
+              filename: payload.filename,
+              mimeType: payload.mimeType,
+              sizeBytes: payload.sizeBytes,
+            },
+          },
+          context: {
+            spaceId: payload.spaceId,
+            conversationId: payload.conversationId,
+          },
+          agentId,
+        },
       });
     }
   );

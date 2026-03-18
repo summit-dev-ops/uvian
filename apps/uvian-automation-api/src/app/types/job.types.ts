@@ -1,8 +1,60 @@
+export type JobInputType = 'manual' | 'event' | 'scheduled' | 'webhook';
+
+export interface BaseJobInput {
+  inputType: JobInputType;
+}
+
+export interface ManualJobInput extends BaseJobInput {
+  inputType: 'manual';
+  message?: string;
+}
+
+export interface EventJobInput extends BaseJobInput {
+  inputType: 'event';
+  eventId: string;
+  eventType: string;
+  actor: {
+    id: string;
+    type: 'user' | 'system' | 'agent';
+  };
+  resource: {
+    type: string;
+    id: string;
+    data: Record<string, any>;
+  };
+  context: {
+    conversationId?: string;
+    spaceId?: string;
+  };
+  agentId?: string;
+  threadId?: string;
+}
+
+export interface ScheduledJobInput extends BaseJobInput {
+  inputType: 'scheduled';
+  scheduleId: string;
+  cronExpression?: string;
+}
+
+export interface WebhookJobInput extends BaseJobInput {
+  inputType: 'webhook';
+  webhookId: string;
+  source: string;
+  payload: Record<string, any>;
+}
+
+export type JobInput =
+  | ManualJobInput
+  | EventJobInput
+  | ScheduledJobInput
+  | WebhookJobInput;
+
 export interface Job {
   id: string;
   type: 'chat' | 'task' | 'agent';
+  inputType: JobInputType;
   status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
-  input: Record<string, any>;
+  input: JobInput;
   output: Record<string, any> | null;
   errorMessage: string | null;
   resourceScopeId: string;
@@ -126,7 +178,8 @@ export interface GetResourceScopeByResourceRequest {
 export interface CreateJobRequest {
   Body: {
     type: 'chat' | 'task' | 'agent';
-    input: Record<string, any>;
+    inputType?: JobInputType;
+    input: JobInput;
     resourceScopeId: string;
     threadId?: string;
   };

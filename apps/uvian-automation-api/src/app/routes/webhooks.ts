@@ -2,19 +2,29 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { WebhookEnvelope, WebhookResponse } from '@org/uvian-events';
 import { webhookHandlerService } from '../services/webhook-handler.service';
 
+interface AgentWebhookParams {
+  agentId: string;
+}
+
 export default async function (fastify: FastifyInstance) {
-  fastify.post<{ Body: WebhookEnvelope }>(
-    '/api/webhooks/events',
+  fastify.post<{ Params: AgentWebhookParams; Body: WebhookEnvelope }>(
+    '/api/webhooks/agents/:agentId/events',
     {
       preHandler: [fastify.authenticateWebhook],
     },
     async (
-      request: FastifyRequest<{ Body: WebhookEnvelope }>,
+      request: FastifyRequest<{
+        Params: AgentWebhookParams;
+        Body: WebhookEnvelope;
+      }>,
       reply: FastifyReply
     ) => {
+      const { agentId } = request.params;
+
       try {
         const result: WebhookResponse = await webhookHandlerService.handleEvent(
-          request.body
+          request.body,
+          agentId
         );
 
         if (result.message?.includes('already processed')) {

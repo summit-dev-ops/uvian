@@ -1,4 +1,4 @@
-import { queueService } from '../queue.service';
+import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
   MessagingEvents,
@@ -8,7 +8,7 @@ import {
 export function registerChatHandlers(webhookHandler: any) {
   webhookHandler.registerHandler(
     MessagingEvents.MESSAGE_CREATED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as MessageCreatedData;
 
       console.log('Message created:', {
@@ -17,15 +17,26 @@ export function registerChatHandlers(webhookHandler: any) {
         conversationId: payload.conversationId,
         source: envelope.source,
         subject: envelope.subject,
+        agentId,
       });
 
-      await queueService.addJob('main-queue', 'message.created', {
-        eventId: envelope.id,
-        messageId: payload.messageId,
-        content: payload.content,
-        assetIds: payload.assetIds,
-        conversationId: payload.conversationId,
-        senderId: payload.senderId,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'message.created',
+          actor: { id: payload.senderId, type: 'user' },
+          resource: {
+            type: 'message',
+            id: payload.messageId,
+            data: {
+              content: payload.content,
+              assetIds: payload.assetIds,
+            },
+          },
+          context: { conversationId: payload.conversationId },
+          agentId,
+        },
       });
     }
   );

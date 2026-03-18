@@ -12,9 +12,5 @@ class DatabaseInterface:
     
     def update_job(self, job_id: str, updates: dict):
         return job_repository.update_job(job_id, updates)
-    
-    def insert_message(self, message_data: dict):
-        return message_repository.insert_message(message_data)
-
 # Re-export as 'db' to maintain compatibility with existing code
 db = DatabaseInterface()

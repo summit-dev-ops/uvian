@@ -1,4 +1,4 @@
-import { queueService } from '../queue.service';
+import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
   TicketEvents,
@@ -9,42 +9,65 @@ import {
 export function registerTicketHandlers(webhookHandler: any) {
   webhookHandler.registerHandler(
     TicketEvents.TICKET_CREATED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as TicketCreatedData;
 
       console.log('Ticket created:', {
         ticketId: payload.ticketId,
         priority: payload.priority,
+        agentId,
       });
 
-      await queueService.addJob('main-queue', 'ticket.created', {
-        eventId: envelope.id,
-        ticketId: payload.ticketId,
-        title: payload.title,
-        description: payload.description,
-        priority: payload.priority,
-        createdBy: payload.createdBy,
-        spaceId: payload.spaceId,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'ticket.created',
+          actor: { id: payload.createdBy, type: 'user' },
+          resource: {
+            type: 'ticket',
+            id: payload.ticketId,
+            data: {
+              title: payload.title,
+              description: payload.description,
+              priority: payload.priority,
+            },
+          },
+          context: { spaceId: payload.spaceId },
+          agentId,
+        },
       });
     }
   );
 
   webhookHandler.registerHandler(
     TicketEvents.TICKET_UPDATED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as TicketUpdatedData;
 
       console.log('Ticket updated:', {
         ticketId: payload.ticketId,
         status: payload.status,
+        agentId,
       });
 
-      await queueService.addJob('main-queue', 'ticket.updated', {
-        eventId: envelope.id,
-        ticketId: payload.ticketId,
-        status: payload.status,
-        priority: payload.priority,
-        updatedBy: payload.updatedBy,
+      await jobService.createEventJob({
+        type: 'agent',
+        input: {
+          eventId: envelope.id,
+          eventType: 'ticket.updated',
+          actor: { id: payload.updatedBy, type: 'user' },
+          resource: {
+            type: 'ticket',
+            id: payload.ticketId,
+            data: {
+              status: payload.status,
+              priority: payload.priority,
+            },
+          },
+          context: {},
+          agentId,
+        },
       });
     }
   );

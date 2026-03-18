@@ -2,6 +2,8 @@ from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
 from langchain_core.messages import ToolMessage, AIMessage
 
+from .end_task_tool import end_task
+
 search_skills_schema = {
     "type": "object",
     "properties": {
@@ -67,4 +69,4 @@ def load_skill(
 
 
 # Augment the LLM with tools
-tools = [load_skill]
+tools = [load_skill, end_task]

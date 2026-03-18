@@ -98,7 +98,7 @@ export default fp(async (fastify) => {
       return;
     }
 
-    const publicEndpoints: string[] = ['/api/agents/init'];
+    const publicEndpoints: string[] = ['/api/agents/', '/api/webhooks/'];
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       request.url.startsWith(endpoint)
     );

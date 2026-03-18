@@ -1,12 +1,12 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
+import { queueService } from '../services/queue.service';
 import {
   createCloudEvent,
   buildSourcePath,
   MessagingEvents,
   SpaceEvents,
   ContentEvents,
-  TicketEvents,
   AccountEvents,
   MessageCreatedData,
   MessageUpdatedData,
@@ -30,11 +30,6 @@ import {
   NoteDeletedData,
   AssetUploadedData,
   AssetDeletedData,
-  TicketCreatedData,
-  TicketUpdatedData,
-  TicketResolvedData,
-  TicketClosedData,
-  TicketAssignedData,
   AccountCreatedData,
   AccountUpdatedData,
   AccountMemberAddedData,
@@ -42,15 +37,17 @@ import {
   AccountMemberRoleChangedData,
 } from '@org/uvian-events';
 
+const EVENT_QUEUE_NAME = 'uvian-events';
+
 export class EventEmitterService {
   constructor(private fastify: FastifyInstance) {}
 
-  private emit<T>(
+  private async emit<T>(
     type: string,
     source: string,
     data: T,
     actorId: string
-  ): void {
+  ): Promise<void> {
     try {
       const event = createCloudEvent({
         type,
@@ -62,6 +59,10 @@ export class EventEmitterService {
         },
       });
       this.fastify.log.info({ event }, 'Event emitted');
+
+      queueService.addJob(EVENT_QUEUE_NAME, 'event', event).catch((err) => {
+        this.fastify.log.error({ err }, 'Failed to add event to queue');
+      });
     } catch (error) {
       this.fastify.log.error(
         { err: error, type, source },
@@ -204,33 +205,6 @@ export class EventEmitterService {
   emitAssetDeleted(data: AssetDeletedData, actorId: string): void {
     const source = '/assets';
     this.emit(ContentEvents.ASSET_DELETED, source, data, actorId);
-  }
-
-  emitTicketCreated(data: TicketCreatedData, actorId: string): void {
-    const source = data.spaceId
-      ? buildSourcePath('spaces', data.spaceId)
-      : '/tickets';
-    this.emit(TicketEvents.TICKET_CREATED, source, data, actorId);
-  }
-
-  emitTicketUpdated(data: TicketUpdatedData, actorId: string): void {
-    const source = '/tickets';
-    this.emit(TicketEvents.TICKET_UPDATED, source, data, actorId);
-  }
-
-  emitTicketResolved(data: TicketResolvedData, actorId: string): void {
-    const source = '/tickets';
-    this.emit(TicketEvents.TICKET_RESOLVED, source, data, actorId);
-  }
-
-  emitTicketClosed(data: TicketClosedData, actorId: string): void {
-    const source = '/tickets';
-    this.emit(TicketEvents.TICKET_CLOSED, source, data, actorId);
-  }
-
-  emitTicketAssigned(data: TicketAssignedData, actorId: string): void {
-    const source = '/tickets';
-    this.emit(TicketEvents.TICKET_ASSIGNED, source, data, actorId);
   }
 
   emitPostUpdated(data: PostUpdatedData, actorId: string): void {

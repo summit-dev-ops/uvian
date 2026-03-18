@@ -73,23 +73,28 @@ export default async function authRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!;
+        const userId = userData.user.id;
+        const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+
+        if (!jwtSecret) {
+          reply.code(500).send({ error: 'JWT_SECRET not configured' });
+          return;
+        }
 
         const payload = {
           aud: 'authenticated',
           role: 'authenticated',
-          sub: apiKeyRecord.user_id,
-          email: userData.user.email,
-          app_metadata: userData.user.app_metadata,
-          user_metadata: userData.user.user_metadata,
+          sub: userId,
+          exp: Math.floor(Date.now() / 1000) + 60 * 60,
+          iss: 'supabase',
         };
 
-        const jwtToken = jwt.sign(payload, supabaseServiceKey, {
-          expiresIn: '1 hour',
+        const workerJwt = jwt.sign(payload, jwtSecret, {
+          algorithm: 'HS256',
         });
 
         const response: JwtResponse = {
-          jwt: jwtToken,
+          jwt: workerJwt,
           expires_in: 3600,
           user_id: apiKeyRecord.user_id,
         };

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageSquare, Folder, User, Cog, Bot, Users } from 'lucide-react';
+import { MessageSquare, Folder, User, Cog, Users } from 'lucide-react';
 import {
   PageContainer,
   PageContent,
@@ -36,12 +36,6 @@ const navItems = [
     href: '/users',
     icon: User,
     description: 'Users in your account',
-  },
-  {
-    title: 'Jobs',
-    href: '/jobs',
-    icon: Bot,
-    description: 'View and manage jobs',
   },
   {
     title: 'Accounts',

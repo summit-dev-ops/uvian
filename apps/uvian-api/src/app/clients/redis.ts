@@ -6,7 +6,6 @@ const redisConfig = {
   maxRetriesPerRequest: null,
   password: process.env.REDIS_PASSWORD,
   username: process.env.REDIS_USERNAME,
-  family: Number(process.env.REDIS_FAMILY) || 0,
 };
 
 export const redisConnection = new Redis(redisConfig);

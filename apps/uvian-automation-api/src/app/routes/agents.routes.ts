@@ -108,7 +108,7 @@ export default async function agentRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: GetApiKeyParams }>(
     '/api/agents/:agentUserId/api-key',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [fastify.authenticateWebhook],
       schema: {
         params: {
           type: 'object',
@@ -143,15 +143,16 @@ export default async function agentRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const encryptionSecret = process.env.INTERNAL_API_KEY;
+        const encryptionSecret = process.env.SECRET_API_KEY;
         if (!encryptionSecret) {
-          throw new Error('INTERNAL_API_KEY environment variable is required');
+          throw new Error('SECRET_API_KEY environment variable is required');
         }
 
         const apiKey = decryptApiKey(data.encrypted_api_key, encryptionSecret);
 
         reply.send({ api_key: apiKey });
       } catch (error: any) {
+        console.log(error)
         reply
           .code(500)
           .send({ error: error.message || 'Failed to fetch API key' });

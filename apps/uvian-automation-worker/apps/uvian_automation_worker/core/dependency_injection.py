@@ -224,9 +224,6 @@ def setup_default_executors() -> None:
     
     # Register default executors (lazy imported to avoid circular imports)
     try:
-        from executors.chat_executor import ChatExecutor
-
-        factory.register_executor("chat", ChatExecutor)
         worker_logger.info("Successfully registered chat executor")
         
         # Try to register agent executor, but don't fail if it's broken
@@ -258,10 +255,8 @@ def create_test_container() -> DependencyContainer:
     
     # Register default executors for testing (lazy imported)
     try:
-        from ..executors.chat_executor import ChatExecutor
         from ..executors.agent_executor import AgentExecutor
         
-        factory.register_executor("chat", ChatExecutor)
         factory.register_executor("agent", AgentExecutor)
     except ImportError:
         # For testing when executors are not available

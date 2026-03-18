@@ -5,7 +5,6 @@ import {
   InviteUserAsMemberModal,
   CreateSpaceModal,
   CreateConversationModal,
-  CreateJobModal,
   ContactSupportModal,
   CreatePostModal,
   CreateNoteModal,
@@ -27,7 +26,6 @@ export const MODAL_IDS = {
   INVITE_MEMBERS: 'invite-members',
   INVITE_PROFILES: 'invite-profiles',
   INVITE_USER_AS_MEMBER: 'invite-user-as-member',
-  CREATE_JOB: 'create-job',
   CONTACT_SUPPORT: 'contact-support',
   CREATE_POST: 'create-post',
   DELETE_POST: 'delete-post',
@@ -39,10 +37,6 @@ export const MODAL_IDS = {
 
 // Modal Registry - Maps modal IDs to their components and default props
 export const MODAL_REGISTRY: Record<string, ModalRegistration> = {
-  'create-job': {
-    id: 'create-job',
-    Component: CreateJobModal,
-  },
   'confirm-action': {
     id: 'confirm-action',
     Component: ConfirmModal,

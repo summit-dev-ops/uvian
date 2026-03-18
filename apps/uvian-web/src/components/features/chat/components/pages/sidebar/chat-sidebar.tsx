@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, ListChecks } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import {
   SidebarContent,
@@ -16,7 +16,6 @@ import {
   Button,
 } from '@org/ui';
 import { chatQueries } from '~/lib/domains/chat/api/queries';
-import { jobQueries } from '~/lib/domains/jobs/api/queries';
 import type { ConversationUI } from '~/lib/domains/chat/types';
 
 interface ChatSidebarProps {
@@ -25,9 +24,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
   const pathname = usePathname();
-  const [view, setView] = React.useState<'conversations' | 'jobs'>(
-    'conversations'
-  );
+  const [view, setView] = React.useState<'conversations'>('conversations');
 
   const { data: conversations = [] } = useQuery(chatQueries.conversations());
 
@@ -38,12 +35,6 @@ export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
   const otherConversations = (conversations as ConversationUI[]).filter(
     (c) => c.id !== currentConversationId
   );
-
-  const { data: jobsData } = useQuery(
-    jobQueries.listByConversation(currentConversationId, { limit: 1 })
-  );
-
-  const jobCount = jobsData?.total || 0;
 
   const groupedConversations = React.useMemo(() => {
     const spaceConversations: Record<string, ConversationUI[]> = {};
@@ -71,7 +62,7 @@ export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
             {currentConversation?.title || 'Chat'}
           </h2>
           <p className="text-xs text-muted-foreground">
-            {otherConversations.length} other conversations · {jobCount} jobs
+            {otherConversations.length} other conversations
           </p>
         </div>
       </SidebarHeader>
@@ -86,15 +77,6 @@ export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
           >
             <MessageSquare className="h-4 w-4 mr-1" />
             Chats
-          </Button>
-          <Button
-            variant={view === 'jobs' ? 'secondary' : 'ghost'}
-            size="sm"
-            className="flex-1"
-            onClick={() => setView('jobs')}
-          >
-            <ListChecks className="h-4 w-4 mr-1" />
-            Jobs
           </Button>
         </div>
       </SidebarHeader>
@@ -164,30 +146,6 @@ export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
                     No other conversations
                   </div>
                 )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {view === 'jobs' && (
-          <SidebarGroup className="mt-2">
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link
-                      href={`/chats/${currentConversationId}/jobs`}
-                      className={
-                        pathname === `/chats/${currentConversationId}/jobs`
-                          ? 'bg-accent'
-                          : ''
-                      }
-                    >
-                      <ListChecks className="h-4 w-4" />
-                      <span className="truncate">View all {jobCount} jobs</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

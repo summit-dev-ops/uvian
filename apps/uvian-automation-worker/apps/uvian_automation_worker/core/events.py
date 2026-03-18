@@ -10,7 +10,6 @@ class EventsClient:
         self.redis = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
-            family=REDIS_FAMILY,
             password=REDIS_PASSWORD,
             decode_responses=True
         )
