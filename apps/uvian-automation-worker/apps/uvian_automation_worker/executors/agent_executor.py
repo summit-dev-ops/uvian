@@ -12,16 +12,14 @@ Uses dependency injection to delegate to specialized components for:
 This refactored version is significantly smaller and more maintainable
 than the original monolith.
 """
-from typing import List, Dict, Any, Optional
+from typing import List, Any
 from executors.base import BaseExecutor, JobData, JobResult
 from executors.triggers import TriggerRegistry
-from core.events import events
 from core.agents.universal_agent.agent import build_agent
 from clients.mcp import create_mcp_registry
+from clients.auth import get_agent_secrets
 from repositories.process_threads import process_thread_repository
-from repositories.profiles import profile_repository
 from core.logging import worker_logger
-from core.config import UVIAN_MCP_LIST
 from langgraph.types import Command
 from langchain.messages import HumanMessage
 import uuid
@@ -98,20 +96,34 @@ class AgentExecutor(BaseExecutor):
             created_thread = await process_thread_repository.create_thread(
                 thread_id=thread_id,
                 agent_profile_id=agent_user_id,
-                resource_scope_id=None
+                metadata=None
             )
             
             if not created_thread:
                 worker_logger.warning_job(job_id, "Failed to create thread in DB, continuing with in-memory thread")
         
-        worker_logger.info_job(job_id, "Loading MCP tools...")
+        worker_logger.info_job(job_id, "Loading agent secrets from automation-api...")
+        secrets = await get_agent_secrets(agent_user_id)
 
-        mcp_list = UVIAN_MCP_LIST.split(",")
-        mcp_registry = create_mcp_registry()
-        mcp_tools = await mcp_registry.get_tools(
-            mcp_names=mcp_list,
-            auth_context={"agent_user_id": agent_user_id}
-        )
+        llm_config = {}
+        if secrets.get("llms"):
+            default_llm = next(
+                (al for al in secrets["llms"] if al.get("is_default")),
+                secrets["llms"][0],
+            )
+            if default_llm and default_llm.get("llms"):
+                llm = default_llm["llms"]
+                llm_config = {
+                    "model_name": llm.get("model_name"),
+                    "base_url": llm.get("base_url"),
+                    "api_key": llm.get("api_key"),
+                    "temperature": llm.get("temperature"),
+                }
+
+        mcp_tools = []
+        if secrets.get("mcps"):
+            worker_logger.info_job(job_id, "Loading MCP tools from DB...")
+            mcp_tools = await create_mcp_registry(secrets["mcps"])
 
         channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
         agent_input = None
@@ -143,7 +155,7 @@ class AgentExecutor(BaseExecutor):
         config = {"configurable": {"thread_id": thread_id}}
         full_response: List[Any] = []
         try:
-            agent = build_agent(mcp_tools)
+            agent = build_agent(mcp_tools, llm_config)
             async for chunk,_m in agent.astream(
                 agent_input,
                 config=config, 

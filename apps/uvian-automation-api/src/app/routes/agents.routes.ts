@@ -1,9 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import crypto from 'crypto';
+import { encrypt, decrypt } from '../services/encryption.service.js';
 
 interface InitAgentBody {
   user_id: string;
+  account_id: string;
   api_key: string;
   api_key_prefix: string;
 }
@@ -12,52 +13,18 @@ interface GetApiKeyParams {
   agentUserId: string;
 }
 
-function encryptApiKey(apiKey: string, secret: string): string {
-  const key = crypto.createHash('sha256').update(secret).digest();
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-  let encrypted = cipher.update(apiKey, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return iv.toString('hex') + ':' + encrypted;
-}
-
-function decryptApiKey(encryptedKey: string, secret: string): string {
-  const key = crypto.createHash('sha256').update(secret).digest();
-  const [ivHex, encrypted] = encryptedKey.split(':');
-  const iv = Buffer.from(ivHex, 'hex');
-  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
-}
-
-async function verifyInternalApiKey(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<void> {
-  const authHeader = request.headers['authorization'];
-  const expectedApiKey = process.env.INTERNAL_API_KEY;
-
-  if (
-    !authHeader ||
-    !authHeader.startsWith('Bearer ') ||
-    authHeader.slice(7) !== expectedApiKey
-  ) {
-    return reply.code(401).send({ error: 'Unauthorized' });
-  }
-}
-
 export default async function agentRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: InitAgentBody }>(
     '/api/agents/init',
     {
-      preHandler: verifyInternalApiKey,
+      preHandler: [fastify.authenticateInternal],
       schema: {
         body: {
           type: 'object',
-          required: ['user_id', 'api_key', 'api_key_prefix'],
+          required: ['user_id', 'account_id', 'api_key', 'api_key_prefix'],
           properties: {
             user_id: { type: 'string' },
+            account_id: { type: 'string' },
             api_key: { type: 'string' },
             api_key_prefix: { type: 'string' },
           },
@@ -70,17 +37,17 @@ export default async function agentRoutes(fastify: FastifyInstance) {
       reply: FastifyReply
     ): Promise<void> => {
       try {
-        const { user_id, api_key, api_key_prefix } = request.body;
+        const { user_id, account_id, api_key, api_key_prefix } = request.body;
 
         const encryptionSecret = process.env.INTERNAL_API_KEY;
         if (!encryptionSecret) {
           throw new Error('INTERNAL_API_KEY environment variable is required');
         }
 
-        const encryptedApiKey = encryptApiKey(api_key, encryptionSecret);
+        const encryptedApiKey = encrypt(api_key, encryptionSecret);
 
-        const { error } = await adminSupabase
-          .from('automation_agent_keys')
+        const { error: keyError } = await adminSupabase
+          .from('core_automation.automation_agent_keys')
           .insert({
             user_id,
             encrypted_api_key: encryptedApiKey,
@@ -88,8 +55,21 @@ export default async function agentRoutes(fastify: FastifyInstance) {
             is_active: true,
           });
 
-        if (error) {
-          reply.code(400).send({ error: error.message });
+        if (keyError) {
+          reply.code(400).send({ error: keyError.message });
+          return;
+        }
+
+        const { error: agentError } = await adminSupabase
+          .from('core_automation.agents')
+          .insert({
+            user_id,
+            account_id,
+            is_active: true,
+          });
+
+        if (agentError) {
+          reply.code(400).send({ error: agentError.message });
           return;
         }
 
@@ -127,7 +107,7 @@ export default async function agentRoutes(fastify: FastifyInstance) {
         const { agentUserId } = request.params;
 
         const { data, error } = await adminSupabase
-          .from('automation_agent_keys')
+          .from('core_automation.automation_agent_keys')
           .select('encrypted_api_key')
           .eq('user_id', agentUserId)
           .eq('is_active', true)
@@ -148,11 +128,11 @@ export default async function agentRoutes(fastify: FastifyInstance) {
           throw new Error('SECRET_API_KEY environment variable is required');
         }
 
-        const apiKey = decryptApiKey(data.encrypted_api_key, encryptionSecret);
+        const apiKey = decrypt(data.encrypted_api_key, encryptionSecret);
 
         reply.send({ api_key: apiKey });
       } catch (error: any) {
-        console.log(error)
+        console.log(error);
         reply
           .code(500)
           .send({ error: error.message || 'Failed to fetch API key' });

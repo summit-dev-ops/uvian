@@ -1,10 +1,4 @@
-# repositories/process_threads.py
-"""
-Process Thread repository with consistent parameter naming.
-- API uses camelCase (agentProfileId, resourceScopeId)
-- Database uses snake_case (profile_id, resource_scope_id)
-This repository handles persistent process threads that can be used by any type of executor.
-"""
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 from clients.supabase import supabase_client
 from core.utils.naming import to_db_format, from_db_format
@@ -19,24 +13,20 @@ class ProcessThreadRepository:
         self,
         thread_id: str,
         agent_profile_id: str,
-        resource_scope_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """Create a new process thread."""
         try:
-            # Convert to database format (snake_case)
-            thread_data = to_db_format('process_threads', {
+            thread_data = {
                 'id': thread_id,
-                'agentProfileId': agent_profile_id,
-                'resourceScopeId': resource_scope_id,
-                'currentStatus': 'active',
-                'metadata': metadata or {}
-            })
+                'user_id': agent_profile_id,
+                'current_status': 'active',
+                'metadata': metadata or {},
+            }
 
-            result = self.client.table('process_threads').insert(thread_data).execute()
+            result = self.client.table('core_automation.process_threads').insert(thread_data).execute()
 
             if result.data:
-                # Convert Supabase JSON response to dict
                 data = dict(result.data[0]) if hasattr(result.data[0], 'keys') else result.data[0]
                 return from_db_format('process_threads', data)
 
@@ -48,7 +38,7 @@ class ProcessThreadRepository:
     async def get_thread(self, thread_id: str) -> Optional[Dict[str, Any]]:
         """Get a process thread by ID."""
         try:
-            result = self.client.table('process_threads').select('*').eq('id', thread_id).execute()
+            result = self.client.table('core_automation.process_threads').select('*').eq('id', thread_id).execute()
 
             if result.data:
                 return from_db_format('process_threads', result.data[0])
@@ -66,14 +56,13 @@ class ProcessThreadRepository:
     ) -> bool:
         """Update process thread status."""
         try:
-            update_data = {'currentStatus': status}
+            update_data: Dict[str, Any] = {'current_status': status}
             if metadata:
                 update_data['metadata'] = metadata
 
-            db_data = to_db_format('process_threads', update_data)
-            db_data['updated_at'] = 'now()'
+            update_data['updated_at'] = datetime.utcnow().isoformat()
 
-            result = self.client.table('process_threads').update(db_data).eq('id', thread_id).execute()
+            result = self.client.table('core_automation.process_threads').update(update_data).eq('id', thread_id).execute()
             return bool(result.data)
         except Exception as e:
             print(f"Error updating process thread {thread_id}: {e}", flush=True)
@@ -82,8 +71,7 @@ class ProcessThreadRepository:
     async def get_threads_by_agent(self, agent_profile_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Get all threads for an agent profile."""
         try:
-            # Use snake_case for database query
-            result = self.client.table('process_threads').select('*').eq('profile_id', agent_profile_id).order('created_at', desc=True).limit(limit).execute()
+            result = self.client.table('core_automation.process_threads').select('*').eq('user_id', agent_profile_id).order('created_at', desc=True).limit(limit).execute()
 
             threads = []
             for data in result.data or []:
@@ -97,14 +85,11 @@ class ProcessThreadRepository:
     async def delete_thread(self, thread_id: str) -> bool:
         """Delete a process thread."""
         try:
-            result = self.client.table('process_threads').delete().eq('id', thread_id).execute()
+            result = self.client.table('core_automation.process_threads').delete().eq('id', thread_id).execute()
             return bool(result.data)
         except Exception as e:
             print(f"Error deleting process thread {thread_id}: {e}", flush=True)
             return False
 
-# Singleton instance
 process_thread_repository = ProcessThreadRepository()
-
-# Backward compatibility alias
 agent_thread_repository = process_thread_repository

@@ -182,7 +182,12 @@ export class AgentConfigService {
       throw new Error(`Failed to create agent API key: ${apiKeyError.message}`);
     }
 
-    await this.initAgentInAutomationApi(agentUserId, apiKey, apiKeyPrefix);
+    await this.initAgentInAutomationApi(
+      agentUserId,
+      accountId,
+      apiKey,
+      apiKeyPrefix
+    );
 
     return {
       ...data,
@@ -194,6 +199,7 @@ export class AgentConfigService {
 
   private async initAgentInAutomationApi(
     agentUserId: string,
+    accountId: string,
     apiKey: string,
     apiKeyPrefix: string
   ): Promise<void> {
@@ -212,6 +218,7 @@ export class AgentConfigService {
       },
       body: JSON.stringify({
         user_id: agentUserId,
+        account_id: accountId,
         api_key: apiKey,
         api_key_prefix: apiKeyPrefix,
       }),

@@ -52,7 +52,6 @@ export type MessageUI = {
 export type ConversationUI = {
   id: string; // UUID
   title: string;
-  resourceScopeId?: string;
   createdAt: string;
   updatedAt: string;
   syncStatus: DataSyncStatus;

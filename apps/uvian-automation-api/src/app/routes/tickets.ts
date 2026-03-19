@@ -16,10 +16,9 @@ export default async function (fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['threadId', 'resourceScopeId', 'title'],
+          required: ['threadId', 'title'],
           properties: {
             threadId: { type: 'string' },
-            resourceScopeId: { type: 'string' },
             title: { type: 'string' },
             description: { type: 'string' },
             priority: {
@@ -41,7 +40,6 @@ export default async function (fastify: FastifyInstance) {
         const body = request.body || {};
         const {
           threadId,
-          resourceScopeId,
           title,
           description,
           priority,
@@ -49,9 +47,9 @@ export default async function (fastify: FastifyInstance) {
           requesterJobId,
         } = body;
 
-        if (!threadId || !resourceScopeId || !title) {
+        if (!threadId || !title) {
           reply.code(400).send({
-            error: 'threadId, resourceScopeId, and title are required',
+            error: 'threadId and title are required',
           });
           return;
         }
@@ -64,7 +62,6 @@ export default async function (fastify: FastifyInstance) {
 
         const result = await ticketService.createTicket(request.supabase, {
           threadId,
-          resourceScopeId,
           title,
           description,
           priority,
@@ -74,13 +71,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.code(201).send(result);
       } catch (error: any) {
-        if (error.message.includes('Not a member')) {
-          reply
-            .code(403)
-            .send({ error: 'Not a member of this space or conversation' });
-        } else {
-          reply.code(400).send({ error: 'Failed to create ticket' });
-        }
+        reply.code(400).send({ error: 'Failed to create ticket' });
       }
     }
   );
@@ -95,8 +86,6 @@ export default async function (fastify: FastifyInstance) {
         const result = await ticketService.listTickets(request.supabase, {
           status: query.status,
           priority: query.priority,
-          spaceId: query.spaceId,
-          conversationId: query.conversationId,
         });
 
         reply.send(result);
@@ -128,8 +117,6 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         if (error.message === 'Ticket not found') {
           reply.code(404).send({ error: 'Ticket not found' });
-        } else if (error.message.includes('access denied')) {
-          reply.code(403).send({ error: 'Access denied' });
         } else {
           reply.code(400).send({ error: 'Failed to fetch ticket' });
         }
@@ -182,11 +169,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.send(ticket);
       } catch (error: any) {
-        if (error.message.includes('access denied')) {
-          reply.code(403).send({ error: 'Access denied' });
-        } else {
-          reply.code(400).send({ error: 'Failed to update ticket' });
-        }
+        reply.code(400).send({ error: 'Failed to update ticket' });
       }
     }
   );
@@ -232,11 +215,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.send(ticket);
       } catch (error: any) {
-        if (error.message.includes('access denied')) {
-          reply.code(403).send({ error: 'Access denied' });
-        } else {
-          reply.code(400).send({ error: 'Failed to resolve ticket' });
-        }
+        reply.code(400).send({ error: 'Failed to resolve ticket' });
       }
     }
   );
@@ -286,18 +265,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.send(ticket);
       } catch (error: any) {
-        if (
-          error.message.includes('Only admins') ||
-          error.message.includes('Only conversation owners')
-        ) {
-          reply.code(403).send({
-            error: 'Only admins or conversation owners can assign tickets',
-          });
-        } else if (error.message.includes('access denied')) {
-          reply.code(403).send({ error: 'Access denied' });
-        } else {
-          reply.code(400).send({ error: 'Failed to assign ticket' });
-        }
+        reply.code(400).send({ error: 'Failed to assign ticket' });
       }
     }
   );
@@ -331,18 +299,7 @@ export default async function (fastify: FastifyInstance) {
 
         reply.code(204).send();
       } catch (error: any) {
-        if (
-          error.message.includes('Only admins') ||
-          error.message.includes('Only conversation owners')
-        ) {
-          reply.code(403).send({
-            error: 'Only admins or conversation owners can delete tickets',
-          });
-        } else if (error.message.includes('access denied')) {
-          reply.code(403).send({ error: 'Access denied' });
-        } else {
-          reply.code(400).send({ error: 'Failed to delete ticket' });
-        }
+        reply.code(400).send({ error: 'Failed to delete ticket' });
       }
     }
   );

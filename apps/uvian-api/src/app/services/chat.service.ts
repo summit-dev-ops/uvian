@@ -13,7 +13,7 @@ export class ChatService {
     return (data || []).map((row) => ({
       id: row.id,
       title: row.title,
-      resourceScopeId: row.resource_scope_id,
+      spaceId: row.space_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       syncStatus: 'synced',
@@ -22,14 +22,14 @@ export class ChatService {
   }
 
   async getConversation(userClient: SupabaseClient, conversationId: string) {
-    console.log("getConversation")
+    console.log('getConversation');
     const { data, error } = await userClient
       .from('get_conversation_details')
       .select('*')
       .eq('id', conversationId)
       .single();
 
-    console.log("getConversation", error)
+    console.log('getConversation', error);
     if (error || !data) {
       throw new Error('Conversation not found');
     }
@@ -156,17 +156,10 @@ export class ChatService {
       role: { name: 'owner' },
     });
 
-    const { data: scope } = await adminSupabase
-      .from('resource_scopes')
-      .select('id')
-      .eq('conversation_id', conversation.id)
-      .single();
-
     return {
       id: conversation.id,
       title: conversation.title,
       spaceId: conversation.space_id,
-      resourceScopeId: scope?.id,
       createdAt: conversation.created_at,
       updatedAt: conversation.updated_at,
     };

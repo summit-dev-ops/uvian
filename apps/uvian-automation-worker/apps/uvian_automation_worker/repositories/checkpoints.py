@@ -12,7 +12,7 @@ class CheckpointRepository:
 
     def __init__(self):
         self.client = supabase_client.client
-        self.table_name = 'agent_checkpoints'
+        self.table_name = 'core_automation.agent_checkpoints'
 
     async def get_checkpoint(
         self, 

@@ -1,7 +1,6 @@
 export interface Ticket {
   id: string;
-  threadId: string;
-  resourceScopeId: string;
+  threadId: string | null;
   requesterJobId: string | null;
   status: 'open' | 'in_progress' | 'resolved' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'critical';
@@ -12,9 +11,6 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
-  spaceId?: string;
-  conversationId?: string;
-  scopeType?: 'space' | 'conversation';
   assignedProfile?: {
     id: string;
     displayName: string;
@@ -25,7 +21,6 @@ export interface Ticket {
 export interface CreateTicketRequest {
   Body: {
     threadId: string;
-    resourceScopeId: string;
     title: string;
     description?: string;
     priority?: 'low' | 'medium' | 'high' | 'critical';
@@ -47,8 +42,6 @@ export interface TicketFilters {
   status?: Ticket['status'];
   priority?: Ticket['priority'];
   threadId?: string;
-  spaceId?: string;
-  conversationId?: string;
   assignedTo?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -65,48 +58,12 @@ export interface TicketListResponse {
   page: number;
   limit: number;
   hasMore: boolean;
-  scope?: {
-    type: 'space' | 'conversation';
-    id: string;
-    name?: string;
-  };
 }
 
 export interface CreateTicketResponse {
   ticketId: string;
   status: 'open' | 'in_progress' | 'resolved' | 'cancelled';
-  resourceScopeId: string;
   threadId: string;
-  spaceId?: string;
-  conversationId?: string;
-}
-
-export interface GetSpaceTicketsRequest {
-  Params: {
-    spaceId: string;
-  };
-  Querystring: {
-    status?: Ticket['status'];
-    priority?: Ticket['priority'];
-    dateFrom?: string;
-    dateTo?: string;
-    page?: number;
-    limit?: number;
-  };
-}
-
-export interface GetConversationTicketsRequest {
-  Params: {
-    conversationId: string;
-  };
-  Querystring: {
-    status?: Ticket['status'];
-    priority?: Ticket['priority'];
-    dateFrom?: string;
-    dateTo?: string;
-    page?: number;
-    limit?: number;
-  };
 }
 
 export interface TicketMetrics {
@@ -119,10 +76,6 @@ export interface TicketMetrics {
 }
 
 export interface GetTicketMetricsRequest {
-  Params?: {
-    scopeType?: 'space' | 'conversation';
-    scopeId?: string;
-  };
   Querystring: {
     dateFrom?: string;
     dateTo?: string;

@@ -3,40 +3,7 @@ import { adminSupabase } from '../clients/supabase.client';
 import { queueService } from './queue.service';
 
 export class JobService {
-  private async verifyResourceScopeAccess(
-    userClient: SupabaseClient,
-    resourceScopeId: string
-  ) {
-    const { data: scope } = await userClient
-      .from('resource_scopes')
-      .select('space_id, conversation_id')
-      .eq('id', resourceScopeId)
-      .single();
-
-    if (!scope) throw new Error('Resource scope not found');
-
-    if (scope.space_id) {
-      const { data: member } = await userClient
-        .from('space_members')
-        .select('id')
-        .eq('space_id', scope.space_id)
-        .single();
-      if (!member) throw new Error('Not a member of this space');
-    } else if (scope.conversation_id) {
-      const { data: member } = await userClient
-        .from('conversation_members')
-        .select('id')
-        .eq('conversation_id', scope.conversation_id)
-        .single();
-      if (!member) throw new Error('Not a member of this conversation');
-    }
-  }
-
-  async createEventJob(data: {
-    type: string;
-    input: object;
-    executor?: string;
-  }) {
+  async createEventJob(data: { type: string; input: object }) {
     const { randomUUID } = await import('crypto');
     const jobId = randomUUID();
 
@@ -44,7 +11,7 @@ export class JobService {
     const agentId = input.agentId as string | undefined;
 
     const { data: job, error } = await adminSupabase
-      .from('jobs')
+      .from('core_automation.jobs')
       .insert({
         id: jobId,
         type: data.type,
@@ -53,7 +20,6 @@ export class JobService {
           inputType: 'event',
           ...data.input,
         },
-        resource_scope_id: null,
         agent_id: agentId || null,
       })
       .select()
@@ -73,23 +39,9 @@ export class JobService {
 
   async listJobs(
     userClient: SupabaseClient,
-    filters: {
-      spaceId?: string;
-      conversationId?: string;
-      status?: string;
-      type?: string;
-    }
+    filters: { status?: string; type?: string } = {}
   ) {
-    let viewName = 'get_jobs_for_space';
-    if (filters.conversationId) {
-      viewName = 'get_jobs_for_conversation';
-    }
-
-    let q = userClient.from(viewName).select('*');
-
-    if (filters.spaceId) q = q.eq('space_id', filters.spaceId);
-    if (filters.conversationId)
-      q = q.eq('conversation_id', filters.conversationId);
+    let q = userClient.from('get_jobs_for_current_user').select('*');
     if (filters.status) q = q.eq('status', filters.status);
     if (filters.type) q = q.eq('type', filters.type);
 
@@ -97,7 +49,7 @@ export class JobService {
     if (error) throw new Error(error.message);
 
     return {
-      jobs: (data || []).map((row) => ({
+      jobs: (data || []).map((row: any) => ({
         id: row.id,
         type: row.type,
         inputType: row.input_type,
@@ -105,13 +57,12 @@ export class JobService {
         input: row.input,
         output: row.output,
         errorMessage: row.error_message,
-        resourceScopeId: row.resource_scope_id,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         startedAt: row.started_at,
         completedAt: row.completed_at,
-        spaceId: row.space_id,
-        conversationId: row.conversation_id,
+        threadId: row.thread_id,
+        agentId: row.agent_id,
       })),
       total: data?.length || 0,
       page: 1,
@@ -122,37 +73,9 @@ export class JobService {
 
   async getJobsForUser(
     userClient: SupabaseClient,
-    filters: { status?: string; type?: string }
+    filters: { status?: string; type?: string } = {}
   ) {
-    let q = userClient.from('get_jobs_for_current_user').select('*');
-    if (filters.status) q = q.eq('status', filters.status);
-    if (filters.type) q = q.eq('type', filters.type);
-
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
-
-    return {
-      jobs: (data || []).map((row) => ({
-        id: row.id,
-        type: row.type,
-        inputType: row.input_type,
-        status: row.status,
-        input: row.input,
-        output: row.output,
-        errorMessage: row.error_message,
-        resourceScopeId: row.resource_scope_id,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        startedAt: row.started_at,
-        completedAt: row.completed_at,
-        spaceId: row.space_id,
-        conversationId: row.conversation_id,
-      })),
-      total: data?.length || 0,
-      page: 1,
-      limit: 20,
-      hasMore: false,
-    };
+    return this.listJobs(userClient, filters);
   }
 
   async getJob(userClient: SupabaseClient, jobId: string) {
@@ -172,52 +95,36 @@ export class JobService {
       input: data.input,
       output: data.output,
       errorMessage: data.error_message,
-      resourceScopeId: data.resource_scope_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       startedAt: data.started_at,
       completedAt: data.completed_at,
-      spaceId: data.space_id,
-      conversationId: data.conversation_id,
+      threadId: data.thread_id,
+      agentId: data.agent_id,
     };
   }
 
   async createJob(
     userClient: SupabaseClient,
-    userId: string,
-    data: { type: string; input: object; resourceScopeId: string }
+    _userId: string,
+    data: { type: string; input: object }
   ) {
-    await this.verifyResourceScopeAccess(userClient, data.resourceScopeId);
-
     const jobId = require('crypto').randomUUID();
 
-    const { data: job, error } = await adminSupabase
-      .from('jobs')
-      .insert({
-        id: jobId,
-        type: data.type,
-        input: data.input,
-        resource_scope_id: data.resourceScopeId,
-      })
-      .select()
-      .single();
+    const { error } = await adminSupabase.from('core_automation.jobs').insert({
+      id: jobId,
+      type: data.type,
+      input_type: 'manual',
+      input: data.input,
+    });
 
     if (error) throw new Error(error.message);
 
     await queueService.addJob('main-queue', data.type, { jobId });
 
-    const { data: scope } = await adminSupabase
-      .from('resource_scopes')
-      .select('space_id, conversation_id')
-      .eq('id', data.resourceScopeId)
-      .single();
-
     return {
       jobId,
       status: 'queued',
-      resourceScopeId: job.resource_scope_id,
-      spaceId: scope?.space_id,
-      conversationId: scope?.conversation_id,
     };
   }
 
@@ -225,7 +132,7 @@ export class JobService {
     await this.getJob(userClient, jobId);
 
     const { data: job, error } = await adminSupabase
-      .from('jobs')
+      .from('core_automation.jobs')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', jobId)
       .eq('status', 'queued')
@@ -248,7 +155,7 @@ export class JobService {
     await this.getJob(userClient, jobId);
 
     const { data: job, error } = await adminSupabase
-      .from('jobs')
+      .from('core_automation.jobs')
       .update({
         status: 'queued',
         error_message: null,
@@ -278,33 +185,12 @@ export class JobService {
   async deleteJob(userClient: SupabaseClient, jobId: string) {
     await this.getJob(userClient, jobId);
 
-    const { error } = await adminSupabase.from('jobs').delete().eq('id', jobId);
+    const { error } = await adminSupabase
+      .from('core_automation.jobs')
+      .delete()
+      .eq('id', jobId);
     if (error) throw new Error('Cannot delete job');
     return { success: true };
-  }
-
-  async getJobMetrics(userClient: SupabaseClient, spaceId: string) {
-    const { data, error } = await userClient
-      .from('get_jobs_for_space')
-      .select('status')
-      .eq('space_id', spaceId);
-
-    if (error) throw new Error(error.message);
-
-    const statusCounts = (data || []).reduce((acc, job: any) => {
-      acc[job.status] = (acc[job.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      total: data?.length || 0,
-      queued: statusCounts.queued || 0,
-      processing: statusCounts.processing || 0,
-      completed: statusCounts.completed || 0,
-      failed: statusCounts.failed || 0,
-      cancelled: statusCounts.cancelled || 0,
-      averageProcessingTime: 0,
-    };
   }
 }
 

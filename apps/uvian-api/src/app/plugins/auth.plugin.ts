@@ -110,9 +110,7 @@ export default fp(async (fastify) => {
       return;
     }
 
-    const publicEndpoints: string[] = [
-      '/api/auth/get-jwt'
-    ]; // Add public endpoints here
+    const publicEndpoints: string[] = [];
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       request.url.startsWith(endpoint)
     );

@@ -152,16 +152,9 @@ export class SpacesService {
       role: { name: 'owner' },
     });
 
-    const { data: scope } = await adminSupabase
-      .from('resource_scopes')
-      .select('id')
-      .eq('space_id', space.id)
-      .single();
-
     return {
       id: space.id,
       name: space.name,
-      resourceScopeId: scope?.id,
       createdAt: space.created_at,
       createdBy: space.created_by,
       settings: space.settings,

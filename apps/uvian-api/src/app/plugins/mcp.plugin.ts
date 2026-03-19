@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { Services } from './services';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -19,10 +20,86 @@ type ToolResult = {
   isError?: boolean;
 };
 
+const jwtCache = new Map<string, { jwt: string; expiresAt: number }>();
+const JWT_TTL_MS = 50 * 60 * 1000;
+
+async function authenticateWithApiKey(
+  apiKey: string
+): Promise<{ userId: string; jwt: string } | null> {
+  if (!apiKey.startsWith('sk_agent_')) {
+    return null;
+  }
+
+  const apiKeyPrefix = apiKey.substring(0, 16);
+
+  const cached = jwtCache.get(apiKeyPrefix);
+  if (cached && cached.expiresAt > Date.now()) {
+    return {
+      userId: cached.jwt ? extractUserIdFromJwt(cached.jwt) : '',
+      jwt: cached.jwt,
+    };
+  }
+
+  const { data: apiKeyRecord, error } = await adminSupabase
+    .from('agent_api_keys')
+    .select('id, user_id, api_key_hash, is_active')
+    .eq('api_key_prefix', apiKeyPrefix)
+    .eq('is_active', true)
+    .single();
+
+  if (error || !apiKeyRecord) {
+    return null;
+  }
+
+  const isValid = await bcrypt.compare(apiKey, apiKeyRecord.api_key_hash);
+  if (!isValid) {
+    return null;
+  }
+
+  const { data: userData, error: userError } =
+    await adminSupabase.auth.admin.getUserById(apiKeyRecord.user_id);
+  if (userError || !userData.user) {
+    return null;
+  }
+
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (!jwtSecret) {
+    return null;
+  }
+
+  const payload = {
+    aud: 'authenticated',
+    role: 'authenticated',
+    sub: userData.user.id,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60,
+    iss: 'supabase',
+  };
+
+  const newJwt = jwt.sign(payload, jwtSecret, { algorithm: 'HS256' });
+
+  jwtCache.set(apiKeyPrefix, {
+    jwt: newJwt,
+    expiresAt: Date.now() + JWT_TTL_MS,
+  });
+
+  return { userId: userData.user.id, jwt: newJwt };
+}
+
+function extractUserIdFromJwt(token: string): string {
+  try {
+    const decoded = jwt.decode(token) as jwt.JwtPayload | null;
+    return decoded?.sub ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
-  // Now accepts both token AND userId from the validated JWT
-  async function createAuthenticatedServer(token: string, userId: string): Promise<McpServer> {
-    const userClient = createUserClient(token);
+  async function createAuthenticatedServer(
+    userId: string,
+    userJwt: string
+  ): Promise<McpServer> {
+    const userClient = createUserClient(userJwt);
 
     const server = new McpServer(
       {
@@ -50,7 +127,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             args.noteId
           );
           return {
-            content:[{ type: 'text', text: JSON.stringify(note) }],
+            content: [{ type: 'text', text: JSON.stringify(note) }],
           };
         } catch (error) {
           return {
@@ -73,11 +150,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient
           );
           return {
-            content:[{ type: 'text', text: JSON.stringify(results) }],
+            content: [{ type: 'text', text: JSON.stringify(results) }],
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -90,17 +167,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         inputSchema: z.object({ conversationId: z.string() }),
       },
       async ({ conversationId }): Promise<ToolResult> => {
-        console.log({ conversationId })
+        console.log({ conversationId });
         try {
           const result = await fastify.services.chat.getConversation(
             userClient,
             conversationId
           );
           return {
-            content:[{ type: 'text', text: JSON.stringify(result) }],
+            content: [{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
-          console.log({ error })
+          console.log({ error });
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
@@ -125,11 +202,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             args.conversationId
           );
           return {
-            content:[{ type: 'text', text: JSON.stringify(result) }],
+            content: [{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -158,7 +235,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -183,7 +260,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -207,11 +284,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             { title: args.title, spaceId: args.spaceId }
           );
           return {
-            content:[{ type: 'text', text: JSON.stringify(result) }],
+            content: [{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -232,7 +309,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const id = randomUUID();
           const result = await fastify.services.chat.createMessage(
             userClient,
-            userId, 
+            userId,
             args.conversationId,
             { id, content: args.content }
           );
@@ -241,7 +318,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -271,7 +348,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -311,7 +388,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           });
 
           // Process contents
-          const contents = args.contents ||[];
+          const contents = args.contents || [];
           for (let i = 0; i < contents.length; i++) {
             const item = contents[i];
             let noteId = item.noteId;
@@ -346,11 +423,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             post.id
           );
           return {
-            content:[{ type: 'text', text: JSON.stringify(fullPost) }],
+            content: [{ type: 'text', text: JSON.stringify(fullPost) }],
           };
         } catch (error) {
           return {
-            content:[{ type: 'text', text: `Error: ${error}` }],
+            content: [{ type: 'text', text: `Error: ${error}` }],
             isError: true,
           };
         }
@@ -385,42 +462,55 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           .send({ error: 'Unauthorized', message: 'Missing token' });
       }
 
-      console.log('[MCP] Validating token...');
+      let userId: string;
+      let userJwt: string;
 
-      // Local JWT verification - no database check needed for RLS
-      const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-      if (!jwtSecret) {
-        console.log('[MCP] JWT_SECRET not configured');
-        return reply
-          .code(500)
-          .send({
+      if (token.startsWith('sk_agent_')) {
+        console.log('[MCP] Authenticating with raw API key...');
+        const result = await authenticateWithApiKey(token);
+        if (!result) {
+          console.log('[MCP] API key authentication failed');
+          return reply
+            .code(401)
+            .send({ error: 'Unauthorized', message: 'Invalid API key' });
+        }
+        userId = result.userId;
+        userJwt = result.jwt;
+        console.log('[MCP] API key auth OK, user:', userId);
+      } else {
+        console.log('[MCP] Validating pre-issued JWT...');
+        const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+        if (!jwtSecret) {
+          console.log('[MCP] JWT_SECRET not configured');
+          return reply.code(500).send({
             error: 'Internal server error',
             message: 'JWT_SECRET not configured',
           });
+        }
+
+        let decoded: jwt.JwtPayload;
+        try {
+          decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
+        } catch (err) {
+          console.log('[MCP] JWT verification failed:', err);
+          return reply
+            .code(401)
+            .send({ error: 'Unauthorized', message: 'Invalid token' });
+        }
+
+        if (!decoded.sub || decoded.role !== 'authenticated') {
+          console.log('[MCP] Invalid JWT claims');
+          return reply
+            .code(401)
+            .send({ error: 'Unauthorized', message: 'Invalid token claims' });
+        }
+
+        userId = decoded.sub;
+        userJwt = token;
+        console.log('[MCP] JWT auth OK, user:', userId);
       }
 
-      let decoded: jwt.JwtPayload;
-      try {
-        decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
-      } catch (err) {
-        console.log('[MCP] JWT verification failed:', err);
-        return reply
-          .code(401)
-          .send({ error: 'Unauthorized', message: 'Invalid token' });
-      }
-
-      if (!decoded.sub || decoded.role !== 'authenticated') {
-        console.log('[MCP] Invalid JWT claims');
-        return reply
-          .code(401)
-          .send({ error: 'Unauthorized', message: 'Invalid token claims' });
-      }
-
-      const userId = decoded.sub;
-      console.log('[MCP] Auth OK, user:', userId);
-
-      // Create server and pass BOTH the token and the validated userId
-      const server = await createAuthenticatedServer(token, userId);
+      const server = await createAuthenticatedServer(userId, userJwt);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless mode
       });

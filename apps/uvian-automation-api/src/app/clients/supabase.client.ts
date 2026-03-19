@@ -25,50 +25,20 @@ export const createUserClient = (token: string) => {
 
 export type Database = {
   public: {
+    Views: {
+      get_jobs_for_current_user: {
+        Row: Record<string, unknown>;
+      };
+      get_job_details: {
+        Row: Record<string, unknown>;
+      };
+      get_tickets_for_current_user: {
+        Row: Record<string, unknown>;
+      };
+    };
+  };
+  core_automation: {
     Tables: {
-      conversations: {
-        Row: {
-          id: string;
-          title: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          title: string;
-        };
-      };
-      messages: {
-        Row: {
-          id: string;
-          conversation_id: string;
-          sender_id: string;
-          content: string;
-          role: 'user' | 'assistant' | 'system';
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          conversation_id: string;
-          sender_id: string;
-          content: string;
-          role: 'user' | 'assistant' | 'system';
-        };
-      };
-      conversation_members: {
-        Row: {
-          profile_id: string;
-          conversation_id: string;
-          role: any;
-          created_at: string;
-        };
-        Insert: {
-          profile_id: string;
-          conversation_id: string;
-          role: any;
-        };
-      };
       jobs: {
         Row: {
           id: string;
@@ -76,10 +46,14 @@ export type Database = {
           status: string;
           input: any;
           output: any;
+          error_message: string | null;
+          thread_id: string | null;
+          agent_id: string | null;
+          input_type: string;
           created_at: string;
           updated_at: string;
-          agent_id: string | null;
-          resource_scope_id: string | null;
+          started_at: string | null;
+          completed_at: string | null;
         };
         Insert: {
           id?: string;
@@ -88,45 +62,199 @@ export type Database = {
           input?: any;
           output?: any;
           agent_id?: string | null;
-          resource_scope_id?: string | null;
+          input_type?: string;
+          thread_id?: string | null;
         };
       };
-      profiles: {
+      tickets: {
         Row: {
           id: string;
-          userId: string | null;
-          type: 'human' | 'agent' | 'system' | 'admin';
-          display_name: string;
-          avatar_url: string | null;
-          bio: string | null;
-          agent_config: any;
-          public_fields: any;
+          thread_id: string | null;
+          requester_job_id: string | null;
+          status: string;
+          priority: string;
+          title: string;
+          description: string | null;
+          resolution_payload: any | null;
+          assigned_to: string | null;
+          created_at: string;
+          updated_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          thread_id?: string | null;
+          requester_job_id?: string | null;
+          status?: string;
+          priority?: string;
+          title: string;
+          description?: string | null;
+          resolution_payload?: any | null;
+          assigned_to?: string | null;
+        };
+      };
+      automation_agent_keys: {
+        Row: {
+          id: string;
+          user_id: string;
+          encrypted_api_key: string;
+          api_key_prefix: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          encrypted_api_key: string;
+          api_key_prefix: string;
+          is_active?: boolean;
+        };
+      };
+      process_threads: {
+        Row: {
+          id: string;
+          user_id: string;
+          current_status: string;
+          metadata: any;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          current_status?: string;
+          metadata?: any;
+        };
+      };
+      agent_checkpoints: {
+        Row: {
+          id: string;
+          thread_id: string;
+          checkpoint_id: string;
+          checkpoint_data: any;
+          metadata: any;
+          parent_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          thread_id: string;
+          checkpoint_id: string;
+          checkpoint_data: any;
+          metadata?: any;
+          parent_id?: string | null;
+        };
+      };
+      llms: {
+        Row: {
+          id: string;
+          account_id: string;
+          name: string;
+          type: string;
+          provider: string;
+          model_name: string;
+          base_url: string | null;
+          encrypted_api_key: string | null;
+          temperature: number;
+          max_tokens: number;
+          config: any;
+          is_active: boolean;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          name: string;
+          type: string;
+          provider: string;
+          model_name: string;
+          base_url?: string | null;
+          encrypted_api_key?: string | null;
+          temperature?: number;
+          max_tokens?: number;
+          config?: any;
+          is_active?: boolean;
+          is_default?: boolean;
+        };
+      };
+      mcps: {
+        Row: {
+          id: string;
+          account_id: string;
+          name: string;
+          type: string;
+          url: string | null;
+          auth_method: string;
+          encrypted_auth_config: string | null;
+          config: any;
           is_active: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          userId?: string | null;
-          type?: 'human' | 'agent' | 'system' | 'admin';
-          display_name: string;
-          avatar_url?: string | null;
-          bio?: string | null;
-          agent_config?: any;
-          public_fields?: any;
+          account_id: string;
+          name: string;
+          type: string;
+          url?: string | null;
+          auth_method: string;
+          encrypted_auth_config?: string | null;
+          config?: any;
           is_active?: boolean;
         };
       };
-      profile_settings: {
+      agents: {
         Row: {
-          profile_id: string;
-          settings: any;
+          id: string;
+          user_id: string;
+          account_id: string;
+          system_prompt: string | null;
+          max_conversation_history: number;
+          skills: any;
+          config: any;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
-          profile_id: string;
-          settings?: any;
+          id?: string;
+          user_id: string;
+          account_id: string;
+          system_prompt?: string | null;
+          max_conversation_history?: number;
+          skills?: any;
+          config?: any;
+          is_active?: boolean;
+        };
+      };
+      agent_llms: {
+        Row: {
+          agent_id: string;
+          llm_id: string;
+          config: any;
+          is_default: boolean;
+          created_at: string;
+        };
+        Insert: {
+          agent_id: string;
+          llm_id: string;
+          config?: any;
+          is_default?: boolean;
+        };
+      };
+      agent_mcps: {
+        Row: {
+          agent_id: string;
+          mcp_id: string;
+          config: any;
+          created_at: string;
+        };
+        Insert: {
+          agent_id: string;
+          mcp_id: string;
+          config?: any;
         };
       };
     };
