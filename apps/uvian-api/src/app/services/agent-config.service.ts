@@ -35,6 +35,7 @@ export class AgentConfigService {
     accountId: string
   ): Promise<AgentConfig[]> {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('get_my_agent_configs')
       .select('*')
       .eq('account_id', accountId)
@@ -67,6 +68,7 @@ export class AgentConfigService {
     accountId: string
   ): Promise<AgentConfig | null> {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('get_my_agent_configs')
       .select('*')
       .eq('id', agentId)
@@ -145,6 +147,7 @@ export class AgentConfigService {
     }
 
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('agent_configs')
       .insert({
         agent_user_id: agentUserId,
@@ -169,6 +172,7 @@ export class AgentConfigService {
     const apiKeyPrefix = getApiKeyPrefix(apiKey);
 
     const { error: apiKeyError } = await adminSupabase
+      .schema('core_hub')
       .from('agent_api_keys')
       .insert({
         user_id: agentUserId,
@@ -251,6 +255,7 @@ export class AgentConfigService {
       updateData.is_active = payload.is_active;
 
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('agent_configs')
       .update(updateData)
       .eq('id', agentId)
@@ -277,6 +282,7 @@ export class AgentConfigService {
     }
 
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('agent_configs')
       .delete()
       .eq('id', agentId)

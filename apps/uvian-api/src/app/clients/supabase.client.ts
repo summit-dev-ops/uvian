@@ -26,96 +26,328 @@ export const createUserClient = (token: string) => {
 export type Database = {
   public: {
     Tables: {
-      conversations: {
+      accounts: {
         Row: {
           id: string;
-          title: string;
+          name: string | null;
+          settings: unknown;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          title: string;
+          name?: string | null;
+          settings?: unknown;
+        };
+      };
+      account_members: {
+        Row: {
+          id: string;
+          account_id: string;
+          user_id: string;
+          role: unknown;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          user_id: string;
+          role?: unknown;
+        };
+      };
+    };
+  };
+  core_hub: {
+    Tables: {
+      settings: {
+        Row: {
+          user_id: string;
+          settings: unknown;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          settings?: unknown;
+        };
+      };
+      profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          bio: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          bio?: string | null;
+        };
+      };
+      conversations: {
+        Row: {
+          id: string;
+          title: string | null;
+          space_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title?: string | null;
+          space_id?: string | null;
+          created_by?: string | null;
+        };
+      };
+      conversation_members: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          user_id: string;
+          role: unknown;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          user_id: string;
+          role?: unknown;
         };
       };
       messages: {
         Row: {
           id: string;
           conversation_id: string;
-          sender_id: string;
-          content: string;
-          role: 'user' | 'assistant' | 'system';
+          sender_id: string | null;
+          content: string | null;
+          role: string;
+          metadata: unknown;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           conversation_id: string;
-          sender_id: string;
-          content: string;
-          role: 'user' | 'assistant' | 'system';
+          sender_id?: string | null;
+          content?: string | null;
+          role?: string;
+          metadata?: unknown;
         };
       };
-      conversation_members: {
-        Row: {
-          profile_id: string;
-          conversation_id: string;
-          role: any;
-          created_at: string;
-        };
-        Insert: {
-          profile_id: string;
-          conversation_id: string;
-          role: any;
-        };
-      };
-      jobs: {
+      spaces: {
         Row: {
           id: string;
-          type: string;
-          status: string;
-          input: any;
-          output: any;
+          name: string;
+          description: string | null;
+          avatar_url: string | null;
+          created_by: string | null;
+          settings: unknown;
+          is_private: boolean;
+          created_at: string;
+          updated_at: string;
+          cover_url: string | null;
+          cover_image_url: string | null;
+          main_image_url: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          avatar_url?: string | null;
+          created_by?: string | null;
+          settings?: unknown;
+          is_private?: boolean;
+          cover_url?: string | null;
+          cover_image_url?: string | null;
+          main_image_url?: string | null;
+        };
+      };
+      space_members: {
+        Row: {
+          id: string;
+          space_id: string;
+          user_id: string;
+          role: unknown;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          space_id: string;
+          user_id: string;
+          role?: unknown;
+        };
+      };
+      posts: {
+        Row: {
+          id: string;
+          space_id: string;
+          author_id: string | null;
           created_at: string;
           updated_at: string;
         };
+        Insert: {
+          id?: string;
+          space_id: string;
+          author_id?: string | null;
+        };
       };
-      profiles: {
+      post_contents: {
         Row: {
           id: string;
-          userId: string | null;
-          type: 'human' | 'agent' | 'system' | 'admin';
-          display_name: string;
-          avatar_url: string | null;
-          bio: string | null;
-          agent_config: any;
-          public_fields: any;
+          post_id: string;
+          content_type: string;
+          note_id: string | null;
+          asset_id: string | null;
+          url: string | null;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          content_type: string;
+          note_id?: string | null;
+          asset_id?: string | null;
+          url?: string | null;
+          position?: number;
+        };
+      };
+      notes: {
+        Row: {
+          id: string;
+          space_id: string;
+          owner_user_id: string | null;
+          title: string;
+          body: string | null;
+          attachments: unknown;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          space_id: string;
+          owner_user_id?: string | null;
+          title: string;
+          body?: string | null;
+          attachments?: unknown;
+        };
+      };
+      assets: {
+        Row: {
+          id: string;
+          account_id: string;
+          uploader_user_id: string | null;
+          type: string;
+          url: string;
+          filename: string | null;
+          mime_type: string | null;
+          file_size_bytes: number | null;
+          storage_type: string;
+          metadata: unknown;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          uploader_user_id?: string | null;
+          type: string;
+          url: string;
+          filename?: string | null;
+          mime_type?: string | null;
+          file_size_bytes?: number | null;
+          storage_type?: string;
+          metadata?: unknown;
+        };
+      };
+      automaton_providers: {
+        Row: {
+          id: string;
+          account_id: string;
+          owner_user_id: string;
+          name: string;
+          type: string;
+          url: string | null;
+          auth_method: string | null;
+          auth_config: unknown;
           is_active: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          userId?: string | null;
-          type?: 'human' | 'agent' | 'system' | 'admin';
-          display_name: string;
-          avatar_url?: string | null;
-          bio?: string | null;
-          agent_config?: any;
-          public_fields?: any;
+          account_id: string;
+          owner_user_id: string;
+          name: string;
+          type?: string;
+          url?: string | null;
+          auth_method?: string | null;
+          auth_config?: unknown;
           is_active?: boolean;
         };
       };
-      profile_settings: {
+      agent_configs: {
         Row: {
-          profile_id: string;
-          settings: any;
+          id: string;
+          agent_user_id: string;
+          account_id: string;
+          automation_provider_id: string;
+          name: string;
+          description: string | null;
+          subscribed_events: unknown;
+          config: unknown;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
-          profile_id: string;
-          settings?: any;
+          id?: string;
+          agent_user_id: string;
+          account_id: string;
+          automation_provider_id: string;
+          name: string;
+          description?: string | null;
+          subscribed_events?: unknown;
+          config?: unknown;
+          is_active?: boolean;
+        };
+      };
+      agent_api_keys: {
+        Row: {
+          id: string;
+          user_id: string;
+          api_key_hash: string;
+          api_key_prefix: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          api_key_hash: string;
+          api_key_prefix: string;
+          is_active?: boolean;
+        };
+      };
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          resource_type: string;
+          resource_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          resource_type: string;
+          resource_id: string;
         };
       };
     };

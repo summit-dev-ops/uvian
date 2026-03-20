@@ -11,6 +11,7 @@ export class NoteService {
     const limit = options.limit || 20;
 
     let q = userClient
+      .schema('core_hub')
       .from('notes')
       .select('*')
       .eq('space_id', spaceId)
@@ -47,6 +48,7 @@ export class NoteService {
 
   async getNote(userClient: SupabaseClient, noteId: string) {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('notes')
       .select('*')
       .eq('id', noteId)
@@ -78,6 +80,7 @@ export class NoteService {
     }
   ) {
     const { data: note, error } = await adminSupabase
+      .schema('core_hub')
       .from('notes')
       .insert({
         id: data.id,
@@ -124,6 +127,7 @@ export class NoteService {
       updateData.attachments = data.attachments;
 
     const { data: note, error } = await adminSupabase
+      .schema('core_hub')
       .from('notes')
       .update(updateData)
       .eq('id', noteId)
@@ -146,6 +150,7 @@ export class NoteService {
 
   async deleteNote(userClient: SupabaseClient, userId: string, noteId: string) {
     const { data: note, error: fetchError } = await adminSupabase
+      .schema('core_hub')
       .from('notes')
       .select('owner_user_id')
       .eq('id', noteId)
@@ -160,6 +165,7 @@ export class NoteService {
     }
 
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('notes')
       .delete()
       .eq('id', noteId);

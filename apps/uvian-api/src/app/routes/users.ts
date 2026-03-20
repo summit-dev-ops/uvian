@@ -129,6 +129,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
 
             if (context.type === 'conversation') {
               const { data: members } = await adminSupabase
+                .schema('core_hub')
                 .from('conversation_members')
                 .select('user_id')
                 .eq('conversation_id', context.id);
@@ -136,6 +137,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
               excludeUserIds = (members || []).map((m) => m.user_id);
             } else if (context.type === 'space') {
               const { data: members } = await adminSupabase
+                .schema('core_hub')
                 .from('space_members')
                 .select('user_id')
                 .eq('space_id', context.id);
@@ -152,6 +154,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
         }
 
         let query = adminSupabase
+          .schema('core_hub')
           .from('profiles')
           .select('id, user_id, display_name, avatar_url', { count: 'exact' });
 

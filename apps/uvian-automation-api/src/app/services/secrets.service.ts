@@ -1,36 +1,39 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
+import { encrypt, decryptJson } from './encryption.service';
 
-export interface CreateMcpPayload {
+const ENCRYPTION_SECRET = process.env.INTERNAL_API_KEY!;
+
+export type SecretType = 'api_key' | 'bearer' | 'jwt' | 'api_key_json';
+
+export interface CreateSecretPayload {
   accountId: string;
   name: string;
-  type: string;
-  url?: string;
-  authMethod: string;
-  config?: Record<string, unknown>;
+  secretType: SecretType;
+  value: string;
+  metadata?: Record<string, unknown>;
 }
 
-export interface UpdateMcpPayload {
+export interface UpdateSecretPayload {
   name?: string;
-  type?: string;
-  url?: string;
-  authMethod?: string;
-  config?: Record<string, unknown>;
+  value?: string;
+  metadata?: Record<string, unknown>;
   isActive?: boolean;
 }
 
-export class McpService {
-  async create(userClient: SupabaseClient, payload: CreateMcpPayload) {
+export class SecretsService {
+  async create(userClient: SupabaseClient, payload: CreateSecretPayload) {
+    const encryptedValue = encrypt(payload.value, ENCRYPTION_SECRET);
+
     const { data, error } = await adminSupabase
       .schema('core_automation')
-      .from('mcps')
+      .from('secrets')
       .insert({
         account_id: payload.accountId,
         name: payload.name,
-        type: payload.type,
-        url: payload.url || null,
-        auth_method: payload.authMethod,
-        config: payload.config || {},
+        secret_type: payload.secretType,
+        encrypted_value: encryptedValue,
+        metadata: payload.metadata || {},
         is_active: true,
       })
       .select()
@@ -43,7 +46,7 @@ export class McpService {
   async list(userClient: SupabaseClient, accountId: string) {
     const { data, error } = await userClient
       .schema('core_automation')
-      .from('mcps')
+      .from('secrets')
       .select('*')
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
@@ -52,38 +55,37 @@ export class McpService {
     return (data || []).map((row: any) => this.mapRow(row));
   }
 
-  async get(userClient: SupabaseClient, mcpId: string) {
+  async get(userClient: SupabaseClient, secretId: string) {
     const { data, error } = await userClient
       .schema('core_automation')
-      .from('mcps')
+      .from('secrets')
       .select('*')
-      .eq('id', mcpId)
+      .eq('id', secretId)
       .single();
 
-    if (error || !data) throw new Error('MCP not found');
+    if (error || !data) throw new Error('Secret not found');
     return this.mapRow(data);
   }
 
   async update(
     userClient: SupabaseClient,
-    mcpId: string,
-    payload: UpdateMcpPayload
+    secretId: string,
+    payload: UpdateSecretPayload
   ) {
     const updateData: Record<string, unknown> = {};
 
     if (payload.name !== undefined) updateData.name = payload.name;
-    if (payload.type !== undefined) updateData.type = payload.type;
-    if (payload.url !== undefined) updateData.url = payload.url;
-    if (payload.authMethod !== undefined)
-      updateData.auth_method = payload.authMethod;
-    if (payload.config !== undefined) updateData.config = payload.config;
+    if (payload.metadata !== undefined) updateData.metadata = payload.metadata;
     if (payload.isActive !== undefined) updateData.is_active = payload.isActive;
+    if (payload.value !== undefined) {
+      updateData.encrypted_value = encrypt(payload.value, ENCRYPTION_SECRET);
+    }
 
     const { data, error } = await adminSupabase
       .schema('core_automation')
-      .from('mcps')
+      .from('secrets')
       .update(updateData)
-      .eq('id', mcpId)
+      .eq('id', secretId)
       .select()
       .single();
 
@@ -91,15 +93,19 @@ export class McpService {
     return this.mapRow(data);
   }
 
-  async delete(userClient: SupabaseClient, mcpId: string) {
+  async delete(userClient: SupabaseClient, secretId: string) {
     const { error } = await adminSupabase
       .schema('core_automation')
-      .from('mcps')
+      .from('secrets')
       .delete()
-      .eq('id', mcpId);
+      .eq('id', secretId);
 
-    if (error) throw new Error('Cannot delete MCP');
+    if (error) throw new Error('Cannot delete secret');
     return { success: true };
+  }
+
+  getDecryptedValue(encryptedValue: string): string {
+    return decryptJson<string>(encryptedValue, ENCRYPTION_SECRET);
   }
 
   private mapRow(row: any) {
@@ -107,10 +113,9 @@ export class McpService {
       id: row.id,
       accountId: row.account_id,
       name: row.name,
-      type: row.type,
-      url: row.url,
-      authMethod: row.auth_method,
-      config: row.config,
+      secretType: row.secret_type,
+      hasValue: !!row.encrypted_value,
+      metadata: row.metadata,
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -118,4 +123,4 @@ export class McpService {
   }
 }
 
-export const mcpService = new McpService();
+export const secretsService = new SecretsService();

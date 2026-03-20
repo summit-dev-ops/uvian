@@ -59,12 +59,13 @@ export default fp(async (fastify) => {
   ): Promise<boolean> {
     try {
       const { data, error } = await client
+        .schema('core_hub')
         .from('conversation_members')
         .select('conversation_id')
         .eq('conversation_id', conversationId)
         .eq('user_id', userId)
         .single();
-        
+
       return !error && !!data;
     } catch {
       return false;

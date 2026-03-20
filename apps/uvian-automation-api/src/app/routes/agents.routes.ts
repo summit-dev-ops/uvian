@@ -1,16 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { encrypt, decrypt } from '../services/encryption.service.js';
+import { encrypt } from '../services/encryption.service.js';
 
 interface InitAgentBody {
   user_id: string;
   account_id: string;
   api_key: string;
   api_key_prefix: string;
-}
-
-interface GetApiKeyParams {
-  agentUserId: string;
 }
 
 export default async function agentRoutes(fastify: FastifyInstance) {
@@ -46,96 +42,91 @@ export default async function agentRoutes(fastify: FastifyInstance) {
 
         const encryptedApiKey = encrypt(api_key, encryptionSecret);
 
-        const { error: keyError } = await adminSupabase
-          .from('core_automation.automation_agent_keys')
-          .insert({
-            user_id,
-            encrypted_api_key: encryptedApiKey,
-            api_key_prefix,
-            is_active: true,
-          });
-
-        if (keyError) {
-          reply.code(400).send({ error: keyError.message });
-          return;
-        }
-
-        const { error: agentError } = await adminSupabase
-          .from('core_automation.agents')
+        const { data: agent, error: agentError } = await adminSupabase
+          .schema('core_automation')
+          .from('agents')
           .insert({
             user_id,
             account_id,
             is_active: true,
-          });
+          })
+          .select('id')
+          .single();
 
         if (agentError) {
           reply.code(400).send({ error: agentError.message });
           return;
         }
 
+        const secret = await adminSupabase
+          .schema('core_automation')
+          .from('secrets')
+          .insert({
+            account_id,
+            name: 'Uvian Hub API Key',
+            secret_type: 'api_key',
+            encrypted_value: encryptedApiKey,
+            metadata: { api_key_prefix },
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (secret.error) {
+          reply.code(400).send({ error: secret.error.message });
+          return;
+        }
+
+        const hubMcpUrl = `${request.headers.origin}/v1/mcp`;
+
+        const { data: hubMcp, error: mcpError } = await adminSupabase
+          .schema('core_automation')
+          .from('mcps')
+          .upsert(
+            {
+              account_id,
+              name: 'Uvian Hub',
+              type: 'external',
+              auth_method: 'bearer',
+              url: hubMcpUrl,
+              config: {
+                system: true,
+                description: 'Uvian Hub event and messaging MCP',
+              },
+              is_active: true,
+            },
+            { onConflict: 'account_id' }
+          )
+          .select()
+          .single();
+
+        if (mcpError) {
+          reply.code(400).send({ error: mcpError.message });
+          return;
+        }
+
+        const { error: linkError } = await adminSupabase
+          .schema('core_automation')
+          .from('agent_mcps')
+          .insert({
+            agent_id: agent.id,
+            mcp_id: hubMcp.id,
+            secret_id: secret.data.id,
+          });
+
+        if (linkError) {
+          reply.code(400).send({ error: linkError.message });
+          return;
+        }
+
         reply.send({
           success: true,
-          message: 'Agent initialized successfully',
+          message: 'Agent initialized with Hub MCP',
         });
       } catch (error: any) {
         reply
           .code(500)
           .send({ error: error.message || 'Failed to initialize agent' });
-      }
-    }
-  );
-
-  fastify.get<{ Params: GetApiKeyParams }>(
-    '/api/agents/:agentUserId/api-key',
-    {
-      preHandler: [fastify.authenticateWebhook],
-      schema: {
-        params: {
-          type: 'object',
-          required: ['agentUserId'],
-          properties: {
-            agentUserId: { type: 'string' },
-          },
-        },
-      },
-    },
-    async (
-      request: FastifyRequest<{ Params: GetApiKeyParams }>,
-      reply: FastifyReply
-    ): Promise<void> => {
-      try {
-        const { agentUserId } = request.params;
-
-        const { data, error } = await adminSupabase
-          .from('core_automation.automation_agent_keys')
-          .select('encrypted_api_key')
-          .eq('user_id', agentUserId)
-          .eq('is_active', true)
-          .single();
-
-        if (error || !data) {
-          reply.code(404).send({ error: 'API key not found for this agent' });
-          return;
-        }
-
-        if (!data.encrypted_api_key) {
-          reply.code(404).send({ error: 'API key not found' });
-          return;
-        }
-
-        const encryptionSecret = process.env.SECRET_API_KEY;
-        if (!encryptionSecret) {
-          throw new Error('SECRET_API_KEY environment variable is required');
-        }
-
-        const apiKey = decrypt(data.encrypted_api_key, encryptionSecret);
-
-        reply.send({ api_key: apiKey });
-      } catch (error: any) {
-        console.log(error);
-        reply
-          .code(500)
-          .send({ error: error.message || 'Failed to fetch API key' });
       }
     }
   );

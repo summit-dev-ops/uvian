@@ -19,7 +19,7 @@ class JobRepository:
             - Raises DatabaseError: For connection/query errors
         """
         try:
-            result = supabase_client.client.table('core_automation.jobs').select('*').eq('id', job_id).execute()
+            result = supabase_client.client.schema("core_automation").table('jobs').select('*').eq('id', job_id).execute()
             data = result.data
             if data:
                 worker_logger.debug_job(job_id, "Job found in database")
@@ -35,7 +35,7 @@ class JobRepository:
     def update_job(self, job_id: str, updates: Dict[str, Any]) -> bool:
         """Update a job with comprehensive error handling."""
         try:
-            result = supabase_client.client.table('core_automation.jobs').update(updates).eq('id', job_id).execute()
+            result = supabase_client.client.schema("core_automation").table('jobs').update(updates).eq('id', job_id).execute()
             if result.data:
                 worker_logger.debug_job(job_id, f"Updated job in database: {list(updates.keys())}")
                 return True
@@ -64,7 +64,7 @@ class JobRepository:
     def create_job(self, job_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Create a new job."""
         try:
-            result = supabase_client.client.table('core_automation.jobs').insert(job_data).execute()
+            result = supabase_client.client.schema("core_automation").table('jobs').insert(job_data).execute()
             data = result.data
             worker_logger.info_job(job_data.get('id', 'new'), f"Created new job in database")
             return data[0] if data else None
@@ -75,7 +75,7 @@ class JobRepository:
     def get_jobs_by_status(self, status: str) -> List[Dict[str, Any]]:
         """Get all jobs with a specific status."""
         try:
-            result = supabase_client.client.table('core_automation.jobs').select('*').eq('status', status).execute()
+            result = supabase_client.client.schema("core_automation").table('jobs').select('*').eq('status', status).execute()
             return result.data or []
         except Exception as e:
             worker_logger.error_job("get_jobs_by_status", f"Error fetching jobs with status {status}", exception=e)

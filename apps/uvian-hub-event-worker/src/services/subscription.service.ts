@@ -43,6 +43,7 @@ export class SubscriptionService {
     );
 
     const { data, error } = await supabaseAdmin
+      .schema('core_hub')
       .from('get_subscription_providers_for_resource')
       .select('*')
       .eq('resource_type', resourceType)

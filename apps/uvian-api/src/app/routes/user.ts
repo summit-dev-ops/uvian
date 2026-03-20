@@ -42,6 +42,7 @@ export default async function (fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { data, error } = await request.supabase
+          .schema('core_hub')
           .from('get_my_profile')
           .select('*')
           .single();
@@ -67,6 +68,7 @@ export default async function (fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { data, error } = await request.supabase
+          .schema('core_hub')
           .from('get_my_settings')
           .select('*')
           .single();
@@ -120,6 +122,7 @@ export default async function (fastify: FastifyInstance) {
         }
 
         const { data, error } = await request.supabase
+          .schema('core_hub')
           .from('settings')
           .upsert({
             user_id: userId,
@@ -156,6 +159,7 @@ export default async function (fastify: FastifyInstance) {
         }
 
         const { error } = await request.supabase
+          .schema('core_hub')
           .from('settings')
           .delete()
           .eq('user_id', userId);

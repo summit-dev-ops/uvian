@@ -1,8 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
-import { encrypt, decryptJson } from './encryption.service';
-
-const ENCRYPTION_SECRET = process.env.INTERNAL_API_KEY!;
 
 export interface CreateLlmPayload {
   accountId: string;
@@ -11,7 +8,6 @@ export interface CreateLlmPayload {
   provider: string;
   modelName: string;
   baseUrl?: string;
-  apiKey?: string;
   temperature?: number;
   maxTokens?: number;
   config?: Record<string, unknown>;
@@ -24,7 +20,6 @@ export interface UpdateLlmPayload {
   provider?: string;
   modelName?: string;
   baseUrl?: string;
-  apiKey?: string;
   temperature?: number;
   maxTokens?: number;
   config?: Record<string, unknown>;
@@ -34,12 +29,9 @@ export interface UpdateLlmPayload {
 
 export class LlmService {
   async create(userClient: SupabaseClient, payload: CreateLlmPayload) {
-    const encryptedApiKey = payload.apiKey
-      ? encrypt(payload.apiKey, ENCRYPTION_SECRET)
-      : null;
-
     const { data, error } = await adminSupabase
-      .from('core_automation.llms')
+      .schema('core_automation')
+      .from('llms')
       .insert({
         account_id: payload.accountId,
         name: payload.name,
@@ -47,7 +39,6 @@ export class LlmService {
         provider: payload.provider,
         model_name: payload.modelName,
         base_url: payload.baseUrl || null,
-        encrypted_api_key: encryptedApiKey,
         temperature: payload.temperature ?? 0.6,
         max_tokens: payload.maxTokens ?? 4096,
         config: payload.config || {},
@@ -63,7 +54,8 @@ export class LlmService {
 
   async list(userClient: SupabaseClient, accountId: string) {
     const { data, error } = await userClient
-      .from('core_automation.llms')
+      .schema('core_automation')
+      .from('llms')
       .select('*')
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
@@ -74,7 +66,8 @@ export class LlmService {
 
   async get(userClient: SupabaseClient, llmId: string) {
     const { data, error } = await userClient
-      .from('core_automation.llms')
+      .schema('core_automation')
+      .from('llms')
       .select('*')
       .eq('id', llmId)
       .single();
@@ -88,7 +81,7 @@ export class LlmService {
     llmId: string,
     payload: UpdateLlmPayload
   ) {
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.type !== undefined) updateData.type = payload.type;
@@ -104,14 +97,10 @@ export class LlmService {
     if (payload.isActive !== undefined) updateData.is_active = payload.isActive;
     if (payload.isDefault !== undefined)
       updateData.is_default = payload.isDefault;
-    if (payload.apiKey !== undefined) {
-      updateData.encrypted_api_key = payload.apiKey
-        ? encrypt(payload.apiKey, ENCRYPTION_SECRET)
-        : null;
-    }
 
     const { data, error } = await adminSupabase
-      .from('core_automation.llms')
+      .schema('core_automation')
+      .from('llms')
       .update(updateData)
       .eq('id', llmId)
       .select()
@@ -123,16 +112,13 @@ export class LlmService {
 
   async delete(userClient: SupabaseClient, llmId: string) {
     const { error } = await adminSupabase
-      .from('core_automation.llms')
+      .schema('core_automation')
+      .from('llms')
       .delete()
       .eq('id', llmId);
 
     if (error) throw new Error('Cannot delete LLM');
     return { success: true };
-  }
-
-  getDecryptedApiKey(encryptedApiKey: string): string {
-    return decryptJson<string>(encryptedApiKey, ENCRYPTION_SECRET);
   }
 
   private mapRow(row: any) {
@@ -144,7 +130,6 @@ export class LlmService {
       provider: row.provider,
       modelName: row.model_name,
       baseUrl: row.base_url,
-      hasApiKey: !!row.encrypted_api_key,
       temperature: row.temperature,
       maxTokens: row.max_tokens,
       config: row.config,

@@ -62,9 +62,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
             maxConversationHistory: { type: 'number' },
             skills: { type: 'array', items: { type: 'object' } },
             config: { type: 'object' },
-            llmIds: { type: 'array', items: { type: 'string' } },
-            isDefaultLlmId: { type: 'string' },
-            mcpIds: { type: 'array', items: { type: 'string' } },
           },
           additionalProperties: false,
         },
@@ -83,19 +80,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
           skills: body.skills,
           config: body.config,
         });
-
-        if (body.llmIds?.length) {
-          await agentConfigService.setLlms(userClient, agent.id, {
-            llmIds: body.llmIds,
-            isDefaultLlmId: body.isDefaultLlmId,
-          });
-        }
-
-        if (body.mcpIds?.length) {
-          await agentConfigService.setMcps(userClient, agent.id, {
-            mcpIds: body.mcpIds,
-          });
-        }
 
         return reply.code(201).send({ agent });
       } catch (error: any) {
@@ -122,9 +106,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
             skills: { type: 'array', items: { type: 'object' } },
             config: { type: 'object' },
             isActive: { type: 'boolean' },
-            llmIds: { type: 'array', items: { type: 'string' } },
-            isDefaultLlmId: { type: 'string' },
-            mcpIds: { type: 'array', items: { type: 'string' } },
           },
           additionalProperties: false,
         },
@@ -143,19 +124,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
           config: body.config,
           isActive: body.isActive,
         });
-
-        if (body.llmIds !== undefined) {
-          await agentConfigService.setLlms(userClient, agentId, {
-            llmIds: body.llmIds,
-            isDefaultLlmId: body.isDefaultLlmId,
-          });
-        }
-
-        if (body.mcpIds !== undefined) {
-          await agentConfigService.setMcps(userClient, agentId, {
-            mcpIds: body.mcpIds,
-          });
-        }
 
         return reply.send({ agent });
       } catch (error: any) {

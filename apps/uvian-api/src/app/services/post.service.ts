@@ -18,6 +18,7 @@ export class PostService {
     const limit = options.limit || 20;
 
     let q = userClient
+      .schema('core_hub')
       .from('get_posts_for_space')
       .select('*')
       .eq('space_id', spaceId)
@@ -40,6 +41,7 @@ export class PostService {
 
     if (postIds.length > 0) {
       const { data: contents } = await adminSupabase
+        .schema('core_hub')
         .from('post_contents')
         .select('*')
         .in('post_id', postIds)
@@ -79,6 +81,7 @@ export class PostService {
 
   async getPost(userClient: SupabaseClient, postId: string) {
     const { data: post, error: postError } = await userClient
+      .schema('core_hub')
       .from('get_post_details')
       .select('*')
       .eq('id', postId)
@@ -88,6 +91,7 @@ export class PostService {
 
     // Fetch post_contents
     const { data: contents } = await adminSupabase
+      .schema('core_hub')
       .from('post_contents')
       .select('*')
       .eq('post_id', postId)
@@ -120,6 +124,7 @@ export class PostService {
     }
   ) {
     const { data: member } = await userClient
+      .schema('core_hub')
       .from('space_members')
       .select('id')
       .eq('space_id', data.spaceId)
@@ -129,6 +134,7 @@ export class PostService {
     if (!member) throw new Error('Not a member of this space');
 
     const { data: post, error } = await adminSupabase
+      .schema('core_hub')
       .from('posts')
       .insert({
         id: data.id,
@@ -144,6 +150,7 @@ export class PostService {
 
   async deletePost(userClient: SupabaseClient, postId: string, userId: string) {
     const { data: post, error: fetchError } = await adminSupabase
+      .schema('core_hub')
       .from('posts')
       .select('author_id')
       .eq('id', postId)
@@ -158,9 +165,14 @@ export class PostService {
     }
 
     // Delete post_contents first (handled by CASCADE, but being explicit)
-    await adminSupabase.from('post_contents').delete().eq('post_id', postId);
+    await adminSupabase
+      .schema('core_hub')
+      .from('post_contents')
+      .delete()
+      .eq('post_id', postId);
 
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('posts')
       .delete()
       .eq('id', postId);

@@ -5,6 +5,7 @@ import type { Attachment } from '../types/chat.types';
 export class ChatService {
   async getConversations(userClient: SupabaseClient) {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('get_conversations_for_current_user')
       .select('*');
 
@@ -24,6 +25,7 @@ export class ChatService {
   async getConversation(userClient: SupabaseClient, conversationId: string) {
     console.log('getConversation');
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('get_conversation_details')
       .select('*')
       .eq('id', conversationId)
@@ -41,6 +43,7 @@ export class ChatService {
     conversationId: string
   ) {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('get_conversation_members')
       .select('*')
       .eq('conversation_id', conversationId);
@@ -58,6 +61,7 @@ export class ChatService {
 
   async getMessages(userClient: SupabaseClient, conversationId: string) {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('get_conversation_messages')
       .select('*')
       .eq('conversation_id', conversationId);
@@ -92,6 +96,7 @@ export class ChatService {
     }
   ) {
     let query = userClient
+      .schema('core_hub')
       .from('get_conversation_messages')
       .select('*')
       .eq('conversation_id', conversationId);
@@ -139,6 +144,7 @@ export class ChatService {
     data: { id?: string; title: string; spaceId?: string }
   ) {
     const { data: conversation, error: convError } = await adminSupabase
+      .schema('core_hub')
       .from('conversations')
       .insert({
         id: data.id,
@@ -150,11 +156,14 @@ export class ChatService {
 
     if (convError) throw new Error(convError.message);
 
-    await adminSupabase.from('conversation_members').insert({
-      user_id: userId,
-      conversation_id: conversation.id,
-      role: { name: 'owner' },
-    });
+    await adminSupabase
+      .schema('core_hub')
+      .from('conversation_members')
+      .insert({
+        user_id: userId,
+        conversation_id: conversation.id,
+        role: { name: 'owner' },
+      });
 
     return {
       id: conversation.id,
@@ -178,6 +187,7 @@ export class ChatService {
   ) {
     // Check membership
     const { data: memberCheck } = await userClient
+      .schema('core_hub')
       .from('conversation_members')
       .select('conversation_id')
       .eq('conversation_id', conversationId)
@@ -189,6 +199,7 @@ export class ChatService {
 
     // Store attachments directly (URLs are already public/permanent)
     const { data: message, error } = await adminSupabase
+      .schema('core_hub')
       .from('messages')
       .insert({
         id: data.id,
@@ -204,6 +215,7 @@ export class ChatService {
     if (error) throw new Error(error.message);
 
     await adminSupabase
+      .schema('core_hub')
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', conversationId);
@@ -230,6 +242,7 @@ export class ChatService {
   ) {
     // Check inviter role
     const { data: updaterMembership } = await userClient
+      .schema('core_hub')
       .from('conversation_members')
       .select('role')
       .eq('conversation_id', conversationId)
@@ -242,6 +255,7 @@ export class ChatService {
     }
 
     const { data: membership, error } = await adminSupabase
+      .schema('core_hub')
       .from('conversation_members')
       .insert({
         user_id: targetUserId,
@@ -271,6 +285,7 @@ export class ChatService {
     const isSelf = userId === targetUserId;
 
     const { data: removerMembership } = await userClient
+      .schema('core_hub')
       .from('conversation_members')
       .select('role')
       .eq('conversation_id', conversationId)
@@ -284,6 +299,7 @@ export class ChatService {
     }
 
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('conversation_members')
       .delete()
       .eq('conversation_id', conversationId)
@@ -302,6 +318,7 @@ export class ChatService {
     role: { name: string }
   ) {
     const { data: updaterMembership } = await userClient
+      .schema('core_hub')
       .from('conversation_members')
       .select('role')
       .eq('conversation_id', conversationId)
@@ -314,6 +331,7 @@ export class ChatService {
     }
 
     const { data: membership, error } = await adminSupabase
+      .schema('core_hub')
       .from('conversation_members')
       .update({ role })
       .eq('conversation_id', conversationId)
@@ -338,6 +356,7 @@ export class ChatService {
     conversationId: string
   ) {
     const { data: membership } = await userClient
+      .schema('core_hub')
       .from('conversation_members')
       .select('role')
       .eq('conversation_id', conversationId)
@@ -350,6 +369,7 @@ export class ChatService {
     }
 
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('conversations')
       .delete()
       .eq('id', conversationId);
@@ -367,6 +387,7 @@ export class ChatService {
   ) {
     // Check membership
     const { data: memberCheck } = await userClient
+      .schema('core_hub')
       .from('conversation_members')
       .select('conversation_id')
       .eq('conversation_id', conversationId)
@@ -377,6 +398,7 @@ export class ChatService {
     }
 
     const { data: message, error: fetchError } = await adminSupabase
+      .schema('core_hub')
       .from('messages')
       .select('sender_id')
       .eq('id', messageId)
@@ -392,6 +414,7 @@ export class ChatService {
     }
 
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('messages')
       .delete()
       .eq('id', messageId)
@@ -412,6 +435,7 @@ export class ChatService {
   ) {
     // Check membership
     const { data: memberCheck } = await userClient
+      .schema('core_hub')
       .from('conversation_members')
       .select('conversation_id')
       .eq('conversation_id', conversationId)
@@ -422,6 +446,7 @@ export class ChatService {
     }
 
     const { data: message, error: fetchError } = await adminSupabase
+      .schema('core_hub')
       .from('messages')
       .select('sender_id')
       .eq('id', messageId)
@@ -437,6 +462,7 @@ export class ChatService {
     }
 
     const { data: updatedMessage, error } = await adminSupabase
+      .schema('core_hub')
       .from('messages')
       .update({
         content,

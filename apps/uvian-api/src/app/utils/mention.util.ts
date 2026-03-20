@@ -55,6 +55,7 @@ export class MentionUtil {
 
     // Get all mentioned profiles and filter for agents
     const { data: profiles, error } = await adminSupabase
+      .schema('core_hub')
       .from('profiles')
       .select('id, type')
       .in('id', mentionIds);

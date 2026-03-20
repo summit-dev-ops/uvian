@@ -10,6 +10,7 @@ export class AutomationProviderService {
     accountId: string
   ): Promise<AutomationProvider[]> {
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('automaton_providers')
       .select('*')
       .eq('account_id', accountId)
@@ -27,6 +28,7 @@ export class AutomationProviderService {
     accountId: string
   ): Promise<AutomationProvider | null> {
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('automaton_providers')
       .select('*')
       .eq('id', providerId)
@@ -44,6 +46,7 @@ export class AutomationProviderService {
     accountId: string
   ): Promise<AutomationProvider | null> {
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('automaton_providers')
       .select('*')
       .eq('account_id', accountId)
@@ -65,6 +68,7 @@ export class AutomationProviderService {
     payload: CreateAutomationProviderPayload
   ): Promise<AutomationProvider> {
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('automaton_providers')
       .insert({
         account_id: accountId,
@@ -106,6 +110,7 @@ export class AutomationProviderService {
       updateData.is_active = payload.is_active;
 
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('automaton_providers')
       .update(updateData)
       .eq('id', providerId)
@@ -122,6 +127,7 @@ export class AutomationProviderService {
 
   async deleteProvider(providerId: string, accountId: string): Promise<void> {
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('automaton_providers')
       .delete()
       .eq('id', providerId)

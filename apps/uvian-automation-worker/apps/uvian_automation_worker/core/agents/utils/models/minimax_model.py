@@ -4,9 +4,9 @@ from typing import Optional, Dict, Any
 
 def create_minimax_model(config: Dict[str, Any]) -> ChatOpenAI:
     return ChatOpenAI(
-        model=config.get("model_name", "nemotron-3-super-free"),
+        model="nemotron-3-super-free",
         stream_usage=True,
-        temperature=config.get("temperature", 0.6),
-        base_url=config.get("base_url", "https://opencode.ai/zen/v1"),
-        api_key=config.get("api_key"),
+        temperature=0.6,
+        base_url="https://opencode.ai/zen/v1/",
+        api_key="sk-cBaoEPGlWz0F39wZ44jJj2C2lxgyAQhDdQdj7yHqE4ZI3w3LDufUMzKBUgN5ybT8",
     )

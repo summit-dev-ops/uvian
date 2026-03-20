@@ -41,6 +41,7 @@ async function authenticateWithApiKey(
   }
 
   const { data: apiKeyRecord, error } = await adminSupabase
+    .schema('core_hub')
     .from('agent_api_keys')
     .select('id, user_id, api_key_hash, is_active')
     .eq('api_key_prefix', apiKeyPrefix)
@@ -407,14 +408,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               noteId = createdNote.id;
             }
 
-            await adminSupabase.from('post_contents').insert({
-              post_id: post.id,
-              content_type: item.type,
-              note_id: noteId,
-              asset_id: item.assetId,
-              url: item.url,
-              position: i,
-            });
+            await adminSupabase
+              .schema('core_hub')
+              .from('post_contents')
+              .insert({
+                post_id: post.id,
+                content_type: item.type,
+                note_id: noteId,
+                asset_id: item.assetId,
+                url: item.url,
+                position: i,
+              });
           }
 
           // Return full post

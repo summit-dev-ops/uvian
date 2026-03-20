@@ -11,6 +11,7 @@ export class AssetService {
     const offset = (page - 1) * limit;
 
     let query = userClient
+      .schema('core_hub')
       .from('get_my_assets')
       .select('*', { count: 'exact' });
 
@@ -40,6 +41,7 @@ export class AssetService {
 
   async getAsset(userClient: SupabaseClient, assetId: string) {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('get_asset_details')
       .select('*')
       .eq('id', assetId)
@@ -54,6 +56,7 @@ export class AssetService {
 
   async getAssetById(assetId: string): Promise<Asset | null> {
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('assets')
       .select('*')
       .eq('id', assetId)
@@ -83,6 +86,7 @@ export class AssetService {
     const publicUrl = this.getPublicUrl(input.url);
 
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('assets')
       .insert({
         account_id: accountId,
@@ -113,6 +117,7 @@ export class AssetService {
   ) {
     // First get the asset to check permissions
     const { data: asset, error: fetchError } = await userClient
+      .schema('core_hub')
       .from('get_asset_details')
       .select('*, account_id')
       .eq('id', assetId)
@@ -155,6 +160,7 @@ export class AssetService {
       }
 
       const { error } = await adminSupabase
+        .schema('core_hub')
         .from('assets')
         .delete()
         .eq('id', assetId);
@@ -165,6 +171,7 @@ export class AssetService {
     } else {
       // Soft delete: just remove the row (file remains orphaned)
       const { error } = await adminSupabase
+        .schema('core_hub')
         .from('assets')
         .delete()
         .eq('id', assetId);
@@ -220,6 +227,7 @@ export class AssetService {
     }
 
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('assets')
       .select('id, url, storage_type, account_id')
       .in('id', assetIds);
@@ -253,6 +261,7 @@ export class AssetService {
 
   async getAccountStorageUsage(accountId: string) {
     const { data, error } = await adminSupabase
+      .schema('core_hub')
       .from('assets')
       .select('file_size_bytes')
       .eq('account_id', accountId);
@@ -286,6 +295,7 @@ export class AssetService {
     }
 
     const { data: asset, error }: any = await adminSupabase
+      .schema('core_hub')
       .from('assets')
       .select('url, mime_type, file_size_bytes, storage_type, filename')
       .eq('url', storagePath)

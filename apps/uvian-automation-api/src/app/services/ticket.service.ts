@@ -7,6 +7,7 @@ export class TicketService {
     ticketId: string
   ) {
     const { data, error } = await userClient
+      .schema('core_automation')
       .from('get_tickets_for_current_user')
       .select('id')
       .eq('id', ticketId)
@@ -27,7 +28,8 @@ export class TicketService {
     }
   ) {
     const { data: ticket, error } = await adminSupabase
-      .from('core_automation.tickets')
+      .schema('core_automation')
+      .from('tickets')
       .insert({
         thread_id: data.threadId,
         title: data.title,
@@ -52,7 +54,10 @@ export class TicketService {
     userClient: SupabaseClient,
     filters: { status?: string; priority?: string } = {}
   ) {
-    let q = userClient.from('get_tickets_for_current_user').select('*');
+    let q = userClient
+      .schema('core_automation')
+      .from('get_tickets_for_current_user')
+      .select('*');
 
     if (filters.status) q = q.eq('status', filters.status);
     if (filters.priority) q = q.eq('priority', filters.priority);
@@ -71,7 +76,8 @@ export class TicketService {
 
   async getTicket(userClient: SupabaseClient, ticketId: string) {
     const { data, error } = await userClient
-      .from('core_automation.tickets')
+      .schema('core_automation')
+      .from('tickets')
       .select('*')
       .eq('id', ticketId)
       .single();
@@ -100,7 +106,8 @@ export class TicketService {
     if (updates.priority) updateData.priority = updates.priority;
 
     const { data: ticket, error } = await adminSupabase
-      .from('core_automation.tickets')
+      .schema('core_automation')
+      .from('tickets')
       .update(updateData)
       .eq('id', ticketId)
       .select()
@@ -119,7 +126,8 @@ export class TicketService {
     await this.verifyTicketAccess(userClient, ticketId);
 
     const { data: ticket, error } = await adminSupabase
-      .from('core_automation.tickets')
+      .schema('core_automation')
+      .from('tickets')
       .update({
         status: 'resolved',
         resolution_payload: resolutionPayload,
@@ -143,7 +151,8 @@ export class TicketService {
     await this.verifyTicketAccess(userClient, ticketId);
 
     const { data: ticket, error } = await adminSupabase
-      .from('core_automation.tickets')
+      .schema('core_automation')
+      .from('tickets')
       .update({
         assigned_to: assignedTo,
         status: assignedTo ? 'in_progress' : 'open',
@@ -165,7 +174,8 @@ export class TicketService {
     await this.verifyTicketAccess(userClient, ticketId);
 
     const { error } = await adminSupabase
-      .from('core_automation.tickets')
+      .schema('core_automation')
+      .from('tickets')
       .delete()
       .eq('id', ticketId);
 

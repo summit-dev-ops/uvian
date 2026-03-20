@@ -93,20 +93,25 @@ export type Database = {
           assigned_to?: string | null;
         };
       };
-      automation_agent_keys: {
+      secrets: {
         Row: {
           id: string;
-          user_id: string;
-          encrypted_api_key: string;
-          api_key_prefix: string;
+          account_id: string;
+          name: string;
+          secret_type: string;
+          encrypted_value: string;
+          metadata: any;
           is_active: boolean;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
-          user_id: string;
-          encrypted_api_key: string;
-          api_key_prefix: string;
+          account_id: string;
+          name: string;
+          secret_type: string;
+          encrypted_value: string;
+          metadata?: any;
           is_active?: boolean;
         };
       };
@@ -154,7 +159,6 @@ export type Database = {
           provider: string;
           model_name: string;
           base_url: string | null;
-          encrypted_api_key: string | null;
           temperature: number;
           max_tokens: number;
           config: any;
@@ -171,7 +175,6 @@ export type Database = {
           provider: string;
           model_name: string;
           base_url?: string | null;
-          encrypted_api_key?: string | null;
           temperature?: number;
           max_tokens?: number;
           config?: any;
@@ -187,7 +190,6 @@ export type Database = {
           type: string;
           url: string | null;
           auth_method: string;
-          encrypted_auth_config: string | null;
           config: any;
           is_active: boolean;
           created_at: string;
@@ -200,7 +202,6 @@ export type Database = {
           type: string;
           url?: string | null;
           auth_method: string;
-          encrypted_auth_config?: string | null;
           config?: any;
           is_active?: boolean;
         };
@@ -233,6 +234,7 @@ export type Database = {
         Row: {
           agent_id: string;
           llm_id: string;
+          secret_id: string | null;
           config: any;
           is_default: boolean;
           created_at: string;
@@ -240,6 +242,7 @@ export type Database = {
         Insert: {
           agent_id: string;
           llm_id: string;
+          secret_id?: string | null;
           config?: any;
           is_default?: boolean;
         };
@@ -248,12 +251,14 @@ export type Database = {
         Row: {
           agent_id: string;
           mcp_id: string;
+          secret_id: string | null;
           config: any;
           created_at: string;
         };
         Insert: {
           agent_id: string;
           mcp_id: string;
+          secret_id?: string | null;
           config?: any;
         };
       };

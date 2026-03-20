@@ -15,6 +15,7 @@ export class UserService {
     userId: string
   ): Promise<UserSettings | undefined> {
     const { data, error } = await supabaseClient
+      .schema('core_hub')
       .from('settings')
       .select('*')
       .eq('user_id', userId)
@@ -43,6 +44,7 @@ export class UserService {
     settings: Record<string, any> = {}
   ): Promise<UserSettings> {
     const { data: settingsRecord, error } = await supabaseClient
+      .schema('core_hub')
       .from('settings')
       .insert({
         user_id: userId,
@@ -81,6 +83,7 @@ export class UserService {
     };
 
     const { data: settingsRecord, error } = await supabaseClient
+      .schema('core_hub')
       .from('settings')
       .update({
         settings: mergedSettings,
@@ -107,6 +110,7 @@ export class UserService {
     userId: string
   ): Promise<void> {
     const { error } = await supabaseClient
+      .schema('core_hub')
       .from('settings')
       .delete()
       .eq('user_id', userId);

@@ -11,7 +11,8 @@ export class JobService {
     const agentId = input.agentId as string | undefined;
 
     const { data: job, error } = await adminSupabase
-      .from('core_automation.jobs')
+      .schema('core_automation')
+      .from('jobs')
       .insert({
         id: jobId,
         type: data.type,
@@ -41,7 +42,10 @@ export class JobService {
     userClient: SupabaseClient,
     filters: { status?: string; type?: string } = {}
   ) {
-    let q = userClient.from('get_jobs_for_current_user').select('*');
+    let q = userClient
+      .schema('core_automation')
+      .from('get_jobs_for_current_user')
+      .select('*');
     if (filters.status) q = q.eq('status', filters.status);
     if (filters.type) q = q.eq('type', filters.type);
 
@@ -80,6 +84,7 @@ export class JobService {
 
   async getJob(userClient: SupabaseClient, jobId: string) {
     const { data, error } = await userClient
+      .schema('core_automation')
       .from('get_job_details')
       .select('*')
       .eq('id', jobId)
@@ -111,12 +116,15 @@ export class JobService {
   ) {
     const jobId = require('crypto').randomUUID();
 
-    const { error } = await adminSupabase.from('core_automation.jobs').insert({
-      id: jobId,
-      type: data.type,
-      input_type: 'manual',
-      input: data.input,
-    });
+    const { error } = await adminSupabase
+      .schema('core_automation')
+      .from('jobs')
+      .insert({
+        id: jobId,
+        type: data.type,
+        input_type: 'manual',
+        input: data.input,
+      });
 
     if (error) throw new Error(error.message);
 
@@ -132,7 +140,8 @@ export class JobService {
     await this.getJob(userClient, jobId);
 
     const { data: job, error } = await adminSupabase
-      .from('core_automation.jobs')
+      .schema('core_automation')
+      .from('jobs')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', jobId)
       .eq('status', 'queued')
@@ -155,7 +164,8 @@ export class JobService {
     await this.getJob(userClient, jobId);
 
     const { data: job, error } = await adminSupabase
-      .from('core_automation.jobs')
+      .schema('core_automation')
+      .from('jobs')
       .update({
         status: 'queued',
         error_message: null,
@@ -186,7 +196,8 @@ export class JobService {
     await this.getJob(userClient, jobId);
 
     const { error } = await adminSupabase
-      .from('core_automation.jobs')
+      .schema('core_automation')
+      .from('jobs')
       .delete()
       .eq('id', jobId);
     if (error) throw new Error('Cannot delete job');

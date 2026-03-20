@@ -13,6 +13,7 @@ export class ProfileService {
 
   async getProfile(userClient: SupabaseClient, profileId: string) {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('profiles')
       .select('*')
       .eq('id', profileId)
@@ -27,6 +28,7 @@ export class ProfileService {
 
   async getProfileByUserId(userClient: SupabaseClient, userId: string) {
     const { data, error } = await userClient
+      .schema('core_hub')
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
@@ -67,6 +69,7 @@ export class ProfileService {
     if (data.bio !== undefined) updateData.bio = data.bio;
 
     const { data: profile, error } = await adminSupabase
+      .schema('core_hub')
       .from('profiles')
       .upsert(updateData)
       .select()
@@ -87,6 +90,7 @@ export class ProfileService {
   ) {
     // Verify ownership via RLS
     const { data: existing } = await userClient
+      .schema('core_hub')
       .from('profiles')
       .select('user_id')
       .eq('id', profileId)
@@ -106,6 +110,7 @@ export class ProfileService {
     if (data.bio !== undefined) updateData.bio = data.bio;
 
     const { data: profile, error } = await adminSupabase
+      .schema('core_hub')
       .from('profiles')
       .update(updateData)
       .eq('id', profileId)
@@ -126,6 +131,7 @@ export class ProfileService {
   ) {
     // Verify ownership via RLS
     const { data: existing } = await userClient
+      .schema('core_hub')
       .from('profiles')
       .select('user_id')
       .eq('id', profileId)
@@ -136,6 +142,7 @@ export class ProfileService {
     }
 
     const { error } = await adminSupabase
+      .schema('core_hub')
       .from('profiles')
       .delete()
       .eq('id', profileId);

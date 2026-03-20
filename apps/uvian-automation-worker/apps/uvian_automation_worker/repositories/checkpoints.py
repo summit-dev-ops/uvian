@@ -12,7 +12,7 @@ class CheckpointRepository:
 
     def __init__(self):
         self.client = supabase_client.client
-        self.table_name = 'core_automation.agent_checkpoints'
+        self.table_name = 'agent_checkpoints'
 
     async def get_checkpoint(
         self, 
@@ -28,7 +28,7 @@ class CheckpointRepository:
                            If None, returns the most recent one.
         """
         try:
-            query = self.client.table(self.table_name).select('*').eq('thread_id', thread_id)
+            query = self.client.schema('core_automation').table(self.table_name).select('*').eq('thread_id', thread_id)
 
             if checkpoint_id:
                 # Fetch specific version
@@ -70,7 +70,7 @@ class CheckpointRepository:
                 'parent_id': checkpoint_data.get('parent_id')
             })
 
-            result = self.client.table(self.table_name).insert(db_payload).execute()
+            result = self.client.schema('core_automation').table(self.table_name).insert(db_payload).execute()
 
             if result.data:
                 return from_db_format(self.table_name, result.data[0])
@@ -96,7 +96,7 @@ class CheckpointRepository:
                                   without a sequence ID, but often mapped to created_at).
         """
         try:
-            query = self.client.table(self.table_name)\
+            query = self.client.schema('core_automation').table(self.table_name)\
                 .select('*')\
                 .eq('thread_id', thread_id)\
                 .order('created_at', desc=True)\

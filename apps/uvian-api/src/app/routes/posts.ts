@@ -158,6 +158,7 @@ export default async function (fastify: FastifyInstance) {
 
         // Create the post first
         const { data: post, error: postError } = await adminSupabase
+          .schema('core_hub')
           .from('posts')
           .insert({
             id,
@@ -195,26 +196,35 @@ export default async function (fastify: FastifyInstance) {
             }
 
             // Insert into post_contents
-            await adminSupabase.from('post_contents').insert({
-              post_id: post.id,
-              content_type: 'note',
-              note_id: noteId,
-              position: i,
-            });
+            await adminSupabase
+              .schema('core_hub')
+              .from('post_contents')
+              .insert({
+                post_id: post.id,
+                content_type: 'note',
+                note_id: noteId,
+                position: i,
+              });
           } else if (item.type === 'asset') {
-            await adminSupabase.from('post_contents').insert({
-              post_id: post.id,
-              content_type: 'asset',
-              asset_id: item.assetId,
-              position: i,
-            });
+            await adminSupabase
+              .schema('core_hub')
+              .from('post_contents')
+              .insert({
+                post_id: post.id,
+                content_type: 'asset',
+                asset_id: item.assetId,
+                position: i,
+              });
           } else if (item.type === 'external') {
-            await adminSupabase.from('post_contents').insert({
-              post_id: post.id,
-              content_type: 'external',
-              url: item.url,
-              position: i,
-            });
+            await adminSupabase
+              .schema('core_hub')
+              .from('post_contents')
+              .insert({
+                post_id: post.id,
+                content_type: 'external',
+                url: item.url,
+                position: i,
+              });
           }
         }
 

@@ -155,6 +155,7 @@ export class AccountService {
     const userIds = members.map((m) => m.user_id);
 
     const { data: profiles } = await adminSupabase
+      .schema('core_hub')
       .from('profiles')
       .select('user_id, display_name, avatar_url')
       .in('user_id', userIds);

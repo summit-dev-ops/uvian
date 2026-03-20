@@ -24,7 +24,7 @@ class ProcessThreadRepository:
                 'metadata': metadata or {},
             }
 
-            result = self.client.table('core_automation.process_threads').insert(thread_data).execute()
+            result = self.client.schema('core_automation').table('process_threads').insert(thread_data).execute()
 
             if result.data:
                 data = dict(result.data[0]) if hasattr(result.data[0], 'keys') else result.data[0]
@@ -38,7 +38,7 @@ class ProcessThreadRepository:
     async def get_thread(self, thread_id: str) -> Optional[Dict[str, Any]]:
         """Get a process thread by ID."""
         try:
-            result = self.client.table('core_automation.process_threads').select('*').eq('id', thread_id).execute()
+            result = self.client.schema('core_automation').table('process_threads').select('*').eq('id', thread_id).execute()
 
             if result.data:
                 return from_db_format('process_threads', result.data[0])
@@ -62,7 +62,7 @@ class ProcessThreadRepository:
 
             update_data['updated_at'] = datetime.utcnow().isoformat()
 
-            result = self.client.table('core_automation.process_threads').update(update_data).eq('id', thread_id).execute()
+            result = self.client.schema('core_automation').table('process_threads').update(update_data).eq('id', thread_id).execute()
             return bool(result.data)
         except Exception as e:
             print(f"Error updating process thread {thread_id}: {e}", flush=True)
@@ -71,7 +71,7 @@ class ProcessThreadRepository:
     async def get_threads_by_agent(self, agent_profile_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Get all threads for an agent profile."""
         try:
-            result = self.client.table('core_automation.process_threads').select('*').eq('user_id', agent_profile_id).order('created_at', desc=True).limit(limit).execute()
+            result = self.client.schema('core_automation').table('process_threads').select('*').eq('user_id', agent_profile_id).order('created_at', desc=True).limit(limit).execute()
 
             threads = []
             for data in result.data or []:
@@ -85,7 +85,7 @@ class ProcessThreadRepository:
     async def delete_thread(self, thread_id: str) -> bool:
         """Delete a process thread."""
         try:
-            result = self.client.table('core_automation.process_threads').delete().eq('id', thread_id).execute()
+            result = self.client.schema('core_automation').table('process_threads').delete().eq('id', thread_id).execute()
             return bool(result.data)
         except Exception as e:
             print(f"Error deleting process thread {thread_id}: {e}", flush=True)
