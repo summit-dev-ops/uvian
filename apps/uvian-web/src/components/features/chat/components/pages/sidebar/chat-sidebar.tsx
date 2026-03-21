@@ -39,18 +39,6 @@ export function ChatSidebar({ currentConversationId }: ChatSidebarProps) {
   const groupedConversations = React.useMemo(() => {
     const spaceConversations: Record<string, ConversationUI[]> = {};
     const directMessages: ConversationUI[] = [];
-
-    otherConversations.forEach((conv) => {
-      if (conv.resourceScopeId) {
-        if (!spaceConversations[conv.resourceScopeId]) {
-          spaceConversations[conv.resourceScopeId] = [];
-        }
-        spaceConversations[conv.resourceScopeId].push(conv);
-      } else {
-        directMessages.push(conv);
-      }
-    });
-
     return { spaceConversations, directMessages };
   }, [otherConversations]);
 

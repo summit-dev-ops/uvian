@@ -16,8 +16,6 @@ import {
   Button,
 } from '@org/ui';
 import { spacesQueries } from '~/lib/domains/spaces/api';
-import { chatQueries } from '~/lib/domains/chat/api/queries';
-import type { ConversationUI } from '~/lib/domains/chat/types';
 import type { SpaceMemberUI } from '~/lib/domains/spaces/types';
 
 interface SpacesSidebarProps {
@@ -32,11 +30,6 @@ export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
 
   const { data: space } = useQuery(spacesQueries.space(spaceId));
 
-  const { data: allConversations = [] } = useQuery(chatQueries.conversations());
-
-  const conversations = allConversations.filter(
-    (c: ConversationUI) => c.resourceScopeId === spaceId
-  );
 
   const { data: members = [] } = useQuery(spacesQueries.spaceMembers(spaceId));
 
@@ -47,9 +40,6 @@ export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
           <h2 className="text-sm font-semibold truncate">
             {space?.name || 'Space'}
           </h2>
-          <p className="text-xs text-muted-foreground">
-            {members.length} members · {conversations.length} conversations
-          </p>
         </div>
       </SidebarHeader>
 
@@ -95,36 +85,6 @@ export function SpacesSidebar({ spaceId }: SpacesSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        {view === 'conversations' && (
-          <SidebarGroup className="mt-2">
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {conversations.length > 0 ? (
-                  (conversations as ConversationUI[]).map((conv) => (
-                    <SidebarMenuItem key={conv.id}>
-                      <SidebarMenuButton asChild>
-                        <Link
-                          href={`/chats/${conv.id}`}
-                          className={
-                            pathname === `/chats/${conv.id}` ? 'bg-accent' : ''
-                          }
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          <span className="truncate">{conv.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))
-                ) : (
-                  <div className="px-4 py-2 text-sm text-muted-foreground">
-                    No conversations yet
-                  </div>
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
         {view === 'members' && (
           <SidebarGroup className="mt-2">
             <SidebarGroupContent>
