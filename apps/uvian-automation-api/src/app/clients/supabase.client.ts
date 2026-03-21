@@ -36,6 +36,30 @@ export type Database = {
         Row: Record<string, unknown>;
       };
     };
+    Tables: {
+      secrets: {
+        Row: {
+          id: string;
+          account_id: string;
+          name: string;
+          value_type: 'text' | 'json';
+          encrypted_value: string;
+          metadata: any;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          name: string;
+          value_type: 'text' | 'json';
+          encrypted_value: string;
+          metadata?: any;
+          is_active?: boolean;
+        };
+      };
+    };
   };
   core_automation: {
     Tables: {
@@ -91,28 +115,6 @@ export type Database = {
           description?: string | null;
           resolution_payload?: any | null;
           assigned_to?: string | null;
-        };
-      };
-      secrets: {
-        Row: {
-          id: string;
-          account_id: string;
-          name: string;
-          secret_type: string;
-          encrypted_value: string;
-          metadata: any;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          account_id: string;
-          name: string;
-          secret_type: string;
-          encrypted_value: string;
-          metadata?: any;
-          is_active?: boolean;
         };
       };
       process_threads: {

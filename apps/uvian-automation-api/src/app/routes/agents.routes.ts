@@ -61,12 +61,12 @@ export default async function agentRoutes(fastify: FastifyInstance) {
         }
 
         const secret = await adminSupabase
-          .schema('core_automation')
+          .schema('public')
           .from('secrets')
           .insert({
             account_id,
             name: 'Uvian Hub API Key',
-            secret_type: 'api_key',
+            value_type: 'text',
             encrypted_value: encryptedApiKey,
             metadata: { api_key_prefix },
             is_active: true,

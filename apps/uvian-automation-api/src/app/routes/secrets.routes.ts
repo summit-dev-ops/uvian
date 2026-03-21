@@ -24,13 +24,13 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['accountId', 'name', 'secretType', 'value'],
+          required: ['accountId', 'name', 'valueType', 'value'],
           properties: {
             accountId: { type: 'string' },
             name: { type: 'string' },
-            secretType: {
+            valueType: {
               type: 'string',
-              enum: ['api_key', 'bearer', 'jwt', 'api_key_json'],
+              enum: ['text', 'json'],
             },
             value: { type: 'string' },
             metadata: { type: 'object' },

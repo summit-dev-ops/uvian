@@ -8,7 +8,6 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
       mcpId: string;
       secretName?: string;
       secretValue?: string;
-      secretType?: string;
     };
   }>(
     '/api/config/agents/:agentId/mcps',
@@ -27,10 +26,6 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
             mcpId: { type: 'string' },
             secretName: { type: 'string' },
             secretValue: { type: 'string' },
-            secretType: {
-              type: 'string',
-              enum: ['api_key', 'bearer', 'jwt', 'api_key_json'],
-            },
           },
           additionalProperties: false,
         },
@@ -46,7 +41,6 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
           mcpId: body.mcpId,
           secretName: body.secretName,
           secretValue: body.secretValue,
-          secretType: body.secretType,
         });
 
         return reply.code(201).send({ link });

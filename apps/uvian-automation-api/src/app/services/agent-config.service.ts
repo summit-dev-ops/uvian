@@ -37,7 +37,6 @@ export interface LinkMcpPayload {
   mcpId: string;
   secretName?: string;
   secretValue?: string;
-  secretType?: string;
 }
 
 export interface UpdateMcpLinkPayload {
@@ -139,12 +138,12 @@ export class AgentConfigService {
     if (payload.secretValue) {
       const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
       const { data, error } = await adminSupabase
-        .schema('core_automation')
+        .schema('public')
         .from('secrets')
         .insert({
           account_id: agent.account_id,
           name: payload.secretName || 'LLM API Key',
-          secret_type: 'api_key',
+          value_type: 'text',
           encrypted_value: encrypted,
           is_active: true,
         })
@@ -234,12 +233,12 @@ export class AgentConfigService {
         const agent = await this.getAgentById(agentId);
         const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
         const { data, error } = await adminSupabase
-          .schema('core_automation')
+          .schema('public')
           .from('secrets')
           .insert({
             account_id: agent.account_id,
             name: 'LLM API Key',
-            secret_type: 'api_key',
+            value_type: 'text',
             encrypted_value: encrypted,
             is_active: true,
           })
@@ -286,12 +285,12 @@ export class AgentConfigService {
     if (payload.secretValue) {
       const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
       const { data, error } = await adminSupabase
-        .schema('core_automation')
+        .schema('public')
         .from('secrets')
         .insert({
           account_id: agent.account_id,
           name: payload.secretName || 'MCP Auth Config',
-          secret_type: (payload.secretType as any) || 'bearer',
+          value_type: 'text',
           encrypted_value: encrypted,
           is_active: true,
         })
@@ -383,12 +382,12 @@ export class AgentConfigService {
       } else {
         const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
         const { data, error } = await adminSupabase
-          .schema('core_automation')
+          .schema('public')
           .from('secrets')
           .insert({
             account_id: agent.account_id,
             name: 'MCP Auth Config',
-            secret_type: 'bearer',
+            value_type: 'text',
             encrypted_value: encrypted,
             is_active: true,
           })

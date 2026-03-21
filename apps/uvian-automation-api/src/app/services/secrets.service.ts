@@ -4,12 +4,12 @@ import { encrypt, decryptJson } from './encryption.service';
 
 const ENCRYPTION_SECRET = process.env.SECRET_INTERNAL_API_KEY!;
 
-export type SecretType = 'api_key' | 'bearer' | 'jwt' | 'api_key_json';
+export type SecretValueType = 'text' | 'json';
 
 export interface CreateSecretPayload {
   accountId: string;
   name: string;
-  secretType: SecretType;
+  valueType: SecretValueType;
   value: string;
   metadata?: Record<string, unknown>;
 }
@@ -26,12 +26,12 @@ export class SecretsService {
     const encryptedValue = encrypt(payload.value, ENCRYPTION_SECRET);
 
     const { data, error } = await adminSupabase
-      .schema('core_automation')
+      .schema('public')
       .from('secrets')
       .insert({
         account_id: payload.accountId,
         name: payload.name,
-        secret_type: payload.secretType,
+        value_type: payload.valueType,
         encrypted_value: encryptedValue,
         metadata: payload.metadata || {},
         is_active: true,
@@ -45,7 +45,7 @@ export class SecretsService {
 
   async list(userClient: SupabaseClient, accountId: string) {
     const { data, error } = await userClient
-      .schema('core_automation')
+      .schema('public')
       .from('secrets')
       .select('*')
       .eq('account_id', accountId)
@@ -57,7 +57,7 @@ export class SecretsService {
 
   async get(userClient: SupabaseClient, secretId: string) {
     const { data, error } = await userClient
-      .schema('core_automation')
+      .schema('public')
       .from('secrets')
       .select('*')
       .eq('id', secretId)
@@ -82,7 +82,7 @@ export class SecretsService {
     }
 
     const { data, error } = await adminSupabase
-      .schema('core_automation')
+      .schema('public')
       .from('secrets')
       .update(updateData)
       .eq('id', secretId)
@@ -95,7 +95,7 @@ export class SecretsService {
 
   async delete(userClient: SupabaseClient, secretId: string) {
     const { error } = await adminSupabase
-      .schema('core_automation')
+      .schema('public')
       .from('secrets')
       .delete()
       .eq('id', secretId);
@@ -113,7 +113,7 @@ export class SecretsService {
       id: row.id,
       accountId: row.account_id,
       name: row.name,
-      secretType: row.secret_type,
+      valueType: row.value_type,
       hasValue: !!row.encrypted_value,
       metadata: row.metadata,
       isActive: row.is_active,
