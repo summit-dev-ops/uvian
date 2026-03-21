@@ -35,9 +35,11 @@ export default async function agentRoutes(fastify: FastifyInstance) {
       try {
         const { user_id, account_id, api_key, api_key_prefix } = request.body;
 
-        const encryptionSecret = process.env.INTERNAL_API_KEY;
+        const encryptionSecret = process.env.SECRET_INTERNAL_API_KEY;
         if (!encryptionSecret) {
-          throw new Error('INTERNAL_API_KEY environment variable is required');
+          throw new Error(
+            'SECRET_INTERNAL_API_KEY environment variable is required'
+          );
         }
 
         const encryptedApiKey = encrypt(api_key, encryptionSecret);

@@ -2,7 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
 import { encrypt, decryptJson } from './encryption.service';
 
-const ENCRYPTION_SECRET = process.env.INTERNAL_API_KEY!;
+const ENCRYPTION_SECRET = process.env.SECRET_INTERNAL_API_KEY!;
 
 export type SecretType = 'api_key' | 'bearer' | 'jwt' | 'api_key_json';
 

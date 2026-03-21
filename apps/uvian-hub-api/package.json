@@ -1,5 +1,5 @@
 {
-  "name": "@org/uvian-api",
+  "name": "@org/uvian-hub-api",
   "version": "0.0.1",
   "private": true,
   "nx": {
@@ -12,15 +12,15 @@
         "defaultConfiguration": "production",
         "options": {
           "platform": "node",
-          "outputPath": "apps/uvian-api/dist",
+          "outputPath": "apps/uvian-hub-api/dist",
           "format": [
             "cjs"
           ],
           "bundle": false,
-          "main": "apps/uvian-api/src/main.ts",
-          "tsConfig": "apps/uvian-api/tsconfig.app.json",
+          "main": "apps/uvian-hub-api/src/main.ts",
+          "tsConfig": "apps/uvian-hub-api/tsconfig.app.json",
           "assets": [
-            "apps/uvian-api/src/assets"
+            "apps/uvian-hub-api/src/assets"
           ],
           "esbuildOptions": {
             "sourcemap": true,
@@ -48,8 +48,8 @@
         "cache": true,
         "executor": "@nx/js:prune-lockfile",
         "outputs": [
-          "{workspaceRoot}/apps/uvian-api/dist/package.json",
-          "{workspaceRoot}/apps/uvian-api/dist/package-lock.json"
+          "{workspaceRoot}/apps/uvian-hub-api/dist/package.json",
+          "{workspaceRoot}/apps/uvian-hub-api/dist/package-lock.json"
         ],
         "options": {
           "buildTarget": "build"
@@ -61,7 +61,7 @@
         ],
         "cache": true,
         "outputs": [
-          "{workspaceRoot}/apps/uvian-api/dist/workspace_modules"
+          "{workspaceRoot}/apps/uvian-hub-api/dist/workspace_modules"
         ],
         "executor": "@nx/js:copy-workspace-modules",
         "options": {
@@ -83,15 +83,15 @@
           "build"
         ],
         "options": {
-          "buildTarget": "@org/uvian-api:build",
+          "buildTarget": "@org/uvian-hub-api:build",
           "runBuildTargetDependencies": false
         },
         "configurations": {
           "development": {
-            "buildTarget": "@org/uvian-api:build:development"
+            "buildTarget": "@org/uvian-hub-api:build:development"
           },
           "production": {
-            "buildTarget": "@org/uvian-api:build:production"
+            "buildTarget": "@org/uvian-hub-api:build:production"
           }
         }
       },

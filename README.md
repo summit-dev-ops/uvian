@@ -53,11 +53,11 @@ Each app needs its own env files.
 
 ```bash
 # Start all applications
-npx nx run-many -t serve -p=uvian-api,uvian-web,uvian-automation-worker
+npx nx run-many -t serve -p=uvian-hub-api,uvian-web,uvian-automation-worker
 
 # Or start individual services
 npx nx serve uvian-web    # Frontend on http://localhost:3000
-npx nx serve uvian-api    # API on http://localhost:8000
+npx nx serve uvian-hub-api    # API on http://localhost:8000
 npx nx serve uvian-automation-worker # Worker (no web interface)
 ```
 
@@ -67,7 +67,7 @@ npx nx serve uvian-automation-worker # Worker (no web interface)
 
 ```
 📁 apps/                    # 3 applications
-  ├── uvian-api/           # Fastify API server (Node.js)
+  ├── uvian-hub-api/           # Fastify API server (Node.js)
   ├── uvian-web/           # Next.js web application (React)
   └── uvian-automation-worker/        # Python background worker
 
@@ -85,11 +85,11 @@ npx nx serve uvian-automation-worker # Worker (no web interface)
 
 ```bash
 # Start all applications
-npx nx run-many -t serve -p=uvian-api,uvian-web,uvian-automation-worker
+npx nx run-many -t serve -p=uvian-hub-api,uvian-web,uvian-automation-worker
 
 # Or start individual services
 npx nx serve uvian-web    # Frontend on http://localhost:3000
-npx nx serve uvian-api    # API on http://localhost:8000
+npx nx serve uvian-hub-api    # API on http://localhost:8000
 npx nx serve uvian-automation-worker # Worker (no web interface)
 ```
 
@@ -97,27 +97,27 @@ npx nx serve uvian-automation-worker # Worker (no web interface)
 
 ```bash
 # Build all applications
-npx nx run-many -t build -p=uvian-api,uvian-web,uvian-automation-worker
+npx nx run-many -t build -p=uvian-hub-api,uvian-web,uvian-automation-worker
 
 # Build specific application
 npx nx build uvian-web
-npx nx build uvian-api
+npx nx build uvian-hub-api
 npx nx build uvian-automation-worker
 
 # Run tests
 npx nx test uvian-web        # All tests for web
-npx nx test uvian-api        # All tests for API
+npx nx test uvian-hub-api        # All tests for API
 npx nx test uvian-automation-worker     # All tests for worker
 
 # Run specific test file
-npx nx test uvian-api --testPathPattern=app.spec.ts
+npx nx test uvian-hub-api --testPathPattern=app.spec.ts
 
 # Type checking
-npx nx run-many -t typecheck -p=uvian-api,uvian-web,uvian-automation-worker
+npx nx run-many -t typecheck -p=uvian-hub-api,uvian-web,uvian-automation-worker
 
 # Linting
 npx nx lint uvian-web        # Lint web app
-npx nx lint uvian-api        # Lint API
+npx nx lint uvian-hub-api        # Lint API
 npx nx lint                  # Lint all projects
 ```
 

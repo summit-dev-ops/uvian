@@ -10,7 +10,7 @@ const swcJestConfig = JSON.parse(
 swcJestConfig.swcrc = false;
 
 module.exports = {
-  displayName: '@org/uvian-api',
+  displayName: '@org/uvian-automation-api',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {

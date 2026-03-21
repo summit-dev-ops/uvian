@@ -76,16 +76,17 @@ REDIS_URL=redis://localhost:6379
       "executor": "@nx/esbuild:esbuild",
       "options": {
         "platform": "node",
-        "outputPath": "dist/apps/uvian-api",
+        "outputPath": "dist/apps/uvian-hub-api",
         "bundle": true,
-        "main": "dist/apps/uvian-api/src/main.js",
-        "tsConfig": "apps/uvian-api/tsconfig.app.json",
-        "assets": ["apps/uvian-api/src/assets"]
+        "main": "dist/apps/uvian-hub-api/src/main.js",
+        "tsConfig": "apps/uvian-hub-api/tsconfig.app.json",
+        "assets": ["apps/uvian-hub-api/src/assets"]
       }
     }
   }
 }
 ```
+
 ---
 
 ## 📚 Additional Resources

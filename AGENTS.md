@@ -27,8 +27,8 @@ npx nx typecheck <project>
 
 # Serve apps
 npx nx serve uvian-web          # Frontend: localhost:3000
-npx nx serve uvian-api          # API: localhost:8000
-npx nx run-many -t serve -p=uvian-api,uvian-web,uvian-automation-worker
+npx nx serve uvian-hub-api          # API: localhost:8000
+npx nx run-many -t serve -p=uvian-hub-api,uvian-web,uvian-automation-worker
 ```
 
 ### Python Worker (uvian-automation-worker)
@@ -73,7 +73,7 @@ import { userService } from '../services/user'; // relative
 
 ## Error Handling
 
-### Fastify API (uvian-api)
+### Fastify API (uvian-hub-api)
 
 ```typescript
 // Service layer - throw errors
@@ -121,7 +121,7 @@ lib/domains/[domain]/         components/features/[feature]/
 └── utils.ts                  └── types.ts
 ```
 
-## Backend Architecture (uvian-api)
+## Backend Architecture (uvian-hub-api)
 
 - **Plugin-based Fastify** with **auto-loading** via `@fastify/autoload`
 - **Services** in `src/app/services/`, **Routes** in `src/app/routes/`

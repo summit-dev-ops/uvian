@@ -2,7 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
 import { decrypt, encrypt } from './encryption.service.js';
 
-const ENCRYPTION_SECRET = process.env.INTERNAL_API_KEY!;
+const ENCRYPTION_SECRET = process.env.SECRET_INTERNAL_API_KEY!;
 
 export interface CreateAgentConfigPayload {
   userId: string;
@@ -418,8 +418,8 @@ export class AgentConfigService {
   }
 
   async getAgentSecrets(ownerUserId: string) {
-    const secret = process.env.INTERNAL_API_KEY;
-    if (!secret) throw new Error('INTERNAL_API_KEY not configured');
+    const secret = process.env.SECRET_INTERNAL_API_KEY;
+    if (!secret) throw new Error('SECRET_INTERNAL_API_KEY not configured');
 
     const { data: agent, error } = await adminSupabase
       .schema('core_automation')

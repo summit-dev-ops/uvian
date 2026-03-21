@@ -4,24 +4,18 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug @org/uvian-api with Nx",
+      "name": "Debug @org/uvian-hub-api with Nx",
       "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "nx",
-        "serve",
-        "@org/uvian-api"
-      ],
+      "runtimeArgs": ["nx", "serve", "@org/uvian-hub-api"],
       "env": {
         "NODE_OPTIONS": "--inspect=9229"
       },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/apps/uvian-api/dist/**/*.(m|c|)js",
+        "${workspaceFolder}/apps/uvian-hub-api/dist/**/*.(m|c|)js",
         "!**/node_modules/**"
       ]
     },
@@ -30,19 +24,13 @@
       "request": "launch",
       "name": "Debug @org/uvian-hub-event-worker with Nx",
       "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "nx",
-        "serve",
-        "@org/uvian-hub-event-worker"
-      ],
+      "runtimeArgs": ["nx", "serve", "@org/uvian-hub-event-worker"],
       "env": {
         "NODE_OPTIONS": "--inspect=9230"
       },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "outFiles": [
         "${workspaceFolder}/apps/uvian-hub-event-worker/dist/**/*.(m|c|)js",

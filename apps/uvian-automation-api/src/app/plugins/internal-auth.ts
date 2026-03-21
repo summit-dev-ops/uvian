@@ -11,7 +11,7 @@ declare module 'fastify' {
 }
 
 export default fp(async (fastify) => {
-  const internalApiKey = process.env.INTERNAL_API_KEY;
+  const internalApiKey = process.env.SECRET_INTERNAL_API_KEY;
 
   fastify.decorate(
     'authenticateInternal',

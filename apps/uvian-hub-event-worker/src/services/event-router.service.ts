@@ -5,9 +5,9 @@ import {
 } from './subscription.service';
 
 const AUTOMATION_API_URL =
-  process.env.AUTOMATION_API_URL || 'http://localhost:3001';
+  process.env.UVIAN_AUTOMATION_API_URL || 'http://localhost:3001';
 const AUTOMATION_API_KEY =
-  process.env.AUTOMATION_API_KEY || 'dev-internal-api-key-change-in-prod';
+  process.env.UVIAN_AUTOMATION_API_KEY || 'dev-internal-api-key-change-in-prod';
 
 interface SourcePath {
   type: string;

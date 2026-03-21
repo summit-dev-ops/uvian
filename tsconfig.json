@@ -7,7 +7,7 @@
       "path": "./apps/uvian-web"
     },
     {
-      "path": "./apps/uvian-api"
+      "path": "./apps/uvian-hub-api"
     },
     {
       "path": "./packages/ui"

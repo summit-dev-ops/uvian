@@ -11,18 +11,18 @@ declare module 'fastify' {
 }
 
 export default fp(async (fastify) => {
-  const webhookApiKey = process.env.SECRET_API_KEY;
+  const webhookApiKey = process.env.SECRET_WEBHOOK_API_KEY;
 
   if (!webhookApiKey) {
     fastify.log.warn(
-      'SECRET_API_KEY not set - webhook endpoint will reject all requests'
+      'SECRET_WEBHOOK_API_KEY not set - webhook endpoint will reject all requests'
     );
   }
 
   fastify.decorate(
     'authenticateWebhook',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      console.log(request.headers)
+      console.log(request.headers);
       const providedKey = request.headers['x-api-key'];
       if (!providedKey) {
         reply.code(401).send({
