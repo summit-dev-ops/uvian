@@ -1,4 +1,5 @@
 import { CloudEvent } from '@org/uvian-events';
+import { IntakeEvents } from '@org/uvian-events';
 import {
   subscriptionService,
   SubscriptionProvider,
@@ -14,9 +15,10 @@ interface SourcePath {
   id: string;
 }
 
-const RESOURCE_TYPE_MAP: Record<string, 'conversation' | 'space'> = {
+const RESOURCE_TYPE_MAP: Record<string, 'conversation' | 'space' | 'intake'> = {
   conversations: 'conversation',
   spaces: 'space',
+  intakes: 'intake',
 };
 
 const MEMBER_EVENT_TYPES = [
@@ -24,6 +26,12 @@ const MEMBER_EVENT_TYPES = [
   'io.uvian.conversation.member_left',
   'io.uvian.space.member_joined',
   'io.uvian.space.member_left',
+];
+
+const INTAKE_EVENT_TYPES = [
+  IntakeEvents.INTAKE_CREATED,
+  IntakeEvents.INTAKE_COMPLETED,
+  IntakeEvents.INTAKE_REVOKED,
 ];
 
 export class EventRouter {
@@ -51,6 +59,12 @@ export class EventRouter {
       return;
     }
 
+    if (this.isIntakeEvent(event.type)) {
+      console.log('[EventRouter] Intake event detected:', event.type);
+      await this.processIntakeEvent(event);
+      return;
+    }
+
     await this.routeToSubscribers(event, resourceType, sourcePath.id);
   }
 
@@ -74,9 +88,59 @@ export class EventRouter {
     return MEMBER_EVENT_TYPES.includes(eventType);
   }
 
+  private isIntakeEvent(eventType: string): boolean {
+    return INTAKE_EVENT_TYPES.includes(eventType as any);
+  }
+
+  private async processIntakeEvent(event: CloudEvent): Promise<void> {
+    const intakeId = event.subject as string;
+    console.log(
+      '[EventRouter] Processing intake event:',
+      event.type,
+      'intakeId:',
+      intakeId
+    );
+
+    try {
+      const providers = await subscriptionService.getProvidersForResource(
+        'intake',
+        intakeId
+      );
+
+      if (providers.length === 0) {
+        console.log(
+          '[EventRouter] No providers subscribed to intake/',
+          intakeId
+        );
+        return;
+      }
+
+      console.log(
+        '[EventRouter] Routing intake event to',
+        providers.length,
+        'provider(s)'
+      );
+
+      const routingPromises = providers.map((provider) =>
+        this.routeToProvider(provider, event).catch((error) => {
+          console.error(
+            '[EventRouter] Error routing to provider',
+            provider.provider_id,
+            ':',
+            error
+          );
+        })
+      );
+
+      await Promise.all(routingPromises);
+    } catch (error) {
+      console.error('[EventRouter] Error processing intake event:', error);
+    }
+  }
+
   private async routeToSubscribers(
     event: CloudEvent,
-    resourceType: 'conversation' | 'space',
+    resourceType: 'conversation' | 'space' | 'intake',
     resourceId: string
   ): Promise<void> {
     let providers: SubscriptionProvider[];

@@ -59,14 +59,20 @@
     "ts-node": "10.9.1",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
-    "typescript-eslint": "^8.40.0"
+    "typescript-eslint": "^8.40.0",
+    "@tailwindcss/typography": "^0.5.19",
+    "baseline-browser-mapping": "^2.9.19"
   },
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "dependencies": {
+    
+    "@socket.io/redis-adapter": "^8.3.0",
+    "socket.io": "^4.8.3",
     "@fastify/autoload": "^5.0.0",
+    "@fastify/cors": "^8.5.0",
     "@fastify/sensible": "^5.0.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -95,6 +101,7 @@
     "embla-carousel-react": "^8.6.0",
     "fastify": "^4.29.1",
     "fastify-plugin": "^4.0.0",
+    "fastify-socket.io": "^4.0.0",
     "input-otp": "^1.4.2",
     "ioredis": "^5.9.2",
     "jsonwebtoken": "^9.0.3",
@@ -105,6 +112,22 @@
     "react-dom": "^19.0.0",
     "sonner": "^2.0.7",
     "vaul": "^1.1.2",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@hookform/resolvers": "^5.2.2",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.93.3",
+    "@tanstack/react-query": "^5.90.20",
+    "@tiptap/extension-mention": "^3.20.0",
+    "@tiptap/extension-placeholder": "^3.20.0",
+    "@tiptap/markdown": "^3.20.0",
+    "@tiptap/pm": "^3.20.0",
+    "@tiptap/react": "^3.20.0",
+    "@tiptap/starter-kit": "^3.20.0",
+    "immer": "^11.1.3",
+    "react-hook-form": "^7.71.1",
+    "react-markdown": "^10.1.0",
+    "socket.io-client": "^4.8.3",
+    "uuidv7": "^1.1.0",
+    "zustand": "^5.0.10"
   }
 }

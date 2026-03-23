@@ -67,6 +67,45 @@ export class SecretsService {
     return this.mapRow(data);
   }
 
+  async getByName(userClient: SupabaseClient, accountId: string, name: string) {
+    const { data, error } = await userClient
+      .schema('public')
+      .from('secrets')
+      .select('*')
+      .eq('account_id', accountId)
+      .eq('name', name)
+      .single();
+
+    if (error || !data) return null;
+    return this.mapRow(data);
+  }
+
+  async getByIdWithDecryptedValue(
+    secretId: string
+  ): Promise<{
+    id: string;
+    name: string;
+    value: string;
+    metadata: Record<string, unknown>;
+  } | null> {
+    const { data, error } = await adminSupabase
+      .schema('public')
+      .from('secrets')
+      .select('*')
+      .eq('id', secretId)
+      .single();
+
+    if (error || !data) return null;
+
+    const decryptedValue = this.getDecryptedValue(data.encrypted_value);
+    return {
+      id: data.id,
+      name: data.name,
+      value: decryptedValue,
+      metadata: data.metadata || {},
+    };
+  }
+
   async update(
     userClient: SupabaseClient,
     secretId: string,

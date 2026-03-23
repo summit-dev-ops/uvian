@@ -20,6 +20,12 @@
     },
     {
       "path": "./apps/uvian-hub-event-worker"
+    },
+    {
+      "path": "./apps/uvian-intake-api"
+    },
+    {
+      "path": "./apps/uvian-intake-web"
     }
   ]
 }

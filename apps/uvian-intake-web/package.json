@@ -1,0 +1,8 @@
+{
+  "name": "@org/uvian-intake-web",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@org/ui": "*"
+  }
+}

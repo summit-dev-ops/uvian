@@ -6,6 +6,7 @@ export * from './tickets.js';
 export * from './users.js';
 export * from './accounts.js';
 export * from './agents.js';
+export * from './intake.js';
 
 import { MessagingEvents } from './messaging.js';
 import { SpaceEvents } from './spaces.js';
@@ -15,6 +16,7 @@ import { TicketEvents } from './tickets.js';
 import { UserEvents } from './users.js';
 import { AccountEvents } from './accounts.js';
 import { AgentEvents } from './agents.js';
+import { IntakeEvents } from './intake.js';
 
 export const AllEvents = {
   ...MessagingEvents,
@@ -25,6 +27,7 @@ export const AllEvents = {
   ...UserEvents,
   ...AccountEvents,
   ...AgentEvents,
+  ...IntakeEvents,
 } as const;
 
 export type UvianEventType =
@@ -35,7 +38,8 @@ export type UvianEventType =
   | import('./tickets.js').TicketEventType
   | import('./users.js').UserEventType
   | import('./accounts.js').AccountEventType
-  | import('./agents.js').AgentEventType;
+  | import('./agents.js').AgentEventType
+  | import('./intake.js').IntakeEventType;
 
 export type UvianEventData =
   | import('./messaging.js').MessagingEventData
@@ -45,4 +49,5 @@ export type UvianEventData =
   | import('./tickets.js').TicketEventData
   | import('./users.js').UserEventData
   | import('./accounts.js').AccountEventData
-  | import('./agents.js').AgentEventData;
+  | import('./agents.js').AgentEventData
+  | import('./intake.js').IntakeEventData;
