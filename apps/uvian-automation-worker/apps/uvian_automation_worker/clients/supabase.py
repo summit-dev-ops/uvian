@@ -19,7 +19,7 @@ class SupabaseClient:
     def health_check(self) -> bool:
         """Verify the connection to Supabase."""
         try:
-            result = self.client.table('core_automation.jobs').select('id').limit(1).execute()
+            result = self.client.schema('core_automation').table('jobs').select('id').limit(1).execute()
             return True
         except Exception as e:
             print(f"Supabase health check failed: {e}")

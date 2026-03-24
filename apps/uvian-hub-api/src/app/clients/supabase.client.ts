@@ -325,6 +325,7 @@ export type Database = {
           api_key_hash: string;
           api_key_prefix: string;
           is_active: boolean;
+          service: string;
           created_at: string;
         };
         Insert: {
@@ -333,6 +334,7 @@ export type Database = {
           api_key_hash: string;
           api_key_prefix: string;
           is_active?: boolean;
+          service: string;
         };
       };
       subscriptions: {

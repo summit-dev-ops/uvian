@@ -16,6 +16,7 @@ export interface IntakeSchema {
   schema: {
     fields: IntakeField[];
   };
+  requiresAuth?: boolean;
 }
 
 export interface IntakeStatus {

@@ -41,11 +41,11 @@ async function authenticateWithApiKey(
   }
 
   const { data: apiKeyRecord, error } = await adminSupabase
-    .schema('core_hub')
     .from('agent_api_keys')
-    .select('id, user_id, api_key_hash, is_active')
+    .select('id, user_id, api_key_hash, is_active, service')
     .eq('api_key_prefix', apiKeyPrefix)
     .eq('is_active', true)
+    .eq('service', 'hub-api')
     .single();
 
   if (error || !apiKeyRecord) {

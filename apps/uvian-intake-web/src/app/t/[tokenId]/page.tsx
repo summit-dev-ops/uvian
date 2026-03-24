@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getIntakeSchema } from '@/lib/api/intake';
-import { DynamicForm } from '@/components/dynamic-form';
+import IntakeFormContainer from '@/components/intake-form-container';
+import { AuthProviderWrapper } from '@/components/providers/auth-provider';
 
 interface PageProps {
   params: Promise<{ tokenId: string }>;
@@ -48,7 +49,9 @@ export default async function IntakePage({ params }: PageProps) {
             )}
           </div>
 
-          <DynamicForm tokenId={tokenId} schema={schema} />
+          <AuthProviderWrapper>
+            <IntakeFormContainer tokenId={tokenId} schema={schema} />
+          </AuthProviderWrapper>
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">

@@ -57,6 +57,7 @@ test-output
 *$py.class
 
 .env
+.env.*
 .venv
 env/
 venv/

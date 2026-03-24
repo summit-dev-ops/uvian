@@ -31,6 +31,7 @@ export interface CreateIntakeInput {
   metadata?: Record<string, unknown>;
   expiresInSeconds?: number;
   createdBy: string;
+  requiresAuth?: boolean;
 }
 
 export interface IntakeRecord {
@@ -45,6 +46,7 @@ export interface IntakeRecord {
   expires_at: string;
   created_by: string;
   created_at: string;
+  requires_auth: boolean;
 }
 
 export interface SubmissionRecord {
@@ -53,6 +55,7 @@ export interface SubmissionRecord {
   payload: Record<string, unknown>;
   submitted_at: string;
   expires_at: string;
+  submitted_by: string | null;
 }
 
 export class IntakeService {
@@ -86,6 +89,7 @@ export class IntakeService {
         status: 'pending',
         expires_at: expiresAt,
         created_by: input.createdBy,
+        requires_auth: input.requiresAuth ?? false,
       });
 
     if (error) {
@@ -133,18 +137,50 @@ export class IntakeService {
     return { status: data.status, expiresAt: data.expires_at };
   }
 
+  async listIntakes(userId: string): Promise<
+    Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      status: IntakeRecord['status'];
+      expiresAt: string;
+      createdAt: string;
+    }>
+  > {
+    const { data, error } = await this.fastify.supabase
+      .schema('core_intake')
+      .from('intakes')
+      .select('id, title, description, status, expires_at, created_at')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to list intakes: ${error.message}`);
+    }
+
+    return (data || []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+    }));
+  }
+
   async getIntakeSchema(tokenId: string): Promise<{
     title: string;
     description: string | null;
     submitLabel: string;
     publicKey: string;
     schema: IntakeSchema;
+    requiresAuth: boolean;
   } | null> {
     const { data, error } = await this.fastify.supabase
       .schema('core_intake')
       .from('intakes')
       .select(
-        'title, description, submit_label, public_key, schema, status, expires_at'
+        'title, description, submit_label, public_key, schema, status, expires_at, requires_auth'
       )
       .eq('id', tokenId)
       .single();
@@ -171,12 +207,14 @@ export class IntakeService {
       submitLabel: data.submit_label,
       publicKey: data.public_key,
       schema: data.schema,
+      requiresAuth: data.requires_auth ?? false,
     };
   }
 
   async submitIntake(
     tokenId: string,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    submittedBy?: string
   ): Promise<{ submissionId: string }> {
     const intake = await this.getIntakeRecord(tokenId);
     if (!intake) {
@@ -192,9 +230,13 @@ export class IntakeService {
       throw new Error('Intake has expired');
     }
 
-    const submissionId = await this.storeSubmission(tokenId, payload);
+    const submissionId = await this.storeSubmission(
+      tokenId,
+      payload,
+      submittedBy
+    );
 
-    await this.markAsCompleted(tokenId);
+    await this.markAsCompleted(tokenId, submissionId);
 
     const eventData: IntakeCompletedData = {
       intakeId: tokenId,
@@ -260,6 +302,23 @@ export class IntakeService {
     return data as SubmissionRecord;
   }
 
+  async getSubmissionsByIntakeId(
+    intakeId: string
+  ): Promise<SubmissionRecord[]> {
+    const { data, error } = await this.fastify.supabase
+      .schema('core_intake')
+      .from('submissions')
+      .select('*')
+      .eq('intake_id', intakeId)
+      .gt('expires_at', new Date().toISOString());
+
+    if (error) {
+      throw new Error(`Failed to get submissions: ${error.message}`);
+    }
+
+    return data as SubmissionRecord[];
+  }
+
   async revokeIntake(tokenId: string): Promise<boolean> {
     const intake = await this.getIntakeRecord(tokenId);
     if (!intake) {
@@ -319,7 +378,7 @@ export class IntakeService {
     return true;
   }
 
-  private async getIntakeRecord(tokenId: string): Promise<IntakeRecord | null> {
+  async getIntakeRecord(tokenId: string): Promise<IntakeRecord | null> {
     const { data, error } = await this.fastify.supabase
       .schema('core_intake')
       .from('intakes')
@@ -349,11 +408,14 @@ export class IntakeService {
     }
   }
 
-  private async markAsCompleted(tokenId: string): Promise<void> {
+  private async markAsCompleted(
+    tokenId: string,
+    submissionId: string
+  ): Promise<void> {
     const { error } = await this.fastify.supabase
       .schema('core_intake')
       .from('intakes')
-      .update({ status: 'completed' })
+      .update({ status: 'completed', submission_id: submissionId })
       .eq('id', tokenId);
 
     if (error) {
@@ -363,7 +425,8 @@ export class IntakeService {
 
   private async storeSubmission(
     intakeId: string,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    submittedBy?: string
   ): Promise<string> {
     const submissionId = `sub_${nanoid(21)}`;
     const expiryDays = Number(process.env.SUBMISSION_EXPIRY_DAYS) || 30;
@@ -379,6 +442,7 @@ export class IntakeService {
         intake_id: intakeId,
         payload,
         expires_at: expiresAt,
+        submitted_by: submittedBy || null,
       });
 
     if (error) {

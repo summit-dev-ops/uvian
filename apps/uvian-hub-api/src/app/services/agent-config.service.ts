@@ -1,29 +1,12 @@
 import { adminSupabase } from '../clients/supabase.client.js';
 import { automationProviderService } from './automation-provider.service.js';
+import { ApiKeyService } from './api-key.service.js';
 import type {
   AgentConfig,
   CreateAgentConfigPayload,
   UpdateAgentConfigPayload,
 } from '../types/agent-config.types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-
-function generateApiKey(): string {
-  const randomBytes = crypto.getRandomValues(new Uint8Array(24));
-  const randomString = Array.from(randomBytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-  return `sk_agent_${randomString}`;
-}
-
-async function hashApiKey(apiKey: string): Promise<string> {
-  return bcrypt.hash(apiKey, 10);
-}
-
-function getApiKeyPrefix(apiKey: string): string {
-  return apiKey.substring(0, 16);
-}
 
 export interface CreatedAgentResult extends AgentConfig {
   api_key: string;
@@ -167,37 +150,23 @@ export class AgentConfigService {
       throw new Error(`Failed to create agent config: ${error.message}`);
     }
 
-    const apiKey = generateApiKey();
-    const apiKeyHash = await hashApiKey(apiKey);
-    const apiKeyPrefix = getApiKeyPrefix(apiKey);
-
-    const { error: apiKeyError } = await adminSupabase
-      .schema('core_hub')
-      .from('agent_api_keys')
-      .insert({
-        user_id: agentUserId,
-        api_key_hash: apiKeyHash,
-        api_key_prefix: apiKeyPrefix,
-        is_active: true,
-      });
-
-    if (apiKeyError) {
-      await adminSupabase.auth.admin.deleteUser(agentUserId);
-      throw new Error(`Failed to create agent API key: ${apiKeyError.message}`);
-    }
+    const apiKeyResult = await ApiKeyService.createApiKey(
+      agentUserId,
+      'hub-api'
+    );
 
     await this.initAgentInAutomationApi(
       agentUserId,
       accountId,
-      apiKey,
-      apiKeyPrefix
+      apiKeyResult.api_key,
+      apiKeyResult.api_key.substring(0, 16)
     );
 
     return {
       ...data,
       agent_display_name: payload.name,
       agent_avatar_url: null,
-      api_key: apiKey,
+      api_key: apiKeyResult.api_key,
     };
   }
 

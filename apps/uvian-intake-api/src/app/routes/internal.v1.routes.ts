@@ -1,5 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { IntakeService, CreateIntakeInput } from '../services/intake.service';
+import {
+  ApiKeyService,
+  checkAccountMembership,
+} from '../services/api-key.service';
+import jwt from 'jsonwebtoken';
 
 interface CreateIntakeBody {
   title: string;
@@ -26,22 +31,154 @@ interface TokenIdParams {
   tokenId: string;
 }
 
+interface CreateApiKeyBody {
+  userId: string;
+}
+
+interface RevokeApiKeyBody {
+  userId: string;
+  apiKeyPrefix?: string;
+}
+
+interface AuthContext {
+  userId?: string;
+  internalAuth: boolean;
+}
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    authContext?: AuthContext;
+  }
+}
+
+async function verifyJwt(token: string): Promise<string | null> {
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (!jwtSecret) {
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
+    if (!decoded.sub || decoded.role !== 'authenticated') {
+      return null;
+    }
+    return decoded.sub;
+  } catch {
+    return null;
+  }
+}
+
 export async function internalV1Routes(fastify: FastifyInstance) {
   const intakeService = new IntakeService(fastify);
 
   fastify.addHook(
     'preHandler',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const apiKey = request.headers['x-internal-api-key'];
-      const expectedKey = process.env.INTERNAL_API_KEY;
+      const internalKey = request.headers['x-internal-api-key'];
+      const authHeader = request.headers.authorization;
 
-      if (!expectedKey) {
-        fastify.log.error('INTERNAL_API_KEY not configured');
-        return reply.code(500).send({ error: 'Server misconfiguration' });
+      if (internalKey === process.env.INTERNAL_API_KEY) {
+        request.authContext = { internalAuth: true };
+        return;
       }
 
-      if (apiKey !== expectedKey) {
-        return reply.code(401).send({ error: 'Unauthorized' });
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        const userId = await verifyJwt(token);
+        if (userId) {
+          request.authContext = { userId, internalAuth: false };
+          return;
+        }
+      }
+
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+  );
+
+  fastify.post<{ Body: CreateApiKeyBody }>(
+    '/api/auth/api-key',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['userId'],
+          properties: {
+            userId: { type: 'string', format: 'uuid' },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { userId: targetUserId } = request.body;
+      const authContext = request.authContext!;
+
+      if (!authContext.internalAuth && authContext.userId) {
+        const hasAccess = await checkAccountMembership(
+          authContext.userId,
+          targetUserId
+        );
+        if (!hasAccess) {
+          return reply.code(403).send({
+            error: 'Forbidden',
+            message: 'Target user must be in the same account',
+          });
+        }
+      }
+
+      try {
+        const result = await ApiKeyService.createApiKey(
+          targetUserId,
+          'intake-api'
+        );
+        return reply.code(201).send(result);
+      } catch (error) {
+        fastify.log.error({ error }, 'Failed to create API key');
+        return reply.code(500).send({ error: 'Failed to create API key' });
+      }
+    }
+  );
+
+  fastify.delete<{ Body: RevokeApiKeyBody }>(
+    '/api/auth/api-key',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['userId'],
+          properties: {
+            userId: { type: 'string', format: 'uuid' },
+            apiKeyPrefix: { type: 'string', minLength: 16, maxLength: 16 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { userId: targetUserId, apiKeyPrefix } = request.body;
+      const authContext = request.authContext!;
+
+      if (!authContext.internalAuth && authContext.userId) {
+        const hasAccess = await checkAccountMembership(
+          authContext.userId,
+          targetUserId
+        );
+        if (!hasAccess) {
+          return reply.code(403).send({
+            error: 'Forbidden',
+            message: 'Target user must be in the same account',
+          });
+        }
+      }
+
+      try {
+        await ApiKeyService.revokeApiKey(
+          targetUserId,
+          'intake-api',
+          apiKeyPrefix
+        );
+        return reply.send({ success: true });
+      } catch (error) {
+        fastify.log.error({ error }, 'Failed to revoke API key');
+        return reply.code(500).send({ error: 'Failed to revoke API key' });
       }
     }
   );

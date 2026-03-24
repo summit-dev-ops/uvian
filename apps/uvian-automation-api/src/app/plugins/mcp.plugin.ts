@@ -5,7 +5,10 @@ import { z } from 'zod';
 import { adminSupabase } from '../clients/supabase.client';
 import { secretsService } from '../services/secrets.service';
 import { agentConfigService } from '../services/agent-config.service';
-import { generateRSAKeyPair, decryptRSA } from '../services/encryption.service';
+import {
+  generateRSAKeyPair,
+  decryptRSA,
+} from '../services/encryption.service';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -19,7 +22,7 @@ const JWT_TTL_MS = 50 * 60 * 1000;
 
 async function authenticateWithApiKey(
   apiKey: string
-): Promise<{ userId: string; jwt: string; accountId: string } | null> {
+): Promise<{ userId: string; jwt: string } | null> {
   if (!apiKey.startsWith('sk_agent_')) {
     return null;
   }
@@ -31,16 +34,15 @@ async function authenticateWithApiKey(
     return {
       userId: extractUserIdFromJwt(cached.jwt),
       jwt: cached.jwt,
-      accountId: extractAccountIdFromJwt(cached.jwt),
     };
   }
 
   const { data: apiKeyRecord, error } = await adminSupabase
-    .schema('core_automation')
     .from('agent_api_keys')
-    .select('id, user_id, api_key_hash, is_active, account_id')
+    .select('id, user_id, api_key_hash, is_active, service')
     .eq('api_key_prefix', apiKeyPrefix)
     .eq('is_active', true)
+    .eq('service', 'automation-api')
     .single();
 
   if (error || !apiKeyRecord) {
@@ -69,7 +71,6 @@ async function authenticateWithApiKey(
     sub: userData.user.id,
     exp: Math.floor(Date.now() / 1000) + 60 * 60,
     iss: 'supabase',
-    account_id: apiKeyRecord.account_id,
   };
 
   const newJwt = jwt.sign(payload, jwtSecret, { algorithm: 'HS256' });
@@ -82,7 +83,6 @@ async function authenticateWithApiKey(
   return {
     userId: userData.user.id,
     jwt: newJwt,
-    accountId: apiKeyRecord.account_id,
   };
 }
 
@@ -90,15 +90,6 @@ function extractUserIdFromJwt(token: string): string {
   try {
     const decoded = jwt.decode(token) as jwt.JwtPayload | null;
     return decoded?.sub ?? '';
-  } catch {
-    return '';
-  }
-}
-
-function extractAccountIdFromJwt(token: string): string {
-  try {
-    const decoded = jwt.decode(token) as jwt.JwtPayload | null;
-    return ((decoded as Record<string, unknown>)?.account_id as string) ?? '';
   } catch {
     return '';
   }
@@ -275,7 +266,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         }
       }
     );
-
     return server;
   }
 
@@ -298,7 +288,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       }
 
       let userId: string;
-      let accountId: string;
+      let accountId = '';
       let userJwt: string;
 
       if (token.startsWith('sk_agent_')) {
@@ -309,7 +299,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             .send({ error: 'Unauthorized', message: 'Invalid API key' });
         }
         userId = result.userId;
-        accountId = result.accountId;
         userJwt = result.jwt;
       } else {
         const jwtSecret = process.env.SUPABASE_JWT_SECRET;

@@ -25,7 +25,18 @@ export async function getIntakeStatus(tokenId: string): Promise<IntakeStatus> {
 
 export async function submitIntake(
   tokenId: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  accessToken?: string
 ): Promise<void> {
-  await apiClient.post(`/public/v1/intakes/${tokenId}/submit`, payload);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  await apiClient.post(`/public/v1/intakes/${tokenId}/submit`, payload, {
+    headers,
+  });
 }

@@ -21,11 +21,12 @@ import {
   SelectValue,
 } from '@org/ui';
 import { Textarea } from '@org/ui';
-import { importPublicKey, encryptSecretFields } from '@/lib/crypto';
+import { importPublicKey, encryptPayload } from '@/lib/crypto';
 
 interface DynamicFormProps {
   tokenId: string;
   schema: IntakeSchema;
+  authToken?: string;
 }
 
 function FieldRenderer({
@@ -132,7 +133,7 @@ function FieldRenderer({
   );
 }
 
-export function DynamicForm({ tokenId, schema }: DynamicFormProps) {
+export function DynamicForm({ tokenId, schema, authToken }: DynamicFormProps) {
   const router = useRouter();
   const formSchema = buildDynamicSchema(schema.schema.fields);
 
@@ -141,20 +142,21 @@ export function DynamicForm({ tokenId, schema }: DynamicFormProps) {
     mode: 'onChange',
   });
 
-  const secretFields = schema.schema.fields
-    .filter((f) => f.secret)
-    .map((f) => f.name);
-
   const mutation = useMutation({
     mutationFn: async (data: DynamicFormData) => {
-      let payload: Record<string, unknown> = { ...data };
+      const payload: Record<string, unknown> = { ...data };
 
-      if (secretFields.length > 0 && schema.publicKey) {
+      if (schema.publicKey) {
         const publicKey = await importPublicKey(schema.publicKey);
-        payload = await encryptSecretFields(payload, secretFields, publicKey);
+        const encrypted = await encryptPayload(payload, publicKey);
+        return submitIntake(
+          tokenId,
+          encrypted as unknown as Record<string, unknown>,
+          authToken
+        );
       }
 
-      return submitIntake(tokenId, payload);
+      return submitIntake(tokenId, payload, authToken);
     },
     onSuccess: () => {
       router.push('/success');
