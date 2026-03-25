@@ -22,9 +22,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug @org/uvian-hub-event-worker with Nx",
+      "name": "Debug @org/uvian-event-worker with Nx",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["nx", "serve", "@org/uvian-hub-event-worker"],
+      "runtimeArgs": ["nx", "serve", "@org/uvian-event-worker"],
       "env": {
         "NODE_OPTIONS": "--inspect=9230"
       },
@@ -33,7 +33,7 @@
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/apps/uvian-hub-event-worker/dist/**/*.(m|c|)js",
+        "${workspaceFolder}/apps/uvian-event-worker/dist/**/*.(m|c|)js",
         "!**/node_modules/**"
       ]
     },

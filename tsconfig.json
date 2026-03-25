@@ -19,13 +19,16 @@
       "path": "./packages/uvian-events"
     },
     {
-      "path": "./apps/uvian-hub-event-worker"
+      "path": "./apps/uvian-event-worker"
     },
     {
       "path": "./apps/uvian-intake-api"
     },
     {
       "path": "./apps/uvian-intake-web"
+    },
+    {
+      "path": "./apps/uvian-core-api"
     }
   ]
 }

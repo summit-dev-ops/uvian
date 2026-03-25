@@ -20,20 +20,11 @@ export function AccountPageActions({ accountId }: AccountPageActionsProps) {
     router.push(`/accounts/${accountId}/members`);
   }, [router, accountId]);
 
-  const handleAgents = React.useCallback(() => {
-    router.push(`/accounts/${accountId}/agents`);
-  }, [router, accountId]);
-
   return (
     <>
       <DropdownMenuItem onClick={handleMembers} className="cursor-pointer">
         <Users className="mr-2 h-4 w-4" />
         <span>Members</span>
-      </DropdownMenuItem>
-
-      <DropdownMenuItem onClick={handleAgents} className="cursor-pointer">
-        <span className="mr-2">🤖</span>
-        <span>Agents</span>
       </DropdownMenuItem>
 
       <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
