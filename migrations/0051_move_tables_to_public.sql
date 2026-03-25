@@ -34,8 +34,7 @@ SELECT
   ap.created_at AS provider_created_at,
   s.user_id AS dependent_user_id
 FROM public.subscriptions s
-JOIN public.automaton_providers ap ON s.provider_id = ap.id
-WHERE ap.is_active = true;
+JOIN public.automaton_providers ap ON ap.owner_user_id = s.user_id AND ap.is_active = true;
 
 -- Step 6: Ensure RLS policies exist on moved tables
 -- PostgreSQL handles schema change automatically - policies will continue to work

@@ -68,8 +68,7 @@ SELECT
   s.user_id AS dependent_user_id
 FROM public.subscriptions s
 JOIN public.automaton_providers ap 
-  ON s.provider_id = ap.id
+  ON ap.owner_user_id = s.user_id AND ap.is_active = true
 JOIN public.user_automation_providers uap
   ON uap.automation_provider_id = ap.id
-  AND uap.user_id = s.user_id
-WHERE ap.is_active = true;
+  AND uap.user_id = s.user_id;
