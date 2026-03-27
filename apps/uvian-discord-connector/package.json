@@ -1,0 +1,66 @@
+{
+  "name": "@org/uvian-discord-connector",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "build": {
+        "executor": "@nx/esbuild:esbuild",
+        "outputs": [
+          "{options.outputPath}"
+        ],
+        "defaultConfiguration": "production",
+        "options": {
+          "platform": "node",
+          "outputPath": "apps/uvian-discord-connector/dist",
+          "format": [
+            "cjs"
+          ],
+          "bundle": false,
+          "main": "apps/uvian-discord-connector/src/main.ts",
+          "tsConfig": "apps/uvian-discord-connector/tsconfig.app.json",
+          "assets": [
+            "apps/uvian-discord-connector/src/assets"
+          ],
+          "esbuildOptions": {
+            "sourcemap": true,
+            "outExtension": {
+              ".js": ".js"
+            }
+          }
+        },
+        "configurations": {
+          "development": {},
+          "production": {
+            "esbuildOptions": {
+              "sourcemap": false,
+              "outExtension": {
+                ".js": ".js"
+              }
+            }
+          }
+        }
+      },
+      "serve": {
+        "continuous": true,
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@org/uvian-discord-connector:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@org/uvian-discord-connector:build:development"
+          },
+          "production": {
+            "buildTarget": "@org/uvian-discord-connector:build:production"
+          }
+        }
+      }
+    }
+  }
+}

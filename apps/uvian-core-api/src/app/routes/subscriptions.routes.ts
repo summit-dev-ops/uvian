@@ -1,14 +1,24 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { subscriptionService } from '../services/subscription.service';
+import { createUserClient } from '../clients/supabase.client';
 
 interface CreateSubscriptionBody {
   resource_type: string;
   resource_id: string;
-  provider_id: string;
+  is_active?: boolean;
 }
 
 interface DeleteSubscriptionParams {
   subscriptionId: string;
+}
+
+function getUserClient(request: FastifyRequest) {
+  const authHeader = request.headers.authorization;
+  if (!authHeader) {
+    throw new Error('Missing authorization header');
+  }
+  const token = authHeader.replace('Bearer ', '');
+  return createUserClient(token);
 }
 
 export default async function subscriptionRoutes(fastify: FastifyInstance) {
@@ -25,7 +35,9 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
           return;
         }
 
+        const userClient = getUserClient(request);
         const subscriptions = await subscriptionService.getSubscriptionsByUser(
+          userClient,
           userId
         );
         reply.send({ subscriptions });
@@ -44,7 +56,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['resource_type', 'resource_id', 'provider_id'],
+          required: ['resource_type', 'resource_id'],
           properties: {
             resource_type: {
               type: 'string',
@@ -59,7 +71,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
               ],
             },
             resource_id: { type: 'string', format: 'uuid' },
-            provider_id: { type: 'string', format: 'uuid' },
+            is_active: { type: 'boolean', default: true },
           },
           additionalProperties: false,
         },
@@ -76,11 +88,14 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
           return;
         }
 
+        const userClient = getUserClient(request);
         const subscription = await subscriptionService.createSubscription(
+          userClient,
           userId,
           {
-            ...request.body,
-            user_id: userId,
+            resource_type: request.body.resource_type,
+            resource_id: request.body.resource_id,
+            is_active: request.body.is_active,
           }
         );
 
@@ -120,23 +135,13 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
         }
 
         const { subscriptionId } = request.params;
+        const userClient = getUserClient(request);
 
-        const existing = await subscriptionService.getSubscriptionById(
+        await subscriptionService.deleteSubscription(
+          userClient,
+          userId,
           subscriptionId
         );
-        if (!existing) {
-          reply.code(404).send({ error: 'Subscription not found' });
-          return;
-        }
-
-        if (existing.user_id !== userId) {
-          reply
-            .code(403)
-            .send({ error: 'Not authorized to delete this subscription' });
-          return;
-        }
-
-        await subscriptionService.deleteSubscription(subscriptionId, userId);
 
         fastify.eventEmitter.emitSubscriptionDeleted(
           { subscriptionId, userId },

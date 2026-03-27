@@ -292,32 +292,6 @@ export type Database = {
           is_active?: boolean;
         };
       };
-      agent_configs: {
-        Row: {
-          id: string;
-          agent_user_id: string;
-          account_id: string;
-          automation_provider_id: string;
-          name: string;
-          description: string | null;
-          subscribed_events: unknown;
-          config: unknown;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          agent_user_id: string;
-          account_id: string;
-          automation_provider_id: string;
-          name: string;
-          description?: string | null;
-          subscribed_events?: unknown;
-          config?: unknown;
-          is_active?: boolean;
-        };
-      };
       agent_api_keys: {
         Row: {
           id: string;

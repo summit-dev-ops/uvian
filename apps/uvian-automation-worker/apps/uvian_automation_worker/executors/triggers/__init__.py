@@ -23,6 +23,10 @@ from executors.triggers.job_trigger import (
     JobCancelledTrigger,
     JobRetryTrigger,
 )
+from executors.triggers.discord_trigger import (
+    DiscordMessageCreatedTrigger,
+    DiscordInteractionReceivedTrigger,
+)
 
 __all__ = [
     "BaseTrigger",

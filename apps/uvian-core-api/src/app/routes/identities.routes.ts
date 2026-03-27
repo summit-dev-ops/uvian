@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { identityService } from '../services/identity.service';
+import { createUserClient } from '../clients/supabase.client';
 
 interface CreateIdentityBody {
   provider?: 'whatsapp' | 'slack' | 'telegram' | 'discord' | 'email';
@@ -17,6 +18,15 @@ interface IdentityParams {
   identityId: string;
 }
 
+function getUserClient(request: FastifyRequest) {
+  const authHeader = request.headers.authorization;
+  if (!authHeader) {
+    throw new Error('Missing authorization header');
+  }
+  const token = authHeader.replace('Bearer ', '');
+  return createUserClient(token);
+}
+
 export default async function identityRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/identities',
@@ -31,7 +41,11 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const identities = await identityService.getIdentitiesByUser(userId);
+        const userClient = getUserClient(request);
+        const identities = await identityService.getIdentitiesByUser(
+          userClient,
+          userId
+        );
         reply.send({ identities });
       } catch (error: any) {
         reply
@@ -58,17 +72,14 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const { identityId } = request.params;
-        const identity = await identityService.getIdentityById(identityId);
+        const userClient = getUserClient(request);
+        const identity = await identityService.getIdentityById(
+          userClient,
+          identityId
+        );
 
         if (!identity) {
           reply.code(404).send({ error: 'Identity not found' });
-          return;
-        }
-
-        if (identity.user_id !== userId) {
-          reply
-            .code(403)
-            .send({ error: 'Not authorized to view this identity' });
           return;
         }
 
@@ -112,7 +123,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
+        const userClient = getUserClient(request);
         const existing = await identityService.getIdentityByProviderUserId(
+          userClient,
           request.body.provider || 'whatsapp',
           request.body.provider_user_id
         );
@@ -124,11 +137,15 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const identity = await identityService.createIdentity(userId, {
-          ...request.body,
-          provider: request.body.provider || 'whatsapp',
-          user_id: userId,
-        });
+        const identity = await identityService.createIdentity(
+          userClient,
+          userId,
+          {
+            ...request.body,
+            provider: request.body.provider || 'whatsapp',
+            user_id: userId,
+          }
+        );
 
         fastify.eventEmitter.emitIdentityCreated(
           { identityId: identity.id, userId, provider: identity.provider },
@@ -178,23 +195,12 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const { identityId } = request.params;
-        const existing = await identityService.getIdentityById(identityId);
-
-        if (!existing) {
-          reply.code(404).send({ error: 'Identity not found' });
-          return;
-        }
-
-        if (existing.user_id !== userId) {
-          reply
-            .code(403)
-            .send({ error: 'Not authorized to update this identity' });
-          return;
-        }
+        const userClient = getUserClient(request);
 
         const identity = await identityService.updateIdentity(
-          identityId,
+          userClient,
           userId,
+          identityId,
           request.body
         );
 
@@ -229,21 +235,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const { identityId } = request.params;
-        const existing = await identityService.getIdentityById(identityId);
+        const userClient = getUserClient(request);
 
-        if (!existing) {
-          reply.code(404).send({ error: 'Identity not found' });
-          return;
-        }
-
-        if (existing.user_id !== userId) {
-          reply
-            .code(403)
-            .send({ error: 'Not authorized to delete this identity' });
-          return;
-        }
-
-        await identityService.deleteIdentity(identityId, userId);
+        await identityService.deleteIdentity(userClient, userId, identityId);
 
         fastify.eventEmitter.emitIdentityDeleted(
           { identityId, userId },

@@ -1,3 +1,4 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
 import type { Database } from '../clients/supabase.client';
 
@@ -5,8 +6,11 @@ type UserAutomationProvider =
   Database['public']['Tables']['user_automation_providers']['Row'];
 
 export class UserAutomationProviderService {
-  async getProvidersByUser(userId: string): Promise<UserAutomationProvider[]> {
-    const { data, error } = await adminSupabase
+  async getProvidersByUser(
+    userClient: SupabaseClient,
+    userId: string
+  ): Promise<UserAutomationProvider[]> {
+    const { data, error } = await userClient
       .from('user_automation_providers')
       .select('*')
       .eq('user_id', userId)
@@ -22,9 +26,10 @@ export class UserAutomationProviderService {
   }
 
   async getProviderById(
+    userClient: SupabaseClient,
     providerId: string
   ): Promise<UserAutomationProvider | null> {
-    const { data, error } = await adminSupabase
+    const { data, error } = await userClient
       .from('user_automation_providers')
       .select('*')
       .eq('id', providerId)
@@ -40,6 +45,7 @@ export class UserAutomationProviderService {
   }
 
   async linkUserToProvider(
+    userClient: SupabaseClient,
     userId: string,
     automationProviderId: string
   ): Promise<UserAutomationProvider> {
@@ -60,9 +66,21 @@ export class UserAutomationProviderService {
   }
 
   async unlinkUserFromProvider(
-    providerLinkId: string,
-    userId: string
+    userClient: SupabaseClient,
+    userId: string,
+    providerLinkId: string
   ): Promise<void> {
+    const { data: existing, error: fetchError } = await userClient
+      .from('user_automation_providers')
+      .select('id')
+      .eq('id', providerLinkId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error('Provider link not found or access denied');
+    }
+
     const { error } = await adminSupabase
       .from('user_automation_providers')
       .delete()
@@ -74,8 +92,11 @@ export class UserAutomationProviderService {
     }
   }
 
-  async getProvidersForUser(userId: string): Promise<UserAutomationProvider[]> {
-    return this.getProvidersByUser(userId);
+  async getProvidersForUser(
+    userClient: SupabaseClient,
+    userId: string
+  ): Promise<UserAutomationProvider[]> {
+    return this.getProvidersByUser(userClient, userId);
   }
 }
 

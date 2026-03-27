@@ -5,6 +5,7 @@ import { registerContentHandlers } from './content.handlers';
 import { registerTicketHandlers } from './ticket.handlers';
 import { registerSpaceHandlers } from './space.handlers';
 import { registerConversationEventHandlers } from './conversation.handlers';
+import { registerDiscordHandlers } from './discord.handlers';
 
 export function registerAllEventHandlers() {
   registerChatHandlers(webhookHandlerService);
@@ -12,6 +13,7 @@ export function registerAllEventHandlers() {
   registerContentHandlers(webhookHandlerService);
   registerTicketHandlers(webhookHandlerService);
   registerSpaceHandlers(webhookHandlerService);
+  registerDiscordHandlers(webhookHandlerService);
 
   const conversationHandlers = registerConversationEventHandlers();
   for (const { eventType, handler } of conversationHandlers) {
@@ -25,3 +27,4 @@ export * from './content.handlers';
 export * from './ticket.handlers';
 export * from './space.handlers';
 export * from './conversation.handlers';
+export * from './discord.handlers';

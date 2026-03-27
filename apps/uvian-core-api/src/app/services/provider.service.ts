@@ -1,3 +1,4 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
 import type { Database } from '../clients/supabase.client';
 
@@ -10,9 +11,10 @@ type UpdateProviderPayload =
 
 export class ProviderService {
   async getProvidersByAccount(
+    userClient: SupabaseClient,
     accountId: string
   ): Promise<AutomationProvider[]> {
-    const { data, error } = await adminSupabase
+    const { data, error } = await userClient
       .from('automaton_providers')
       .select('*')
       .eq('account_id', accountId)
@@ -26,10 +28,11 @@ export class ProviderService {
   }
 
   async getProviderById(
+    userClient: SupabaseClient,
     providerId: string,
     accountId: string
   ): Promise<AutomationProvider | null> {
-    const { data, error } = await adminSupabase
+    const { data, error } = await userClient
       .from('automaton_providers')
       .select('*')
       .eq('id', providerId)
@@ -44,9 +47,10 @@ export class ProviderService {
   }
 
   async getInternalProvider(
+    userClient: SupabaseClient,
     accountId: string
   ): Promise<AutomationProvider | null> {
-    const { data, error } = await adminSupabase
+    const { data, error } = await userClient
       .from('automaton_providers')
       .select('*')
       .eq('account_id', accountId)
@@ -63,15 +67,29 @@ export class ProviderService {
   }
 
   async createProvider(
+    userClient: SupabaseClient,
+    userId: string,
     accountId: string,
-    ownerUserId: string,
     payload: CreateProviderPayload
   ): Promise<AutomationProvider> {
+    const { data: membership, error: membershipError } = await userClient
+      .from('account_members')
+      .select('account_id')
+      .eq('account_id', accountId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membershipError || !membership) {
+      throw new Error(
+        'You must be a member of this account to create providers'
+      );
+    }
+
     const { data, error } = await adminSupabase
       .from('automaton_providers')
       .insert({
         account_id: accountId,
-        owner_user_id: ownerUserId,
+        owner_user_id: userId,
         name: payload.name,
         type: payload.type || 'webhook',
         url: payload.url || null,
@@ -90,10 +108,25 @@ export class ProviderService {
   }
 
   async updateProvider(
+    userClient: SupabaseClient,
+    userId: string,
     providerId: string,
     accountId: string,
     payload: Partial<UpdateProviderPayload>
   ): Promise<AutomationProvider> {
+    const { data: membership, error: membershipError } = await userClient
+      .from('account_members')
+      .select('account_id')
+      .eq('account_id', accountId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membershipError || !membership) {
+      throw new Error(
+        'You must be a member of this account to update providers'
+      );
+    }
+
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -123,7 +156,25 @@ export class ProviderService {
     return data;
   }
 
-  async deleteProvider(providerId: string, accountId: string): Promise<void> {
+  async deleteProvider(
+    userClient: SupabaseClient,
+    userId: string,
+    providerId: string,
+    accountId: string
+  ): Promise<void> {
+    const { data: membership, error: membershipError } = await userClient
+      .from('account_members')
+      .select('account_id')
+      .eq('account_id', accountId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membershipError || !membership) {
+      throw new Error(
+        'You must be a member of this account to delete providers'
+      );
+    }
+
     const { error } = await adminSupabase
       .from('automaton_providers')
       .delete()

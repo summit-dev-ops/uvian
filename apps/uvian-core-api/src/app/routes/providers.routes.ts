@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { providerService } from '../services/provider.service';
-import { adminSupabase } from '../clients/supabase.client';
+import { createUserClient } from '../clients/supabase.client';
 
 interface GetAutomationProvidersParams {
   accountId: string;
@@ -38,21 +38,13 @@ interface DeleteAutomationProviderParams {
   automationProviderId: string;
 }
 
-async function verifyAccountAccess(
-  supabase: typeof adminSupabase,
-  accountId: string,
-  userId: string
-): Promise<void> {
-  const { data, error } = await supabase
-    .from('account_members')
-    .select('account_id')
-    .eq('account_id', accountId)
-    .eq('user_id', userId)
-    .single();
-
-  if (error || !data) {
-    throw new Error('Account not found or access denied');
+function getUserClient(request: FastifyRequest) {
+  const authHeader = request.headers.authorization;
+  if (!authHeader) {
+    throw new Error('Missing authorization header');
   }
+  const token = authHeader.replace('Bearer ', '');
+  return createUserClient(token);
 }
 
 export default async function providerRoutes(fastify: FastifyInstance) {
@@ -73,9 +65,10 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
-        await verifyAccountAccess(adminSupabase, accountId, userId);
+        const userClient = getUserClient(request);
 
         const providers = await providerService.getProvidersByAccount(
+          userClient,
           accountId
         );
         reply.send({ providers });
@@ -128,11 +121,12 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
-        await verifyAccountAccess(adminSupabase, accountId, userId);
+        const userClient = getUserClient(request);
 
         const provider = await providerService.createProvider(
-          accountId,
+          userClient,
           userId,
+          accountId,
           {
             ...request.body,
             account_id: accountId,
@@ -194,9 +188,11 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId, automationProviderId } = request.params;
-        await verifyAccountAccess(adminSupabase, accountId, userId);
+        const userClient = getUserClient(request);
 
         const provider = await providerService.updateProvider(
+          userClient,
+          userId,
           automationProviderId,
           accountId,
           request.body
@@ -233,9 +229,10 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId, automationProviderId } = request.params;
-        await verifyAccountAccess(adminSupabase, accountId, userId);
+        const userClient = getUserClient(request);
 
         const existingProvider = await providerService.getProviderById(
+          userClient,
           automationProviderId,
           accountId
         );
@@ -244,7 +241,12 @@ export default async function providerRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        await providerService.deleteProvider(automationProviderId, accountId);
+        await providerService.deleteProvider(
+          userClient,
+          userId,
+          automationProviderId,
+          accountId
+        );
 
         fastify.eventEmitter.emitAutomationProviderDeleted(
           { automationProviderId, accountId },

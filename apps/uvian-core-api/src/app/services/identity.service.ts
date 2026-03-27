@@ -1,3 +1,4 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
 import type { Database } from '../clients/supabase.client';
 
@@ -6,8 +7,11 @@ type CreateIdentityPayload =
   Database['public']['Tables']['user_identities']['Insert'];
 
 export class IdentityService {
-  async getIdentitiesByUser(userId: string): Promise<UserIdentity[]> {
-    const { data, error } = await adminSupabase
+  async getIdentitiesByUser(
+    userClient: SupabaseClient,
+    userId: string
+  ): Promise<UserIdentity[]> {
+    const { data, error } = await userClient
       .from('user_identities')
       .select('*')
       .eq('user_id', userId)
@@ -20,8 +24,11 @@ export class IdentityService {
     return data || [];
   }
 
-  async getIdentitiesByProvider(provider: string): Promise<UserIdentity[]> {
-    const { data, error } = await adminSupabase
+  async getIdentitiesByProvider(
+    userClient: SupabaseClient,
+    provider: string
+  ): Promise<UserIdentity[]> {
+    const { data, error } = await userClient
       .from('user_identities')
       .select('*')
       .eq('provider', provider);
@@ -33,8 +40,11 @@ export class IdentityService {
     return data || [];
   }
 
-  async getIdentityById(identityId: string): Promise<UserIdentity | null> {
-    const { data, error } = await adminSupabase
+  async getIdentityById(
+    userClient: SupabaseClient,
+    identityId: string
+  ): Promise<UserIdentity | null> {
+    const { data, error } = await userClient
       .from('user_identities')
       .select('*')
       .eq('id', identityId)
@@ -48,10 +58,11 @@ export class IdentityService {
   }
 
   async getIdentityByProviderUserId(
+    userClient: SupabaseClient,
     provider: string,
     providerUserId: string
   ): Promise<UserIdentity | null> {
-    const { data, error } = await adminSupabase
+    const { data, error } = await userClient
       .from('user_identities')
       .select('*')
       .eq('provider', provider)
@@ -66,6 +77,7 @@ export class IdentityService {
   }
 
   async createIdentity(
+    userClient: SupabaseClient,
     userId: string,
     payload: CreateIdentityPayload
   ): Promise<UserIdentity> {
@@ -88,10 +100,22 @@ export class IdentityService {
   }
 
   async updateIdentity(
-    identityId: string,
+    userClient: SupabaseClient,
     userId: string,
+    identityId: string,
     payload: Partial<CreateIdentityPayload>
   ): Promise<UserIdentity> {
+    const { data: existing, error: fetchError } = await userClient
+      .from('user_identities')
+      .select('id')
+      .eq('id', identityId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error('Identity not found or access denied');
+    }
+
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -116,7 +140,22 @@ export class IdentityService {
     return data;
   }
 
-  async deleteIdentity(identityId: string, userId: string): Promise<void> {
+  async deleteIdentity(
+    userClient: SupabaseClient,
+    userId: string,
+    identityId: string
+  ): Promise<void> {
+    const { data: existing, error: fetchError } = await userClient
+      .from('user_identities')
+      .select('id')
+      .eq('id', identityId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error('Identity not found or access denied');
+    }
+
     const { error } = await adminSupabase
       .from('user_identities')
       .delete()

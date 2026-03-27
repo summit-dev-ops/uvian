@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from executors.triggers.base import BaseTrigger, TriggerMessage, TriggerRegistry
 
 
@@ -19,6 +19,28 @@ class MessageCreatedTrigger(BaseTrigger):
         context = event_data.get("context", {})
         
         content = resource_data.get("content", "")
+        platform = resource_data.get("platform")
+        external_channel_id = resource_data.get("externalChannelId")
+        external_user_id = resource_data.get("externalUserId")
+        
+        if platform and platform != "internal":
+            message_content = f"""[{platform}] User said: {content}
+External Channel: {external_channel_id or 'unknown'}
+External User: {external_user_id or 'unknown'}"""
+            
+            return TriggerMessage(
+                content=message_content,
+                event_type=self.event_type,
+                metadata={
+                    "message_id": resource_id,
+                    "conversation_id": context.get("conversationId"),
+                    "sender_id": actor_id,
+                    "asset_ids": resource_data.get("assetIds", []),
+                    "platform": platform,
+                    "external_channel_id": external_channel_id,
+                    "external_user_id": external_user_id,
+                }
+            )
         
         message_content = f"""Event: message.created
 Actor: {actor_id}

@@ -5,6 +5,7 @@ const SUBSCRIPTION_PROVIDERS_CACHE_TTL = 300; // 5 minutes
 
 export interface SubscriptionProvider {
   subscription_id: string;
+  subscription_is_active: boolean;
   user_id: string;
   resource_type: string;
   resource_id: string;

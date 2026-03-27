@@ -130,6 +130,25 @@ export type Database = {
           automation_provider_id: string;
         };
       };
+      agent_api_keys: {
+        Row: {
+          id: string;
+          user_id: string;
+          api_key_hash: string;
+          api_key_prefix: string;
+          is_active: boolean;
+          service: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          api_key_hash: string;
+          api_key_prefix: string;
+          is_active?: boolean;
+          service: string;
+        };
+      };
     };
   };
 };

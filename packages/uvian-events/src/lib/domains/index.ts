@@ -8,6 +8,7 @@ export * from './accounts.js';
 export * from './agents.js';
 export * from './intake.js';
 export * from './core.js';
+export * from './discord.js';
 
 import { MessagingEvents } from './messaging.js';
 import { SpaceEvents } from './spaces.js';
@@ -19,6 +20,7 @@ import { AccountEvents } from './accounts.js';
 import { AgentEvents } from './agents.js';
 import { IntakeEvents } from './intake.js';
 import { CoreEvents } from './core.js';
+import { DiscordEvents } from './discord.js';
 
 export const AllEvents = {
   ...MessagingEvents,
@@ -31,6 +33,7 @@ export const AllEvents = {
   ...AgentEvents,
   ...IntakeEvents,
   ...CoreEvents,
+  ...DiscordEvents,
 } as const;
 
 export type UvianEventType =
@@ -43,7 +46,8 @@ export type UvianEventType =
   | import('./accounts.js').AccountEventType
   | import('./agents.js').AgentEventType
   | import('./intake.js').IntakeEventType
-  | import('./core.js').CoreEventType;
+  | import('./core.js').CoreEventType
+  | import('./discord.js').DiscordEventType;
 
 export type UvianEventData =
   | import('./messaging.js').MessagingEventData
@@ -55,4 +59,5 @@ export type UvianEventData =
   | import('./accounts.js').AccountEventData
   | import('./agents.js').AgentEventData
   | import('./intake.js').IntakeEventData
-  | import('./core.js').CoreEventData;
+  | import('./core.js').CoreEventData
+  | import('./discord.js').DiscordEventData;

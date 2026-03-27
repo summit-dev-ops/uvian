@@ -1,13 +1,21 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { adminSupabase } from '../clients/supabase.client';
 import type { Database } from '../clients/supabase.client';
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row'];
-type CreateSubscriptionPayload =
-  Database['public']['Tables']['subscriptions']['Insert'];
+
+interface CreateSubscriptionPayload {
+  resource_type: string;
+  resource_id: string;
+  is_active?: boolean;
+}
 
 export class SubscriptionService {
-  async getSubscriptionsByUser(userId: string): Promise<Subscription[]> {
-    const { data, error } = await adminSupabase
+  async getSubscriptionsByUser(
+    userClient: SupabaseClient,
+    userId: string
+  ): Promise<Subscription[]> {
+    const { data, error } = await userClient
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId)
@@ -21,10 +29,11 @@ export class SubscriptionService {
   }
 
   async getSubscriptionsByResource(
+    userClient: SupabaseClient,
     resourceType: string,
     resourceId: string
   ): Promise<Subscription[]> {
-    const { data, error } = await adminSupabase
+    const { data, error } = await userClient
       .from('subscriptions')
       .select('*')
       .eq('resource_type', resourceType)
@@ -38,9 +47,10 @@ export class SubscriptionService {
   }
 
   async getSubscriptionById(
+    userClient: SupabaseClient,
     subscriptionId: string
   ): Promise<Subscription | null> {
-    const { data, error } = await adminSupabase
+    const { data, error } = await userClient
       .from('subscriptions')
       .select('*')
       .eq('id', subscriptionId)
@@ -54,17 +64,23 @@ export class SubscriptionService {
   }
 
   async createSubscription(
+    userClient: SupabaseClient,
     userId: string,
     payload: CreateSubscriptionPayload
   ): Promise<Subscription> {
+    const insertData: Record<string, unknown> = {
+      user_id: userId,
+      resource_type: payload.resource_type,
+      resource_id: payload.resource_id,
+    };
+
+    if (payload.is_active !== undefined) {
+      insertData.is_active = payload.is_active;
+    }
+
     const { data, error } = await adminSupabase
       .from('subscriptions')
-      .insert({
-        user_id: userId,
-        resource_type: payload.resource_type,
-        resource_id: payload.resource_id,
-        provider_id: payload.provider_id,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -76,9 +92,21 @@ export class SubscriptionService {
   }
 
   async deleteSubscription(
-    subscriptionId: string,
-    userId: string
+    userClient: SupabaseClient,
+    userId: string,
+    subscriptionId: string
   ): Promise<void> {
+    const { data: existing, error: fetchError } = await userClient
+      .from('subscriptions')
+      .select('id')
+      .eq('id', subscriptionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error('Subscription not found or access denied');
+    }
+
     const { error } = await adminSupabase
       .from('subscriptions')
       .delete()
@@ -91,6 +119,7 @@ export class SubscriptionService {
   }
 
   async deleteSubscriptionByResource(
+    userClient: SupabaseClient,
     userId: string,
     resourceType: string,
     resourceId: string

@@ -4,11 +4,13 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { adminSupabase } from '../clients/supabase.client';
 import { secretsService } from '../services/secrets.service';
-import { agentConfigService } from '../services/agent-config.service';
 import {
-  generateRSAKeyPair,
-  decryptRSA,
-} from '../services/encryption.service';
+  agentConfigService,
+  UpdateAgentConfigPayload,
+} from '../services/agent-config.service';
+import { llmService } from '../services/llm.service';
+import { mcpService } from '../services/mcp.service';
+import { generateRSAKeyPair, decryptRSA } from '../services/encryption.service';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -266,6 +268,387 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         }
       }
     );
+
+    server.registerTool(
+      'create_agent_config',
+      {
+        inputSchema: z.object({
+          userId: z.string(),
+          accountId: z.string(),
+          systemPrompt: z.string().optional(),
+          maxConversationHistory: z.number().optional(),
+          skills: z.array(z.record(z.string(), z.unknown())).optional(),
+          config: z.record(z.string(), z.unknown()).optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const agent = await agentConfigService.create({} as any, {
+            userId: args.userId,
+            accountId: args.accountId,
+            systemPrompt: args.systemPrompt,
+            maxConversationHistory: args.maxConversationHistory,
+            skills: args.skills,
+            config: args.config,
+          });
+          return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_agent_config',
+      {
+        inputSchema: z.object({ agentId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const agent = await agentConfigService.getById(
+            {} as any,
+            args.agentId
+          );
+          return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'update_agent_config',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          systemPrompt: z.string().optional(),
+          maxConversationHistory: z.number().optional(),
+          skills: z.array(z.record(z.string(), z.unknown())).optional(),
+          config: z.record(z.string(), z.unknown()).optional(),
+          isActive: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const payload: UpdateAgentConfigPayload = {
+            systemPrompt: args.systemPrompt,
+            maxConversationHistory: args.maxConversationHistory,
+            skills:
+              args.skills as unknown as UpdateAgentConfigPayload['skills'],
+            config: args.config,
+            isActive: args.isActive,
+          };
+          const agent = await agentConfigService.update(
+            {} as any,
+            args.agentId,
+            payload
+          );
+          return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'list_llms',
+      {
+        inputSchema: z.object({ accountId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const llms = await llmService.list({} as any, args.accountId);
+          return { content: [{ type: 'text', text: JSON.stringify(llms) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_llm',
+      {
+        inputSchema: z.object({ llmId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const llm = await llmService.get({} as any, args.llmId);
+          return { content: [{ type: 'text', text: JSON.stringify(llm) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'create_llm',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          name: z.string(),
+          type: z.string(),
+          provider: z.string(),
+          modelName: z.string(),
+          baseUrl: z.string().optional(),
+          temperature: z.number().optional(),
+          maxTokens: z.number().optional(),
+          config: z.record(z.string(), z.unknown()).optional(),
+          isDefault: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const llm = await llmService.create({} as any, args);
+          return { content: [{ type: 'text', text: JSON.stringify(llm) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'list_mcps',
+      {
+        inputSchema: z.object({ accountId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const mcps = await mcpService.list({} as any, args.accountId);
+          return { content: [{ type: 'text', text: JSON.stringify(mcps) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_mcp',
+      {
+        inputSchema: z.object({ mcpId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const mcp = await mcpService.get({} as any, args.mcpId);
+          return { content: [{ type: 'text', text: JSON.stringify(mcp) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'create_mcp',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          name: z.string(),
+          type: z.string(),
+          url: z.string().optional(),
+          authMethod: z.string(),
+          config: z.record(z.string(), z.unknown()).optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const mcp = await mcpService.create({} as any, args);
+          return { content: [{ type: 'text', text: JSON.stringify(mcp) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'link_llm',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          llmId: z.string(),
+          secretName: z.string().optional(),
+          secretValue: z.string().optional(),
+          isDefault: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const link = await agentConfigService.linkLlm(
+            {} as any,
+            args.agentId,
+            {
+              llmId: args.llmId,
+              secretName: args.secretName,
+              secretValue: args.secretValue,
+              isDefault: args.isDefault,
+            }
+          );
+          return { content: [{ type: 'text', text: JSON.stringify(link) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'unlink_llm',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          llmId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          await agentConfigService.unlinkLlm(
+            {} as any,
+            args.agentId,
+            args.llmId
+          );
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ success: true }) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'link_mcp',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          mcpId: z.string(),
+          secretName: z.string().optional(),
+          secretValue: z.string().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const link = await agentConfigService.linkMcp(
+            {} as any,
+            args.agentId,
+            {
+              mcpId: args.mcpId,
+              secretName: args.secretName,
+              secretValue: args.secretValue,
+            }
+          );
+          return { content: [{ type: 'text', text: JSON.stringify(link) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'unlink_mcp',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          mcpId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          await agentConfigService.unlinkMcp(
+            {} as any,
+            args.agentId,
+            args.mcpId
+          );
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ success: true }) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_agent_llms',
+      {
+        inputSchema: z.object({ agentId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const llms = await agentConfigService.getLlms(
+            {} as any,
+            args.agentId
+          );
+          return { content: [{ type: 'text', text: JSON.stringify(llms) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_agent_mcps',
+      {
+        inputSchema: z.object({ agentId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const mcps = await agentConfigService.getMcps(
+            {} as any,
+            args.agentId
+          );
+          return { content: [{ type: 'text', text: JSON.stringify(mcps) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
     return server;
   }
 
