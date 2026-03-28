@@ -2,8 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import { IntakeService } from '../services/intake.service';
-import { secretsService } from '../services';
+import { intakeService, secretsService } from '../services';
 import {
   generateRSAKeyPair,
   decryptRSA,
@@ -67,10 +66,9 @@ async function authenticateWithApiKey(
     return null;
   }
 
-  const accountId = await secretsService.getAccountIdForUser(
-    { adminClient: adminSupabase, userClient: adminSupabase },
-    userData.user.id
-  );
+  const accountId = await secretsService
+    .admin({ adminClient: adminSupabase, userClient: adminSupabase })
+    .getAccountIdForUser(userData.user.id);
   if (!accountId) {
     return null;
   }
@@ -176,8 +174,6 @@ const DecryptSubmissionInputSchema = z.object({
 });
 
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
-  const intakeService = new IntakeService(fastify);
-
   function createServer(userId: string, accountId: string, jwt: string) {
     const supabaseUrl = process.env.SUPABASE_URL!;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
@@ -200,17 +196,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const result = await intakeService.createIntake({
-            title: args.title,
-            description: args.description,
-            submitLabel: args.submitLabel,
-            publicKey: args.publicKey,
-            schema: { fields: args.fields },
-            metadata: args.metadata,
-            expiresInSeconds: args.expiresInSeconds,
-            requiresAuth: args.requiresAuth,
-            createdBy: userId,
-          });
+          const result = await intakeService
+            .scoped(clients)
+            .createIntake(userId, {
+              title: args.title,
+              description: args.description,
+              submitLabel: args.submitLabel,
+              publicKey: args.publicKey,
+              schema: { fields: args.fields },
+              metadata: args.metadata,
+              expiresInSeconds: args.expiresInSeconds,
+              requiresAuth: args.requiresAuth,
+              createdBy: userId,
+            });
           return {
             content: [
               {
@@ -235,7 +233,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const status = await intakeService.getIntakeStatus(args.tokenId);
+          const status = await intakeService
+            .scoped(clients)
+            .getIntakeStatus(args.tokenId);
           if (!status) {
             return {
               content: [{ type: 'text', text: 'Intake not found' }],
@@ -266,7 +266,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const revoked = await intakeService.revokeIntake(args.tokenId);
+          const revoked = await intakeService
+            .scoped(clients)
+            .revokeIntake(args.tokenId, userId);
           return {
             content: [
               {
@@ -291,7 +293,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async () => {
         try {
-          const intakes = await intakeService.listIntakes(userId);
+          const intakes = await intakeService
+            .scoped(clients)
+            .listIntakes(userId);
           return {
             content: [
               {
@@ -316,9 +320,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const submission = await intakeService.getSubmission(
-            args.submissionId
-          );
+          const submission = await intakeService
+            .scoped(clients)
+            .getSubmission(args.submissionId, userId);
           if (!submission) {
             return {
               content: [
@@ -357,9 +361,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const submissions = await intakeService.getSubmissionsByIntakeId(
-            args.tokenId
-          );
+          const submissions = await intakeService
+            .scoped(clients)
+            .getSubmissionsByIntakeId(args.tokenId, userId);
           return {
             content: [
               {
@@ -394,17 +398,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const keyPair = generateRSAKeyPair();
 
-          const secret = await secretsService.create(clients, {
-            accountId,
-            name: `${args.name}_private_key`,
-            valueType: 'text',
-            value: keyPair.privateKey,
-            metadata: {
-              ...args.metadata,
-              keyType: 'rsa_private_key',
-              createdBy: 'mcp-intake-plugin',
-            },
-          });
+          const secret = await secretsService
+            .scoped(clients)
+            .create(accountId, {
+              name: `${args.name}_private_key`,
+              valueType: 'text',
+              value: keyPair.privateKey,
+              metadata: {
+                ...args.metadata,
+                keyType: 'rsa_private_key',
+                createdBy: 'mcp-intake-plugin',
+              },
+            });
 
           return {
             content: [
@@ -434,10 +439,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const secret = await secretsService.getByIdWithDecryptedValue(
-            clients,
-            args.secretId
-          );
+          const secret = await secretsService
+            .admin(clients)
+            .getByIdWithDecryptedValue(args.secretId);
           if (!secret) {
             return {
               content: [{ type: 'text', text: 'Secret not found' }],
@@ -463,7 +467,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async () => {
         try {
-          const secrets = await secretsService.list(clients, accountId);
+          const secrets = await secretsService.scoped(clients).list(accountId);
           return {
             content: [{ type: 'text', text: JSON.stringify(secrets) }],
           } as ToolResult;
@@ -483,7 +487,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          await secretsService.delete(clients, args.secretId);
+          await secretsService.scoped(clients).delete(accountId, args.secretId);
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -505,10 +509,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const secret = await secretsService.getByIdWithDecryptedValue(
-            clients,
-            args.secretId
-          );
+          const secret = await secretsService
+            .admin(clients)
+            .getByIdWithDecryptedValue(args.secretId);
           if (!secret) {
             return {
               content: [{ type: 'text', text: 'Secret not found' }],
@@ -538,10 +541,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const secret = await secretsService.getByIdWithDecryptedValue(
-            clients,
-            args.secretId
-          );
+          const secret = await secretsService
+            .admin(clients)
+            .getByIdWithDecryptedValue(args.secretId);
           if (!secret) {
             return {
               content: [{ type: 'text', text: 'Secret not found' }],

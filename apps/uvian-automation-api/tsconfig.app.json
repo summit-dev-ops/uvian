@@ -33,6 +33,9 @@
     },
     {
       "path": "../../packages/uvian-events/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/utils/encryption/tsconfig.lib.json"
     }
   ]
 }

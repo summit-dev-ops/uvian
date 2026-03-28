@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { profileService } from '../services/profile.service';
+import { profileService } from '../services/factory';
 import { adminSupabase } from '../clients/supabase.client';
+
 import {
   CreateProfileRequest,
   UpdateProfileRequest,
@@ -45,11 +46,9 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
 
         const { displayName, avatarUrl, bio } = request.body || {};
 
-        const profile = await profileService.createOrUpdateProfile(
-          getClients(request),
-          userId,
-          { displayName, avatarUrl, bio }
-        );
+        const profile = await profileService
+          .scoped(getClients(request))
+          .createOrUpdateProfile(userId, { displayName, avatarUrl, bio });
 
         reply.code(201).send(profile);
       } catch (error: any) {
@@ -96,12 +95,9 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
         const { profileId } = request.params;
         const { displayName, avatarUrl, bio } = request.body || {};
 
-        const profile = await profileService.updateProfile(
-          getClients(request),
-          userId,
-          profileId,
-          { displayName, avatarUrl, bio }
-        );
+        const profile = await profileService
+          .scoped(getClients(request))
+          .updateProfile(userId, profileId, { displayName, avatarUrl, bio });
 
         reply.send(profile);
       } catch (error: any) {
@@ -144,11 +140,9 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
 
         const { profileId } = request.params;
 
-        await profileService.deleteProfile(
-          getClients(request),
-          userId,
-          profileId
-        );
+        await profileService
+          .scoped(getClients(request))
+          .deleteProfile(userId, profileId);
 
         reply.code(204).send();
       } catch (error: any) {
@@ -184,10 +178,9 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
       try {
         const { profileId } = request.params;
 
-        const profile = await profileService.getProfile(
-          getClients(request),
-          profileId
-        );
+        const profile = await profileService
+          .scoped(getClients(request))
+          .getProfile(profileId);
 
         reply.send(profile);
       } catch (error: any) {

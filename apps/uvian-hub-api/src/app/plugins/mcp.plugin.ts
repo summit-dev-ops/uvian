@@ -124,10 +124,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const note = await fastify.services.note.getNote(
-            clients,
-            args.noteId
-          );
+          const note = await fastify.services.note
+            .scoped(clients)
+            .getNote(args.noteId);
           return {
             content: [{ type: 'text', text: JSON.stringify(note) }],
           };
@@ -148,7 +147,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const results = await fastify.services.chat.getConversations(clients);
+          const results = await fastify.services.chat
+            .scoped(clients)
+            .getConversations();
           return {
             content: [{ type: 'text', text: JSON.stringify(results) }],
           };
@@ -169,10 +170,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async ({ conversationId }): Promise<ToolResult> => {
         console.log({ conversationId });
         try {
-          const result = await fastify.services.chat.getConversation(
-            clients,
-            conversationId
-          );
+          const result = await fastify.services.chat
+            .scoped(clients)
+            .getConversation(conversationId);
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
           };
@@ -197,10 +197,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.chat.getMessages(
-            clients,
-            args.conversationId
-          );
+          const result = await fastify.services.chat
+            .scoped(clients)
+            .getMessages(args.conversationId);
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
           };
@@ -225,11 +224,12 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.post.getPostsBySpace(
-            clients,
-            args.spaceId,
-            { limit: args.limit, cursor: args.cursor }
-          );
+          const result = await fastify.services.post
+            .scoped(clients)
+            .getPostsBySpace(args.spaceId, {
+              limit: args.limit,
+              cursor: args.cursor,
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
           };
@@ -251,10 +251,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.post.getPost(
-            clients,
-            args.postId
-          );
+          const result = await fastify.services.post
+            .scoped(clients)
+            .getPost(args.postId);
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
           };
@@ -279,11 +278,12 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           // Bypassed getUser() - using injected userId directly
-          const result = await fastify.services.chat.createConversation(
-            clients,
-            userId,
-            { title: args.title, spaceId: args.spaceId }
-          );
+          const result = await fastify.services.chat
+            .scoped(clients)
+            .createConversation(userId, {
+              title: args.title,
+              spaceId: args.spaceId,
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
           };
@@ -308,12 +308,12 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           // Bypassed getUser() - using injected userId directly
           const id = randomUUID();
-          const result = await fastify.services.chat.createMessage(
-            clients,
-            userId,
-            args.conversationId,
-            { id, content: args.content }
-          );
+          const result = await fastify.services.chat
+            .scoped(clients)
+            .createMessage(userId, args.conversationId, {
+              id,
+              content: args.content,
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
           };
@@ -339,15 +339,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           // Bypassed getUser() - using injected userId directly
-          const result = await fastify.services.spaces.createSpace(
-            clients,
-            userId,
-            {
+          const result = await fastify.services.spaces
+            .scoped(clients)
+            .createSpace(userId, {
               name: args.name,
               description: args.description,
               isPrivate: args.isPrivate,
-            }
-          );
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
           };
@@ -371,7 +369,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (): Promise<ToolResult> => {
         try {
-          const spaces = await fastify.services.spaces.getSpaces(clients);
+          const spaces = await fastify.services.spaces
+            .scoped(clients)
+            .getSpaces();
           return { content: [{ type: 'text', text: JSON.stringify(spaces) }] };
         } catch (error) {
           return {
@@ -389,10 +389,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ spaceId }): Promise<ToolResult> => {
         try {
-          const space = await fastify.services.spaces.getSpace(
-            clients,
-            spaceId
-          );
+          const space = await fastify.services.spaces
+            .scoped(clients)
+            .getSpace(spaceId);
           return { content: [{ type: 'text', text: JSON.stringify(space) }] };
         } catch (error) {
           return {
@@ -410,10 +409,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (): Promise<ToolResult> => {
         try {
-          const stats = await fastify.services.spaces.getSpaceStats(
-            clients,
-            userId
-          );
+          const stats = await fastify.services.spaces
+            .scoped(clients)
+            .getSpaceStats(userId);
           return { content: [{ type: 'text', text: JSON.stringify(stats) }] };
         } catch (error) {
           return {
@@ -439,19 +437,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const space = await fastify.services.spaces.updateSpace(
-            clients,
-            userId,
-            args.spaceId,
-            {
+          const space = await fastify.services.spaces
+            .scoped(clients)
+            .updateSpace(userId, args.spaceId, {
               name: args.name,
               description: args.description,
               avatarUrl: args.avatarUrl,
               coverUrl: args.coverUrl,
               settings: args.settings,
               isPrivate: args.isPrivate,
-            }
-          );
+            });
           return { content: [{ type: 'text', text: JSON.stringify(space) }] };
         } catch (error) {
           return {
@@ -469,11 +464,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ spaceId }): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.spaces.deleteSpace(
-            clients,
-            userId,
-            spaceId
-          );
+          const result = await fastify.services.spaces
+            .scoped(clients)
+            .deleteSpace(userId, spaceId);
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -499,11 +492,12 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.note.getNotesBySpace(
-            clients,
-            args.spaceId,
-            { limit: args.limit, cursor: args.cursor }
-          );
+          const result = await fastify.services.note
+            .scoped(clients)
+            .getNotesBySpace(args.spaceId, {
+              limit: args.limit,
+              cursor: args.cursor,
+            });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -525,12 +519,12 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const note = await fastify.services.note.updateNote(
-            clients,
-            userId,
-            args.noteId,
-            { title: args.title, body: args.body }
-          );
+          const note = await fastify.services.note
+            .scoped(clients)
+            .updateNote(userId, args.noteId, {
+              title: args.title,
+              body: args.body,
+            });
           return { content: [{ type: 'text', text: JSON.stringify(note) }] };
         } catch (error) {
           return {
@@ -548,11 +542,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ noteId }): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.note.deleteNote(
-            clients,
-            userId,
-            noteId
-          );
+          const result = await fastify.services.note
+            .scoped(clients)
+            .deleteNote(userId, noteId);
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -574,10 +566,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ spaceId }): Promise<ToolResult> => {
         try {
-          const members = await fastify.services.spaces.getSpaceMembers(
-            clients,
-            spaceId
-          );
+          const members = await fastify.services.spaces
+            .scoped(clients)
+            .getSpaceMembers(spaceId);
           return { content: [{ type: 'text', text: JSON.stringify(members) }] };
         } catch (error) {
           return {
@@ -599,13 +590,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.spaces.inviteMember(
-            clients,
-            userId,
-            args.spaceId,
-            args.targetUserId,
-            { name: args.role || 'member' }
-          );
+          const member = await fastify.services.spaces
+            .scoped(clients)
+            .inviteMember(userId, args.spaceId, args.targetUserId, {
+              name: args.role || 'member',
+            });
           return { content: [{ type: 'text', text: JSON.stringify(member) }] };
         } catch (error) {
           return {
@@ -626,12 +615,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.spaces.removeMember(
-            clients,
-            userId,
-            args.spaceId,
-            args.targetUserId
-          );
+          const result = await fastify.services.spaces
+            .scoped(clients)
+            .removeMember(userId, args.spaceId, args.targetUserId);
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -653,13 +639,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.spaces.updateMemberRole(
-            clients,
-            userId,
-            args.spaceId,
-            args.targetUserId,
-            { name: args.role }
-          );
+          const member = await fastify.services.spaces
+            .scoped(clients)
+            .updateMemberRole(userId, args.spaceId, args.targetUserId, {
+              name: args.role,
+            });
           return { content: [{ type: 'text', text: JSON.stringify(member) }] };
         } catch (error) {
           return {
@@ -681,10 +665,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ conversationId }): Promise<ToolResult> => {
         try {
-          const members = await fastify.services.chat.getConversationMembers(
-            clients,
-            conversationId
-          );
+          const members = await fastify.services.chat
+            .scoped(clients)
+            .getConversationMembers(conversationId);
           return { content: [{ type: 'text', text: JSON.stringify(members) }] };
         } catch (error) {
           return {
@@ -706,13 +689,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.chat.inviteMember(
-            clients,
-            userId,
-            args.conversationId,
-            args.targetUserId,
-            { name: args.role || 'member' }
-          );
+          const member = await fastify.services.chat
+            .scoped(clients)
+            .inviteMember(userId, args.conversationId, args.targetUserId, {
+              name: args.role || 'member',
+            });
           return { content: [{ type: 'text', text: JSON.stringify(member) }] };
         } catch (error) {
           return {
@@ -733,12 +714,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.chat.removeMember(
-            clients,
-            userId,
-            args.conversationId,
-            args.targetUserId
-          );
+          const result = await fastify.services.chat
+            .scoped(clients)
+            .removeMember(userId, args.conversationId, args.targetUserId);
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -760,13 +738,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.chat.updateMemberRole(
-            clients,
-            userId,
-            args.conversationId,
-            args.targetUserId,
-            { name: args.role }
-          );
+          const member = await fastify.services.chat
+            .scoped(clients)
+            .updateMemberRole(userId, args.conversationId, args.targetUserId, {
+              name: args.role,
+            });
           return { content: [{ type: 'text', text: JSON.stringify(member) }] };
         } catch (error) {
           return {
@@ -796,18 +772,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const messages = await fastify.services.chat.searchMessages(
-            clients,
-            args.conversationId,
-            {
+          const messages = await fastify.services.chat
+            .scoped(clients)
+            .searchMessages(args.conversationId, {
               q: args.q,
               senderId: args.senderId,
               from: args.from,
               to: args.to,
               limit: args.limit,
               offset: args.offset,
-            }
-          );
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(messages) }],
           };
@@ -827,11 +801,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ conversationId }): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.chat.deleteConversation(
-            clients,
-            userId,
-            conversationId
-          );
+          const result = await fastify.services.chat
+            .scoped(clients)
+            .deleteConversation(userId, conversationId);
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -852,12 +824,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.chat.deleteMessage(
-            clients,
-            userId,
-            args.conversationId,
-            args.messageId
-          );
+          const result = await fastify.services.chat
+            .scoped(clients)
+            .deleteMessage(userId, args.conversationId, args.messageId);
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -879,13 +848,14 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const message = await fastify.services.chat.updateMessage(
-            clients,
-            userId,
-            args.conversationId,
-            args.messageId,
-            args.content
-          );
+          const message = await fastify.services.chat
+            .scoped(clients)
+            .updateMessage(
+              userId,
+              args.conversationId,
+              args.messageId,
+              args.content
+            );
           return { content: [{ type: 'text', text: JSON.stringify(message) }] };
         } catch (error) {
           return {
@@ -907,10 +877,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ profileId }): Promise<ToolResult> => {
         try {
-          const profile = await fastify.services.profile.getProfile(
-            clients,
-            profileId
-          );
+          const profile = await fastify.services.profile
+            .scoped(clients)
+            .getProfile(profileId);
           return { content: [{ type: 'text', text: JSON.stringify(profile) }] };
         } catch (error) {
           return {
@@ -928,10 +897,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (): Promise<ToolResult> => {
         try {
-          const profile = await fastify.services.profile.getProfileByUserId(
-            clients,
-            userId
-          );
+          const profile = await fastify.services.profile
+            .scoped(clients)
+            .getProfileByUserId(userId);
           return { content: [{ type: 'text', text: JSON.stringify(profile) }] };
         } catch (error) {
           return {
@@ -954,16 +922,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const profile = await fastify.services.profile.updateProfile(
-            clients,
-            userId,
-            args.profileId,
-            {
+          const profile = await fastify.services.profile
+            .scoped(clients)
+            .updateProfile(userId, args.profileId, {
               displayName: args.displayName,
               avatarUrl: args.avatarUrl,
               bio: args.bio,
-            }
-          );
+            });
           return { content: [{ type: 'text', text: JSON.stringify(profile) }] };
         } catch (error) {
           return {
@@ -989,11 +954,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.asset.getAssets(clients, {
-            page: args.page,
-            limit: args.limit,
-            type: args.type,
-          });
+          const result = await fastify.services.asset
+            .scoped(clients)
+            .getAssets({
+              page: args.page,
+              limit: args.limit,
+              type: args.type,
+            });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -1011,7 +978,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ assetId }): Promise<ToolResult> => {
         try {
-          const asset = await fastify.services.asset.getAsset(clients, assetId);
+          const asset = await fastify.services.asset
+            .scoped(clients)
+            .getAsset(assetId);
           return { content: [{ type: 'text', text: JSON.stringify(asset) }] };
         } catch (error) {
           return {
@@ -1033,11 +1002,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ postId }): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.post.deletePost(
-            clients,
-            postId,
-            userId
-          );
+          const result = await fastify.services.post
+            .scoped(clients)
+            .deletePost(postId, userId);
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -1078,7 +1045,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           // Bypassed getUser() - using injected userId directly
-          const post = await fastify.services.post.createPost(clients, {
+          const post = await fastify.services.post.scoped(clients).createPost({
             spaceId: args.spaceId,
             userId: userId,
           });
@@ -1090,16 +1057,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             let noteId = item.noteId;
 
             if (item.type === 'note' && item.note?.title) {
-              const createdNote = await fastify.services.note.createNote(
-                clients,
-                userId, // Injected userId
-                {
-                  id: item.noteId, // Optional ID passing
-                  spaceId: args.spaceId,
-                  title: item.note.title,
-                  body: item.note.body,
-                }
-              );
+              const createdNote = await fastify.services.note
+                .scoped(clients)
+                .createNote(
+                  userId, // Injected userId
+                  {
+                    id: item.noteId, // Optional ID passing
+                    spaceId: args.spaceId,
+                    title: item.note.title,
+                    body: item.note.body,
+                  }
+                );
               noteId = createdNote.id;
             }
 
@@ -1117,10 +1085,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           }
 
           // Return full post
-          const fullPost = await fastify.services.post.getPost(
-            clients,
-            post.id
-          );
+          const fullPost = await fastify.services.post
+            .scoped(clients)
+            .getPost(post.id);
           return {
             content: [{ type: 'text', text: JSON.stringify(fullPost) }],
           };

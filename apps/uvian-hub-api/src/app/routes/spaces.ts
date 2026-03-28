@@ -1,6 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { spacesService } from '../services/spaces.service';
+import { createSpacesService } from '../services/spaces';
 import { adminSupabase } from '../clients/supabase.client';
+
+const spacesService = createSpacesService({});
 
 function getClients(request: any) {
   return {
@@ -27,7 +29,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
     { preHandler: [fastify.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const spaces = await spacesService.getSpaces(getClients(request));
+        const spaces = await spacesService
+          .scoped(getClients(request))
+          .getSpaces();
         reply.send(spaces);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch spaces' });
@@ -45,10 +49,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
-        const stats = await spacesService.getSpaceStats(
-          getClients(request),
-          userId
-        );
+        const stats = await spacesService
+          .scoped(getClients(request))
+          .getSpaceStats(userId);
         reply.send(stats);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch space stats' });
@@ -72,10 +75,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest<GetSpaceRequest>, reply: FastifyReply) => {
       try {
         const { spaceId } = request.params;
-        const space = await spacesService.getSpace(
-          getClients(request),
-          spaceId
-        );
+        const space = await spacesService
+          .scoped(getClients(request))
+          .getSpace(spaceId);
         reply.send(space);
       } catch (error: any) {
         if (error.message.includes('not found')) {
@@ -106,10 +108,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
     ) => {
       try {
         const { spaceId } = request.params;
-        const members = await spacesService.getSpaceMembers(
-          getClients(request),
-          spaceId
-        );
+        const members = await spacesService
+          .scoped(getClients(request))
+          .getSpaceMembers(spaceId);
         reply.send(members);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch space members' });
@@ -148,11 +149,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
-        const space = await spacesService.createSpace(
-          getClients(request),
-          userId,
-          request.body || {}
-        );
+        const space = await spacesService
+          .scoped(getClients(request))
+          .createSpace(userId, request.body || {});
         fastify.services.eventEmitter.emitSpaceCreated(
           {
             spaceId: space.id,
@@ -205,12 +204,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           return;
         }
         const { spaceId } = request.params;
-        const space = await spacesService.updateSpace(
-          getClients(request),
-          userId,
-          spaceId,
-          request.body || {}
-        );
+        const space = await spacesService
+          .scoped(getClients(request))
+          .updateSpace(userId, spaceId, request.body || {});
         fastify.services.eventEmitter.emitSpaceUpdated(
           { spaceId, updatedBy: userId, name: space.name },
           userId
@@ -252,7 +248,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           return;
         }
         const { spaceId } = request.params;
-        await spacesService.deleteSpace(getClients(request), userId, spaceId);
+        await spacesService
+          .scoped(getClients(request))
+          .deleteSpace(userId, spaceId);
         fastify.services.eventEmitter.emitSpaceDeleted(
           { spaceId, deletedBy: userId },
           userId
@@ -311,13 +309,14 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         }
         const { spaceId } = request.params;
         const { userId: targetUserId, role } = request.body || {};
-        const membership = await spacesService.inviteMember(
-          getClients(request),
-          userId,
-          spaceId,
-          targetUserId,
-          role || { name: 'member' }
-        );
+        const membership = await spacesService
+          .scoped(getClients(request))
+          .inviteMember(
+            userId,
+            spaceId,
+            targetUserId,
+            role || { name: 'member' }
+          );
         fastify.services.eventEmitter.emitSpaceMemberJoined(
           {
             spaceId,
@@ -367,12 +366,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           return;
         }
         const { spaceId, userId: targetUserId } = request.params;
-        await spacesService.removeMember(
-          getClients(request),
-          userId,
-          spaceId,
-          targetUserId
-        );
+        await spacesService
+          .scoped(getClients(request))
+          .removeMember(userId, spaceId, targetUserId);
         fastify.services.eventEmitter.emitSpaceMemberLeft(
           { spaceId, userId: targetUserId, removedBy: userId },
           userId
@@ -431,13 +427,9 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         }
         const { spaceId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
-        const membership = await spacesService.updateMemberRole(
-          getClients(request),
-          userId,
-          spaceId,
-          targetUserId,
-          role
-        );
+        const membership = await spacesService
+          .scoped(getClients(request))
+          .updateMemberRole(userId, spaceId, targetUserId, role);
         fastify.services.eventEmitter.emitSpaceMemberRoleChanged(
           {
             spaceId,

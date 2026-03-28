@@ -64,11 +64,9 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const identity = await identityService.getIdentityByProviderUserId(
-          clients,
-          'discord',
-          userId
-        );
+        const identity = await identityService
+          .admin(clients)
+          .getIdentityByProviderUserId('discord', userId);
 
         const senderId = identity?.user_id || 'external';
         const source = channelId ? `/discord/${channelId}` : '/discord';
@@ -91,7 +89,7 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
             }
 
             try {
-              const users = await userService.searchUsers(clients, {
+              const users = await userService.admin(clients).searchUsers({
                 query: agentName,
                 includeAgents: true,
                 limit: 1,
@@ -108,12 +106,9 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
                 return;
               }
 
-              await subscriptionService.activateSubscription(
-                clients,
-                agent.id,
-                'discord',
-                channelId || 'dm'
-              );
+              await subscriptionService
+                .scoped(clients)
+                .activateSubscription(agent.id, 'discord', channelId || 'dm');
 
               reply.code(200).send({
                 type: 4,
@@ -147,12 +142,13 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
                 return;
               }
 
-              await subscriptionService.deactivateSubscription(
-                clients,
-                identity.user_id,
-                'discord',
-                channelId || 'dm'
-              );
+              await subscriptionService
+                .scoped(clients)
+                .deactivateSubscription(
+                  identity.user_id,
+                  'discord',
+                  channelId || 'dm'
+                );
 
               reply.code(200).send({
                 type: 4,

@@ -6,10 +6,9 @@ import {
   AccountEvents,
   CoreEvents,
 } from '@org/uvian-events';
-import {
-  subscriptionService,
-  SubscriptionProvider,
-} from './subscription.service';
+import { cachedSubscriptionService, SubscriptionProvider } from './factory';
+import { redisConnection } from '../clients/redis';
+import { supabaseAdmin } from '../clients/supabase';
 
 const AUTOMATION_API_URL =
   process.env.UVIAN_AUTOMATION_API_URL || 'http://localhost:3001';
@@ -78,9 +77,7 @@ export class EventRouter {
       );
       const data = event.data as { automationProviderId?: string };
       if (data.automationProviderId) {
-        await subscriptionService.invalidateCacheForProvider(
-          data.automationProviderId
-        );
+        await this.invalidateCacheForProvider(data.automationProviderId);
       }
       return;
     }
@@ -104,13 +101,13 @@ export class EventRouter {
       console.log(
         '[EventRouter] Subscription event detected, invalidating cache'
       );
-      await subscriptionService.invalidateCache(resourceType, sourcePath.id);
+      await this.invalidateCache(resourceType, sourcePath.id);
       return;
     }
 
     if (this.isMemberEvent(event.type)) {
       console.log('[EventRouter] Member event detected, invalidating cache');
-      await subscriptionService.invalidateCache(resourceType, sourcePath.id);
+      await this.invalidateCache(resourceType, sourcePath.id);
       return;
     }
 
@@ -161,6 +158,62 @@ export class EventRouter {
     return INTAKE_EVENT_TYPES.includes(eventType as any);
   }
 
+  private buildCacheKey(resourceType: string, resourceId: string): string {
+    return `sub_providers:${resourceType}:${resourceId}`;
+  }
+
+  private async invalidateCache(
+    resourceType: string,
+    resourceId: string
+  ): Promise<void> {
+    const cacheKey = this.buildCacheKey(resourceType, resourceId);
+    try {
+      await redisConnection.del(cacheKey);
+      console.log(`[EventRouter] Invalidated cache for ${cacheKey}`);
+    } catch (error) {
+      console.error('[EventRouter] Redis cache invalidation error:', error);
+    }
+  }
+
+  private async invalidateCacheForProvider(
+    automationProviderId: string
+  ): Promise<void> {
+    try {
+      const { data: subscriptions, error } = await supabaseAdmin
+        .from('subscriptions')
+        .select('resource_type, resource_id')
+        .eq('provider_id', automationProviderId);
+
+      if (error) {
+        console.error(
+          '[EventRouter] Error fetching provider subscriptions:',
+          error
+        );
+        return;
+      }
+
+      const uniqueKeys = new Set<string>();
+      for (const sub of subscriptions || []) {
+        uniqueKeys.add(this.buildCacheKey(sub.resource_type, sub.resource_id));
+      }
+
+      for (const cacheKey of uniqueKeys) {
+        try {
+          await redisConnection.del(cacheKey);
+          console.log(`[EventRouter] Invalidated cache: ${cacheKey}`);
+        } catch (err) {
+          console.error('[EventRouter] Redis cache invalidation error:', err);
+        }
+      }
+
+      console.log(
+        `[EventRouter] Invalidated ${uniqueKeys.size} caches for provider ${automationProviderId}`
+      );
+    } catch (error) {
+      console.error('[EventRouter] Error invalidating provider cache:', error);
+    }
+  }
+
   private async processIntakeEvent(event: CloudEvent): Promise<void> {
     const intakeId = event.subject as string;
     console.log(
@@ -171,7 +224,7 @@ export class EventRouter {
     );
 
     try {
-      const providers = await subscriptionService.getProvidersForResource(
+      const providers = await cachedSubscriptionService.getProvidersForResource(
         'intake',
         intakeId
       );
@@ -215,7 +268,7 @@ export class EventRouter {
     let providers: SubscriptionProvider[];
 
     try {
-      providers = await subscriptionService.getProvidersForResource(
+      providers = await cachedSubscriptionService.getProvidersForResource(
         resourceType,
         resourceId
       );

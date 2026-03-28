@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { ticketService } from '../services/ticket.service';
+import { ticketService } from '../services';
 import {
   CreateTicketRequest,
   GetTicketsRequest,
@@ -65,7 +65,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await ticketService.createTicket(clients, {
+        const result = await ticketService.scoped(clients).create({
           threadId,
           title,
           description,
@@ -92,7 +92,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await ticketService.listTickets(clients, {
+        const result = await ticketService.scoped(clients).list({
           status: query.status,
           priority: query.priority,
         });
@@ -124,7 +124,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const ticket = await ticketService.getTicket(clients, id);
+        const ticket = await ticketService.scoped(clients).get(id);
 
         reply.send(ticket);
       } catch (error: any) {
@@ -177,12 +177,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const ticket = await ticketService.updateTicket(
-          clients,
-          id,
-          updates,
-          userId
-        );
+        const ticket = await ticketService.scoped(clients).update(id, updates);
 
         reply.send(ticket);
       } catch (error: any) {
@@ -227,12 +222,9 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const ticket = await ticketService.resolveTicket(
-          clients,
-          id,
-          body.resolutionPayload || {},
-          userId
-        );
+        const ticket = await ticketService
+          .scoped(clients)
+          .resolve(id, body.resolutionPayload || {});
 
         reply.send(ticket);
       } catch (error: any) {
@@ -281,12 +273,9 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const ticket = await ticketService.assignTicket(
-          clients,
-          id,
-          assignedTo ?? null,
-          userId
-        );
+        const ticket = await ticketService
+          .scoped(clients)
+          .assign(id, assignedTo ?? null);
 
         reply.send(ticket);
       } catch (error: any) {
@@ -324,7 +313,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        await ticketService.deleteTicket(clients, id, userId);
+        await ticketService.scoped(clients).delete(id);
 
         reply.code(204).send();
       } catch (error: any) {

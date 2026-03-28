@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { profileService } from '../services/profile.service';
+import { profileService } from '../services/factory';
 import { adminSupabase } from '../clients/supabase.client';
 
 function getClients(request: any) {
@@ -101,10 +101,9 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       try {
         const { userId } = request.params;
 
-        const profile = await profileService.getProfileByUserId(
-          getClients(request),
-          userId
-        );
+        const profile = await profileService
+          .scoped(getClients(request))
+          .getProfileByUserId(userId);
 
         reply.send(profile);
       } catch (error: any) {

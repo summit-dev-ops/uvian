@@ -33,7 +33,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const accounts = await accountService.getAccounts(clients, userId);
+        const accounts = await accountService
+          .scoped(clients)
+          .getAccounts(userId);
         reply.send({ accounts });
       } catch (error: any) {
         reply
@@ -71,10 +73,12 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
 
         const { name, settings } = request.body || {};
         const clients = getClients(request);
-        const account = await accountService.createAccount(clients, userId, {
-          name,
-          settings,
-        });
+        const account = await accountService
+          .scoped(clients)
+          .createAccount(userId, {
+            name,
+            settings,
+          });
         fastify.services.eventEmitter.emitAccountCreated(
           {
             accountId: account.id,
@@ -117,11 +121,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
 
         const { accountId } = request.params;
         const clients = getClients(request);
-        const account = await accountService.getAccount(
-          clients,
-          accountId,
-          userId
-        );
+        const account = await accountService
+          .scoped(clients)
+          .getAccount(accountId, userId);
         reply.send(account);
       } catch (error: any) {
         if (
@@ -175,15 +177,12 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         const { accountId } = request.params;
         const { name, settings } = request.body || {};
         const clients = getClients(request);
-        const account = await accountService.updateAccount(
-          clients,
-          accountId,
-          userId,
-          {
+        const account = await accountService
+          .scoped(clients)
+          .updateAccount(accountId, userId, {
             name,
             settings,
-          }
-        );
+          });
         fastify.services.eventEmitter.emitAccountUpdated(
           { accountId, updatedBy: userId, name },
           userId
@@ -229,11 +228,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
 
         const { accountId } = request.params;
         const clients = getClients(request);
-        const members = await accountService.getAccountMembers(
-          clients,
-          accountId,
-          userId
-        );
+        const members = await accountService
+          .scoped(clients)
+          .getAccountMembers(accountId, userId);
         reply.send({ members });
       } catch (error: any) {
         if (error.message.includes('access denied')) {
@@ -286,13 +283,14 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         const { userId: newMemberUserId, role } = request.body || {};
 
         const clients = getClients(request);
-        const member = await accountService.addAccountMember(
-          clients,
-          accountId,
-          userId,
-          newMemberUserId,
-          role || { name: 'member', permissions: [] }
-        );
+        const member = await accountService
+          .scoped(clients)
+          .addAccountMember(
+            accountId,
+            userId,
+            newMemberUserId,
+            role || { name: 'member', permissions: [] }
+          );
         fastify.services.eventEmitter.emitAccountMemberAdded(
           {
             accountId,
@@ -354,13 +352,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         const { role } = request.body || {};
 
         const clients = getClients(request);
-        const member = await accountService.updateAccountMember(
-          clients,
-          accountId,
-          userId,
-          targetUserId,
-          role
-        );
+        const member = await accountService
+          .scoped(clients)
+          .updateAccountMember(accountId, userId, targetUserId, role);
         fastify.services.eventEmitter.emitAccountMemberRoleChanged(
           {
             accountId,
@@ -413,12 +407,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
 
         const { accountId, userId: targetUserId } = request.params;
         const clients = getClients(request);
-        await accountService.removeAccountMember(
-          clients,
-          accountId,
-          userId,
-          targetUserId
-        );
+        await accountService
+          .scoped(clients)
+          .removeAccountMember(accountId, userId, targetUserId);
         fastify.services.eventEmitter.emitAccountMemberRemoved(
           { accountId, userId: targetUserId, removedBy: userId },
           userId

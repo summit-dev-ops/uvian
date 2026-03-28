@@ -8,10 +8,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import {
   accountService,
-  providerService,
+  automationProviderService,
   subscriptionService,
   identityService,
-  userAutomationProviderService,
   agentService,
 } from '../services/factory';
 
@@ -131,11 +130,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const account = await accountService.getAccount(
-            clients,
-            args.accountId,
-            userId
-          );
+          const account = await accountService
+            .scoped(clients)
+            .getAccount(args.accountId, userId);
           return { content: [{ type: 'text', text: JSON.stringify(account) }] };
         } catch (error: any) {
           return {
@@ -153,11 +150,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const members = await accountService.getAccountMembers(
-            clients,
-            args.accountId,
-            userId
-          );
+          const members = await accountService
+            .scoped(clients)
+            .getAccountMembers(args.accountId, userId);
           return { content: [{ type: 'text', text: JSON.stringify(members) }] };
         } catch (error: any) {
           return {
@@ -175,12 +170,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await accountService.getAccountMember(
-            clients,
-            args.accountId,
-            userId,
-            args.userId
-          );
+          const member = await accountService
+            .scoped(clients)
+            .getAccountMember(args.accountId, userId, args.userId);
           return { content: [{ type: 'text', text: JSON.stringify(member) }] };
         } catch (error: any) {
           return {
@@ -198,7 +190,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (): Promise<ToolResult> => {
         try {
-          const accounts = await accountService.getAccounts(clients, userId);
+          const accounts = await accountService
+            .scoped(clients)
+            .getAccounts(userId);
           return {
             content: [{ type: 'text', text: JSON.stringify(accounts) }],
           };
@@ -218,10 +212,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const providers = await providerService.getProvidersByAccount(
-            clients,
-            args.accountId
-          );
+          const providers = await automationProviderService
+            .scoped(clients)
+            .getProvidersByAccount(args.accountId);
           return {
             content: [{ type: 'text', text: JSON.stringify(providers) }],
           };
@@ -244,11 +237,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await providerService.getProviderById(
-            clients,
-            args.providerId,
-            args.accountId
-          );
+          const provider = await automationProviderService
+            .scoped(clients)
+            .getProviderById(args.providerId, args.accountId);
           return {
             content: [{ type: 'text', text: JSON.stringify(provider) }],
           };
@@ -268,10 +259,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await providerService.getInternalProvider(
-            clients,
-            args.accountId
-          );
+          const provider = await automationProviderService
+            .scoped(clients)
+            .getInternalProvider(args.accountId);
           return {
             content: [{ type: 'text', text: JSON.stringify(provider) }],
           };
@@ -299,11 +289,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await providerService.createProvider(
-            clients,
-            userId,
-            args.accountId,
-            {
+          const provider = await automationProviderService
+            .scoped(clients)
+            .createProvider(userId, args.accountId, {
               account_id: args.accountId,
               owner_user_id: userId,
               name: args.name,
@@ -312,8 +300,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               auth_method: args.auth_method,
               auth_config: args.auth_config,
               is_active: args.is_active,
-            }
-          );
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(provider) }],
           };
@@ -342,20 +329,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await providerService.updateProvider(
-            clients,
-            userId,
-            args.providerId,
-            args.accountId,
-            {
+          const provider = await automationProviderService
+            .scoped(clients)
+            .updateProvider(userId, args.providerId, args.accountId, {
               name: args.name,
               type: args.type,
               url: args.url,
               auth_method: args.auth_method,
               auth_config: args.auth_config,
               is_active: args.is_active,
-            }
-          );
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(provider) }],
           };
@@ -378,12 +361,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await providerService.deleteProvider(
-            clients,
-            userId,
-            args.providerId,
-            args.accountId
-          );
+          await automationProviderService
+            .scoped(clients)
+            .deleteProvider(userId, args.providerId, args.accountId);
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -405,8 +385,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (): Promise<ToolResult> => {
         try {
-          const subscriptions =
-            await subscriptionService.getSubscriptionsByUser(clients, userId);
+          const subscriptions = await subscriptionService
+            .scoped(clients)
+            .getSubscriptionsByUser(userId);
           return {
             content: [{ type: 'text', text: JSON.stringify(subscriptions) }],
           };
@@ -426,10 +407,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const subscription = await subscriptionService.getSubscriptionById(
-            clients,
-            args.subscriptionId
-          );
+          const subscription = await subscriptionService
+            .admin(clients)
+            .getSubscriptionById(args.subscriptionId);
           return {
             content: [{ type: 'text', text: JSON.stringify(subscription) }],
           };
@@ -452,12 +432,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const subscriptions =
-            await subscriptionService.getSubscriptionsByResource(
-              clients,
-              args.resourceType,
-              args.resourceId
-            );
+          const subscriptions = await subscriptionService
+            .admin(clients)
+            .getSubscriptionsByResource(args.resourceType, args.resourceId);
           return {
             content: [{ type: 'text', text: JSON.stringify(subscriptions) }],
           };
@@ -481,15 +458,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const subscription = await subscriptionService.createSubscription(
-            clients,
-            userId,
-            {
+          const subscription = await subscriptionService
+            .scoped(clients)
+            .createSubscription(userId, {
               resource_type: args.resourceType,
               resource_id: args.resourceId,
               is_active: args.isActive,
-            }
-          );
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(subscription) }],
           };
@@ -509,11 +484,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await subscriptionService.deleteSubscription(
-            clients,
-            userId,
-            args.subscriptionId
-          );
+          await subscriptionService
+            .scoped(clients)
+            .deleteSubscription(userId, args.subscriptionId);
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -535,10 +508,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (): Promise<ToolResult> => {
         try {
-          const identities = await identityService.getIdentitiesByUser(
-            clients,
-            userId
-          );
+          const identities = await identityService
+            .scoped(clients)
+            .getIdentitiesByUser(userId);
           return {
             content: [{ type: 'text', text: JSON.stringify(identities) }],
           };
@@ -558,10 +530,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const identity = await identityService.getIdentityById(
-            clients,
-            args.identityId
-          );
+          const identity = await identityService
+            .admin(clients)
+            .getIdentityById(args.identityId);
           return {
             content: [{ type: 'text', text: JSON.stringify(identity) }],
           };
@@ -584,11 +555,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const identity = await identityService.getIdentityByProviderUserId(
-            clients,
-            args.provider,
-            args.providerUserId
-          );
+          const identity = await identityService
+            .admin(clients)
+            .getIdentityByProviderUserId(args.provider, args.providerUserId);
           return {
             content: [{ type: 'text', text: JSON.stringify(identity) }],
           };
@@ -612,16 +581,14 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const identity = await identityService.createIdentity(
-            clients,
-            userId,
-            {
+          const identity = await identityService
+            .scoped(clients)
+            .createIdentity(userId, {
               user_id: userId,
               provider: args.provider,
               provider_user_id: args.providerUserId,
               metadata: args.metadata,
-            } as any
-          );
+            } as any);
           return {
             content: [{ type: 'text', text: JSON.stringify(identity) }],
           };
@@ -646,16 +613,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const identity = await identityService.updateIdentity(
-            clients,
-            userId,
-            args.identityId,
-            {
+          const identity = await identityService
+            .scoped(clients)
+            .updateIdentity(userId, args.identityId, {
               provider: args.provider,
               provider_user_id: args.providerUserId,
               metadata: args.metadata,
-            }
-          );
+            });
           return {
             content: [{ type: 'text', text: JSON.stringify(identity) }],
           };
@@ -675,11 +639,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await identityService.deleteIdentity(
-            clients,
-            userId,
-            args.identityId
-          );
+          await identityService
+            .scoped(clients)
+            .deleteIdentity(userId, args.identityId);
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -701,7 +663,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const agents = await agentService.getAgents(clients, args.accountId);
+          const agents = await agentService
+            .scoped(clients)
+            .getAgents(args.accountId);
           return { content: [{ type: 'text', text: JSON.stringify(agents) }] };
         } catch (error: any) {
           return {
@@ -719,11 +683,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const agent = await agentService.getAgent(
-            clients,
-            args.agentId,
-            args.accountId
-          );
+          const agent = await agentService
+            .scoped(clients)
+            .getAgent(args.agentId, args.accountId);
           return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
         } catch (error: any) {
           return {
@@ -741,12 +703,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const agent = await agentService.createAgent(
-            clients,
-            userId,
-            args.accountId,
-            args.name
-          );
+          const agent = await agentService
+            .scoped(clients)
+            .createAgent(userId, args.accountId, args.name);
           return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
         } catch (error: any) {
           return {
@@ -764,12 +723,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await agentService.deleteAgent(
-            clients,
-            userId,
-            args.agentId,
-            args.accountId
-          );
+          await agentService
+            .scoped(clients)
+            .deleteAgent(userId, args.agentId, args.accountId);
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -791,11 +747,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (): Promise<ToolResult> => {
         try {
-          const providers =
-            await userAutomationProviderService.getProvidersByUser(
-              clients,
-              userId
-            );
+          const providers = await automationProviderService
+            .scoped(clients)
+            .getProvidersByUser(userId);
           return {
             content: [{ type: 'text', text: JSON.stringify(providers) }],
           };
@@ -815,10 +769,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await userAutomationProviderService.getProviderById(
-            clients,
-            args.providerId
-          );
+          const provider = await automationProviderService
+            .scoped(clients)
+            .getUserLinkById(args.providerId);
           return {
             content: [{ type: 'text', text: JSON.stringify(provider) }],
           };
@@ -838,12 +791,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider =
-            await userAutomationProviderService.linkUserToProvider(
-              clients,
-              userId,
-              args.automationProviderId
-            );
+          const provider = await automationProviderService
+            .scoped(clients)
+            .linkUserToProvider(userId, args.automationProviderId);
           return {
             content: [{ type: 'text', text: JSON.stringify(provider) }],
           };
@@ -863,11 +813,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await userAutomationProviderService.unlinkUserFromProvider(
-            clients,
-            userId,
-            args.providerLinkId
-          );
+          await automationProviderService
+            .scoped(clients)
+            .unlinkUserFromProvider(userId, args.providerLinkId);
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },

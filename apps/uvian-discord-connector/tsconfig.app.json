@@ -7,6 +7,15 @@
   "include": ["src/**/*"],
   "references": [
     {
+      "path": "../../packages/services/users/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/subscription/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/identity/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/uvian-events/tsconfig.lib.json"
     }
   ]

@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { agentConfigService } from '../services/agent-config.service';
+import { agentConfigService } from '../services';
 
 export default async function agentLlmRoutes(fastify: FastifyInstance) {
   fastify.post<{
@@ -43,7 +43,7 @@ export default async function agentLlmRoutes(fastify: FastifyInstance) {
         const { agentId } = request.params as any as { agentId: string };
         const body = request.body as any;
 
-        const link = await agentConfigService.linkLlm(clients, agentId, {
+        const link = await agentConfigService.scoped(clients).linkLlm(agentId, {
           llmId: body.llmId,
           secretName: body.secretName,
           secretValue: body.secretValue,
@@ -98,15 +98,12 @@ export default async function agentLlmRoutes(fastify: FastifyInstance) {
         };
         const body = request.body as any;
 
-        const link = await agentConfigService.updateLlmLink(
-          clients,
-          agentId,
-          llmId,
-          {
+        const link = await agentConfigService
+          .scoped(clients)
+          .updateLlmLink(agentId, llmId, {
             secretValue: body.secretValue,
             isDefault: body.isDefault,
-          }
-        );
+          });
 
         return reply.send({ link });
       } catch (error: any) {
@@ -143,7 +140,7 @@ export default async function agentLlmRoutes(fastify: FastifyInstance) {
           llmId: string;
         };
 
-        await agentConfigService.unlinkLlm(clients, agentId, llmId);
+        await agentConfigService.scoped(clients).unlinkLlm(agentId, llmId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { jobService } from '../services/job.service';
+import { jobService } from '../services';
 import {
   CreateJobRequest,
   GetJobsRequest,
@@ -43,7 +43,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await jobService.createJob(clients, userId, {
+        const result = await jobService.scoped(clients).createJob({
           type,
           input: { ...input, threadId },
         });
@@ -78,7 +78,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await jobService.listJobs(clients, {
+        const result = await jobService.scoped(clients).listJobs({
           status,
           type,
         });
@@ -116,7 +116,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await jobService.getJobsForUser(clients, {
+        const result = await jobService.scoped(clients).getJobsForUser({
           status,
           type,
         });
@@ -150,7 +150,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const job = await jobService.getJob(clients, id);
+        const job = await jobService.scoped(clients).getJob(id);
 
         reply.send(job);
       } catch (error: any) {
@@ -185,7 +185,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await jobService.cancelJob(clients, id);
+        const result = await jobService.scoped(clients).cancelJob(id);
         reply.send(result);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to cancel job' });
@@ -215,7 +215,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await jobService.retryJob(clients, id);
+        const result = await jobService.scoped(clients).retryJob(id);
         reply.send(result);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to retry job' });
@@ -245,7 +245,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        await jobService.deleteJob(clients, id);
+        await jobService.scoped(clients).deleteJob(id);
         reply.code(204).send();
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to delete job' });

@@ -1,25 +1,27 @@
 import fp from 'fastify-plugin';
-import { chatService } from '../services/chat.service';
-import { accountService } from '../services/factory';
-import { noteService } from '../services/note.service.js';
-import { postService } from '../services/post.service.js';
-import { assetService } from '../services/asset.service.js';
-import { profileService } from '../services/profile.service.js';
-import { spacesService } from '../services/spaces.service.js';
-import { feedService } from '../services/feed.service.js';
-import { userService } from '../services/user.service.js';
+import { createChatService } from '../services/chat';
+import { createNoteService } from '../services/note';
+import { createPostService } from '../services/post';
+import { createAssetService } from '../services/asset';
+import { createSpacesService } from '../services/spaces';
+import { profileService } from '../services/factory';
 import { EventEmitterService } from '../plugins/event-emitter.js';
 
+const noteService = createNoteService({});
+const postService = createPostService({});
+const assetService = createAssetService({});
+const spacesService = createSpacesService({});
+const chatService = createChatService({});
+
 export interface Services {
-  chat: typeof chatService;
-  account: typeof accountService;
-  note: typeof noteService;
-  post: typeof postService;
-  asset: typeof assetService;
+  note: ReturnType<typeof createNoteService>;
+  post: ReturnType<typeof createPostService>;
+  asset: ReturnType<typeof createAssetService>;
   profile: typeof profileService;
-  spaces: typeof spacesService;
-  feed: typeof feedService;
-  user: typeof userService;
+  spaces: ReturnType<typeof createSpacesService>;
+  chat: ReturnType<typeof createChatService>;
+  account: any;
+  user: any;
   eventEmitter: EventEmitterService;
 }
 
@@ -31,15 +33,14 @@ declare module 'fastify' {
 
 export default fp(async (fastify) => {
   fastify.decorate('services', {
-    chat: chatService,
-    account: accountService,
     note: noteService,
     post: postService,
     asset: assetService,
     profile: profileService,
     spaces: spacesService,
-    feed: feedService,
-    user: userService,
+    chat: chatService,
+    account: {},
+    user: {},
     eventEmitter: fastify.eventEmitter,
   });
 });

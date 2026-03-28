@@ -1,0 +1,118 @@
+import { SupabaseClient } from '@supabase/supabase-js';
+
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
+
+export interface CreateAgentConfigPayload {
+  userId: string;
+  accountId: string;
+  systemPrompt?: string;
+  maxConversationHistory?: number;
+  skills?: Record<string, unknown>[];
+  config?: Record<string, unknown>;
+}
+
+export interface UpdateAgentConfigPayload {
+  systemPrompt?: string;
+  maxConversationHistory?: number;
+  skills?: Record<string, unknown>[];
+  config?: Record<string, unknown>;
+  isActive?: boolean;
+}
+
+export interface LinkLlmPayload {
+  llmId: string;
+  secretName?: string;
+  secretValue?: string;
+  isDefault?: boolean;
+}
+
+export interface UpdateLlmLinkPayload {
+  secretValue?: string;
+  isDefault?: boolean;
+}
+
+export interface LinkMcpPayload {
+  mcpId: string;
+  secretName?: string;
+  secretValue?: string;
+}
+
+export interface UpdateMcpLinkPayload {
+  secretValue?: string;
+  isDefault?: boolean;
+}
+
+export interface AgentConfigRecord {
+  id: string;
+  ownerUserId: string;
+  accountId: string;
+  systemPrompt?: string;
+  maxConversationHistory: number;
+  skills: Record<string, unknown>[];
+  config: Record<string, unknown>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LinkedLlm {
+  id: string;
+  name: string;
+  type: string;
+  model_name: string;
+  base_url: string;
+  api_key?: string | null;
+  temperature: number;
+  is_default: boolean;
+}
+
+export interface LinkedMcp {
+  id: string;
+  name: string;
+  url: string;
+  auth_method: string;
+  _auth_secret?: string | null;
+}
+
+export interface AgentSecrets {
+  llms: LinkedLlm[];
+  mcps: LinkedMcp[];
+}
+
+export interface AgentConfigScopedService {
+  create(payload: CreateAgentConfigPayload): Promise<AgentConfigRecord>;
+  getById(agentId: string): Promise<AgentConfigRecord | null>;
+  getByUserId(ownerUserId: string): Promise<AgentConfigRecord | null>;
+  update(
+    agentId: string,
+    payload: UpdateAgentConfigPayload
+  ): Promise<AgentConfigRecord>;
+  getLlms(agentId: string): Promise<LinkedLlm[]>;
+  linkLlm(agentId: string, payload: LinkLlmPayload): Promise<unknown>;
+  unlinkLlm(agentId: string, llmId: string): Promise<{ success: boolean }>;
+  updateLlmLink(
+    agentId: string,
+    llmId: string,
+    payload: UpdateLlmLinkPayload
+  ): Promise<unknown>;
+  getMcps(agentId: string): Promise<LinkedMcp[]>;
+  linkMcp(agentId: string, payload: LinkMcpPayload): Promise<unknown>;
+  unlinkMcp(agentId: string, mcpId: string): Promise<{ success: boolean }>;
+  updateMcpLink(
+    agentId: string,
+    mcpId: string,
+    payload: UpdateMcpLinkPayload
+  ): Promise<unknown>;
+  getAgentSecrets(ownerUserId: string): Promise<AgentSecrets>;
+}
+
+export interface AgentConfigAdminService {
+  getById(agentId: string): Promise<AgentConfigRecord | null>;
+}
+
+export interface CreateAgentConfigServiceConfig {
+  encryptionSecret?: string;
+}

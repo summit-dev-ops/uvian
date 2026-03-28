@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { agentConfigService } from '../services/agent-config.service';
+import { agentConfigService } from '../services';
 
 export default async function agentMcpRoutes(fastify: FastifyInstance) {
   fastify.post<{
@@ -41,7 +41,7 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
         const { agentId } = request.params as any as { agentId: string };
         const body = request.body as any;
 
-        const link = await agentConfigService.linkMcp(clients, agentId, {
+        const link = await agentConfigService.scoped(clients).linkMcp(agentId, {
           mcpId: body.mcpId,
           secretName: body.secretName,
           secretValue: body.secretValue,
@@ -95,12 +95,12 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
         };
         const body = request.body as any;
 
-        const link = await agentConfigService.updateMcpLink(
-          clients,
-          agentId,
-          mcpId,
-          { secretValue: body.secretValue, isDefault: body.isDefault }
-        );
+        const link = await agentConfigService
+          .scoped(clients)
+          .updateMcpLink(agentId, mcpId, {
+            secretValue: body.secretValue,
+            isDefault: body.isDefault,
+          });
 
         return reply.send({ link });
       } catch (error: any) {
@@ -137,7 +137,7 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
           mcpId: string;
         };
 
-        await agentConfigService.unlinkMcp(clients, agentId, mcpId);
+        await agentConfigService.scoped(clients).unlinkMcp(agentId, mcpId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

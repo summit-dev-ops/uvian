@@ -34,10 +34,9 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const subscriptions = await subscriptionService.getSubscriptionsByUser(
-          clients,
-          userId
-        );
+        const subscriptions = await subscriptionService
+          .scoped(clients)
+          .getSubscriptionsByUser(userId);
         reply.send({ subscriptions });
       } catch (error: any) {
         reply
@@ -87,15 +86,13 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const subscription = await subscriptionService.createSubscription(
-          clients,
-          userId,
-          {
+        const subscription = await subscriptionService
+          .scoped(clients)
+          .createSubscription(userId, {
             resource_type: request.body.resource_type,
             resource_id: request.body.resource_id,
             is_active: request.body.is_active,
-          }
-        );
+          });
 
         fastify.eventEmitter.emitSubscriptionCreated(
           {
@@ -135,11 +132,9 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
         const { subscriptionId } = request.params;
         const clients = getClients(request);
 
-        await subscriptionService.deleteSubscription(
-          clients,
-          userId,
-          subscriptionId
-        );
+        await subscriptionService
+          .scoped(clients)
+          .deleteSubscription(userId, subscriptionId);
 
         fastify.eventEmitter.emitSubscriptionDeleted(
           { subscriptionId, userId },

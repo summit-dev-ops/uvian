@@ -66,6 +66,7 @@
   "workspaces": [
     "packages/*",
     "packages/services/*",
+    "packages/utils/*",
     "apps/*"
   ],
   "dependencies": {

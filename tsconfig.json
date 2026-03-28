@@ -41,6 +41,24 @@
     },
     {
       "path": "./packages/utils/encryption"
+    },
+    {
+      "path": "./packages/services/subscription"
+    },
+    {
+      "path": "./packages/services/accounts"
+    },
+    {
+      "path": "./packages/services/identity"
+    },
+    {
+      "path": "./packages/services/users"
+    },
+    {
+      "path": "./packages/services/profiles"
+    },
+    {
+      "path": "./packages/utils/cache"
     }
   ]
 }

@@ -45,11 +45,9 @@ export default fp(async (fastify) => {
 
       const isDm = message.channel.isDMBased ? true : false;
 
-      const identity = await identityService.getIdentityByProviderUserId(
-        clients,
-        'discord',
-        discordUserId
-      );
+      const identity = await identityService
+        .admin(clients)
+        .getIdentityByProviderUserId('discord', discordUserId);
 
       const senderId = identity?.user_id || 'external';
       const source = `/discord/${channelId}`;

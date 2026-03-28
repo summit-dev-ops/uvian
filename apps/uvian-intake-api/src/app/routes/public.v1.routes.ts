@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import jwt from 'jsonwebtoken';
-import { IntakeService } from '../services/intake.service';
+import { intakeService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
 
 interface TokenIdParams {
   tokenId: string;
@@ -36,9 +37,14 @@ async function verifyJwt(token: string): Promise<string | null> {
   }
 }
 
-export async function publicV1Routes(fastify: FastifyInstance) {
-  const intakeService = new IntakeService(fastify);
+function getClients() {
+  return {
+    adminClient: adminSupabase,
+    userClient: adminSupabase,
+  };
+}
 
+export async function publicV1Routes(fastify: FastifyInstance) {
   fastify.get<{ Params: TokenIdParams }>(
     '/intakes/:tokenId',
     async (request, reply) => {
@@ -49,7 +55,10 @@ export async function publicV1Routes(fastify: FastifyInstance) {
           return reply.code(400).send({ error: 'Invalid token format' });
         }
 
-        const schema = await intakeService.getIntakeSchema(tokenId);
+        const clients = getClients();
+        const schema = await intakeService
+          .scoped(clients)
+          .getIntakeSchema(tokenId);
 
         if (!schema) {
           return reply.code(410).send({ error: 'Intake not found or expired' });
@@ -73,7 +82,10 @@ export async function publicV1Routes(fastify: FastifyInstance) {
           return reply.code(400).send({ error: 'Invalid token format' });
         }
 
-        const result = await intakeService.getIntakeStatus(tokenId);
+        const clients = getClients();
+        const result = await intakeService
+          .scoped(clients)
+          .getIntakeStatus(tokenId);
 
         if (!result) {
           return reply.code(404).send({ error: 'Intake not found' });
@@ -105,7 +117,12 @@ export async function publicV1Routes(fastify: FastifyInstance) {
           return reply.code(400).send({ error: 'Invalid token format' });
         }
 
-        const intake = await intakeService.getIntakeRecord(tokenId);
+        const clients = getClients();
+
+        const intake = await intakeService
+          .admin(clients)
+          .getIntakeByToken(tokenId);
+
         if (!intake) {
           return reply.code(410).send({ error: 'Intake not found or expired' });
         }
@@ -129,11 +146,9 @@ export async function publicV1Routes(fastify: FastifyInstance) {
           }
         }
 
-        const result = await intakeService.submitIntake(
-          tokenId,
-          request.body,
-          submittedBy
-        );
+        const result = await intakeService
+          .scoped(clients)
+          .submitIntake(tokenId, request.body, submittedBy);
 
         return reply.send({ success: true, submissionId: result.submissionId });
       } catch (error: unknown) {
@@ -170,7 +185,10 @@ export async function publicV1Routes(fastify: FastifyInstance) {
             .send({ error: 'Invalid submission ID format' });
         }
 
-        const submission = await intakeService.getSubmission(submissionId);
+        const clients = getClients();
+        const submission = await intakeService
+          .admin(clients)
+          .getSubmissionById(submissionId);
 
         if (!submission) {
           return reply

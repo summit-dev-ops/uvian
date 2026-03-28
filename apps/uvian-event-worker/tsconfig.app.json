@@ -10,6 +10,12 @@
   "exclude": ["eslint.config.js", "eslint.config.cjs", "eslint.config.mjs"],
   "references": [
     {
+      "path": "../../packages/utils/cache/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/subscription/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/uvian-events/tsconfig.lib.json"
     }
   ]

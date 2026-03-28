@@ -54,10 +54,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const platforms = await externalPlatformService.getPlatformsByUser(
-          clients,
-          userId
-        );
+        const platforms = await externalPlatformService
+          .scoped(clients)
+          .getPlatformsByUser(userId);
         reply.send({ platforms });
       } catch (error: unknown) {
         const errorMessage =
@@ -85,11 +84,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
 
         const { platformId } = request.params;
         const clients = getClients(request);
-        const platform = await externalPlatformService.getPlatformByOwnerAndId(
-          clients,
-          platformId,
-          userId
-        );
+        const platform = await externalPlatformService
+          .scoped(clients)
+          .getPlatformByOwnerAndId(platformId, userId);
 
         if (!platform) {
           reply.code(404).send({ error: 'Platform not found' });
@@ -144,11 +141,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const platform = await externalPlatformService.createPlatform(
-          clients,
-          userId,
-          request.body
-        );
+        const platform = await externalPlatformService
+          .scoped(clients)
+          .createPlatform(userId, request.body);
 
         reply.code(201).send({ platform });
       } catch (error: unknown) {
@@ -201,12 +196,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
 
         const { platformId } = request.params;
         const clients = getClients(request);
-        const platform = await externalPlatformService.updatePlatform(
-          clients,
-          userId,
-          platformId,
-          request.body
-        );
+        const platform = await externalPlatformService
+          .scoped(clients)
+          .updatePlatform(userId, platformId, request.body);
 
         reply.send({ platform });
       } catch (error: unknown) {
@@ -235,11 +227,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
 
         const { platformId } = request.params;
         const clients = getClients(request);
-        await externalPlatformService.deletePlatform(
-          clients,
-          userId,
-          platformId
-        );
+        await externalPlatformService
+          .scoped(clients)
+          .deletePlatform(userId, platformId);
 
         reply.code(204).send();
       } catch (error: unknown) {

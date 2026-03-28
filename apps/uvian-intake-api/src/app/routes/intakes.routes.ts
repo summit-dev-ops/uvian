@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { IntakeService, CreateIntakeInput } from '../services/intake.service';
+import { intakeService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
 
 interface TokenIdParams {
   tokenId: string;
@@ -24,11 +25,17 @@ interface CreateIntakeBody {
   metadata?: Record<string, unknown>;
   expiresInSeconds?: number;
   createdBy: string;
+  requiresAuth?: boolean;
+}
+
+function getClients() {
+  return {
+    adminClient: adminSupabase,
+    userClient: adminSupabase,
+  };
 }
 
 export default async function intakesRoutes(fastify: FastifyInstance) {
-  const intakeService = new IntakeService(fastify);
-
   fastify.post<{ Body: CreateIntakeBody }>(
     '/intakes',
     {
@@ -84,6 +91,7 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
             metadata: { type: 'object' },
             expiresInSeconds: { type: 'number', minimum: 60, maximum: 604800 },
             createdBy: { type: 'string', minLength: 1 },
+            requiresAuth: { type: 'boolean' },
           },
         },
       },
@@ -91,18 +99,21 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const body = request.body as CreateIntakeBody;
-        const input: CreateIntakeInput = {
-          title: body.title,
-          description: body.description,
-          submitLabel: body.submitLabel,
-          publicKey: body.publicKey,
-          schema: body.schema,
-          metadata: body.metadata,
-          expiresInSeconds: body.expiresInSeconds,
-          createdBy: body.createdBy,
-        };
+        const clients = getClients();
 
-        const result = await intakeService.createIntake(input);
+        const result = await intakeService
+          .scoped(clients)
+          .createIntake(body.createdBy, {
+            title: body.title,
+            description: body.description,
+            submitLabel: body.submitLabel,
+            publicKey: body.publicKey,
+            schema: body.schema,
+            metadata: body.metadata,
+            expiresInSeconds: body.expiresInSeconds,
+            createdBy: body.createdBy,
+            requiresAuth: body.requiresAuth,
+          });
         return reply.code(201).send(result);
       } catch (error: unknown) {
         fastify.log.error({ error }, 'Failed to create intake');
@@ -116,7 +127,10 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { tokenId } = request.params as TokenIdParams;
-        const result = await intakeService.getIntakeStatus(tokenId);
+        const clients = getClients();
+        const result = await intakeService
+          .scoped(clients)
+          .getIntakeStatus(tokenId);
 
         if (!result) {
           return reply.code(404).send({ error: 'Intake not found' });
@@ -135,7 +149,16 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { tokenId } = request.params as TokenIdParams;
-        const revoked = await intakeService.revokeIntake(tokenId);
+        const { userId } = request.query as { userId?: string };
+
+        if (!userId) {
+          return reply.code(400).send({ error: 'userId is required' });
+        }
+
+        const clients = getClients();
+        const revoked = await intakeService
+          .scoped(clients)
+          .revokeIntake(tokenId, userId);
 
         if (!revoked) {
           return reply

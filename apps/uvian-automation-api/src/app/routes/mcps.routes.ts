@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { mcpService } from '../services/mcp.service';
+import { mcpService } from '../services';
 
 export default async function mcpRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -13,7 +13,7 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const mcps = await mcpService.list(clients, accountId);
+        const mcps = await mcpService.scoped(clients).list(accountId);
         return reply.send({ mcps });
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
@@ -47,7 +47,9 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const mcp = await mcpService.create(clients, request.body as any);
+        const mcp = await mcpService
+          .scoped(clients)
+          .create(request.body as any);
         return reply.code(201).send({ mcp });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
@@ -86,11 +88,9 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const { mcpId } = request.params as any as { mcpId: string };
-        const mcp = await mcpService.update(
-          clients,
-          mcpId,
-          request.body as any
-        );
+        const mcp = await mcpService
+          .scoped(clients)
+          .update(mcpId, request.body as any);
         return reply.send({ mcp });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
@@ -117,7 +117,7 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const { mcpId } = request.params as any as { mcpId: string };
-        await mcpService.delete(clients, mcpId);
+        await mcpService.scoped(clients).delete(mcpId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

@@ -32,11 +32,9 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
         userClient: request.supabase,
       };
 
-      const hasAccess = await accountService.checkAccountMembership(
-        clients,
-        request.user!.id,
-        targetUserId
-      );
+      const hasAccess = await accountService
+        .admin(clients)
+        .checkAccountMembership(request.user!.id, targetUserId);
 
       if (!hasAccess) {
         return reply.code(403).send({
@@ -46,11 +44,9 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const result = await apiKeyService.createApiKey(
-          clients,
-          targetUserId,
-          'intake-api'
-        );
+        const result = await apiKeyService
+          .scoped(clients)
+          .createApiKey(targetUserId, { service: 'intake-api' });
         return reply.code(201).send(result);
       } catch (error) {
         fastify.log.error({ error }, 'Failed to create API key');
@@ -81,11 +77,9 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
         userClient: request.supabase,
       };
 
-      const hasAccess = await accountService.checkAccountMembership(
-        clients,
-        request.user!.id,
-        targetUserId
-      );
+      const hasAccess = await accountService
+        .admin(clients)
+        .checkAccountMembership(request.user!.id, targetUserId);
 
       if (!hasAccess) {
         return reply.code(403).send({
@@ -95,12 +89,9 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        await apiKeyService.revokeApiKey(
-          clients,
-          targetUserId,
-          'intake-api',
-          apiKeyPrefix
-        );
+        await apiKeyService
+          .scoped(clients)
+          .revokeApiKey(targetUserId, 'intake-api', apiKeyPrefix);
         return reply.send({ success: true });
       } catch (error) {
         fastify.log.error({ error }, 'Failed to revoke API key');

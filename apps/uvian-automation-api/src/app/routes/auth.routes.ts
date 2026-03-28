@@ -50,11 +50,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       if (!isInternalAuth && authenticatedUserId) {
         const clients = getClients(request);
-        const hasAccess = await accountService.checkAccountMembership(
-          clients,
-          authenticatedUserId,
-          targetUserId
-        );
+        const hasAccess = await accountService
+          .admin(clients)
+          .checkAccountMembership(authenticatedUserId, targetUserId);
         if (!hasAccess) {
           return reply.code(403).send({
             error: 'Forbidden',
@@ -65,11 +63,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       const clients = getClients(request);
       try {
-        const result = await apiKeyService.createApiKey(
-          clients,
-          targetUserId,
-          'automation-api'
-        );
+        const result = await apiKeyService
+          .scoped(clients)
+          .createApiKey(targetUserId, { service: 'automation-api' });
         return reply.code(201).send(result);
       } catch (error) {
         fastify.log.error({ error }, 'Failed to create API key');
@@ -103,11 +99,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       if (!isInternalAuth && authenticatedUserId) {
         const clients = getClients(request);
-        const hasAccess = await accountService.checkAccountMembership(
-          clients,
-          authenticatedUserId,
-          targetUserId
-        );
+        const hasAccess = await accountService
+          .admin(clients)
+          .checkAccountMembership(authenticatedUserId, targetUserId);
         if (!hasAccess) {
           return reply.code(403).send({
             error: 'Forbidden',
@@ -118,12 +112,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       const clients = getClients(request);
       try {
-        await apiKeyService.revokeApiKey(
-          clients,
-          targetUserId,
-          'automation-api',
-          apiKeyPrefix
-        );
+        await apiKeyService
+          .scoped(clients)
+          .revokeApiKey(targetUserId, 'automation-api', apiKeyPrefix);
         return reply.send({ success: true });
       } catch (error) {
         fastify.log.error({ error }, 'Failed to revoke API key');

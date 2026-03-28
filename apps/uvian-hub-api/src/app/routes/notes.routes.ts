@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { noteService } from '../services/note.service';
+import { createNoteService } from '../services/note';
 import { adminSupabase } from '../clients/supabase.client';
+
+const noteService = createNoteService({});
 import type { Attachment } from '../types/post.types';
 
 function getClients(request: any) {
@@ -45,11 +47,9 @@ export default async function (fastify: FastifyInstance) {
         const { spaceId } = request.params;
         const { cursor, limit } = request.query || {};
 
-        const result = await noteService.getNotesBySpace(
-          getClients(request),
-          spaceId,
-          { cursor, limit }
-        );
+        const result = await noteService
+          .scoped(getClients(request))
+          .getNotesBySpace(spaceId, { cursor, limit });
 
         reply.send(result);
       } catch (error: any) {
@@ -67,7 +67,9 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { noteId } = request.params;
 
-        const note = await noteService.getNote(getClients(request), noteId);
+        const note = await noteService
+          .scoped(getClients(request))
+          .getNote(noteId);
 
         reply.send(note);
       } catch (error: any) {
@@ -96,12 +98,14 @@ export default async function (fastify: FastifyInstance) {
         const { spaceId } = request.params;
         const { title, body, attachments } = request.body || {};
 
-        const note = await noteService.createNote(getClients(request), userId, {
-          spaceId,
-          title,
-          body,
-          attachments,
-        });
+        const note = await noteService
+          .scoped(getClients(request))
+          .createNote(userId, {
+            spaceId,
+            title,
+            body,
+            attachments,
+          });
 
         fastify.services.eventEmitter.emitNoteCreated(
           {
@@ -138,12 +142,9 @@ export default async function (fastify: FastifyInstance) {
         const { noteId } = request.params;
         const { title, body, attachments } = request.body || {};
 
-        const note = await noteService.updateNote(
-          getClients(request),
-          userId,
-          noteId,
-          { title, body, attachments }
-        );
+        const note = await noteService
+          .scoped(getClients(request))
+          .updateNote(userId, noteId, { title, body, attachments });
 
         fastify.services.eventEmitter.emitNoteUpdated(
           { noteId, updatedBy: userId, title, content: body },
@@ -174,7 +175,9 @@ export default async function (fastify: FastifyInstance) {
 
         const { noteId } = request.params;
 
-        await noteService.deleteNote(getClients(request), userId, noteId);
+        await noteService
+          .scoped(getClients(request))
+          .deleteNote(userId, noteId);
 
         fastify.services.eventEmitter.emitNoteDeleted(
           { noteId, deletedBy: userId },

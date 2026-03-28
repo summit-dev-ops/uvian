@@ -1,11 +1,24 @@
 import { FastifyInstance } from 'fastify';
 import {
+  userService,
+  accountService,
+  profileService,
+} from '../services/factory';
+import { adminSupabase } from '../clients/supabase.client';
+import {
   GetUserSettingsRequest,
   UpdateUserSettingsRequest,
   DeleteUserSettingsRequest,
   GetUserAccountRequest,
   GetUserProfileRequest,
 } from '../types/users.types';
+
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 export default async function (fastify: FastifyInstance) {
   // Get current user's account
@@ -16,17 +29,22 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const { data, error } = await request.supabase
-          .from('get_my_account')
-          .select('*')
-          .single();
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
 
-        if (error || !data) {
+        const accounts = await accountService
+          .scoped(getClients(request))
+          .getAccounts(userId);
+
+        if (!accounts || accounts.length === 0) {
           reply.code(404).send({ error: 'Account not found' });
           return;
         }
 
-        reply.send(data);
+        reply.send(accounts[0]);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch account' });
       }
@@ -41,20 +59,23 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const { data, error } = await request.supabase
-          .schema('core_hub')
-          .from('get_my_profile')
-          .select('*')
-          .single();
-
-        if (error || !data) {
-          reply.code(404).send({ error: 'Profile not found' });
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
 
-        reply.send(data);
+        const profile = await profileService
+          .scoped(getClients(request))
+          .getProfileByUserId(userId);
+
+        reply.send(profile);
       } catch (error: any) {
-        reply.code(400).send({ error: 'Failed to fetch profile' });
+        if (error.message.includes('not found')) {
+          reply.code(404).send({ error: 'Profile not found' });
+        } else {
+          reply.code(400).send({ error: 'Failed to fetch profile' });
+        }
       }
     }
   );
@@ -67,15 +88,19 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const { data, error } = await request.supabase
-          .schema('core_hub')
-          .from('get_my_settings')
-          .select('*')
-          .single();
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
 
-        if (error || !data) {
+        const settings = await userService
+          .scoped(getClients(request))
+          .getSettings(userId);
+
+        if (!settings) {
           reply.send({
-            userId: request.user?.id,
+            userId,
             settings: {},
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -83,7 +108,7 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        reply.send(data);
+        reply.send(settings);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch settings' });
       }
@@ -121,23 +146,11 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        const { data, error } = await request.supabase
-          .schema('core_hub')
-          .from('settings')
-          .upsert({
-            user_id: userId,
-            settings,
-            updated_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
+        const updatedSettings = await userService
+          .scoped(getClients(request))
+          .updateSettings(userId, settings);
 
-        if (error) {
-          reply.code(400).send({ error: 'Failed to update settings' });
-          return;
-        }
-
-        reply.send(data);
+        reply.send(updatedSettings);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to update settings' });
       }
@@ -158,16 +171,7 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        const { error } = await request.supabase
-          .schema('core_hub')
-          .from('settings')
-          .delete()
-          .eq('user_id', userId);
-
-        if (error) {
-          reply.code(400).send({ error: 'Failed to delete settings' });
-          return;
-        }
+        await userService.scoped(getClients(request)).deleteSettings(userId);
 
         reply.code(204).send();
       } catch (error: any) {

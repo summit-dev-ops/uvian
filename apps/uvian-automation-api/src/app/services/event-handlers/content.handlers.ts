@@ -1,5 +1,5 @@
 import { adminSupabase } from '../../clients/supabase.client';
-import { jobService } from '../job.service';
+import { jobService } from '../';
 import {
   WebhookEnvelope,
   ContentEvents,
@@ -18,7 +18,7 @@ export function registerContentHandlers(webhookHandler: any) {
 
       console.log('Post published:', { postId: payload.postId, agentId });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -43,7 +43,7 @@ export function registerContentHandlers(webhookHandler: any) {
 
       console.log('Note updated:', { noteId: payload.noteId, agentId });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -68,7 +68,7 @@ export function registerContentHandlers(webhookHandler: any) {
 
       console.log('Asset uploaded:', { assetId: payload.assetId, agentId });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,

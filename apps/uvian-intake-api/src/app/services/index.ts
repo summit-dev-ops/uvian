@@ -1,1 +1,6 @@
-export { apiKeyService, accountService, secretsService } from './factory';
+export {
+  apiKeyService,
+  accountService,
+  secretsService,
+  intakeService,
+} from './factory';

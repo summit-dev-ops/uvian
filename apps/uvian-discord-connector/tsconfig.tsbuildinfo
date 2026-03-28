@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/app/app.ts","./src/app/clients/supabase.client.ts","./src/app/plugins/cache.ts","./src/app/plugins/event-emitter.ts","./src/app/plugins/gateway.ts","./src/app/plugins/mcp.plugin.ts","./src/app/routes/interactions.ts","./src/app/services/index.ts"],"errors":true,"version":"5.9.3"}

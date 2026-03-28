@@ -40,10 +40,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const identities = await identityService.getIdentitiesByUser(
-          clients,
-          userId
-        );
+        const identities = identityService
+          .scoped(clients)
+          .getIdentitiesByUser(userId);
         reply.send({ identities });
       } catch (error: any) {
         reply
@@ -71,10 +70,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
 
         const { identityId } = request.params;
         const clients = getClients(request);
-        const identity = await identityService.getIdentityById(
-          clients,
-          identityId
-        );
+        const identity = identityService
+          .admin(clients)
+          .getIdentityById(identityId);
 
         if (!identity) {
           reply.code(404).send({ error: 'Identity not found' });
@@ -122,11 +120,12 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const existing = await identityService.getIdentityByProviderUserId(
-          clients,
-          request.body.provider || 'whatsapp',
-          request.body.provider_user_id
-        );
+        const existing = await identityService
+          .admin(clients)
+          .getIdentityByProviderUserId(
+            request.body.provider || 'whatsapp',
+            request.body.provider_user_id
+          );
 
         if (existing) {
           reply
@@ -135,11 +134,13 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const identity = await identityService.createIdentity(clients, userId, {
-          ...request.body,
-          provider: request.body.provider || 'whatsapp',
-          user_id: userId,
-        });
+        const identity = await identityService
+          .scoped(clients)
+          .createIdentity(userId, {
+            ...request.body,
+            provider: request.body.provider || 'whatsapp',
+            user_id: userId,
+          });
 
         fastify.eventEmitter.emitIdentityCreated(
           { identityId: identity.id, userId, provider: identity.provider },
@@ -191,12 +192,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         const { identityId } = request.params;
         const clients = getClients(request);
 
-        const identity = await identityService.updateIdentity(
-          clients,
-          userId,
-          identityId,
-          request.body
-        );
+        const identity = await identityService
+          .scoped(clients)
+          .updateIdentity(userId, identityId, request.body);
 
         fastify.eventEmitter.emitIdentityUpdated(
           { identityId: identity.id, userId },
@@ -231,7 +229,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         const { identityId } = request.params;
         const clients = getClients(request);
 
-        await identityService.deleteIdentity(clients, userId, identityId);
+        await identityService
+          .scoped(clients)
+          .deleteIdentity(userId, identityId);
 
         fastify.eventEmitter.emitIdentityDeleted(
           { identityId, userId },

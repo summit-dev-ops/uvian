@@ -1,7 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { postService } from '../services/post.service';
-import { noteService } from '../services/note.service';
+import { createPostService } from '../services/post';
+import { createNoteService } from '../services/note';
 import { adminSupabase } from '../clients/supabase.client';
+
+const postService = createPostService({});
+const noteService = createNoteService({});
 import {
   GetSpacePostsRequest,
   GetPostRequest,
@@ -46,11 +49,9 @@ export default async function (fastify: FastifyInstance) {
         const { spaceId } = request.params;
         const { cursor, limit } = request.query || {};
 
-        const result = await postService.getPostsBySpace(
-          getClients(request),
-          spaceId,
-          { cursor, limit }
-        );
+        const result = await postService
+          .scoped(getClients(request))
+          .getPostsBySpace(spaceId, { cursor, limit });
 
         reply.send(result);
       } catch (error: any) {
@@ -76,7 +77,7 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { id } = request.params;
 
-        const post = await postService.getPost(getClients(request), id);
+        const post = await postService.scoped(getClients(request)).getPost(id);
 
         reply.send(post);
       } catch (error: any) {
@@ -188,17 +189,15 @@ export default async function (fastify: FastifyInstance) {
 
             // Create note if provided
             if (item.note?.title) {
-              const createdNote = await noteService.createNote(
-                getClients(request),
-                userId,
-                {
+              const createdNote = await noteService
+                .scoped(getClients(request))
+                .createNote(userId, {
                   id: item.noteId,
                   spaceId,
                   title: item.note.title,
                   body: item.note.body,
                   attachments: item.note.attachments,
-                }
-              );
+                });
               noteId = createdNote.id;
             }
 
@@ -236,10 +235,9 @@ export default async function (fastify: FastifyInstance) {
         }
 
         // Fetch the complete post with contents
-        const fullPost = await postService.getPost(
-          getClients(request),
-          post.id
-        );
+        const fullPost = await postService
+          .scoped(getClients(request))
+          .getPost(post.id);
 
         fastify.services.eventEmitter.emitPostCreated(
           {
@@ -285,7 +283,7 @@ export default async function (fastify: FastifyInstance) {
 
         const { id } = request.params;
 
-        await postService.deletePost(getClients(request), id, userId);
+        await postService.scoped(getClients(request)).deletePost(id, userId);
 
         fastify.services.eventEmitter.emitPostDeleted(
           { postId: id, deletedBy: userId },

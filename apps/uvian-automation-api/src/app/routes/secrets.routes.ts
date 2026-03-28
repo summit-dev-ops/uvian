@@ -9,6 +9,19 @@ function getClients(request: FastifyRequest) {
   };
 }
 
+async function getAccountIdForRequest(
+  request: FastifyRequest
+): Promise<string> {
+  const clients = getClients(request);
+  const userId = request.user?.id;
+  if (!userId) throw new Error('User not authenticated');
+  const accountId = await secretsService
+    .admin(clients)
+    .getAccountIdForUser(userId);
+  if (!accountId) throw new Error('User does not have an account');
+  return accountId;
+}
+
 export default async function secretsRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/config/secrets/:accountId',
@@ -17,7 +30,7 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
       try {
         const clients = getClients(request);
         const { accountId } = request.params as any as { accountId: string };
-        const secrets = await secretsService.list(clients, accountId);
+        const secrets = await secretsService.scoped(clients).list(accountId);
         return reply.send({ secrets });
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
@@ -50,10 +63,11 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const clients = getClients(request);
-        const secret = await secretsService.create(
-          clients,
-          request.body as any
-        );
+        const { accountId, name, valueType, value, metadata } =
+          request.body as any;
+        const secret = await secretsService
+          .scoped(clients)
+          .create(accountId, { name, valueType, value, metadata });
         return reply.code(201).send({ secret });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
@@ -87,11 +101,10 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
       try {
         const clients = getClients(request);
         const { secretId } = request.params as any as { secretId: string };
-        const secret = await secretsService.update(
-          clients,
-          secretId,
-          request.body as any
-        );
+        const accountId = await getAccountIdForRequest(request);
+        const secret = await secretsService
+          .scoped(clients)
+          .update(accountId, secretId, request.body as any);
         return reply.send({ secret });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
@@ -115,7 +128,8 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
       try {
         const clients = getClients(request);
         const { secretId } = request.params as any as { secretId: string };
-        await secretsService.delete(clients, secretId);
+        const accountId = await getAccountIdForRequest(request);
+        await secretsService.scoped(clients).delete(accountId, secretId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

@@ -1,5 +1,5 @@
 import { adminSupabase } from '../../clients/supabase.client';
-import { jobService } from '../job.service';
+import { jobService } from '../';
 import {
   WebhookEnvelope,
   MessagingEvents,
@@ -23,7 +23,7 @@ export function registerConversationEventHandlers() {
           agentId,
         });
 
-        await jobService.createEventJob(clients, {
+        await jobService.scoped(clients).createEventJob({
           type: 'agent',
           input: {
             eventId: envelope.id,
@@ -52,7 +52,7 @@ export function registerConversationEventHandlers() {
           agentId,
         });
 
-        await jobService.createEventJob(clients, {
+        await jobService.scoped(clients).createEventJob({
           type: 'agent',
           input: {
             eventId: envelope.id,

@@ -1,0 +1,23 @@
+{
+  "name": "@org/services-profiles",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/services/profiles/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/services/profiles/dist"],
+      "options": {
+        "outputPath": "packages/services/profiles/dist",
+        "main": "packages/services/profiles/src/index.ts",
+        "tsConfig": "packages/services/profiles/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/services/profiles/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:services"]
+}

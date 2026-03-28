@@ -1,10 +1,9 @@
 export {
   apiKeyService,
   accountService,
-  providerService,
+  automationProviderService,
   subscriptionService,
   identityService,
-  userAutomationProviderService,
   agentService,
   externalPlatformService,
   queueService,

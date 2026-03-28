@@ -1,0 +1,23 @@
+{
+  "name": "@org/utils-cache",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/utils/cache/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/utils/cache/dist"],
+      "options": {
+        "outputPath": "packages/utils/cache/dist",
+        "main": "packages/utils/cache/src/index.ts",
+        "tsConfig": "packages/utils/cache/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/utils/cache/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:utils"]
+}

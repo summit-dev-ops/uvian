@@ -1,6 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { chatService } from '../services/chat.service';
+import { createChatService } from '../services/chat';
 import { adminSupabase } from '../clients/supabase.client';
+
+const chatService = createChatService({});
 import {
   GetConversationsRequest,
   GetConversationRequest,
@@ -45,9 +47,9 @@ export default async function (fastify: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const conversations = await chatService.getConversations(
-          getClients(request)
-        );
+        const conversations = await chatService
+          .scoped(getClients(request))
+          .getConversations();
         reply.send(conversations);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch conversations' });
@@ -74,8 +76,7 @@ export default async function (fastify: FastifyInstance) {
     ) => {
       try {
         const { conversationId } = request.params;
-        const conversation = await chatService.getConversation(
-          getClients(request),
+        const conversation = await chatService.scoped(getClients(request)).getConversation(
           conversationId
         );
         reply.send(conversation);
@@ -108,8 +109,7 @@ export default async function (fastify: FastifyInstance) {
     ) => {
       try {
         const { conversationId } = request.params;
-        const members = await chatService.getConversationMembers(
-          getClients(request),
+        const members = await chatService.scoped(getClients(request)).getConversationMembers(
           conversationId
         );
         reply.send(members);
@@ -146,8 +146,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
-        const conversation = await chatService.createConversation(
-          getClients(request),
+        const conversation = await chatService.scoped(getClients(request)).createConversation(
           userId,
           request.body || {}
         );
@@ -206,8 +205,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId } = request.params;
         const { userId: targetUserId, role } = request.body || {};
-        const membership = await chatService.inviteMember(
-          getClients(request),
+        const membership = await chatService.scoped(getClients(request)).inviteMember(
           userId,
           conversationId,
           targetUserId,
@@ -259,8 +257,7 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId, userId: targetUserId } = request.params;
-        await chatService.removeMember(
-          getClients(request),
+        await chatService.scoped(getClients(request)).removeMember(
           userId,
           conversationId,
           targetUserId
@@ -325,8 +322,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
-        const membership = await chatService.updateMemberRole(
-          getClients(request),
+        const membership = await chatService.scoped(getClients(request)).updateMemberRole(
           userId,
           conversationId,
           targetUserId,
@@ -381,8 +377,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId } = request.params;
         const { id, content, role, attachments } = request.body || {};
-        const message = await chatService.createMessage(
-          getClients(request),
+        const message = await chatService.scoped(getClients(request)).createMessage(
           userId,
           conversationId,
           { id, content, role, attachments }
@@ -433,8 +428,7 @@ export default async function (fastify: FastifyInstance) {
     ) => {
       try {
         const { conversationId } = request.params;
-        const messages = await chatService.getMessages(
-          getClients(request),
+        const messages = await chatService.scoped(getClients(request)).getMessages(
           conversationId
         );
         reply.send(messages);
@@ -476,8 +470,7 @@ export default async function (fastify: FastifyInstance) {
         const { conversationId } = request.params;
         const { q, senderId, from, to, limit, offset } = request.query || {};
 
-        const messages = await chatService.searchMessages(
-          getClients(request),
+        const messages = await chatService.scoped(getClients(request)).searchMessages(
           conversationId,
           { q, senderId, from, to, limit, offset }
         );
@@ -513,8 +506,7 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId } = request.params;
-        await chatService.deleteConversation(
-          getClients(request),
+        await chatService.scoped(getClients(request)).deleteConversation(
           userId,
           conversationId
         );
@@ -562,8 +554,7 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId, messageId } = request.params;
-        await chatService.deleteMessage(
-          getClients(request),
+        await chatService.scoped(getClients(request)).deleteMessage(
           userId,
           conversationId,
           messageId
@@ -620,8 +611,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId, messageId } = request.params;
         const { content, attachments } = request.body || {};
-        const message = await chatService.updateMessage(
-          getClients(request),
+        const message = await chatService.scoped(getClients(request)).updateMessage(
           userId,
           conversationId,
           messageId,

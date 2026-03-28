@@ -1,5 +1,5 @@
 import { adminSupabase } from '../../clients/supabase.client';
-import { jobService } from '../job.service';
+import { jobService } from '../';
 import {
   WebhookEnvelope,
   parseSourcePath,
@@ -25,7 +25,7 @@ export function registerAutomationHandlers(webhookHandler: any) {
         agentId,
       });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -53,7 +53,7 @@ export function registerAutomationHandlers(webhookHandler: any) {
 
       console.log('Job cancelled:', { jobId: payload.jobId, agentId });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -78,7 +78,7 @@ export function registerAutomationHandlers(webhookHandler: any) {
 
       console.log('Job retry:', { jobId: payload.jobId, agentId });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,

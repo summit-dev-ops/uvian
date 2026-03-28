@@ -49,11 +49,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       const { userId: targetUserId } = request.body;
       const clients = getClients(request);
 
-      const hasAccess = await accountService.checkAccountMembership(
-        clients,
-        authenticatedUserId,
-        targetUserId
-      );
+      const hasAccess = await accountService
+        .admin(clients)
+        .checkAccountMembership(authenticatedUserId, targetUserId);
       if (!hasAccess) {
         return reply.code(403).send({
           error: 'Forbidden',
@@ -62,11 +60,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const result = await apiKeyService.createApiKey(
-          clients,
-          targetUserId,
-          'hub-api'
-        );
+        const result = await apiKeyService
+          .scoped(clients)
+          .createApiKey(targetUserId, { service: 'hub-api' });
         return reply.code(201).send(result);
       } catch (error) {
         fastify.log.error({ error }, 'Failed to create API key');
@@ -94,11 +90,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       const { userId: targetUserId, apiKeyPrefix } = request.body;
       const clients = getClients(request);
 
-      const hasAccess = await accountService.checkAccountMembership(
-        clients,
-        authenticatedUserId,
-        targetUserId
-      );
+      const hasAccess = await accountService
+        .admin(clients)
+        .checkAccountMembership(authenticatedUserId, targetUserId);
       if (!hasAccess) {
         return reply.code(403).send({
           error: 'Forbidden',
@@ -107,12 +101,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        await apiKeyService.revokeApiKey(
-          clients,
-          targetUserId,
-          'hub-api',
-          apiKeyPrefix
-        );
+        await apiKeyService
+          .scoped(clients)
+          .revokeApiKey(targetUserId, 'hub-api', apiKeyPrefix);
         return reply.send({ success: true });
       } catch (error) {
         fastify.log.error({ error }, 'Failed to revoke API key');

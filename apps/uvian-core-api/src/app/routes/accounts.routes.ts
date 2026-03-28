@@ -51,7 +51,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         const { accountId } = request.params;
         const clients = getClients(request);
 
-        const agents = await agentService.getAgents(clients, accountId);
+        const agents = await agentService.scoped(clients).getAgents(accountId);
         reply.send({ agents });
       } catch (error: any) {
         reply
@@ -94,12 +94,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
 
         const { name } = request.body;
         const clients = getClients(request);
-        const agent = await agentService.createAgent(
-          clients,
-          userId,
-          accountId,
-          name
-        );
+        const agent = await agentService
+          .scoped(clients)
+          .createAgent(userId, accountId, name);
         reply.code(201).send({ agent });
       } catch (error: any) {
         reply
@@ -128,7 +125,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         const { accountId, agentId } = request.params;
         const clients = getClients(request);
 
-        const agent = await agentService.getAgent(clients, agentId, accountId);
+        const agent = await agentService
+          .scoped(clients)
+          .getAgent(agentId, accountId);
 
         if (!agent) {
           reply.code(404).send({ error: 'Agent not found' });
@@ -163,7 +162,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         const { accountId, agentId } = request.params;
         const clients = getClients(request);
 
-        await agentService.deleteAgent(clients, userId, agentId, accountId);
+        await agentService
+          .scoped(clients)
+          .deleteAgent(userId, agentId, accountId);
         reply.code(204).send();
       } catch (error: any) {
         reply

@@ -20,6 +20,12 @@
   ],
   "references": [
     {
+      "path": "../../packages/services/profiles/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/users/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/services/queue/tsconfig.lib.json"
     },
     {

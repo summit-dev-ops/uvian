@@ -20,6 +20,12 @@
   ],
   "references": [
     {
+      "path": "../../packages/services/identity/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/subscription/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/services/queue/tsconfig.lib.json"
     },
     {

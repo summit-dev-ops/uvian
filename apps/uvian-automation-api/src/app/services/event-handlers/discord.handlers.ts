@@ -1,5 +1,5 @@
 import { adminSupabase } from '../../clients/supabase.client';
-import { jobService } from '../job.service';
+import { jobService } from '../';
 import {
   WebhookEnvelope,
   DiscordEvents,
@@ -26,7 +26,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
         guildId: payload.guildId,
       });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -69,7 +69,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
         subject: envelope.subject,
       });
 
-      await jobService.createEventJob(clients, {
+      await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
           eventId: envelope.id,
