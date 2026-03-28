@@ -1,0 +1,23 @@
+{
+  "name": "@org/services-identity",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/services/identity/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/services/identity/dist"],
+      "options": {
+        "outputPath": "packages/services/identity/dist",
+        "main": "packages/services/identity/src/index.ts",
+        "tsConfig": "packages/services/identity/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/services/identity/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:services"]
+}

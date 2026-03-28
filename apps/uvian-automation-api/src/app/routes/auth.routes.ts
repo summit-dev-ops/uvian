@@ -1,8 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import {
-  ApiKeyService,
-  checkAccountMembership,
-} from '../services/api-key.service';
+import { apiKeyService, accountService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
+
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: (request as any).supabase,
+  };
+}
 
 interface CreateApiKeyBody {
   userId: string;
@@ -44,7 +49,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
         internalKey === process.env.SECRET_INTERNAL_API_KEY;
 
       if (!isInternalAuth && authenticatedUserId) {
-        const hasAccess = await checkAccountMembership(
+        const clients = getClients(request);
+        const hasAccess = await accountService.checkAccountMembership(
+          clients,
           authenticatedUserId,
           targetUserId
         );
@@ -56,8 +63,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }
       }
 
+      const clients = getClients(request);
       try {
-        const result = await ApiKeyService.createApiKey(
+        const result = await apiKeyService.createApiKey(
+          clients,
           targetUserId,
           'automation-api'
         );
@@ -93,7 +102,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
         internalKey === process.env.SECRET_INTERNAL_API_KEY;
 
       if (!isInternalAuth && authenticatedUserId) {
-        const hasAccess = await checkAccountMembership(
+        const clients = getClients(request);
+        const hasAccess = await accountService.checkAccountMembership(
+          clients,
           authenticatedUserId,
           targetUserId
         );
@@ -105,8 +116,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
         }
       }
 
+      const clients = getClients(request);
       try {
-        await ApiKeyService.revokeApiKey(
+        await apiKeyService.revokeApiKey(
+          clients,
           targetUserId,
           'automation-api',
           apiKeyPrefix

@@ -11,14 +11,14 @@ const apiClient = axios.create({
 
 export async function getIntakeSchema(tokenId: string): Promise<IntakeSchema> {
   const response = await apiClient.get<IntakeSchema>(
-    `/public/v1/intakes/${tokenId}`
+    `/api/public/intakes/${tokenId}`
   );
   return response.data;
 }
 
 export async function getIntakeStatus(tokenId: string): Promise<IntakeStatus> {
   const response = await apiClient.get<IntakeStatus>(
-    `/public/v1/intakes/${tokenId}/status`
+    `/api/public/intakes/${tokenId}/status`
   );
   return response.data;
 }
@@ -36,7 +36,7 @@ export async function submitIntake(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  await apiClient.post(`/public/v1/intakes/${tokenId}/submit`, payload, {
+  await apiClient.post(`/api/public/intakes/${tokenId}/submit`, payload, {
     headers,
   });
 }

@@ -1,5 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { secretsService } from '../services/secrets.service';
+import { secretsService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
+
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 export default async function secretsRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -7,9 +15,9 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
     { preHandler: [fastify.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const clients = getClients(request);
         const { accountId } = request.params as any as { accountId: string };
-        const userClient = await request.supabase;
-        const secrets = await secretsService.list(userClient, accountId);
+        const secrets = await secretsService.list(clients, accountId);
         return reply.send({ secrets });
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
@@ -41,9 +49,9 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = getClients(request);
         const secret = await secretsService.create(
-          userClient,
+          clients,
           request.body as any
         );
         return reply.code(201).send({ secret });
@@ -77,10 +85,10 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = getClients(request);
         const { secretId } = request.params as any as { secretId: string };
         const secret = await secretsService.update(
-          userClient,
+          clients,
           secretId,
           request.body as any
         );
@@ -105,9 +113,9 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = getClients(request);
         const { secretId } = request.params as any as { secretId: string };
-        await secretsService.delete(userClient, secretId);
+        await secretsService.delete(clients, secretId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

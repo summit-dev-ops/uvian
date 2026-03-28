@@ -1,16 +1,23 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
-import { queueService } from './queue.service';
+import { queueService } from '../services';
+
+export interface Clients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export class JobService {
-  async createEventJob(data: { type: string; input: object }) {
+  async createEventJob(
+    clients: Clients,
+    data: { type: string; input: object }
+  ) {
     const { randomUUID } = await import('crypto');
     const jobId = randomUUID();
 
     const input = data.input as Record<string, unknown>;
     const agentId = input.agentId as string | undefined;
 
-    const { data: job, error } = await adminSupabase
+    const { data: job, error } = await clients.adminClient
       .schema('core_automation')
       .from('jobs')
       .insert({
@@ -39,10 +46,10 @@ export class JobService {
   }
 
   async listJobs(
-    userClient: SupabaseClient,
+    clients: Clients,
     filters: { status?: string; type?: string } = {}
   ) {
-    let q = userClient
+    let q = clients.userClient
       .schema('core_automation')
       .from('get_jobs_for_current_user')
       .select('*');
@@ -76,14 +83,14 @@ export class JobService {
   }
 
   async getJobsForUser(
-    userClient: SupabaseClient,
+    clients: Clients,
     filters: { status?: string; type?: string } = {}
   ) {
-    return this.listJobs(userClient, filters);
+    return this.listJobs(clients, filters);
   }
 
-  async getJob(userClient: SupabaseClient, jobId: string) {
-    const { data, error } = await userClient
+  async getJob(clients: Clients, jobId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('get_job_details')
       .select('*')
@@ -110,13 +117,13 @@ export class JobService {
   }
 
   async createJob(
-    userClient: SupabaseClient,
+    clients: Clients,
     _userId: string,
     data: { type: string; input: object }
   ) {
     const jobId = require('crypto').randomUUID();
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_automation')
       .from('jobs')
       .insert({
@@ -136,10 +143,10 @@ export class JobService {
     };
   }
 
-  async cancelJob(userClient: SupabaseClient, jobId: string) {
-    await this.getJob(userClient, jobId);
+  async cancelJob(clients: Clients, jobId: string) {
+    await this.getJob(clients, jobId);
 
-    const { data: job, error } = await adminSupabase
+    const { data: job, error } = await clients.adminClient
       .schema('core_automation')
       .from('jobs')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
@@ -160,10 +167,10 @@ export class JobService {
     };
   }
 
-  async retryJob(userClient: SupabaseClient, jobId: string) {
-    await this.getJob(userClient, jobId);
+  async retryJob(clients: Clients, jobId: string) {
+    await this.getJob(clients, jobId);
 
-    const { data: job, error } = await adminSupabase
+    const { data: job, error } = await clients.adminClient
       .schema('core_automation')
       .from('jobs')
       .update({
@@ -192,10 +199,10 @@ export class JobService {
     };
   }
 
-  async deleteJob(userClient: SupabaseClient, jobId: string) {
-    await this.getJob(userClient, jobId);
+  async deleteJob(clients: Clients, jobId: string) {
+    await this.getJob(clients, jobId);
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_automation')
       .from('jobs')
       .delete()

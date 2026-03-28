@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { encrypt } from '../services/encryption.service.js';
+import { encrypt } from '@org/utils-encryption';
 
 interface InitAgentBody {
   user_id: string;

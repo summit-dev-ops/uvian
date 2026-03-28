@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { Client, GatewayIntentBits, Message, Channel } from 'discord.js';
-import { identityService } from '../services/identity.service.js';
+import { identityService, clients } from '../services/index.js';
 import { eventEmitter } from './event-emitter.js';
 
 declare module 'fastify' {
@@ -46,6 +46,7 @@ export default fp(async (fastify) => {
       const isDm = message.channel.isDMBased ? true : false;
 
       const identity = await identityService.getIdentityByProviderUserId(
+        clients,
         'discord',
         discordUserId
       );

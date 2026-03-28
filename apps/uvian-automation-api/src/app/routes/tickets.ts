@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { adminSupabase } from '../clients/supabase.client';
 import { ticketService } from '../services/ticket.service';
 import {
   CreateTicketRequest,
@@ -60,7 +61,11 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        const result = await ticketService.createTicket(request.supabase, {
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const result = await ticketService.createTicket(clients, {
           threadId,
           title,
           description,
@@ -83,7 +88,11 @@ export default async function (fastify: FastifyInstance) {
       try {
         const query = request.query || {};
 
-        const result = await ticketService.listTickets(request.supabase, {
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const result = await ticketService.listTickets(clients, {
           status: query.status,
           priority: query.priority,
         });
@@ -111,7 +120,11 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { id } = request.params;
 
-        const ticket = await ticketService.getTicket(request.supabase, id);
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const ticket = await ticketService.getTicket(clients, id);
 
         reply.send(ticket);
       } catch (error: any) {
@@ -160,8 +173,12 @@ export default async function (fastify: FastifyInstance) {
         const { id } = request.params;
         const updates = request.body || {};
 
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const ticket = await ticketService.updateTicket(
-          request.supabase,
+          clients,
           id,
           updates,
           userId
@@ -206,8 +223,12 @@ export default async function (fastify: FastifyInstance) {
         const { id } = request.params;
         const body = request.body || {};
 
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const ticket = await ticketService.resolveTicket(
-          request.supabase,
+          clients,
           id,
           body.resolutionPayload || {},
           userId
@@ -256,8 +277,12 @@ export default async function (fastify: FastifyInstance) {
         const { id } = request.params;
         const { assignedTo } = request.body || {};
 
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const ticket = await ticketService.assignTicket(
-          request.supabase,
+          clients,
           id,
           assignedTo ?? null,
           userId
@@ -295,7 +320,11 @@ export default async function (fastify: FastifyInstance) {
 
         const { id } = request.params;
 
-        await ticketService.deleteTicket(request.supabase, id, userId);
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        await ticketService.deleteTicket(clients, id, userId);
 
         reply.code(204).send();
       } catch (error: any) {

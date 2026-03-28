@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { chatService } from '../services/chat.service';
+import { adminSupabase } from '../clients/supabase.client';
 import {
   GetConversationsRequest,
   GetConversationRequest,
@@ -15,6 +16,13 @@ import {
   UpdateMessageRequest,
   SearchMessagesRequest,
 } from '../types/chat.types';
+
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 export default async function (fastify: FastifyInstance) {
   fastify.get<GetConversationsRequest>(
@@ -38,7 +46,7 @@ export default async function (fastify: FastifyInstance) {
     ) => {
       try {
         const conversations = await chatService.getConversations(
-          request.supabase
+          getClients(request)
         );
         reply.send(conversations);
       } catch (error: any) {
@@ -67,7 +75,7 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { conversationId } = request.params;
         const conversation = await chatService.getConversation(
-          request.supabase,
+          getClients(request),
           conversationId
         );
         reply.send(conversation);
@@ -101,7 +109,7 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { conversationId } = request.params;
         const members = await chatService.getConversationMembers(
-          request.supabase,
+          getClients(request),
           conversationId
         );
         reply.send(members);
@@ -139,6 +147,7 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const conversation = await chatService.createConversation(
+          getClients(request),
           userId,
           request.body || {}
         );
@@ -198,7 +207,7 @@ export default async function (fastify: FastifyInstance) {
         const { conversationId } = request.params;
         const { userId: targetUserId, role } = request.body || {};
         const membership = await chatService.inviteMember(
-          request.supabase,
+          getClients(request),
           userId,
           conversationId,
           targetUserId,
@@ -251,7 +260,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId, userId: targetUserId } = request.params;
         await chatService.removeMember(
-          request.supabase,
+          getClients(request),
           userId,
           conversationId,
           targetUserId
@@ -317,7 +326,7 @@ export default async function (fastify: FastifyInstance) {
         const { conversationId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
         const membership = await chatService.updateMemberRole(
-          request.supabase,
+          getClients(request),
           userId,
           conversationId,
           targetUserId,
@@ -373,7 +382,7 @@ export default async function (fastify: FastifyInstance) {
         const { conversationId } = request.params;
         const { id, content, role, attachments } = request.body || {};
         const message = await chatService.createMessage(
-          request.supabase,
+          getClients(request),
           userId,
           conversationId,
           { id, content, role, attachments }
@@ -425,7 +434,7 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { conversationId } = request.params;
         const messages = await chatService.getMessages(
-          request.supabase,
+          getClients(request),
           conversationId
         );
         reply.send(messages);
@@ -468,7 +477,7 @@ export default async function (fastify: FastifyInstance) {
         const { q, senderId, from, to, limit, offset } = request.query || {};
 
         const messages = await chatService.searchMessages(
-          request.supabase,
+          getClients(request),
           conversationId,
           { q, senderId, from, to, limit, offset }
         );
@@ -505,7 +514,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId } = request.params;
         await chatService.deleteConversation(
-          request.supabase,
+          getClients(request),
           userId,
           conversationId
         );
@@ -554,7 +563,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId, messageId } = request.params;
         await chatService.deleteMessage(
-          request.supabase,
+          getClients(request),
           userId,
           conversationId,
           messageId
@@ -612,7 +621,7 @@ export default async function (fastify: FastifyInstance) {
         const { conversationId, messageId } = request.params;
         const { content, attachments } = request.body || {};
         const message = await chatService.updateMessage(
-          request.supabase,
+          getClients(request),
           userId,
           conversationId,
           messageId,

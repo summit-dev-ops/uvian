@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { redisConnection } from '../clients/redis';
-import { queueService } from '../services/queue.service';
+import { queueService } from '../services';
 
 export default fp(async (fastify) => {
   fastify.decorate('redis', redisConnection);

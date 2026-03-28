@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { assetService } from '../services/asset.service';
+import { adminSupabase } from '../clients/supabase.client';
 import {
   CreateAssetRequest,
   GetAssetRequest,
@@ -7,6 +8,13 @@ import {
   GetUploadUrlRequest,
   ResolveAssetsRequest,
 } from '../types/asset.types';
+
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 export default async function assetsRoutes(fastify: FastifyInstance) {
   // GET /assets - List user's assets
@@ -29,7 +37,7 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
           type?: string;
         };
 
-        const result = await assetService.getAssets(request.supabase, {
+        const result = await assetService.getAssets(getClients(request), {
           page: page ? parseInt(page) : 1,
           limit: limit ? parseInt(limit) : 20,
           type,
@@ -62,7 +70,7 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
       try {
         const { assetId } = request.params;
 
-        const asset = await assetService.getAsset(request.supabase, assetId);
+        const asset = await assetService.getAsset(getClients(request), assetId);
 
         reply.send(asset);
       } catch (error: any) {
@@ -108,7 +116,11 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const asset = await assetService.createAsset(userId, request.body);
+        const asset = await assetService.createAsset(
+          getClients(request),
+          userId,
+          request.body
+        );
 
         fastify.services.eventEmitter.emitAssetUploaded(
           {
@@ -166,7 +178,7 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
         const hardDelete = request.query?.hard === 'true';
 
         await assetService.deleteAsset(
-          request.supabase,
+          getClients(request),
           userId,
           assetId,
           hardDelete
@@ -221,6 +233,7 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
         const { filename, contentType } = request.body;
 
         const result = await assetService.getUploadUrl(
+          getClients(request),
           userId,
           filename,
           contentType
@@ -263,7 +276,10 @@ export default async function assetsRoutes(fastify: FastifyInstance) {
       try {
         const { assetIds } = request.body;
 
-        const resolved = await assetService.resolveAssets(assetIds);
+        const resolved = await assetService.resolveAssets(
+          getClients(request),
+          assetIds
+        );
 
         reply.send(resolved);
       } catch (error: any) {

@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { adminSupabase } from '../clients/supabase.client';
 import { agentConfigService } from '../services/agent-config.service';
 
 export default async function agentMcpRoutes(fastify: FastifyInstance) {
@@ -33,11 +34,14 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentId } = request.params as any as { agentId: string };
         const body = request.body as any;
 
-        const link = await agentConfigService.linkMcp(userClient, agentId, {
+        const link = await agentConfigService.linkMcp(clients, agentId, {
           mcpId: body.mcpId,
           secretName: body.secretName,
           secretValue: body.secretValue,
@@ -81,7 +85,10 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentId, mcpId } = request.params as any as {
           agentId: string;
           mcpId: string;
@@ -89,7 +96,7 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
 
         const link = await agentConfigService.updateMcpLink(
-          userClient,
+          clients,
           agentId,
           mcpId,
           { secretValue: body.secretValue, isDefault: body.isDefault }
@@ -121,13 +128,16 @@ export default async function agentMcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentId, mcpId } = request.params as any as {
           agentId: string;
           mcpId: string;
         };
 
-        await agentConfigService.unlinkMcp(userClient, agentId, mcpId);
+        await agentConfigService.unlinkMcp(clients, agentId, mcpId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

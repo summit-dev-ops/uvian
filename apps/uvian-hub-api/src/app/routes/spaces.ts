@@ -1,5 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { spacesService } from '../services/spaces.service';
+import { adminSupabase } from '../clients/supabase.client';
+
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 import {
   GetSpacesRequest,
   GetSpaceStatsRequest,
@@ -19,7 +27,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
     { preHandler: [fastify.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const spaces = await spacesService.getSpaces(request.supabase);
+        const spaces = await spacesService.getSpaces(getClients(request));
         reply.send(spaces);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch spaces' });
@@ -38,7 +46,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           return;
         }
         const stats = await spacesService.getSpaceStats(
-          request.supabase,
+          getClients(request),
           userId
         );
         reply.send(stats);
@@ -64,7 +72,10 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest<GetSpaceRequest>, reply: FastifyReply) => {
       try {
         const { spaceId } = request.params;
-        const space = await spacesService.getSpace(request.supabase, spaceId);
+        const space = await spacesService.getSpace(
+          getClients(request),
+          spaceId
+        );
         reply.send(space);
       } catch (error: any) {
         if (error.message.includes('not found')) {
@@ -96,7 +107,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
       try {
         const { spaceId } = request.params;
         const members = await spacesService.getSpaceMembers(
-          request.supabase,
+          getClients(request),
           spaceId
         );
         reply.send(members);
@@ -138,6 +149,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           return;
         }
         const space = await spacesService.createSpace(
+          getClients(request),
           userId,
           request.body || {}
         );
@@ -194,7 +206,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         }
         const { spaceId } = request.params;
         const space = await spacesService.updateSpace(
-          request.supabase,
+          getClients(request),
           userId,
           spaceId,
           request.body || {}
@@ -240,7 +252,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           return;
         }
         const { spaceId } = request.params;
-        await spacesService.deleteSpace(request.supabase, userId, spaceId);
+        await spacesService.deleteSpace(getClients(request), userId, spaceId);
         fastify.services.eventEmitter.emitSpaceDeleted(
           { spaceId, deletedBy: userId },
           userId
@@ -300,7 +312,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const { spaceId } = request.params;
         const { userId: targetUserId, role } = request.body || {};
         const membership = await spacesService.inviteMember(
-          request.supabase,
+          getClients(request),
           userId,
           spaceId,
           targetUserId,
@@ -356,7 +368,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         }
         const { spaceId, userId: targetUserId } = request.params;
         await spacesService.removeMember(
-          request.supabase,
+          getClients(request),
           userId,
           spaceId,
           targetUserId
@@ -420,7 +432,7 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         const { spaceId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
         const membership = await spacesService.updateMemberRole(
-          request.supabase,
+          getClients(request),
           userId,
           spaceId,
           targetUserId,

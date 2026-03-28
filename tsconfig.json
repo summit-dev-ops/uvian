@@ -29,6 +29,18 @@
     },
     {
       "path": "./apps/uvian-core-api"
+    },
+    {
+      "path": "./packages/services/api-key"
+    },
+    {
+      "path": "./packages/services/secrets"
+    },
+    {
+      "path": "./packages/services/queue"
+    },
+    {
+      "path": "./packages/utils/encryption"
     }
   ]
 }

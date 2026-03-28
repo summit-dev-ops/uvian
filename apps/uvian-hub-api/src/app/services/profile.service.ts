@@ -1,6 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
 import type { Profile } from '../types/profile.types';
+
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export class ProfileService {
   // Helper to get user ID from request (for backward compatibility)
@@ -11,8 +15,8 @@ export class ProfileService {
     return request.user.id;
   }
 
-  async getProfile(userClient: SupabaseClient, profileId: string) {
-    const { data, error } = await userClient
+  async getProfile(clients: ServiceClients, profileId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('profiles')
       .select('*')
@@ -26,8 +30,8 @@ export class ProfileService {
     return this.transformFromDatabase(data);
   }
 
-  async getProfileByUserId(userClient: SupabaseClient, userId: string) {
-    const { data, error } = await userClient
+  async getProfileByUserId(clients: ServiceClients, userId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('profiles')
       .select('*')
@@ -54,7 +58,7 @@ export class ProfileService {
   }
 
   async createOrUpdateProfile(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     data: { displayName?: string; avatarUrl?: string; bio?: string }
   ) {
@@ -68,7 +72,7 @@ export class ProfileService {
     if (data.avatarUrl !== undefined) updateData.avatar_url = data.avatarUrl;
     if (data.bio !== undefined) updateData.bio = data.bio;
 
-    const { data: profile, error } = await adminSupabase
+    const { data: profile, error } = await clients.adminClient
       .schema('core_hub')
       .from('profiles')
       .upsert(updateData)
@@ -83,13 +87,13 @@ export class ProfileService {
   }
 
   async updateProfile(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     profileId: string,
     data: { displayName?: string; avatarUrl?: string; bio?: string }
   ) {
     // Verify ownership via RLS
-    const { data: existing } = await userClient
+    const { data: existing } = await clients.userClient
       .schema('core_hub')
       .from('profiles')
       .select('user_id')
@@ -109,7 +113,7 @@ export class ProfileService {
     if (data.avatarUrl !== undefined) updateData.avatar_url = data.avatarUrl;
     if (data.bio !== undefined) updateData.bio = data.bio;
 
-    const { data: profile, error } = await adminSupabase
+    const { data: profile, error } = await clients.adminClient
       .schema('core_hub')
       .from('profiles')
       .update(updateData)
@@ -125,12 +129,12 @@ export class ProfileService {
   }
 
   async deleteProfile(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     profileId: string
   ) {
     // Verify ownership via RLS
-    const { data: existing } = await userClient
+    const { data: existing } = await clients.userClient
       .schema('core_hub')
       .from('profiles')
       .select('user_id')
@@ -141,7 +145,7 @@ export class ProfileService {
       throw new Error("Cannot delete another user's profile");
     }
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_hub')
       .from('profiles')
       .delete()

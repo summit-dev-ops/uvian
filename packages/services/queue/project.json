@@ -1,0 +1,23 @@
+{
+  "name": "@org/services-queue",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/services/queue/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/services/queue/dist"],
+      "options": {
+        "outputPath": "packages/services/queue/dist",
+        "main": "packages/services/queue/src/index.ts",
+        "tsConfig": "packages/services/queue/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/services/queue/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:services"]
+}

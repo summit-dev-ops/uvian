@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { subscriptionService } from '../services/subscription.service';
-import { createUserClient } from '../clients/supabase.client';
+import { subscriptionService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
 
 interface CreateSubscriptionBody {
   resource_type: string;
@@ -12,13 +12,11 @@ interface DeleteSubscriptionParams {
   subscriptionId: string;
 }
 
-function getUserClient(request: FastifyRequest) {
-  const authHeader = request.headers.authorization;
-  if (!authHeader) {
-    throw new Error('Missing authorization header');
-  }
-  const token = authHeader.replace('Bearer ', '');
-  return createUserClient(token);
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
 }
 
 export default async function subscriptionRoutes(fastify: FastifyInstance) {
@@ -35,9 +33,9 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const subscriptions = await subscriptionService.getSubscriptionsByUser(
-          userClient,
+          clients,
           userId
         );
         reply.send({ subscriptions });
@@ -88,9 +86,9 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const subscription = await subscriptionService.createSubscription(
-          userClient,
+          clients,
           userId,
           {
             resource_type: request.body.resource_type,
@@ -135,10 +133,10 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
         }
 
         const { subscriptionId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
         await subscriptionService.deleteSubscription(
-          userClient,
+          clients,
           userId,
           subscriptionId
         );

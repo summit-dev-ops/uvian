@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { accountService } from '../services/account.service';
+import { accountService } from '../services/factory';
+import { adminSupabase } from '../clients/supabase.client';
 import {
   CreateAccountRequest,
   UpdateAccountRequest,
@@ -9,6 +10,13 @@ import {
   DeleteAccountMemberRequest,
   GetAccountMembersRequest,
 } from '../types/account.types';
+
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 export default async function accountsRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -24,7 +32,8 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const accounts = await accountService.getAccounts(userId);
+        const clients = getClients(request);
+        const accounts = await accountService.getAccounts(clients, userId);
         reply.send({ accounts });
       } catch (error: any) {
         reply
@@ -61,7 +70,8 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         }
 
         const { name, settings } = request.body || {};
-        const account = await accountService.createAccount(userId, {
+        const clients = getClients(request);
+        const account = await accountService.createAccount(clients, userId, {
           name,
           settings,
         });
@@ -106,7 +116,12 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
-        const account = await accountService.getAccount(accountId, userId);
+        const clients = getClients(request);
+        const account = await accountService.getAccount(
+          clients,
+          accountId,
+          userId
+        );
         reply.send(account);
       } catch (error: any) {
         if (
@@ -159,10 +174,16 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
 
         const { accountId } = request.params;
         const { name, settings } = request.body || {};
-        const account = await accountService.updateAccount(accountId, userId, {
-          name,
-          settings,
-        });
+        const clients = getClients(request);
+        const account = await accountService.updateAccount(
+          clients,
+          accountId,
+          userId,
+          {
+            name,
+            settings,
+          }
+        );
         fastify.services.eventEmitter.emitAccountUpdated(
           { accountId, updatedBy: userId, name },
           userId
@@ -207,7 +228,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
+        const clients = getClients(request);
         const members = await accountService.getAccountMembers(
+          clients,
           accountId,
           userId
         );
@@ -262,7 +285,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         const { accountId } = request.params;
         const { userId: newMemberUserId, role } = request.body || {};
 
+        const clients = getClients(request);
         const member = await accountService.addAccountMember(
+          clients,
           accountId,
           userId,
           newMemberUserId,
@@ -328,7 +353,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         const { accountId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
 
+        const clients = getClients(request);
         const member = await accountService.updateAccountMember(
+          clients,
           accountId,
           userId,
           targetUserId,
@@ -385,7 +412,9 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId, userId: targetUserId } = request.params;
+        const clients = getClients(request);
         await accountService.removeAccountMember(
+          clients,
           accountId,
           userId,
           targetUserId

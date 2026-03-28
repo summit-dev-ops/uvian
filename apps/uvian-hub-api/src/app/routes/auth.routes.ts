@@ -1,8 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import {
-  ApiKeyService,
-  checkAccountMembership,
-} from '../services/api-key.service';
+import { apiKeyService, accountService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
 
 interface CreateApiKeyBody {
   userId: string;
@@ -11,6 +9,13 @@ interface CreateApiKeyBody {
 interface RevokeApiKeyBody {
   userId: string;
   apiKeyPrefix?: string;
+}
+
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
 }
 
 export async function authRoutes(fastify: FastifyInstance) {
@@ -42,8 +47,10 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const authenticatedUserId = request.user!.id;
       const { userId: targetUserId } = request.body;
+      const clients = getClients(request);
 
-      const hasAccess = await checkAccountMembership(
+      const hasAccess = await accountService.checkAccountMembership(
+        clients,
         authenticatedUserId,
         targetUserId
       );
@@ -55,7 +62,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const result = await ApiKeyService.createApiKey(
+        const result = await apiKeyService.createApiKey(
+          clients,
           targetUserId,
           'hub-api'
         );
@@ -84,8 +92,10 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const authenticatedUserId = request.user!.id;
       const { userId: targetUserId, apiKeyPrefix } = request.body;
+      const clients = getClients(request);
 
-      const hasAccess = await checkAccountMembership(
+      const hasAccess = await accountService.checkAccountMembership(
+        clients,
         authenticatedUserId,
         targetUserId
       );
@@ -97,7 +107,12 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        await ApiKeyService.revokeApiKey(targetUserId, 'hub-api', apiKeyPrefix);
+        await apiKeyService.revokeApiKey(
+          clients,
+          targetUserId,
+          'hub-api',
+          apiKeyPrefix
+        );
         return reply.send({ success: true });
       } catch (error) {
         fastify.log.error({ error }, 'Failed to revoke API key');

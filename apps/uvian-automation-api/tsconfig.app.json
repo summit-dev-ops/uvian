@@ -20,6 +20,18 @@
   ],
   "references": [
     {
+      "path": "../../packages/services/secrets/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/queue/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/accounts/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/api-key/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/uvian-events/tsconfig.lib.json"
     }
   ]

@@ -1,16 +1,20 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
 import type { Asset, CreateAssetInput } from '../types/asset.types';
+
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export class AssetService {
   async getAssets(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     options: { page?: number; limit?: number; type?: string } = {}
   ) {
     const { page = 1, limit = 20, type } = options;
     const offset = (page - 1) * limit;
 
-    let query = userClient
+    let query = clients.userClient
       .schema('core_hub')
       .from('get_my_assets')
       .select('*', { count: 'exact' });
@@ -39,8 +43,8 @@ export class AssetService {
     };
   }
 
-  async getAsset(userClient: SupabaseClient, assetId: string) {
-    const { data, error } = await userClient
+  async getAsset(clients: ServiceClients, assetId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_asset_details')
       .select('*')
@@ -54,8 +58,11 @@ export class AssetService {
     return this.transformFromDatabase(data);
   }
 
-  async getAssetById(assetId: string): Promise<Asset | null> {
-    const { data, error } = await adminSupabase
+  async getAssetById(
+    clients: ServiceClients,
+    assetId: string
+  ): Promise<Asset | null> {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('assets')
       .select('*')
@@ -69,12 +76,15 @@ export class AssetService {
     return this.transformFromDatabase(data);
   }
 
-  async createAsset(userId: string, input: CreateAssetInput) {
-    // Derive accountId from current user using admin client
-    const { data: accountData, error: accountError } = await adminSupabase.rpc(
-      'get_account_id_for_user',
-      { target_user_id: userId }
-    );
+  async createAsset(
+    clients: ServiceClients,
+    userId: string,
+    input: CreateAssetInput
+  ) {
+    const { data: accountData, error: accountError } =
+      await clients.adminClient.rpc('get_account_id_for_user', {
+        target_user_id: userId,
+      });
 
     if (accountError || !accountData) {
       throw new Error('Could not determine user account');
@@ -82,10 +92,9 @@ export class AssetService {
 
     const accountId = accountData;
 
-    // Convert storage path to full public URL for permanent access
     const publicUrl = this.getPublicUrl(input.url);
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_hub')
       .from('assets')
       .insert({
@@ -110,13 +119,12 @@ export class AssetService {
   }
 
   async deleteAsset(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     assetId: string,
     hardDelete = false
   ) {
-    // First get the asset to check permissions
-    const { data: asset, error: fetchError } = await userClient
+    const { data: asset, error: fetchError } = await clients.userClient
       .schema('core_hub')
       .from('get_asset_details')
       .select('*, account_id')
@@ -127,14 +135,9 @@ export class AssetService {
       throw new Error('Asset not found');
     }
 
-    // Check if user can delete this asset
-    // User can delete if:
-    // 1. They uploaded it (uploader_user_id = userId)
-    // 2. They are an admin/owner of the account
     const isUploader = asset.uploader_user_id === userId;
 
-    // Check account role
-    const { data: membership } = await userClient
+    const { data: membership } = await clients.userClient
       .from('account_members')
       .select('role')
       .eq('account_id', asset.account_id)
@@ -153,13 +156,12 @@ export class AssetService {
     }
 
     if (hardDelete) {
-      // Hard delete: remove from storage and database
       const storagePath = this.extractStoragePath(asset.url);
       if (storagePath && asset.storageType === 'supabase') {
-        await adminSupabase.storage.from('assets').remove([storagePath]);
+        await clients.adminClient.storage.from('assets').remove([storagePath]);
       }
 
-      const { error } = await adminSupabase
+      const { error } = await clients.adminClient
         .schema('core_hub')
         .from('assets')
         .delete()
@@ -169,8 +171,7 @@ export class AssetService {
         throw new Error(error.message);
       }
     } else {
-      // Soft delete: just remove the row (file remains orphaned)
-      const { error } = await adminSupabase
+      const { error } = await clients.adminClient
         .schema('core_hub')
         .from('assets')
         .delete()
@@ -184,24 +185,26 @@ export class AssetService {
     return { success: true };
   }
 
-  async getUploadUrl(userId: string, filename: string, contentType: string) {
-    // Derive accountId from current user using admin client
-    const { data: accountId, error: accountError } = await adminSupabase.rpc(
-      'get_account_id_for_user',
-      { target_user_id: userId }
-    );
+  async getUploadUrl(
+    clients: ServiceClients,
+    userId: string,
+    filename: string,
+    contentType: string
+  ) {
+    const { data: accountId, error: accountError } =
+      await clients.adminClient.rpc('get_account_id_for_user', {
+        target_user_id: userId,
+      });
 
     if (accountError || !accountId) {
       throw new Error('Could not determine user account');
     }
 
-    // Generate unique filename
     const uniqueId = crypto.randomUUID();
     const ext = filename.split('.').pop() || '';
     const storageFilename = `${uniqueId}${ext ? '.' + ext : ''}`;
     const storagePath = `accounts/${accountId}/${storageFilename}`;
 
-    // Build full URL for POST upload
     const supabaseUrl = process.env.SUPABASE_URL?.replace('https://', '');
     const fullUrl = `https://${supabaseUrl}/storage/v1/object/assets/${storagePath}`;
 
@@ -221,12 +224,12 @@ export class AssetService {
     return `${supabaseUrl}/storage/v1/object/public/assets/${storagePath}`;
   }
 
-  async resolveAssets(assetIds: string[]) {
+  async resolveAssets(clients: ServiceClients, assetIds: string[]) {
     if (!assetIds || assetIds.length === 0) {
       return [];
     }
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('assets')
       .select('id, url, storage_type, account_id')
@@ -241,10 +244,9 @@ export class AssetService {
         let accessUrl = asset.url;
 
         if (asset.storage_type === 'supabase') {
-          // Generate signed URL for private assets
-          const { data: signedData } = await adminSupabase.storage
+          const { data: signedData } = await clients.adminClient.storage
             .from('assets')
-            .createSignedUrl(asset.url, 3600); // 1 hour
+            .createSignedUrl(asset.url, 3600);
 
           accessUrl = signedData?.signedUrl || asset.url;
         }
@@ -259,8 +261,8 @@ export class AssetService {
     return resolved;
   }
 
-  async getAccountStorageUsage(accountId: string) {
-    const { data, error } = await adminSupabase
+  async getAccountStorageUsage(clients: ServiceClients, accountId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('assets')
       .select('file_size_bytes')
@@ -284,7 +286,10 @@ export class AssetService {
     };
   }
 
-  async resolveAssetByUrl(storagePath: string): Promise<{
+  async resolveAssetByUrl(
+    clients: ServiceClients,
+    storagePath: string
+  ): Promise<{
     url: string;
     mimeType: string | null;
     fileSizeBytes: number | null;
@@ -294,7 +299,7 @@ export class AssetService {
       return null;
     }
 
-    const { data: asset, error }: any = await adminSupabase
+    const { data: asset, error }: any = await clients.userClient
       .schema('core_hub')
       .from('assets')
       .select('url, mime_type, file_size_bytes, storage_type, filename')
@@ -308,7 +313,7 @@ export class AssetService {
     let accessUrl = asset.url;
 
     if (asset.storage_type === 'supabase') {
-      const { data: signedData } = await adminSupabase.storage
+      const { data: signedData } = await clients.adminClient.storage
         .from('assets')
         .createSignedUrl(asset.url, 3600);
 
@@ -324,11 +329,9 @@ export class AssetService {
   }
 
   private extractStoragePath(url: string): string | null {
-    // If it's a Supabase storage path (not a full URL), return as-is
     if (url.startsWith('accounts/')) {
       return url;
     }
-    // If it's a full Supabase storage URL, extract the path
     if (url.includes('/storage/v1/object/files/')) {
       return url.split('/storage/v1/object/files/')[1];
     }

@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { redisConnection } from '../clients/redis';
-import { queueService } from '../services/queue.service';
+import { queueService } from '../services';
 import { userService } from '../services/user.service';
 import { supabase } from '../clients/supabase.client';
 import { chatService } from '../services/chat.service';

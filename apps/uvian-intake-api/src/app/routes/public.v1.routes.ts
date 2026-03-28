@@ -63,6 +63,30 @@ export async function publicV1Routes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.get<{ Params: TokenIdParams }>(
+    '/intakes/:tokenId/status',
+    async (request, reply) => {
+      try {
+        const { tokenId } = request.params;
+
+        if (!tokenId || !tokenId.startsWith('int_')) {
+          return reply.code(400).send({ error: 'Invalid token format' });
+        }
+
+        const result = await intakeService.getIntakeStatus(tokenId);
+
+        if (!result) {
+          return reply.code(404).send({ error: 'Intake not found' });
+        }
+
+        return reply.send(result);
+      } catch (error: unknown) {
+        fastify.log.error({ error }, 'Failed to get intake status');
+        return reply.code(500).send({ error: 'Failed to get intake status' });
+      }
+    }
+  );
+
   fastify.post<{ Params: TokenIdParams; Body: SubmitBody }>(
     '/intakes/:tokenId/submit',
     {

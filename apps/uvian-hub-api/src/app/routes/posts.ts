@@ -9,6 +9,13 @@ import {
   DeletePostRequest,
 } from '../types/post.types';
 
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
+
 export default async function (fastify: FastifyInstance) {
   fastify.get<GetSpacePostsRequest>(
     '/api/spaces/:spaceId/posts',
@@ -40,7 +47,7 @@ export default async function (fastify: FastifyInstance) {
         const { cursor, limit } = request.query || {};
 
         const result = await postService.getPostsBySpace(
-          request.supabase,
+          getClients(request),
           spaceId,
           { cursor, limit }
         );
@@ -69,7 +76,7 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { id } = request.params;
 
-        const post = await postService.getPost(request.supabase, id);
+        const post = await postService.getPost(getClients(request), id);
 
         reply.send(post);
       } catch (error: any) {
@@ -182,7 +189,7 @@ export default async function (fastify: FastifyInstance) {
             // Create note if provided
             if (item.note?.title) {
               const createdNote = await noteService.createNote(
-                request.supabase,
+                getClients(request),
                 userId,
                 {
                   id: item.noteId,
@@ -229,7 +236,10 @@ export default async function (fastify: FastifyInstance) {
         }
 
         // Fetch the complete post with contents
-        const fullPost = await postService.getPost(request.supabase, post.id);
+        const fullPost = await postService.getPost(
+          getClients(request),
+          post.id
+        );
 
         fastify.services.eventEmitter.emitPostCreated(
           {
@@ -275,7 +285,7 @@ export default async function (fastify: FastifyInstance) {
 
         const { id } = request.params;
 
-        await postService.deletePost(request.supabase, id, userId);
+        await postService.deletePost(getClients(request), id, userId);
 
         fastify.services.eventEmitter.emitPostDeleted(
           { postId: id, deletedBy: userId },

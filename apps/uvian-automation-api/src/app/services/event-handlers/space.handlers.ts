@@ -1,3 +1,4 @@
+import { adminSupabase } from '../../clients/supabase.client';
 import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
@@ -8,6 +9,8 @@ import {
 } from '@org/uvian-events';
 
 export function registerSpaceHandlers(webhookHandler: any) {
+  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+
   webhookHandler.registerHandler(
     SpaceEvents.SPACE_MEMBER_JOINED,
     async (envelope: WebhookEnvelope, agentId?: string) => {
@@ -19,7 +22,7 @@ export function registerSpaceHandlers(webhookHandler: any) {
         agentId,
       });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -50,7 +53,7 @@ export function registerSpaceHandlers(webhookHandler: any) {
         agentId,
       });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -79,7 +82,7 @@ export function registerSpaceHandlers(webhookHandler: any) {
         agentId,
       });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,

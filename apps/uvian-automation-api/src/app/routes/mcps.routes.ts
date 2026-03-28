@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { adminSupabase } from '../clients/supabase.client';
 import { mcpService } from '../services/mcp.service';
 
 export default async function mcpRoutes(fastify: FastifyInstance) {
@@ -8,8 +9,11 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { accountId } = request.params as any as { accountId: string };
-        const userClient = await request.supabase;
-        const mcps = await mcpService.list(userClient, accountId);
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const mcps = await mcpService.list(clients, accountId);
         return reply.send({ mcps });
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
@@ -39,8 +43,11 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
-        const mcp = await mcpService.create(userClient, request.body as any);
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const mcp = await mcpService.create(clients, request.body as any);
         return reply.code(201).send({ mcp });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
@@ -74,10 +81,13 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { mcpId } = request.params as any as { mcpId: string };
         const mcp = await mcpService.update(
-          userClient,
+          clients,
           mcpId,
           request.body as any
         );
@@ -102,9 +112,12 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { mcpId } = request.params as any as { mcpId: string };
-        await mcpService.delete(userClient, mcpId);
+        await mcpService.delete(clients, mcpId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

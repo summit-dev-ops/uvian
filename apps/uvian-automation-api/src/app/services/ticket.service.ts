@@ -1,12 +1,13 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
+
+export interface Clients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export class TicketService {
-  private async verifyTicketAccess(
-    userClient: SupabaseClient,
-    ticketId: string
-  ) {
-    const { data, error } = await userClient
+  private async verifyTicketAccess(clients: Clients, ticketId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('get_tickets_for_current_user')
       .select('id')
@@ -17,7 +18,7 @@ export class TicketService {
   }
 
   async createTicket(
-    userClient: SupabaseClient,
+    clients: Clients,
     data: {
       threadId: string;
       title: string;
@@ -27,7 +28,7 @@ export class TicketService {
       requesterJobId?: string;
     }
   ) {
-    const { data: ticket, error } = await adminSupabase
+    const { data: ticket, error } = await clients.adminClient
       .schema('core_automation')
       .from('tickets')
       .insert({
@@ -51,10 +52,10 @@ export class TicketService {
   }
 
   async listTickets(
-    userClient: SupabaseClient,
+    clients: Clients,
     filters: { status?: string; priority?: string } = {}
   ) {
-    let q = userClient
+    let q = clients.userClient
       .schema('core_automation')
       .from('get_tickets_for_current_user')
       .select('*');
@@ -74,8 +75,8 @@ export class TicketService {
     };
   }
 
-  async getTicket(userClient: SupabaseClient, ticketId: string) {
-    const { data, error } = await userClient
+  async getTicket(clients: Clients, ticketId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('tickets')
       .select('*')
@@ -87,7 +88,7 @@ export class TicketService {
   }
 
   async updateTicket(
-    userClient: SupabaseClient,
+    clients: Clients,
     ticketId: string,
     updates: {
       title?: string;
@@ -97,7 +98,7 @@ export class TicketService {
     },
     _userId: string
   ) {
-    await this.verifyTicketAccess(userClient, ticketId);
+    await this.verifyTicketAccess(clients, ticketId);
 
     const updateData: any = { updated_at: new Date().toISOString() };
     if (updates.title) updateData.title = updates.title;
@@ -105,7 +106,7 @@ export class TicketService {
     if (updates.status) updateData.status = updates.status;
     if (updates.priority) updateData.priority = updates.priority;
 
-    const { data: ticket, error } = await adminSupabase
+    const { data: ticket, error } = await clients.adminClient
       .schema('core_automation')
       .from('tickets')
       .update(updateData)
@@ -118,14 +119,14 @@ export class TicketService {
   }
 
   async resolveTicket(
-    userClient: SupabaseClient,
+    clients: Clients,
     ticketId: string,
     resolutionPayload: Record<string, any> = {},
     _userId: string
   ) {
-    await this.verifyTicketAccess(userClient, ticketId);
+    await this.verifyTicketAccess(clients, ticketId);
 
-    const { data: ticket, error } = await adminSupabase
+    const { data: ticket, error } = await clients.adminClient
       .schema('core_automation')
       .from('tickets')
       .update({
@@ -143,14 +144,14 @@ export class TicketService {
   }
 
   async assignTicket(
-    userClient: SupabaseClient,
+    clients: Clients,
     ticketId: string,
     assignedTo: string | null,
     _userId: string
   ) {
-    await this.verifyTicketAccess(userClient, ticketId);
+    await this.verifyTicketAccess(clients, ticketId);
 
-    const { data: ticket, error } = await adminSupabase
+    const { data: ticket, error } = await clients.adminClient
       .schema('core_automation')
       .from('tickets')
       .update({
@@ -166,14 +167,10 @@ export class TicketService {
     return ticket;
   }
 
-  async deleteTicket(
-    userClient: SupabaseClient,
-    ticketId: string,
-    _userId: string
-  ) {
-    await this.verifyTicketAccess(userClient, ticketId);
+  async deleteTicket(clients: Clients, ticketId: string, _userId: string) {
+    await this.verifyTicketAccess(clients, ticketId);
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_automation')
       .from('tickets')
       .delete()

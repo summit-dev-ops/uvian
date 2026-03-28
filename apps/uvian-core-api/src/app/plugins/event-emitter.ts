@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
-import { queueService } from '../services/queue.service';
+import { queueService } from '../services';
 import { createCloudEvent, CoreEvents } from '@org/uvian-events';
 import type {
   AutomationProviderCreatedData,

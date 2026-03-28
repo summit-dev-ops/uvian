@@ -3,14 +3,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { IntakeService } from '../services/intake.service';
-import { secretsService } from '../services/secrets.service';
+import { secretsService } from '../services';
 import {
   generateRSAKeyPair,
   decryptRSA,
   decryptHybridSubmission,
   type HybridEncryptedSubmission,
-} from '../services/encryption.service';
+} from '@org/utils-encryption';
 import { adminSupabase } from '../clients/supabase.client';
+import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -66,7 +67,10 @@ async function authenticateWithApiKey(
     return null;
   }
 
-  const accountId = await secretsService.getAccountIdForUser(userData.user.id);
+  const accountId = await secretsService.getAccountIdForUser(
+    { adminClient: adminSupabase, userClient: adminSupabase },
+    userData.user.id
+  );
   if (!accountId) {
     return null;
   }
@@ -174,7 +178,16 @@ const DecryptSubmissionInputSchema = z.object({
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   const intakeService = new IntakeService(fastify);
 
-  function createServer(userId: string, accountId: string) {
+  function createServer(userId: string, accountId: string, jwt: string) {
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    });
+
+    const clients = { adminClient: adminSupabase, userClient };
+
     const server = new McpServer(
       { name: 'uvian-intake', version: '1.0.0' },
       { capabilities: { tools: {} } }
@@ -381,7 +394,8 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const keyPair = generateRSAKeyPair();
 
-          const secret = await secretsService.create({} as any, accountId, {
+          const secret = await secretsService.create(clients, {
+            accountId,
             name: `${args.name}_private_key`,
             valueType: 'text',
             value: keyPair.privateKey,
@@ -421,6 +435,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args) => {
         try {
           const secret = await secretsService.getByIdWithDecryptedValue(
+            clients,
             args.secretId
           );
           if (!secret) {
@@ -448,7 +463,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async () => {
         try {
-          const secrets = await secretsService.list({} as any, accountId);
+          const secrets = await secretsService.list(clients, accountId);
           return {
             content: [{ type: 'text', text: JSON.stringify(secrets) }],
           } as ToolResult;
@@ -468,7 +483,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          await secretsService.delete({} as any, accountId, args.secretId);
+          await secretsService.delete(clients, args.secretId);
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -491,6 +506,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args) => {
         try {
           const secret = await secretsService.getByIdWithDecryptedValue(
+            clients,
             args.secretId
           );
           if (!secret) {
@@ -523,6 +539,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args) => {
         try {
           const secret = await secretsService.getByIdWithDecryptedValue(
+            clients,
             args.secretId
           );
           if (!secret) {
@@ -585,7 +602,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     const { userId, accountId } = authResult;
 
     try {
-      const server = createServer(userId, accountId);
+      const server = createServer(userId, accountId, authResult.jwt);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
       });

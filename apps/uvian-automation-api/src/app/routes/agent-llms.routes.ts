@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { adminSupabase } from '../clients/supabase.client';
 import { agentConfigService } from '../services/agent-config.service';
 
 export default async function agentLlmRoutes(fastify: FastifyInstance) {
@@ -35,11 +36,14 @@ export default async function agentLlmRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentId } = request.params as any as { agentId: string };
         const body = request.body as any;
 
-        const link = await agentConfigService.linkLlm(userClient, agentId, {
+        const link = await agentConfigService.linkLlm(clients, agentId, {
           llmId: body.llmId,
           secretName: body.secretName,
           secretValue: body.secretValue,
@@ -84,7 +88,10 @@ export default async function agentLlmRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentId, llmId } = request.params as any as {
           agentId: string;
           llmId: string;
@@ -92,7 +99,7 @@ export default async function agentLlmRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
 
         const link = await agentConfigService.updateLlmLink(
-          userClient,
+          clients,
           agentId,
           llmId,
           {
@@ -127,13 +134,16 @@ export default async function agentLlmRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentId, llmId } = request.params as any as {
           agentId: string;
           llmId: string;
         };
 
-        await agentConfigService.unlinkLlm(userClient, agentId, llmId);
+        await agentConfigService.unlinkLlm(clients, agentId, llmId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

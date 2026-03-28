@@ -1,7 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { eventEmitter } from '../plugins/event-emitter.js';
-import { identityService } from '../services/identity.service.js';
-import { subscriptionService } from '../services/subscription.service.js';
+import {
+  identityService,
+  subscriptionService,
+  userService,
+  clients,
+} from '../services/index.js';
 
 interface DiscordInteraction {
   type: number;
@@ -61,6 +65,7 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
         }
 
         const identity = await identityService.getIdentityByProviderUserId(
+          clients,
           'discord',
           userId
         );
@@ -86,7 +91,12 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
             }
 
             try {
-              const agent = await subscriptionService.getAgentByName(agentName);
+              const users = await userService.searchUsers(clients, {
+                query: agentName,
+                includeAgents: true,
+                limit: 1,
+              });
+              const agent = users[0];
 
               if (!agent) {
                 reply.code(200).send({
@@ -98,7 +108,8 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
                 return;
               }
 
-              await subscriptionService.activateAgentForSource(
+              await subscriptionService.activateSubscription(
+                clients,
                 agent.id,
                 'discord',
                 channelId || 'dm'
@@ -136,7 +147,8 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
                 return;
               }
 
-              await subscriptionService.deactivateForSource(
+              await subscriptionService.deactivateSubscription(
+                clients,
                 identity.user_id,
                 'discord',
                 channelId || 'dm'

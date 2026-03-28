@@ -1,5 +1,4 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
 
 interface PostContent {
   id: string;
@@ -9,15 +8,20 @@ interface PostContent {
   url: string | null;
 }
 
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
+
 export class PostService {
   async getPostsBySpace(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     spaceId: string,
     options: { limit?: number; cursor?: string } = {}
   ) {
     const limit = options.limit || 20;
 
-    let q = userClient
+    let q = clients.userClient
       .schema('core_hub')
       .from('get_posts_for_space')
       .select('*')
@@ -35,12 +39,11 @@ export class PostService {
     const hasMore = (data || []).length > limit;
     const items = hasMore ? data.slice(0, -1) : data;
 
-    // Fetch post_contents for all posts
     const postIds = (items || []).map((item) => item.id);
     let contentsMap: Record<string, PostContent[]> = {};
 
     if (postIds.length > 0) {
-      const { data: contents } = await adminSupabase
+      const { data: contents } = await clients.userClient
         .schema('core_hub')
         .from('post_contents')
         .select('*')
@@ -79,8 +82,8 @@ export class PostService {
     };
   }
 
-  async getPost(userClient: SupabaseClient, postId: string) {
-    const { data: post, error: postError } = await userClient
+  async getPost(clients: ServiceClients, postId: string) {
+    const { data: post, error: postError } = await clients.userClient
       .schema('core_hub')
       .from('get_post_details')
       .select('*')
@@ -89,8 +92,7 @@ export class PostService {
 
     if (postError || !post) throw new Error('Post not found');
 
-    // Fetch post_contents
-    const { data: contents } = await adminSupabase
+    const { data: contents } = await clients.userClient
       .schema('core_hub')
       .from('post_contents')
       .select('*')
@@ -116,14 +118,14 @@ export class PostService {
   }
 
   async createPost(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     data: {
       id?: string;
       spaceId: string;
       userId: string;
     }
   ) {
-    const { data: member } = await userClient
+    const { data: member } = await clients.userClient
       .schema('core_hub')
       .from('space_members')
       .select('id')
@@ -133,7 +135,7 @@ export class PostService {
 
     if (!member) throw new Error('Not a member of this space');
 
-    const { data: post, error } = await adminSupabase
+    const { data: post, error } = await clients.adminClient
       .schema('core_hub')
       .from('posts')
       .insert({
@@ -148,8 +150,8 @@ export class PostService {
     return post;
   }
 
-  async deletePost(userClient: SupabaseClient, postId: string, userId: string) {
-    const { data: post, error: fetchError } = await adminSupabase
+  async deletePost(clients: ServiceClients, postId: string, userId: string) {
+    const { data: post, error: fetchError } = await clients.adminClient
       .schema('core_hub')
       .from('posts')
       .select('author_id')
@@ -164,14 +166,13 @@ export class PostService {
       throw new Error("Cannot delete another user's post");
     }
 
-    // Delete post_contents first (handled by CASCADE, but being explicit)
-    await adminSupabase
+    await clients.adminClient
       .schema('core_hub')
       .from('post_contents')
       .delete()
       .eq('post_id', postId);
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_hub')
       .from('posts')
       .delete()

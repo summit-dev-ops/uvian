@@ -1,9 +1,13 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
+
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export class SpacesService {
-  async getSpaces(userClient: SupabaseClient) {
-    const { data, error } = await userClient
+  async getSpaces(clients: ServiceClients) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_spaces_for_current_user')
       .select('*');
@@ -27,8 +31,8 @@ export class SpacesService {
     }));
   }
 
-  async getSpace(userClient: SupabaseClient, spaceId: string) {
-    const { data, error } = await userClient
+  async getSpace(clients: ServiceClients, spaceId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_space_details')
       .select('*')
@@ -57,8 +61,8 @@ export class SpacesService {
     };
   }
 
-  async getSpaceMembers(userClient: SupabaseClient, spaceId: string) {
-    const { data, error } = await userClient
+  async getSpaceMembers(clients: ServiceClients, spaceId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_space_members')
       .select('*')
@@ -74,8 +78,8 @@ export class SpacesService {
     }));
   }
 
-  async getSpaceStats(userClient: SupabaseClient, userId: string) {
-    const { data: spaces } = await userClient
+  async getSpaceStats(clients: ServiceClients, userId: string) {
+    const { data: spaces } = await clients.userClient
       .schema('core_hub')
       .from('get_spaces_for_current_user')
       .select('id, created_by');
@@ -92,7 +96,7 @@ export class SpacesService {
 
     const ownedSpaces = spaces.filter((s: any) => s.created_by === userId);
 
-    const { count: totalConvs } = await userClient
+    const { count: totalConvs } = await clients.userClient
       .schema('core_hub')
       .from('conversations')
       .select('*', { count: 'exact', head: true })
@@ -103,7 +107,7 @@ export class SpacesService {
 
     let totalMembersCount = 0;
     if (ownedSpaces.length > 0) {
-      const { count } = await userClient
+      const { count } = await clients.userClient
         .schema('core_hub')
         .from('space_members')
         .select('*', { count: 'exact', head: true })
@@ -124,6 +128,7 @@ export class SpacesService {
   }
 
   async createSpace(
+    clients: ServiceClients,
     userId: string,
     data: {
       id?: string;
@@ -135,7 +140,7 @@ export class SpacesService {
       isPrivate?: boolean;
     }
   ) {
-    const { data: space, error: spaceError } = await adminSupabase
+    const { data: space, error: spaceError } = await clients.adminClient
       .schema('core_hub')
       .from('spaces')
       .insert({
@@ -153,7 +158,7 @@ export class SpacesService {
 
     if (spaceError) throw new Error(spaceError.message);
 
-    await adminSupabase
+    await clients.adminClient
       .schema('core_hub')
       .from('space_members')
       .insert({
@@ -174,7 +179,7 @@ export class SpacesService {
   }
 
   async updateSpace(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     spaceId: string,
     data: {
@@ -187,7 +192,7 @@ export class SpacesService {
     }
   ) {
     // Check membership role
-    const { data: membership } = await userClient
+    const { data: membership } = await clients.userClient
       .schema('core_hub')
       .from('space_members')
       .select('role')
@@ -209,7 +214,7 @@ export class SpacesService {
     if (data.settings !== undefined) updateData.settings = data.settings;
     if (data.isPrivate !== undefined) updateData.is_private = data.isPrivate;
 
-    const { data: space, error } = await adminSupabase
+    const { data: space, error } = await clients.adminClient
       .schema('core_hub')
       .from('spaces')
       .update(updateData)
@@ -222,13 +227,9 @@ export class SpacesService {
     return space;
   }
 
-  async deleteSpace(
-    userClient: SupabaseClient,
-    userId: string,
-    spaceId: string
-  ) {
+  async deleteSpace(clients: ServiceClients, userId: string, spaceId: string) {
     // Check ownership
-    const { data: space } = await adminSupabase
+    const { data: space } = await clients.adminClient
       .schema('core_hub')
       .from('spaces')
       .select('created_by')
@@ -241,7 +242,7 @@ export class SpacesService {
       throw new Error('Only the owner can delete a space');
     }
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_hub')
       .from('spaces')
       .delete()
@@ -252,14 +253,14 @@ export class SpacesService {
   }
 
   async inviteMember(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     spaceId: string,
     targetUserId: string,
     role: { name: string }
   ) {
     // Check inviter role
-    const { data: inviterMembership } = await userClient
+    const { data: inviterMembership } = await clients.userClient
       .schema('core_hub')
       .from('space_members')
       .select('role')
@@ -272,7 +273,7 @@ export class SpacesService {
       throw new Error('Insufficient permissions to invite');
     }
 
-    const { data: membership, error } = await adminSupabase
+    const { data: membership, error } = await clients.adminClient
       .schema('core_hub')
       .from('space_members')
       .insert({
@@ -294,7 +295,7 @@ export class SpacesService {
   }
 
   async removeMember(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     spaceId: string,
     targetUserId: string
@@ -302,7 +303,7 @@ export class SpacesService {
     const isSelf = userId === targetUserId;
 
     // Check remover role
-    const { data: removerMembership } = await userClient
+    const { data: removerMembership } = await clients.userClient
       .schema('core_hub')
       .from('space_members')
       .select('role')
@@ -316,7 +317,7 @@ export class SpacesService {
       throw new Error('Insufficient permissions');
     }
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_hub')
       .from('space_members')
       .delete()
@@ -329,14 +330,14 @@ export class SpacesService {
   }
 
   async updateMemberRole(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     spaceId: string,
     targetUserId: string,
     role: { name: string }
   ) {
     // Check updater role
-    const { data: updaterMembership } = await userClient
+    const { data: updaterMembership } = await clients.userClient
       .schema('core_hub')
       .from('space_members')
       .select('role')
@@ -349,7 +350,7 @@ export class SpacesService {
       throw new Error('Insufficient permissions');
     }
 
-    const { data: membership, error } = await adminSupabase
+    const { data: membership, error } = await clients.adminClient
       .schema('core_hub')
       .from('space_members')
       .update({ role })

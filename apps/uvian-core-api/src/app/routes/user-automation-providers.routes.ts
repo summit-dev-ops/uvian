@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { userAutomationProviderService } from '../services/user-automation-provider.service';
-import { providerService } from '../services/provider.service';
-import { adminSupabase, createUserClient } from '../clients/supabase.client';
+import { userAutomationProviderService, providerService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
 import type { Database } from '../clients/supabase.client';
 
 type UserAutomationProvider =
@@ -27,13 +26,11 @@ interface ManageUserAutomationProviderParams {
   id: string;
 }
 
-function getUserClient(request: FastifyRequest) {
-  const authHeader = request.headers.authorization;
-  if (!authHeader) {
-    throw new Error('Missing authorization header');
-  }
-  const token = authHeader.replace('Bearer ', '');
-  return createUserClient(token);
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
 }
 
 export default async function userAutomationProviderRoutes(
@@ -61,10 +58,10 @@ export default async function userAutomationProviderRoutes(
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const userProviders =
           await userAutomationProviderService.getProvidersByUser(
-            userClient,
+            clients,
             userId
           );
 
@@ -160,10 +157,10 @@ export default async function userAutomationProviderRoutes(
         }
 
         const accountId = accountMember.account_id;
-        const userClient = getUserClient(request);
 
+        const clients = getClients(request);
         const provider = await providerService.getProviderById(
-          userClient,
+          clients,
           request.body.automation_provider_id,
           accountId
         );
@@ -175,7 +172,7 @@ export default async function userAutomationProviderRoutes(
 
         const userProvider =
           await userAutomationProviderService.linkUserToProvider(
-            userClient,
+            clients,
             userId,
             request.body.automation_provider_id
           );
@@ -217,9 +214,9 @@ export default async function userAutomationProviderRoutes(
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         await userAutomationProviderService.unlinkUserFromProvider(
-          userClient,
+          clients,
           userId,
           id
         );

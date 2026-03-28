@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { providerService } from '../services/provider.service';
-import { createUserClient } from '../clients/supabase.client';
+import { providerService } from '../services';
+import { adminSupabase } from '../clients/supabase.client';
 
 interface GetAutomationProvidersParams {
   accountId: string;
@@ -38,13 +38,11 @@ interface DeleteAutomationProviderParams {
   automationProviderId: string;
 }
 
-function getUserClient(request: FastifyRequest) {
-  const authHeader = request.headers.authorization;
-  if (!authHeader) {
-    throw new Error('Missing authorization header');
-  }
-  const token = authHeader.replace('Bearer ', '');
-  return createUserClient(token);
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
 }
 
 export default async function providerRoutes(fastify: FastifyInstance) {
@@ -65,10 +63,10 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
         const providers = await providerService.getProvidersByAccount(
-          userClient,
+          clients,
           accountId
         );
         reply.send({ providers });
@@ -121,10 +119,10 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
         const provider = await providerService.createProvider(
-          userClient,
+          clients,
           userId,
           accountId,
           {
@@ -188,10 +186,10 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId, automationProviderId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
         const provider = await providerService.updateProvider(
-          userClient,
+          clients,
           userId,
           automationProviderId,
           accountId,
@@ -229,10 +227,10 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId, automationProviderId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
         const existingProvider = await providerService.getProviderById(
-          userClient,
+          clients,
           automationProviderId,
           accountId
         );
@@ -242,7 +240,7 @@ export default async function providerRoutes(fastify: FastifyInstance) {
         }
 
         await providerService.deleteProvider(
-          userClient,
+          clients,
           userId,
           automationProviderId,
           accountId

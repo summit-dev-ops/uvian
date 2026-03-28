@@ -1,6 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { identityService } from '../services/identity.service';
-import { createUserClient } from '../clients/supabase.client';
+import { identityService } from '../services/factory';
+import { adminSupabase } from '../clients/supabase.client';
+
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 interface CreateIdentityBody {
   provider?: 'whatsapp' | 'slack' | 'telegram' | 'discord' | 'email';
@@ -18,15 +25,6 @@ interface IdentityParams {
   identityId: string;
 }
 
-function getUserClient(request: FastifyRequest) {
-  const authHeader = request.headers.authorization;
-  if (!authHeader) {
-    throw new Error('Missing authorization header');
-  }
-  const token = authHeader.replace('Bearer ', '');
-  return createUserClient(token);
-}
-
 export default async function identityRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/identities',
@@ -41,9 +39,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const identities = await identityService.getIdentitiesByUser(
-          userClient,
+          clients,
           userId
         );
         reply.send({ identities });
@@ -72,9 +70,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const { identityId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const identity = await identityService.getIdentityById(
-          userClient,
+          clients,
           identityId
         );
 
@@ -123,9 +121,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const existing = await identityService.getIdentityByProviderUserId(
-          userClient,
+          clients,
           request.body.provider || 'whatsapp',
           request.body.provider_user_id
         );
@@ -137,15 +135,11 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const identity = await identityService.createIdentity(
-          userClient,
-          userId,
-          {
-            ...request.body,
-            provider: request.body.provider || 'whatsapp',
-            user_id: userId,
-          }
-        );
+        const identity = await identityService.createIdentity(clients, userId, {
+          ...request.body,
+          provider: request.body.provider || 'whatsapp',
+          user_id: userId,
+        });
 
         fastify.eventEmitter.emitIdentityCreated(
           { identityId: identity.id, userId, provider: identity.provider },
@@ -195,10 +189,10 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const { identityId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
         const identity = await identityService.updateIdentity(
-          userClient,
+          clients,
           userId,
           identityId,
           request.body
@@ -235,9 +229,9 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         }
 
         const { identityId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
-        await identityService.deleteIdentity(userClient, userId, identityId);
+        await identityService.deleteIdentity(clients, userId, identityId);
 
         fastify.eventEmitter.emitIdentityDeleted(
           { identityId, userId },

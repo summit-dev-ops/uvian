@@ -1,3 +1,4 @@
+import { adminSupabase } from '../../clients/supabase.client';
 import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
@@ -13,6 +14,8 @@ interface ExternalMessageData extends MessageCreatedData {
 }
 
 export function registerChatHandlers(webhookHandler: any) {
+  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+
   webhookHandler.registerHandler(
     MessagingEvents.MESSAGE_CREATED,
     async (envelope: WebhookEnvelope, agentId?: string) => {
@@ -60,7 +63,7 @@ export function registerChatHandlers(webhookHandler: any) {
         };
       }
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: jobInput,
       });

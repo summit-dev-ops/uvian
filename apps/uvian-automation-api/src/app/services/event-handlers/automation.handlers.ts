@@ -1,3 +1,4 @@
+import { adminSupabase } from '../../clients/supabase.client';
 import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
@@ -9,6 +10,8 @@ import {
 } from '@org/uvian-events';
 
 export function registerAutomationHandlers(webhookHandler: any) {
+  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+
   webhookHandler.registerHandler(
     JobEvents.JOB_CREATED,
     async (envelope: WebhookEnvelope, agentId?: string) => {
@@ -22,7 +25,7 @@ export function registerAutomationHandlers(webhookHandler: any) {
         agentId,
       });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -50,7 +53,7 @@ export function registerAutomationHandlers(webhookHandler: any) {
 
       console.log('Job cancelled:', { jobId: payload.jobId, agentId });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -75,7 +78,7 @@ export function registerAutomationHandlers(webhookHandler: any) {
 
       console.log('Job retry:', { jobId: payload.jobId, agentId });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,

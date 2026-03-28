@@ -1,0 +1,23 @@
+{
+  "name": "@org/services-api-key",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/services/api-key/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/services/api-key/dist"],
+      "options": {
+        "outputPath": "packages/services/api-key/dist",
+        "main": "packages/services/api-key/src/index.ts",
+        "tsConfig": "packages/services/api-key/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/services/api-key/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:services"]
+}

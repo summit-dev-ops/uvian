@@ -1,5 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
+
+export interface Clients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export interface CreateLlmPayload {
   accountId: string;
@@ -28,8 +32,8 @@ export interface UpdateLlmPayload {
 }
 
 export class LlmService {
-  async create(userClient: SupabaseClient, payload: CreateLlmPayload) {
-    const { data, error } = await adminSupabase
+  async create(clients: Clients, payload: CreateLlmPayload) {
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('llms')
       .insert({
@@ -52,8 +56,8 @@ export class LlmService {
     return this.mapRow(data);
   }
 
-  async list(userClient: SupabaseClient, accountId: string) {
-    const { data, error } = await userClient
+  async list(clients: Clients, accountId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('llms')
       .select('*')
@@ -64,8 +68,8 @@ export class LlmService {
     return (data || []).map((row: any) => this.mapRow(row));
   }
 
-  async get(userClient: SupabaseClient, llmId: string) {
-    const { data, error } = await userClient
+  async get(clients: Clients, llmId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('llms')
       .select('*')
@@ -76,11 +80,7 @@ export class LlmService {
     return this.mapRow(data);
   }
 
-  async update(
-    userClient: SupabaseClient,
-    llmId: string,
-    payload: UpdateLlmPayload
-  ) {
+  async update(clients: Clients, llmId: string, payload: UpdateLlmPayload) {
     const updateData: Record<string, unknown> = {};
 
     if (payload.name !== undefined) updateData.name = payload.name;
@@ -98,7 +98,7 @@ export class LlmService {
     if (payload.isDefault !== undefined)
       updateData.is_default = payload.isDefault;
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('llms')
       .update(updateData)
@@ -110,8 +110,8 @@ export class LlmService {
     return this.mapRow(data);
   }
 
-  async delete(userClient: SupabaseClient, llmId: string) {
-    const { error } = await adminSupabase
+  async delete(clients: Clients, llmId: string) {
+    const { error } = await clients.adminClient
       .schema('core_automation')
       .from('llms')
       .delete()

@@ -1,6 +1,11 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { UserSettings } from '../types/users.types';
 
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
+
 export class UserService {
   // Utility methods
   async getCurrentUserFromRequest(request: any): Promise<string> {
@@ -11,10 +16,10 @@ export class UserService {
   }
   // Settings CRUD operations
   async getSettings(
-    supabaseClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string
   ): Promise<UserSettings | undefined> {
-    const { data, error } = await supabaseClient
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('settings')
       .select('*')
@@ -39,11 +44,11 @@ export class UserService {
   }
 
   async createSettings(
-    supabaseClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     settings: Record<string, any> = {}
   ): Promise<UserSettings> {
-    const { data: settingsRecord, error } = await supabaseClient
+    const { data: settingsRecord, error } = await clients.adminClient
       .schema('core_hub')
       .from('settings')
       .insert({
@@ -67,14 +72,14 @@ export class UserService {
   }
 
   async updateSettings(
-    supabaseClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     settings: Record<string, any>
   ): Promise<UserSettings> {
-    const existingSettings = await this.getSettings(supabaseClient, userId);
+    const existingSettings = await this.getSettings(clients, userId);
 
     if (!existingSettings) {
-      return this.createSettings(supabaseClient, userId, settings);
+      return this.createSettings(clients, userId, settings);
     }
 
     const mergedSettings = {
@@ -82,7 +87,7 @@ export class UserService {
       ...settings,
     };
 
-    const { data: settingsRecord, error } = await supabaseClient
+    const { data: settingsRecord, error } = await clients.adminClient
       .schema('core_hub')
       .from('settings')
       .update({
@@ -105,11 +110,8 @@ export class UserService {
     };
   }
 
-  async deleteSettings(
-    supabaseClient: SupabaseClient,
-    userId: string
-  ): Promise<void> {
-    const { error } = await supabaseClient
+  async deleteSettings(clients: ServiceClients, userId: string): Promise<void> {
+    const { error } = await clients.adminClient
       .schema('core_hub')
       .from('settings')
       .delete()

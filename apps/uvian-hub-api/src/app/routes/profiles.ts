@@ -1,11 +1,19 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { profileService } from '../services/profile.service';
+import { adminSupabase } from '../clients/supabase.client';
 import {
   CreateProfileRequest,
   UpdateProfileRequest,
   DeleteProfileRequest,
   GetProfileRequest,
 } from '../types/profile.types';
+
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 export default async function profilesRoutes(fastify: FastifyInstance) {
   fastify.post<CreateProfileRequest>(
@@ -38,7 +46,7 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
         const { displayName, avatarUrl, bio } = request.body || {};
 
         const profile = await profileService.createOrUpdateProfile(
-          request.supabase,
+          getClients(request),
           userId,
           { displayName, avatarUrl, bio }
         );
@@ -89,7 +97,7 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
         const { displayName, avatarUrl, bio } = request.body || {};
 
         const profile = await profileService.updateProfile(
-          request.supabase,
+          getClients(request),
           userId,
           profileId,
           { displayName, avatarUrl, bio }
@@ -136,7 +144,11 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
 
         const { profileId } = request.params;
 
-        await profileService.deleteProfile(request.supabase, userId, profileId);
+        await profileService.deleteProfile(
+          getClients(request),
+          userId,
+          profileId
+        );
 
         reply.code(204).send();
       } catch (error: any) {
@@ -173,7 +185,7 @@ export default async function profilesRoutes(fastify: FastifyInstance) {
         const { profileId } = request.params;
 
         const profile = await profileService.getProfile(
-          request.supabase,
+          getClients(request),
           profileId
         );
 

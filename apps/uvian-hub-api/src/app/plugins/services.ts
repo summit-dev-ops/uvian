@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { chatService } from '../services/chat.service';
-import { accountService } from '../services/account.service';
+import { accountService } from '../services/factory';
 import { noteService } from '../services/note.service.js';
 import { postService } from '../services/post.service.js';
 import { assetService } from '../services/asset.service.js';

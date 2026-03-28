@@ -1,0 +1,23 @@
+{
+  "name": "@org/services-accounts",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/services/accounts/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/services/accounts/dist"],
+      "options": {
+        "outputPath": "packages/services/accounts/dist",
+        "main": "packages/services/accounts/src/index.ts",
+        "tsConfig": "packages/services/accounts/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/services/accounts/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:services"]
+}

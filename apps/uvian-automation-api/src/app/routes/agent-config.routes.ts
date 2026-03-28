@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { adminSupabase } from '../clients/supabase.client';
 import { agentConfigService } from '../services/agent-config.service';
 
 export default async function agentConfigRoutes(fastify: FastifyInstance) {
@@ -8,7 +9,14 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { agentUserId } = request.params;
-        const secrets = await agentConfigService.getAgentSecrets(agentUserId);
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: adminSupabase,
+        };
+        const secrets = await agentConfigService.getAgentSecrets(
+          clients,
+          agentUserId
+        );
         return reply.send(secrets);
       } catch (error: any) {
         fastify.log.error(error);
@@ -24,20 +32,23 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     { preHandler: [fastify.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentUserId } = request.params as any as {
           agentUserId: string;
         };
         const agent = await agentConfigService.getByUserId(
-          userClient,
+          clients,
           agentUserId
         );
         if (!agent)
           return reply.code(404).send({ error: 'Agent config not found' });
 
         const [llms, mcps] = await Promise.all([
-          agentConfigService.getLlms(userClient, agent.id),
-          agentConfigService.getMcps(userClient, agent.id),
+          agentConfigService.getLlms(clients, agent.id),
+          agentConfigService.getMcps(clients, agent.id),
         ]);
 
         return reply.send({ agent, llms, mcps });
@@ -69,10 +80,13 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const body = request.body as any;
 
-        const agent = await agentConfigService.create(userClient, {
+        const agent = await agentConfigService.create(clients, {
           userId: body.userId,
           accountId: body.accountId,
           systemPrompt: body.systemPrompt,
@@ -113,11 +127,14 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { agentId } = request.params as any as { agentId: string };
         const body = request.body as any;
 
-        const agent = await agentConfigService.update(userClient, agentId, {
+        const agent = await agentConfigService.update(clients, agentId, {
           systemPrompt: body.systemPrompt,
           maxConversationHistory: body.maxConversationHistory,
           skills: body.skills,

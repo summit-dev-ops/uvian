@@ -1,0 +1,23 @@
+{
+  "name": "@org/utils-encryption",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/utils/encryption/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/utils/encryption/dist"],
+      "options": {
+        "outputPath": "packages/utils/encryption/dist",
+        "main": "packages/utils/encryption/src/index.ts",
+        "tsConfig": "packages/utils/encryption/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/utils/encryption/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:utils"]
+}

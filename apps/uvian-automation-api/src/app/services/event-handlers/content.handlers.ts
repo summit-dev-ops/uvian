@@ -1,3 +1,4 @@
+import { adminSupabase } from '../../clients/supabase.client';
 import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
@@ -8,6 +9,8 @@ import {
 } from '@org/uvian-events';
 
 export function registerContentHandlers(webhookHandler: any) {
+  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+
   webhookHandler.registerHandler(
     ContentEvents.POST_CREATED,
     async (envelope: WebhookEnvelope, agentId?: string) => {
@@ -15,7 +18,7 @@ export function registerContentHandlers(webhookHandler: any) {
 
       console.log('Post published:', { postId: payload.postId, agentId });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -40,7 +43,7 @@ export function registerContentHandlers(webhookHandler: any) {
 
       console.log('Note updated:', { noteId: payload.noteId, agentId });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,
@@ -65,7 +68,7 @@ export function registerContentHandlers(webhookHandler: any) {
 
       console.log('Asset uploaded:', { assetId: payload.assetId, agentId });
 
-      await jobService.createEventJob({
+      await jobService.createEventJob(clients, {
         type: 'agent',
         input: {
           eventId: envelope.id,

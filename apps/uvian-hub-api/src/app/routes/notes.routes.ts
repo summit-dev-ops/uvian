@@ -1,6 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { noteService } from '../services/note.service';
+import { adminSupabase } from '../clients/supabase.client';
 import type { Attachment } from '../types/post.types';
+
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
 
 interface GetSpaceNotesParams {
   spaceId: string;
@@ -38,7 +46,7 @@ export default async function (fastify: FastifyInstance) {
         const { cursor, limit } = request.query || {};
 
         const result = await noteService.getNotesBySpace(
-          request.supabase,
+          getClients(request),
           spaceId,
           { cursor, limit }
         );
@@ -59,7 +67,7 @@ export default async function (fastify: FastifyInstance) {
       try {
         const { noteId } = request.params;
 
-        const note = await noteService.getNote(request.supabase, noteId);
+        const note = await noteService.getNote(getClients(request), noteId);
 
         reply.send(note);
       } catch (error: any) {
@@ -88,7 +96,7 @@ export default async function (fastify: FastifyInstance) {
         const { spaceId } = request.params;
         const { title, body, attachments } = request.body || {};
 
-        const note = await noteService.createNote(request.supabase, userId, {
+        const note = await noteService.createNote(getClients(request), userId, {
           spaceId,
           title,
           body,
@@ -131,7 +139,7 @@ export default async function (fastify: FastifyInstance) {
         const { title, body, attachments } = request.body || {};
 
         const note = await noteService.updateNote(
-          request.supabase,
+          getClients(request),
           userId,
           noteId,
           { title, body, attachments }
@@ -166,7 +174,7 @@ export default async function (fastify: FastifyInstance) {
 
         const { noteId } = request.params;
 
-        await noteService.deleteNote(request.supabase, userId, noteId);
+        await noteService.deleteNote(getClients(request), userId, noteId);
 
         fastify.services.eventEmitter.emitNoteDeleted(
           { noteId, deletedBy: userId },

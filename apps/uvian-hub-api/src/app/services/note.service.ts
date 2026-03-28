@@ -1,16 +1,20 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
 import type { Attachment } from '../types/post.types';
+
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export class NoteService {
   async getNotesBySpace(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     spaceId: string,
     options: { limit?: number; cursor?: string } = {}
   ) {
     const limit = options.limit || 20;
 
-    let q = userClient
+    let q = clients.userClient
       .schema('core_hub')
       .from('notes')
       .select('*')
@@ -46,8 +50,8 @@ export class NoteService {
     };
   }
 
-  async getNote(userClient: SupabaseClient, noteId: string) {
-    const { data, error } = await userClient
+  async getNote(clients: ServiceClients, noteId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('notes')
       .select('*')
@@ -69,7 +73,7 @@ export class NoteService {
   }
 
   async createNote(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     data: {
       id?: string;
@@ -79,7 +83,7 @@ export class NoteService {
       attachments?: Attachment[];
     }
   ) {
-    const { data: note, error } = await adminSupabase
+    const { data: note, error } = await clients.adminClient
       .schema('core_hub')
       .from('notes')
       .insert({
@@ -108,7 +112,7 @@ export class NoteService {
   }
 
   async updateNote(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     noteId: string,
     data: {
@@ -126,7 +130,7 @@ export class NoteService {
     if (data.attachments !== undefined)
       updateData.attachments = data.attachments;
 
-    const { data: note, error } = await adminSupabase
+    const { data: note, error } = await clients.adminClient
       .schema('core_hub')
       .from('notes')
       .update(updateData)
@@ -148,8 +152,8 @@ export class NoteService {
     };
   }
 
-  async deleteNote(userClient: SupabaseClient, userId: string, noteId: string) {
-    const { data: note, error: fetchError } = await adminSupabase
+  async deleteNote(clients: ServiceClients, userId: string, noteId: string) {
+    const { data: note, error: fetchError } = await clients.adminClient
       .schema('core_hub')
       .from('notes')
       .select('owner_user_id')
@@ -164,7 +168,7 @@ export class NoteService {
       throw new Error("Cannot delete another user's note");
     }
 
-    const { error } = await adminSupabase
+    const { error } = await clients.adminClient
       .schema('core_hub')
       .from('notes')
       .delete()

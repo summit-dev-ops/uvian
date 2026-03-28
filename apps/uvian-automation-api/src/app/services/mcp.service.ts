@@ -1,5 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
+
+export interface Clients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export interface CreateMcpPayload {
   accountId: string;
@@ -20,8 +24,8 @@ export interface UpdateMcpPayload {
 }
 
 export class McpService {
-  async create(userClient: SupabaseClient, payload: CreateMcpPayload) {
-    const { data, error } = await adminSupabase
+  async create(clients: Clients, payload: CreateMcpPayload) {
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('mcps')
       .insert({
@@ -40,8 +44,8 @@ export class McpService {
     return this.mapRow(data);
   }
 
-  async list(userClient: SupabaseClient, accountId: string) {
-    const { data, error } = await userClient
+  async list(clients: Clients, accountId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('mcps')
       .select('*')
@@ -52,8 +56,8 @@ export class McpService {
     return (data || []).map((row: any) => this.mapRow(row));
   }
 
-  async get(userClient: SupabaseClient, mcpId: string) {
-    const { data, error } = await userClient
+  async get(clients: Clients, mcpId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('mcps')
       .select('*')
@@ -64,11 +68,7 @@ export class McpService {
     return this.mapRow(data);
   }
 
-  async update(
-    userClient: SupabaseClient,
-    mcpId: string,
-    payload: UpdateMcpPayload
-  ) {
+  async update(clients: Clients, mcpId: string, payload: UpdateMcpPayload) {
     const updateData: Record<string, unknown> = {};
 
     if (payload.name !== undefined) updateData.name = payload.name;
@@ -79,7 +79,7 @@ export class McpService {
     if (payload.config !== undefined) updateData.config = payload.config;
     if (payload.isActive !== undefined) updateData.is_active = payload.isActive;
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('mcps')
       .update(updateData)
@@ -91,8 +91,8 @@ export class McpService {
     return this.mapRow(data);
   }
 
-  async delete(userClient: SupabaseClient, mcpId: string) {
-    const { error } = await adminSupabase
+  async delete(clients: Clients, mcpId: string) {
+    const { error } = await clients.adminClient
       .schema('core_automation')
       .from('mcps')
       .delete()

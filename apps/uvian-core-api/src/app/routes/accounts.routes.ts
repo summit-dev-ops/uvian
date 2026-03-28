@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { agentService } from '../services/agent.service';
-import { createUserClient } from '../clients/supabase.client';
+import { agentService } from '../services/factory';
+import { adminSupabase } from '../clients/supabase.client';
 
 interface GetAgentsParams {
   accountId: string;
@@ -24,13 +24,11 @@ interface DeleteAgentParams {
   agentId: string;
 }
 
-function getUserClient(request: FastifyRequest) {
-  const authHeader = request.headers.authorization;
-  if (!authHeader) {
-    throw new Error('Missing authorization header');
-  }
-  const token = authHeader.replace('Bearer ', '');
-  return createUserClient(token);
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
 }
 
 export default async function accountRoutes(fastify: FastifyInstance) {
@@ -51,9 +49,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
-        const agents = await agentService.getAgents(userClient, accountId);
+        const agents = await agentService.getAgents(clients, accountId);
         reply.send({ agents });
       } catch (error: any) {
         reply
@@ -93,11 +91,11 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId } = request.params;
-        const userClient = getUserClient(request);
 
         const { name } = request.body;
+        const clients = getClients(request);
         const agent = await agentService.createAgent(
-          userClient,
+          clients,
           userId,
           accountId,
           name
@@ -128,13 +126,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId, agentId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
-        const agent = await agentService.getAgent(
-          userClient,
-          agentId,
-          accountId
-        );
+        const agent = await agentService.getAgent(clients, agentId, accountId);
 
         if (!agent) {
           reply.code(404).send({ error: 'Agent not found' });
@@ -167,9 +161,9 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         }
 
         const { accountId, agentId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
 
-        await agentService.deleteAgent(userClient, userId, agentId, accountId);
+        await agentService.deleteAgent(clients, userId, agentId, accountId);
         reply.code(204).send();
       } catch (error: any) {
         reply

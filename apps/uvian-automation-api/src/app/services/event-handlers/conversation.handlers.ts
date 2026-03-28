@@ -1,3 +1,4 @@
+import { adminSupabase } from '../../clients/supabase.client';
 import { jobService } from '../job.service';
 import {
   WebhookEnvelope,
@@ -7,6 +8,8 @@ import {
 } from '@org/uvian-events';
 
 export function registerConversationEventHandlers() {
+  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+
   return [
     {
       eventType: MessagingEvents.MESSAGE_CREATED,
@@ -20,7 +23,7 @@ export function registerConversationEventHandlers() {
           agentId,
         });
 
-        await jobService.createEventJob({
+        await jobService.createEventJob(clients, {
           type: 'agent',
           input: {
             eventId: envelope.id,
@@ -49,7 +52,7 @@ export function registerConversationEventHandlers() {
           agentId,
         });
 
-        await jobService.createEventJob({
+        await jobService.createEventJob(clients, {
           type: 'agent',
           input: {
             eventId: envelope.id,

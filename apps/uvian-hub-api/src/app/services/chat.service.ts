@@ -1,10 +1,14 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
 import type { Attachment } from '../types/chat.types';
 
+export interface ServiceClients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
+
 export class ChatService {
-  async getConversations(userClient: SupabaseClient) {
-    const { data, error } = await userClient
+  async getConversations(clients: ServiceClients) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_conversations_for_current_user')
       .select('*');
@@ -22,9 +26,9 @@ export class ChatService {
     }));
   }
 
-  async getConversation(userClient: SupabaseClient, conversationId: string) {
+  async getConversation(clients: ServiceClients, conversationId: string) {
     console.log('getConversation');
-    const { data, error } = await userClient
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_conversation_details')
       .select('*')
@@ -39,10 +43,10 @@ export class ChatService {
   }
 
   async getConversationMembers(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     conversationId: string
   ) {
-    const { data, error } = await userClient
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_conversation_members')
       .select('*')
@@ -59,8 +63,8 @@ export class ChatService {
     }));
   }
 
-  async getMessages(userClient: SupabaseClient, conversationId: string) {
-    const { data, error } = await userClient
+  async getMessages(clients: ServiceClients, conversationId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_hub')
       .from('get_conversation_messages')
       .select('*')
@@ -84,7 +88,7 @@ export class ChatService {
   }
 
   async searchMessages(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     conversationId: string,
     options: {
       q?: string;
@@ -95,7 +99,7 @@ export class ChatService {
       offset?: number;
     }
   ) {
-    let query = userClient
+    let query = clients.userClient
       .schema('core_hub')
       .from('get_conversation_messages')
       .select('*')
@@ -140,10 +144,11 @@ export class ChatService {
   }
 
   async createConversation(
+    clients: ServiceClients,
     userId: string,
     data: { id?: string; title: string; spaceId?: string }
   ) {
-    const { data: conversation, error: convError } = await adminSupabase
+    const { data: conversation, error: convError } = await clients.adminClient
       .schema('core_hub')
       .from('conversations')
       .insert({
@@ -156,7 +161,7 @@ export class ChatService {
 
     if (convError) throw new Error(convError.message);
 
-    await adminSupabase
+    await clients.adminClient
       .schema('core_hub')
       .from('conversation_members')
       .insert({
@@ -175,7 +180,7 @@ export class ChatService {
   }
 
   async createMessage(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     conversationId: string,
     data: {
@@ -185,8 +190,7 @@ export class ChatService {
       attachments?: Attachment[];
     }
   ) {
-    // Check membership
-    const { data: memberCheck } = await userClient
+    const { data: memberCheck } = await clients.userClient
       .schema('core_hub')
       .from('conversation_members')
       .select('conversation_id')
@@ -197,8 +201,7 @@ export class ChatService {
       throw new Error('You are not a member of this conversation');
     }
 
-    // Store attachments directly (URLs are already public/permanent)
-    const { data: message, error } = await adminSupabase
+    const { data: message, error } = await clients.adminClient
       .schema('core_hub')
       .from('messages')
       .insert({
@@ -214,7 +217,7 @@ export class ChatService {
 
     if (error) throw new Error(error.message);
 
-    await adminSupabase
+    await clients.adminClient
       .schema('core_hub')
       .from('conversations')
       .update({ updated_at: new Date().toISOString() })
@@ -233,208 +236,15 @@ export class ChatService {
     };
   }
 
-  async inviteMember(
-    userClient: SupabaseClient,
-    userId: string,
-    conversationId: string,
-    targetUserId: string,
-    role: { name: string }
-  ) {
-    // Check inviter role
-    const { data: updaterMembership } = await userClient
-      .schema('core_hub')
-      .from('conversation_members')
-      .select('role')
-      .eq('conversation_id', conversationId)
-      .eq('user_id', userId)
-      .single();
-
-    const updaterRole = updaterMembership?.role?.name;
-    if (updaterRole !== 'admin' && updaterRole !== 'owner') {
-      throw new Error('Insufficient permissions');
-    }
-
-    const { data: membership, error } = await adminSupabase
-      .schema('core_hub')
-      .from('conversation_members')
-      .insert({
-        user_id: targetUserId,
-        conversation_id: conversationId,
-        role: role || { name: 'member' },
-      })
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-
-    return {
-      userId: membership.user_id,
-      conversationId: membership.conversation_id,
-      role: membership.role,
-      createdAt: membership.created_at,
-      syncStatus: 'synced' as const,
-    };
-  }
-
-  async removeMember(
-    userClient: SupabaseClient,
-    userId: string,
-    conversationId: string,
-    targetUserId: string
-  ) {
-    const isSelf = userId === targetUserId;
-
-    const { data: removerMembership } = await userClient
-      .schema('core_hub')
-      .from('conversation_members')
-      .select('role')
-      .eq('conversation_id', conversationId)
-      .eq('user_id', userId)
-      .single();
-
-    const removerRole = removerMembership?.role?.name;
-
-    if (!isSelf && removerRole !== 'admin' && removerRole !== 'owner') {
-      throw new Error('Insufficient permissions');
-    }
-
-    const { error } = await adminSupabase
-      .schema('core_hub')
-      .from('conversation_members')
-      .delete()
-      .eq('conversation_id', conversationId)
-      .eq('user_id', targetUserId);
-
-    if (error) throw new Error(error.message);
-
-    return { success: true };
-  }
-
-  async updateMemberRole(
-    userClient: SupabaseClient,
-    userId: string,
-    conversationId: string,
-    targetUserId: string,
-    role: { name: string }
-  ) {
-    const { data: updaterMembership } = await userClient
-      .schema('core_hub')
-      .from('conversation_members')
-      .select('role')
-      .eq('conversation_id', conversationId)
-      .eq('user_id', userId)
-      .single();
-
-    const updaterRole = updaterMembership?.role?.name;
-    if (updaterRole !== 'admin' && updaterRole !== 'owner') {
-      throw new Error('Insufficient permissions');
-    }
-
-    const { data: membership, error } = await adminSupabase
-      .schema('core_hub')
-      .from('conversation_members')
-      .update({ role })
-      .eq('conversation_id', conversationId)
-      .eq('user_id', targetUserId)
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-
-    return {
-      userId: membership.user_id,
-      conversationId: membership.conversation_id,
-      role: membership.role,
-      createdAt: membership.created_at,
-      syncStatus: 'synced' as const,
-    };
-  }
-
-  async deleteConversation(
-    userClient: SupabaseClient,
-    userId: string,
-    conversationId: string
-  ) {
-    const { data: membership } = await userClient
-      .schema('core_hub')
-      .from('conversation_members')
-      .select('role')
-      .eq('conversation_id', conversationId)
-      .eq('user_id', userId)
-      .single();
-
-    const role = membership?.role?.name;
-    if (role !== 'owner') {
-      throw new Error('Only owners can delete conversations');
-    }
-
-    const { error } = await adminSupabase
-      .schema('core_hub')
-      .from('conversations')
-      .delete()
-      .eq('id', conversationId);
-
-    if (error) throw new Error(error.message);
-
-    return { success: true };
-  }
-
-  async deleteMessage(
-    userClient: SupabaseClient,
-    userId: string,
-    conversationId: string,
-    messageId: string
-  ) {
-    // Check membership
-    const { data: memberCheck } = await userClient
-      .schema('core_hub')
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('conversation_id', conversationId)
-      .eq('user_id', userId)
-      .single();
-    if (!memberCheck) {
-      throw new Error('You are not a member of this conversation');
-    }
-
-    const { data: message, error: fetchError } = await adminSupabase
-      .schema('core_hub')
-      .from('messages')
-      .select('sender_id')
-      .eq('id', messageId)
-      .eq('conversation_id', conversationId)
-      .single();
-
-    if (fetchError || !message) {
-      throw new Error('Message not found');
-    }
-
-    if (message.sender_id !== userId) {
-      throw new Error('You can only delete your own messages');
-    }
-
-    const { error } = await adminSupabase
-      .schema('core_hub')
-      .from('messages')
-      .delete()
-      .eq('id', messageId)
-      .eq('conversation_id', conversationId);
-
-    if (error) throw new Error(error.message);
-
-    return { success: true };
-  }
-
   async updateMessage(
-    userClient: SupabaseClient,
+    clients: ServiceClients,
     userId: string,
     conversationId: string,
     messageId: string,
     content: string,
     attachments?: Attachment[]
   ) {
-    // Check membership
-    const { data: memberCheck } = await userClient
+    const { data: memberCheck } = await clients.userClient
       .schema('core_hub')
       .from('conversation_members')
       .select('conversation_id')
@@ -445,7 +255,7 @@ export class ChatService {
       throw new Error('You are not a member of this conversation');
     }
 
-    const { data: message, error: fetchError } = await adminSupabase
+    const { data: message, error: fetchError } = await clients.userClient
       .schema('core_hub')
       .from('messages')
       .select('sender_id')
@@ -461,7 +271,7 @@ export class ChatService {
       throw new Error('You can only edit your own messages');
     }
 
-    const { data: updatedMessage, error } = await adminSupabase
+    const { data: updatedMessage, error } = await clients.adminClient
       .schema('core_hub')
       .from('messages')
       .update({
@@ -487,6 +297,196 @@ export class ChatService {
       attachments: updatedMessage.attachments || [],
       syncStatus: 'synced' as const,
     };
+  }
+
+  async inviteMember(
+    clients: ServiceClients,
+    userId: string,
+    conversationId: string,
+    targetUserId: string,
+    role: { name: string }
+  ) {
+    const { data: updaterMembership } = await clients.userClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .select('role')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .single();
+
+    const updaterRole = updaterMembership?.role?.name;
+    if (updaterRole !== 'admin' && updaterRole !== 'owner') {
+      throw new Error('Insufficient permissions');
+    }
+
+    const { data: membership, error } = await clients.adminClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .insert({
+        user_id: targetUserId,
+        conversation_id: conversationId,
+        role: role || { name: 'member' },
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return {
+      userId: membership.user_id,
+      conversationId: membership.conversation_id,
+      role: membership.role,
+      createdAt: membership.created_at,
+      syncStatus: 'synced' as const,
+    };
+  }
+
+  async removeMember(
+    clients: ServiceClients,
+    userId: string,
+    conversationId: string,
+    targetUserId: string
+  ) {
+    const isSelf = userId === targetUserId;
+
+    const { data: removerMembership } = await clients.userClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .select('role')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .single();
+
+    const removerRole = removerMembership?.role?.name;
+
+    if (!isSelf && removerRole !== 'admin' && removerRole !== 'owner') {
+      throw new Error('Insufficient permissions');
+    }
+
+    const { error } = await clients.adminClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .delete()
+      .eq('conversation_id', conversationId)
+      .eq('user_id', targetUserId);
+
+    if (error) throw new Error(error.message);
+
+    return { success: true };
+  }
+
+  async updateMemberRole(
+    clients: ServiceClients,
+    userId: string,
+    conversationId: string,
+    targetUserId: string,
+    role: { name: string }
+  ) {
+    const { data: updaterMembership } = await clients.userClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .select('role')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .single();
+
+    const updaterRole = updaterMembership?.role?.name;
+    if (updaterRole !== 'admin' && updaterRole !== 'owner') {
+      throw new Error('Insufficient permissions');
+    }
+
+    const { data: membership, error } = await clients.adminClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .update({ role })
+      .eq('conversation_id', conversationId)
+      .eq('user_id', targetUserId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return {
+      userId: membership.user_id,
+      conversationId: membership.conversation_id,
+      role: membership.role,
+      createdAt: membership.created_at,
+      syncStatus: 'synced' as const,
+    };
+  }
+
+  async deleteConversation(
+    clients: ServiceClients,
+    userId: string,
+    conversationId: string
+  ) {
+    const { data: membership } = await clients.userClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .select('role')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .single();
+
+    const role = membership?.role?.name;
+    if (role !== 'owner') {
+      throw new Error('Only owners can delete conversations');
+    }
+
+    const { error } = await clients.adminClient
+      .schema('core_hub')
+      .from('conversations')
+      .delete()
+      .eq('id', conversationId);
+
+    if (error) throw new Error(error.message);
+
+    return { success: true };
+  }
+
+  async deleteMessage(
+    clients: ServiceClients,
+    userId: string,
+    conversationId: string,
+    messageId: string
+  ) {
+    const { data: memberCheck } = await clients.userClient
+      .schema('core_hub')
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId)
+      .single();
+    if (!memberCheck) {
+      throw new Error('You are not a member of this conversation');
+    }
+
+    const { data: message, error: fetchError } = await clients.userClient
+      .schema('core_hub')
+      .from('messages')
+      .select('sender_id')
+      .eq('id', messageId)
+      .eq('conversation_id', conversationId)
+      .single();
+
+    if (fetchError || !message) {
+      throw new Error('Message not found');
+    }
+
+    if (message.sender_id !== userId) {
+      throw new Error('You can only delete your own messages');
+    }
+
+    const { error } = await clients.adminClient
+      .schema('core_hub')
+      .from('messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('conversation_id', conversationId);
+
+    if (error) throw new Error(error.message);
+
+    return { success: true };
   }
 }
 

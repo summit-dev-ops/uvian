@@ -1,5 +1,5 @@
 import { redisConnection } from '../clients/redis';
-import { queueService } from '../services/queue.service';
+import { queueService } from '../services';
 
 export {};
 

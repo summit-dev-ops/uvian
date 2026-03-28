@@ -1,8 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { adminSupabase } from '../clients/supabase.client';
-import { decrypt, encrypt } from './encryption.service.js';
+import { decrypt, encrypt } from '@org/utils-encryption';
 
 const ENCRYPTION_SECRET = process.env.SECRET_INTERNAL_API_KEY!;
+
+export interface Clients {
+  adminClient: SupabaseClient;
+  userClient: SupabaseClient;
+}
 
 export interface CreateAgentConfigPayload {
   userId: string;
@@ -45,8 +49,8 @@ export interface UpdateMcpLinkPayload {
 }
 
 export class AgentConfigService {
-  async create(userClient: SupabaseClient, payload: CreateAgentConfigPayload) {
-    const { data, error } = await adminSupabase
+  async create(clients: Clients, payload: CreateAgentConfigPayload) {
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('agents')
       .insert({
@@ -65,20 +69,8 @@ export class AgentConfigService {
     return this.mapRow(data);
   }
 
-  async getByUserId(userClient: SupabaseClient, ownerUserId: string) {
-    const { data, error } = await adminSupabase
-      .schema('core_automation')
-      .from('agents')
-      .select('*')
-      .eq('user_id', ownerUserId)
-      .single();
-
-    if (error || !data) return null;
-    return this.mapRow(data);
-  }
-
-  async getById(userClient: SupabaseClient, agentId: string) {
-    const { data, error } = await userClient
+  async getById(clients: Clients, agentId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('agents')
       .select('*')
@@ -89,8 +81,20 @@ export class AgentConfigService {
     return this.mapRow(data);
   }
 
+  async getByUserId(clients: Clients, ownerUserId: string) {
+    const { data, error } = await clients.adminClient
+      .schema('core_automation')
+      .from('agents')
+      .select('*')
+      .eq('user_id', ownerUserId)
+      .single();
+
+    if (error || !data) return null;
+    return this.mapRow(data);
+  }
+
   async update(
-    userClient: SupabaseClient,
+    clients: Clients,
     agentId: string,
     payload: UpdateAgentConfigPayload
   ) {
@@ -104,7 +108,7 @@ export class AgentConfigService {
     if (payload.config !== undefined) updateData.config = payload.config;
     if (payload.isActive !== undefined) updateData.is_active = payload.isActive;
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('agents')
       .update(updateData)
@@ -116,8 +120,8 @@ export class AgentConfigService {
     return this.mapRow(data);
   }
 
-  async getLlms(userClient: SupabaseClient, agentId: string) {
-    const { data, error } = await userClient
+  async getLlms(clients: Clients, agentId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('agent_llms')
       .select('*, llms(*), secrets(*)')
@@ -127,17 +131,13 @@ export class AgentConfigService {
     return data || [];
   }
 
-  async linkLlm(
-    userClient: SupabaseClient,
-    agentId: string,
-    payload: LinkLlmPayload
-  ) {
-    const agent = await this.getAgentById(agentId);
+  async linkLlm(clients: Clients, agentId: string, payload: LinkLlmPayload) {
+    const agent = await this.getAgentByIdInternal(clients.adminClient, agentId);
     let secretId: string | null = null;
 
     if (payload.secretValue) {
       const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-      const { data, error } = await adminSupabase
+      const { data, error } = await clients.adminClient
         .schema('public')
         .from('secrets')
         .insert({
@@ -155,14 +155,14 @@ export class AgentConfigService {
     }
 
     if (payload.isDefault) {
-      await adminSupabase
+      await clients.adminClient
         .schema('core_automation')
         .from('agent_llms')
         .update({ is_default: false })
         .eq('agent_id', agentId);
     }
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('agent_llms')
       .insert({
@@ -178,10 +178,8 @@ export class AgentConfigService {
     return data;
   }
 
-  async unlinkLlm(userClient: SupabaseClient, agentId: string, llmId: string) {
-    // Note: the linked secret is intentionally left orphaned (not deleted).
-    // Secrets are retained so they can be reused if the LLM is relinked later.
-    const { error } = await adminSupabase
+  async unlinkLlm(clients: Clients, agentId: string, llmId: string) {
+    const { error } = await clients.adminClient
       .schema('core_automation')
       .from('agent_llms')
       .delete()
@@ -193,7 +191,7 @@ export class AgentConfigService {
   }
 
   async updateLlmLink(
-    userClient: SupabaseClient,
+    clients: Clients,
     agentId: string,
     llmId: string,
     payload: UpdateLlmLinkPayload
@@ -202,7 +200,7 @@ export class AgentConfigService {
 
     if (payload.isDefault !== undefined) {
       if (payload.isDefault) {
-        await adminSupabase
+        await clients.adminClient
           .schema('core_automation')
           .from('agent_llms')
           .update({ is_default: false })
@@ -212,7 +210,7 @@ export class AgentConfigService {
     }
 
     if (payload.secretValue) {
-      const { data: existingLink } = await adminSupabase
+      const { data: existingLink } = await clients.adminClient
         .schema('core_automation')
         .from('agent_llms')
         .select('secret_id')
@@ -222,7 +220,7 @@ export class AgentConfigService {
 
       if (existingLink?.secret_id) {
         const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-        const { error } = await adminSupabase
+        const { error } = await clients.adminClient
           .schema('core_automation')
           .from('secrets')
           .update({ encrypted_value: encrypted })
@@ -230,9 +228,12 @@ export class AgentConfigService {
 
         if (error) throw new Error('Failed to update secret');
       } else {
-        const agent = await this.getAgentById(agentId);
+        const agent = await this.getAgentByIdInternal(
+          clients.adminClient,
+          agentId
+        );
         const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-        const { data, error } = await adminSupabase
+        const { data, error } = await clients.adminClient
           .schema('public')
           .from('secrets')
           .insert({
@@ -250,7 +251,7 @@ export class AgentConfigService {
       }
     }
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('agent_llms')
       .update(updateData)
@@ -263,8 +264,8 @@ export class AgentConfigService {
     return data;
   }
 
-  async getMcps(userClient: SupabaseClient, agentId: string) {
-    const { data, error } = await userClient
+  async getMcps(clients: Clients, agentId: string) {
+    const { data, error } = await clients.userClient
       .schema('core_automation')
       .from('agent_mcps')
       .select('*, mcps(*), secrets(*)')
@@ -274,17 +275,13 @@ export class AgentConfigService {
     return data || [];
   }
 
-  async linkMcp(
-    userClient: SupabaseClient,
-    agentId: string,
-    payload: LinkMcpPayload
-  ) {
-    const agent = await this.getAgentById(agentId);
+  async linkMcp(clients: Clients, agentId: string, payload: LinkMcpPayload) {
+    const agent = await this.getAgentByIdInternal(clients.adminClient, agentId);
     let secretId: string | null = null;
 
     if (payload.secretValue) {
       const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-      const { data, error } = await adminSupabase
+      const { data, error } = await clients.adminClient
         .schema('public')
         .from('secrets')
         .insert({
@@ -301,7 +298,7 @@ export class AgentConfigService {
       secretId = data.id;
     }
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('agent_mcps')
       .insert({
@@ -316,10 +313,8 @@ export class AgentConfigService {
     return data;
   }
 
-  async unlinkMcp(userClient: SupabaseClient, agentId: string, mcpId: string) {
-    // Note: the linked secret is intentionally left orphaned (not deleted).
-    // Secrets are retained so they can be reused if the MCP is relinked later.
-    const { error } = await adminSupabase
+  async unlinkMcp(clients: Clients, agentId: string, mcpId: string) {
+    const { error } = await clients.adminClient
       .schema('core_automation')
       .from('agent_mcps')
       .delete()
@@ -331,13 +326,13 @@ export class AgentConfigService {
   }
 
   async updateMcpLink(
-    userClient: SupabaseClient,
+    clients: Clients,
     agentId: string,
     mcpId: string,
     payload: UpdateMcpLinkPayload
   ) {
-    const agent = await this.getAgentById(agentId);
-    const { data: mcp } = await adminSupabase
+    const agent = await this.getAgentByIdInternal(clients.adminClient, agentId);
+    const { data: mcp } = await clients.adminClient
       .schema('core_automation')
       .from('mcps')
       .select('account_id')
@@ -352,7 +347,7 @@ export class AgentConfigService {
 
     if (payload.isDefault !== undefined) {
       if (payload.isDefault) {
-        await adminSupabase
+        await clients.adminClient
           .schema('core_automation')
           .from('agent_mcps')
           .update({ is_default: false })
@@ -362,7 +357,7 @@ export class AgentConfigService {
     }
 
     if (payload.secretValue) {
-      const { data: existingLink } = await adminSupabase
+      const { data: existingLink } = await clients.adminClient
         .schema('core_automation')
         .from('agent_mcps')
         .select('secret_id')
@@ -372,7 +367,7 @@ export class AgentConfigService {
 
       if (existingLink?.secret_id) {
         const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-        const { error } = await adminSupabase
+        const { error } = await clients.adminClient
           .schema('core_automation')
           .from('secrets')
           .update({ encrypted_value: encrypted })
@@ -381,7 +376,7 @@ export class AgentConfigService {
         if (error) throw new Error('Failed to update secret');
       } else {
         const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-        const { data, error } = await adminSupabase
+        const { data, error } = await clients.adminClient
           .schema('public')
           .from('secrets')
           .insert({
@@ -403,7 +398,7 @@ export class AgentConfigService {
       throw new Error('No update payload provided');
     }
 
-    const { data, error } = await adminSupabase
+    const { data, error } = await clients.adminClient
       .schema('core_automation')
       .from('agent_mcps')
       .update(updateData)
@@ -416,11 +411,11 @@ export class AgentConfigService {
     return data;
   }
 
-  async getAgentSecrets(ownerUserId: string) {
+  async getAgentSecrets(clients: Clients, ownerUserId: string) {
     const secret = process.env.SECRET_INTERNAL_API_KEY;
     if (!secret) throw new Error('SECRET_INTERNAL_API_KEY not configured');
 
-    const { data: agent, error } = await adminSupabase
+    const { data: agent, error } = await clients.adminClient
       .schema('core_automation')
       .from('agents')
       .select('id')
@@ -434,7 +429,7 @@ export class AgentConfigService {
 
     if (!agent) throw new Error('Agent not found');
 
-    const { data: llmRows } = await adminSupabase
+    const { data: llmRows } = await clients.adminClient
       .schema('core_automation')
       .from('agent_llms')
       .select('*, llms(*), secrets(*)')
@@ -468,7 +463,7 @@ export class AgentConfigService {
       };
     });
 
-    const { data: mcpRows } = await adminSupabase
+    const { data: mcpRows } = await clients.adminClient
       .schema('core_automation')
       .from('agent_mcps')
       .select('*, mcps(*), secrets(*)')
@@ -509,8 +504,8 @@ export class AgentConfigService {
     return { llms, mcps };
   }
 
-  private async getAgentById(agentId: string) {
-    const { data, error } = await adminSupabase
+  private async getAgentByIdInternal(client: SupabaseClient, agentId: string) {
+    const { data, error } = await client
       .schema('core_automation')
       .from('agents')
       .select('id, account_id')

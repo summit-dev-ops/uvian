@@ -1,0 +1,23 @@
+{
+  "name": "@org/services-users",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/services/users/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/services/users/dist"],
+      "options": {
+        "outputPath": "packages/services/users/dist",
+        "main": "packages/services/users/src/index.ts",
+        "tsConfig": "packages/services/users/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/services/users/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:services"]
+}

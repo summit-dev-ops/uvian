@@ -2,6 +2,13 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { profileService } from '../services/profile.service';
 import { adminSupabase } from '../clients/supabase.client';
 
+function getClients(request: any) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+}
+
 interface GetUserProfileParams {
   userId: string;
 }
@@ -95,7 +102,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
         const { userId } = request.params;
 
         const profile = await profileService.getProfileByUserId(
-          request.supabase,
+          getClients(request),
           userId
         );
 

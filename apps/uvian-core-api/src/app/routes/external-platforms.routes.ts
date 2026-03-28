@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { externalPlatformService } from '../services/external-platform.service';
-import { createUserClient } from '../clients/supabase.client';
+import { externalPlatformService } from '../services/factory';
+import { adminSupabase } from '../clients/supabase.client';
 
 interface PlatformParams {
   platformId: string;
@@ -32,13 +32,11 @@ interface UpdatePlatformBody {
   is_active?: boolean;
 }
 
-function getUserClient(request: FastifyRequest) {
-  const authHeader = request.headers.authorization;
-  if (!authHeader) {
-    throw new Error('Missing authorization header');
-  }
-  const token = authHeader.replace('Bearer ', '');
-  return createUserClient(token);
+function getClients(request: FastifyRequest) {
+  return {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
 }
 
 export default async function externalPlatformRoutes(fastify: FastifyInstance) {
@@ -55,9 +53,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const platforms = await externalPlatformService.getPlatformsByUser(
-          userClient,
+          clients,
           userId
         );
         reply.send({ platforms });
@@ -86,9 +84,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
         }
 
         const { platformId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const platform = await externalPlatformService.getPlatformByOwnerAndId(
-          userClient,
+          clients,
           platformId,
           userId
         );
@@ -145,9 +143,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const platform = await externalPlatformService.createPlatform(
-          userClient,
+          clients,
           userId,
           request.body
         );
@@ -202,9 +200,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
         }
 
         const { platformId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         const platform = await externalPlatformService.updatePlatform(
-          userClient,
+          clients,
           userId,
           platformId,
           request.body
@@ -236,9 +234,9 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
         }
 
         const { platformId } = request.params;
-        const userClient = getUserClient(request);
+        const clients = getClients(request);
         await externalPlatformService.deletePlatform(
-          userClient,
+          clients,
           userId,
           platformId
         );

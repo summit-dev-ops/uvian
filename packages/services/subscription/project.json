@@ -1,0 +1,23 @@
+{
+  "name": "@org/services-subscription",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/services/subscription/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/services/subscription/dist"],
+      "options": {
+        "outputPath": "packages/services/subscription/dist",
+        "main": "packages/services/subscription/src/index.ts",
+        "tsConfig": "packages/services/subscription/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/services/subscription/src",
+        "esbuildOptions": {
+          "outExtension": { ".js": ".js" }
+        }
+      }
+    }
+  },
+  "tags": ["scope:services"]
+}

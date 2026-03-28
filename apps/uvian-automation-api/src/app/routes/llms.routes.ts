@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { adminSupabase } from '../clients/supabase.client';
 import { llmService } from '../services/llm.service';
 
 export default async function llmRoutes(fastify: FastifyInstance) {
@@ -8,8 +9,11 @@ export default async function llmRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { accountId } = request.params as any as { accountId: string };
-        const userClient = await request.supabase;
-        const llms = await llmService.list(userClient, accountId);
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const llms = await llmService.list(clients, accountId);
         return reply.send({ llms });
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
@@ -43,8 +47,11 @@ export default async function llmRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
-        const llm = await llmService.create(userClient, request.body as any);
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const llm = await llmService.create(clients, request.body as any);
         return reply.code(201).send({ llm });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
@@ -82,10 +89,13 @@ export default async function llmRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { llmId } = request.params as any as { llmId: string };
         const llm = await llmService.update(
-          userClient,
+          clients,
           llmId,
           request.body as any
         );
@@ -110,9 +120,12 @@ export default async function llmRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userClient = await request.supabase;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
         const { llmId } = request.params as any as { llmId: string };
-        await llmService.delete(userClient, llmId);
+        await llmService.delete(clients, llmId);
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
