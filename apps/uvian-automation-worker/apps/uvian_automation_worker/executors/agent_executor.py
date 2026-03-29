@@ -102,6 +102,8 @@ class AgentExecutor(BaseExecutor):
             if not created_thread:
                 worker_logger.warning_job(job_id, "Failed to create thread in DB, continuing with in-memory thread")
         
+        worker_logger.info_job(job_id, f"Thread ID: {thread_id}, Agent ID: {agent_user_id}")
+        
         worker_logger.info_job(job_id, "Loading agent secrets from automation-api...")
         secrets = await get_agent_secrets(agent_user_id)
 
@@ -155,6 +157,8 @@ class AgentExecutor(BaseExecutor):
         config = {"configurable": {"thread_id": thread_id}}
         full_response: List[Any] = []
         try:
+            worker_logger.info_job(job_id, f"Starting agent with config: {config}")
+            worker_logger.info_job(job_id, f"Agent input: {str(agent_input)[:500]}...")
             agent = build_agent(mcp_tools, llm_config)
             async for chunk,_m in agent.astream(
                 agent_input,
@@ -162,6 +166,8 @@ class AgentExecutor(BaseExecutor):
                 stream_mode="messages" 
             ):
                 full_response.append(chunk)
+            
+            worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
 
             return {
                 "status": "completed",

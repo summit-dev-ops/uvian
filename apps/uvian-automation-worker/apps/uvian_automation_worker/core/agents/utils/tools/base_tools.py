@@ -1,6 +1,7 @@
 from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
 from langchain_core.messages import ToolMessage, AIMessage
+from core.logging import worker_logger
 
 from .end_task_tool import end_task
 
@@ -22,6 +23,7 @@ def search_skills(
     Args:
         query: simple query string you associate with the request you have: (copy writing, roleplaying, pricing strategy)
     """
+    worker_logger.info(f"[search_skills] Called with query: {kargs.get('query')}")
 
     skills = runtime.state.get("skills")
     # Skill not found
@@ -51,10 +53,12 @@ def load_skill(
     loaded_skills = runtime.state.get("loaded_skills") or []
     skills = runtime.state.get("skills")
     skill_name = kargs["skill_name"]
-    print("load_skill: ", skill_name, loaded_skills)
+    worker_logger.info(f"[load_skill] Called with skill_name: {skill_name}, loaded: {loaded_skills}")
+    
     # Find and return the requested skill
     for skill in skills:
         if skill["name"] == skill_name and not skill in loaded_skills:
+            worker_logger.info(f"[load_skill] Loading skill: {skill_name}")
             return Command(
                 update={
                     "loaded_skills": loaded_skills + [skill_name],  
@@ -65,6 +69,7 @@ def load_skill(
         
     # Skill not found
     available = ", ".join(s["name"] for s in skills)
+    worker_logger.info(f"[load_skill] Skill not found: {skill_name}")
     return f"Skill '{skill_name}' not found. Available skills: {available}"
 
 

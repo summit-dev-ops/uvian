@@ -1,5 +1,6 @@
 from langchain_core.messages import SystemMessage
 from typing import List, Any, Optional
+from core.logging import worker_logger
 
 SYSTEM_PROMPT = """You are a helpful AI assistant called {agent_name} with access to the "end_task" tool.
 
@@ -63,6 +64,8 @@ def create_response_node(model, tools: Optional[List[Any]] = None):
     
     def llm_call(state: dict):
         """LLM decides whether to call a tool or not"""
+        worker_logger.info(f"[response_node] LLM call #{state.get('llm_calls', 0) + 1}")
+        
         # 1. Dynamically format the prompt using the current state
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
@@ -77,6 +80,11 @@ def create_response_node(model, tools: Optional[List[Any]] = None):
         else:
             # Fallback: just invoke without tools
             response = model.invoke(messages)
+        
+        # Log the response
+        tool_calls = getattr(response, "tool_calls", []) or []
+        response_preview = response.content[:200] if hasattr(response, "content") else "no content"
+        worker_logger.info(f"[response_node] LLM response: content={response_preview}... tool_calls={len(tool_calls)}")
         
         return {
             "messages": [response],

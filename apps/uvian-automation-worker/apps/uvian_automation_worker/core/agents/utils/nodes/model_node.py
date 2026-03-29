@@ -1,4 +1,6 @@
 from langchain_core.messages import SystemMessage
+from core.logging import worker_logger
+import json
 
 SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
 
@@ -28,9 +30,26 @@ def create_model_node(model, tools):
         # 2. Prepend the formatted SystemMessage to the agent's internal monologue
         messages = [SystemMessage(content=formatted_system_prompt)] + state["messages"]
         
+        # Log the LLM call
+        last_user_msg = ""
+        for msg in reversed(messages):
+            if hasattr(msg, "type") and msg.type == "human":
+                last_user_msg = msg.content[:200]
+                break
+        worker_logger.info(f"[model_node] LLM call #{state.get('llm_calls', 0) + 1}: last_message={last_user_msg[:100]}...")
+        worker_logger.info(f"[model_node] Tools available: {[t.name for t in tools]}")
+        
         # 3. Invoke the model
         response = model_with_tools.invoke(messages)
-        
+
+        # Log the response
+        tool_calls = getattr(response, "tool_calls", []) or []
+        response_preview = response.content[:200] if hasattr(response, "content") else "no content"
+        worker_logger.info(f"[model_node] LLM response: content={response_preview}... tool_calls={len(tool_calls)}")
+        if tool_calls:
+            for tc in tool_calls:
+                worker_logger.info(f"[model_node] Tool call: {tc.get('name')} args={str(tc.get('args', {}))[:200]}")
+
         return {
             "messages": [response],
             "llm_calls": state.get('llm_calls', 0) + 1
