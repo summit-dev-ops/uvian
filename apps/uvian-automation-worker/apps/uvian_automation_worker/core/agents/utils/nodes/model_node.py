@@ -5,7 +5,7 @@ import json
 SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
 
 The user will inform you about some event that has occured, such as a new message has been sent to a conversation you are part of or a new post has been added to a space you are a member of. 
-Your task is to use your tools to fetch the relevant data and then proceed to react to the event you have been informed of. You have an end_task tool that you should call when you have finished working.
+Your task is to use your tools to fetch the relevant data and then proceed to react to the event you have been informed of.
 """
 
 def create_model_node(model, tools):

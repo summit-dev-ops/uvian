@@ -5,7 +5,6 @@ from langgraph.types import RunnableConfig
 from core.agents.utils.tools.base_tools import tools as base_tools
 from core.agents.utils.models import create_minimax_model
 from core.agents.utils.nodes.model_node import create_model_node
-from core.agents.utils.nodes.response_node import create_response_node
 from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.summarizer_node import create_summarize_node
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
@@ -56,12 +55,8 @@ def build_agent(
 
     # Create node functions
     raw_model_node = create_model_node(llm, tools)
-    raw_response_node = create_response_node(llm, tools)
     raw_summarize_node = create_summarize_node(llm, agent_name="DataBot")
     raw_tool_node = ToolNode(tools)
-
-    # Wrap with logging - note: we can't easily pass config to sync functions
-    # so we'll log at a different level
 
     def check_context_node(state: MessagesState) -> MessagesState:
         """Check context and decide routing."""
@@ -75,7 +70,12 @@ def build_agent(
         worker_logger.info(f"model_node: ENTER (messages={len(state.get('messages', []))})")
         try:
             result = raw_model_node(state)
-            tool_calls = result.get("messages", [None])[0].tool_calls if result.get("messages") else []
+            messages = result.get("messages", [])
+            tool_calls = []
+            if messages:
+                last_msg = messages[-1]
+                if hasattr(last_msg, "tool_calls"):
+                    tool_calls = last_msg.tool_calls or []
             worker_logger.info(f"model_node: EXIT (llm_calls={result.get('llm_calls', 0)}, tool_calls={len(tool_calls)})")
             return result
         except Exception as e:
@@ -93,17 +93,6 @@ def build_agent(
             worker_logger.error(f"tool_node: ERROR - {type(e).__name__}: {str(e)}")
             raise
 
-    def response_node_with_logging(state: MessagesState) -> Any:
-        """Response node with logging."""
-        worker_logger.info(f"response_node: ENTER (messages={len(state.get('messages', []))})")
-        try:
-            result = raw_response_node(state)
-            worker_logger.info(f"response_node: EXIT")
-            return result
-        except Exception as e:
-            worker_logger.error(f"response_node: ERROR - {type(e).__name__}: {str(e)}")
-            raise
-
     def summarize_node_with_logging(state: MessagesState) -> Any:
         """Summarize node with logging."""
         worker_logger.info(f"summarize_node: ENTER (messages={len(state.get('messages', []))})")
@@ -118,13 +107,17 @@ def build_agent(
     def tools_condition_with_logging(state: MessagesState) -> str:
         """Tools condition with logging."""
         result = tools_condition(state)
-        tool_calls = state.get("messages", [None])[0].tool_calls if state.get("messages") else []
+        messages = state.get("messages", [])
+        tool_calls = []
+        if messages:
+            last_msg = messages[-1]
+            if hasattr(last_msg, "tool_calls"):
+                tool_calls = last_msg.tool_calls or []
         worker_logger.info(f"tools_condition: Routing to '{result}' (tool_calls={len(tool_calls)})")
         return result
 
     agent_builder.add_node("check_context_node", check_context_node)
     agent_builder.add_node("model_node", model_node_with_logging)
-    agent_builder.add_node("response_node", response_node_with_logging)
     agent_builder.add_node("tool_node", tool_node_with_logging)
     agent_builder.add_node("summarize_node", summarize_node_with_logging)
 
@@ -143,10 +136,9 @@ def build_agent(
     agent_builder.add_conditional_edges(
         "model_node",
         tools_condition_with_logging,
-        {"tools": "tool_node", "__end__": "response_node"},
+        {"tools": "tool_node", "__end__": END},
     )
 
     agent_builder.add_edge("tool_node", "model_node")
-    agent_builder.add_edge("response_node", END)
     
     return agent_builder.compile(checkpointer=checkpointer)
