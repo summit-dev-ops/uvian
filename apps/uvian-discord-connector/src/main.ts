@@ -1,36 +1,30 @@
 import Fastify from 'fastify';
-import sensible from '@fastify/sensible';
-import autoload from '@fastify/autoload';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { app } from './app/app';
+import cors from '@fastify/cors';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const host = process.env.HOST ?? 'localhost';
+const port = process.env.PORT ? Number(process.env.PORT) : 8000;
 
-const fastify = Fastify({
+// Instantiate Fastify with some config
+const server = Fastify({
   logger: true,
 });
 
-await fastify.register(sensible);
-
-await fastify.register(autoload, {
-  dir: path.join(__dirname, 'app/plugins'),
-  options: { prefix: 'discord-connector' },
+server.register(cors, {
+  origin: process.env.FRONTEND_URL || '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  credentials: true, 
 });
 
-await fastify.register(autoload, {
-  dir: path.join(__dirname, 'app/routes'),
-  options: { prefix: 'discord-connector' },
-});
+// Register your application as a normal plugin.
+server.register(app);
 
-const start = async () => {
-  try {
-    const port = parseInt(process.env.PORT || '3003', 10);
-    await fastify.listen({ port, host: '0.0.0.0' });
-  } catch (err) {
-    fastify.log.error(err);
+// Start listening.
+server.listen({ port, host }, (err) => {
+  if (err) {
+    server.log.error(err);
     process.exit(1);
+  } else {
+    console.log(`[ ready ] http://${host}:${port}`);
   }
-};
-
-start();
+});

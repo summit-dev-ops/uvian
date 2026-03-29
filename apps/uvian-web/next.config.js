@@ -9,7 +9,12 @@ const { composePlugins, withNx } = require('@nx/next');
 const nextConfig = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
-  nx: {},
+  nx: {
+  },
+  
+  experimental: {
+    cpus: 2, // <--- Add this line to limit the workers
+  },
 };
 
 const plugins = [

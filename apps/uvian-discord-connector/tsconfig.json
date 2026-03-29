@@ -1,37 +1,13 @@
 {
-  "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "target": "ES2020",
-    "lib": ["ES2020"],
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "@org/uvian-events": ["packages/uvian-events/src/index.ts"],
-      "~/*": ["apps/uvian-discord-connector/src/*"]
-    }
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
+  "extends": "../../tsconfig.base.json",
+  "files": [],
+  "include": [],
   "references": [
     {
-      "path": "../../packages/services/users"
+      "path": "./tsconfig.app.json"
     },
     {
-      "path": "../../packages/services/subscription"
-    },
-    {
-      "path": "../../packages/services/identity"
-    },
-    {
-      "path": "../../packages/uvian-events"
+      "path": "./tsconfig.spec.json"
     }
   ]
 }
