@@ -106,7 +106,7 @@ class AgentExecutor(BaseExecutor):
         
         worker_logger.info_job(job_id, "Loading agent secrets from automation-api...")
         secrets = await get_agent_secrets(agent_user_id)
-
+        worker_logger.info_job(job_id, str(secrets))
         llm_config = {}
         if secrets.get("llms"):
             default_llm = next(
