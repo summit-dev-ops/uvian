@@ -6,6 +6,7 @@ import encryptionPlugin from './plugins/encryption.plugin';
 import mcpPlugin from './plugins/mcp.plugin';
 import authPlugin from './plugins/auth.plugin';
 import internalAuthPlugin from './plugins/internal-auth';
+import eventEmitterPlugin from './plugins/event-emitter';
 import apiKeysRoutes from './routes/api-keys.routes';
 import intakesRoutes from './routes/intakes.routes';
 import { publicV1Routes } from './routes/public.v1.routes';
@@ -24,6 +25,7 @@ export async function app(fastify: FastifyInstance, _opts: AppOptions) {
   await fastify.register(mcpPlugin);
   await fastify.register(authPlugin);
   await fastify.register(internalAuthPlugin);
+  await fastify.register(eventEmitterPlugin);
 
   await fastify.register(apiKeysRoutes, { prefix: '/api' });
   await fastify.register(intakesRoutes, { prefix: '/api' });

@@ -36,6 +36,9 @@
     },
     {
       "path": "../../packages/uvian-events/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/plugins/event-emitter/tsconfig.lib.json"
     }
   ]
 }

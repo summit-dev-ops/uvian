@@ -1,32 +1,44 @@
+import fp from 'fastify-plugin';
+import { FastifyInstance } from 'fastify';
 import {
-  createCloudEvent,
-  DiscordEvents,
-  DiscordMessageCreatedData,
-} from '@org/uvian-events';
+  BaseEventEmitter,
+  QueueService,
+  Logger,
+} from '@org/plugins-event-emitter';
+import { createQueueService } from '@org/services-queue';
+import { redisConnection } from './cache';
+import { DiscordEvents, DiscordMessageCreatedData } from '@org/uvian-events';
 
-export function emitDiscordMessageCreated(
-  data: DiscordMessageCreatedData,
-  actorId: string,
-  source: string
-): void {
-  const resolvedActorId = actorId || 'external';
+const queueService = createQueueService({ redisConnection });
 
-  const event = createCloudEvent({
-    type: DiscordEvents.MESSAGE_CREATED,
-    source,
-    data: {
-      ...data,
-      actorId: resolvedActorId,
-    },
-    subject: resolvedActorId,
-  });
-
-  console.log(
-    '[Discord-Connector] Emitting event:',
-    JSON.stringify(event, null, 2)
-  );
+export class DiscordEventEmitter extends BaseEventEmitter {
+  emitMessageCreated(
+    data: DiscordMessageCreatedData,
+    actorId: string,
+    source: string
+  ): void {
+    const resolvedActorId = actorId || 'external';
+    this.emit(DiscordEvents.MESSAGE_CREATED, source, data, resolvedActorId);
+  }
 }
 
-export const eventEmitter = {
-  emitMessageCreated: emitDiscordMessageCreated,
-};
+export default fp(async (fastify: FastifyInstance) => {
+  const log: Logger = {
+    info: (obj: Record<string, unknown>, msg: string) =>
+      fastify.log.info(obj, msg),
+    error: (obj: Record<string, unknown>, msg: string) =>
+      fastify.log.error(obj, msg),
+  };
+
+  const eventEmitter = new DiscordEventEmitter({
+    queueService: queueService as unknown as QueueService,
+    log,
+  });
+  fastify.decorate('eventEmitter', eventEmitter);
+});
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    eventEmitter: DiscordEventEmitter;
+  }
+}

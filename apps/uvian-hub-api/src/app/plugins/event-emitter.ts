@@ -1,8 +1,12 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
+import {
+  BaseEventEmitter,
+  QueueService,
+  Logger,
+} from '@org/plugins-event-emitter';
 import { queueService } from '../services';
 import {
-  createCloudEvent,
   buildSourcePath,
   MessagingEvents,
   SpaceEvents,
@@ -37,40 +41,7 @@ import {
   AccountMemberRoleChangedData,
 } from '@org/uvian-events';
 
-const EVENT_QUEUE_NAME = 'uvian-events';
-
-export class EventEmitterService {
-  constructor(private fastify: FastifyInstance) {}
-
-  private async emit<T>(
-    type: string,
-    source: string,
-    data: T,
-    actorId: string
-  ): Promise<void> {
-    try {
-      const event = createCloudEvent({
-        type,
-        source,
-        subject: actorId,
-        data: {
-          ...data,
-          actorId,
-        },
-      });
-      this.fastify.log.info({ event }, 'Event emitted');
-
-      queueService.addJob(EVENT_QUEUE_NAME, 'event', event).catch((err) => {
-        this.fastify.log.error({ err }, 'Failed to add event to queue');
-      });
-    } catch (error) {
-      this.fastify.log.error(
-        { err: error, type, source },
-        'Failed to emit event'
-      );
-    }
-  }
-
+export class HubEventEmitter extends BaseEventEmitter {
   emitMessageCreated(data: MessageCreatedData, actorId: string): void {
     const source = buildSourcePath('conversations', data.conversationId);
     this.emit(MessagingEvents.MESSAGE_CREATED, source, data, actorId);
@@ -245,12 +216,20 @@ export class EventEmitterService {
 }
 
 export default fp(async (fastify: FastifyInstance) => {
-  const eventEmitter = new EventEmitterService(fastify);
+  const log: Logger = {
+    info: (obj, msg) => fastify.log.info(obj, msg),
+    error: (obj, msg) => fastify.log.error(obj, msg),
+  };
+
+  const eventEmitter = new HubEventEmitter({
+    queueService: queueService as unknown as QueueService,
+    log,
+  });
   fastify.decorate('eventEmitter', eventEmitter);
 });
 
 declare module 'fastify' {
   interface FastifyInstance {
-    eventEmitter: EventEmitterService;
+    eventEmitter: HubEventEmitter;
   }
 }

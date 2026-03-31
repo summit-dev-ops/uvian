@@ -39,6 +39,7 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: CreateIntakeBody }>(
     '/intakes',
     {
+      preHandler: [fastify.authenticateInternal],
       schema: {
         body: {
           type: 'object',
@@ -114,6 +115,17 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
             createdBy: body.createdBy,
             requiresAuth: body.requiresAuth,
           });
+
+        fastify.eventEmitter.emitIntakeCreated({
+          intakeId: result.tokenId,
+          title: body.title,
+          publicKey: body.publicKey,
+          expiresAt: new Date(
+            Date.now() + (body.expiresInSeconds ?? 3600) * 1000
+          ).toISOString(),
+          createdBy: body.createdBy,
+        });
+
         return reply.code(201).send(result);
       } catch (error: unknown) {
         fastify.log.error({ error }, 'Failed to create intake');
@@ -165,6 +177,11 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
             .code(404)
             .send({ error: 'Intake not found or already processed' });
         }
+
+        fastify.eventEmitter.emitIntakeRevoked({
+          intakeId: tokenId,
+          revokedBy: userId,
+        });
 
         return reply.send({ success: true });
       } catch (error: unknown) {

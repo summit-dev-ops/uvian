@@ -21,24 +21,22 @@ interface SourcePath {
 }
 
 type ResourceType =
-  | 'conversation'
-  | 'space'
-  | 'intake'
-  | 'job'
-  | 'ticket'
-  | 'user'
-  | 'account'
-  | 'agent';
+  | 'uvian.conversation'
+  | 'uvian.space'
+  | 'uvian.intake'
+  | 'uvian.job'
+  | 'uvian.ticket'
+  | 'uvian.agent'
+  | 'discord.channel';
 
 const RESOURCE_TYPE_MAP: Record<string, ResourceType> = {
-  conversations: 'conversation',
-  spaces: 'space',
-  intakes: 'intake',
-  jobs: 'job',
-  tickets: 'ticket',
-  users: 'user',
-  accounts: 'account',
-  agents: 'agent',
+  conversations: 'uvian.conversation',
+  spaces: 'uvian.space',
+  intakes: 'uvian.intake',
+  jobs: 'uvian.job',
+  tickets: 'uvian.ticket',
+  agents: 'uvian.agent',
+  discord: 'discord.channel',
 };
 
 const MEMBER_EVENT_TYPES = [
@@ -225,7 +223,7 @@ export class EventRouter {
 
     try {
       const providers = await cachedSubscriptionService.getProvidersForResource(
-        'intake',
+        'uvian.intake',
         intakeId
       );
 

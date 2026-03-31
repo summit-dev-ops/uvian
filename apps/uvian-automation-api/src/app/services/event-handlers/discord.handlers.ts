@@ -30,7 +30,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
         type: 'agent',
         input: {
           eventId: envelope.id,
-          eventType: 'discord.message_created',
+          eventType: 'com.uvian.discord.message_created',
           actor: { id: envelope.subject, type: 'user' },
           resource: {
             type: 'discord_message',
@@ -73,7 +73,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
         type: 'agent',
         input: {
           eventId: envelope.id,
-          eventType: 'discord.interaction_received',
+          eventType: 'com.uvian.discord.interaction_received',
           actor: { id: envelope.subject, type: 'user' },
           resource: {
             type: 'discord_interaction',

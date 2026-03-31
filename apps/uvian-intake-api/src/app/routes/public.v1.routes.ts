@@ -44,6 +44,24 @@ function getClients() {
   };
 }
 
+async function linkDiscordIdentity(
+  userId: string,
+  discordUserId: string
+): Promise<void> {
+  const { error } = await adminSupabase.from('user_identities').upsert(
+    {
+      user_id: userId,
+      provider: 'discord',
+      provider_user_id: discordUserId,
+    },
+    { onConflict: 'provider,provider_user_id', ignoreDuplicates: true }
+  );
+
+  if (error) {
+    throw new Error(`Failed to link Discord identity: ${error.message}`);
+  }
+}
+
 export async function publicV1Routes(fastify: FastifyInstance) {
   fastify.get<{ Params: TokenIdParams }>(
     '/intakes/:tokenId',
@@ -149,6 +167,25 @@ export async function publicV1Routes(fastify: FastifyInstance) {
         const result = await intakeService
           .scoped(clients)
           .submitIntake(tokenId, request.body, submittedBy);
+
+        if (
+          intake.metadata?.type === 'discord_link' &&
+          intake.metadata?.discordUserId &&
+          submittedBy
+        ) {
+          await linkDiscordIdentity(
+            submittedBy,
+            intake.metadata.discordUserId as string
+          );
+        }
+
+        fastify.eventEmitter.emitIntakeCompleted({
+          intakeId: tokenId,
+          submissionId: result.submissionId,
+          title: intake.title,
+          submittedAt: new Date().toISOString(),
+          createdBy: intake.created_by,
+        });
 
         return reply.send({ success: true, submissionId: result.submissionId });
       } catch (error: unknown) {

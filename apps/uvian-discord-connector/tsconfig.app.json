@@ -1,5 +1,4 @@
 {
-  
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
@@ -31,6 +30,15 @@
     },
     {
       "path": "../../packages/uvian-events/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/queue/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/utils/encryption/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/plugins/event-emitter/tsconfig.lib.json"
     }
   ]
 }

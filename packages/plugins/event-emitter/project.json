@@ -1,0 +1,24 @@
+{
+  "name": "@org/plugins-event-emitter",
+  "sourceRoot": "packages/plugins/event-emitter/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{workspaceRoot}/packages/plugins/event-emitter/dist"],
+      "options": {
+        "outputPath": "packages/plugins/event-emitter/dist",
+        "main": "packages/plugins/event-emitter/src/index.ts",
+        "tsConfig": "packages/plugins/event-emitter/tsconfig.lib.json",
+        "format": ["cjs"],
+        "declarationRootDir": "packages/plugins/event-emitter/src",
+        "esbuildOptions": {
+          "outExtension": {
+            ".js": ".js"
+          }
+        }
+      }
+    }
+  }
+}

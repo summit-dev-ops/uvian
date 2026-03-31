@@ -5,7 +5,7 @@ import { createPostService } from '../services/post';
 import { createAssetService } from '../services/asset';
 import { createSpacesService } from '../services/spaces';
 import { profileService } from '../services/factory';
-import { EventEmitterService } from '../plugins/event-emitter.js';
+import type { HubEventEmitter } from '../plugins/event-emitter.js';
 
 const noteService = createNoteService({});
 const postService = createPostService({});
@@ -22,7 +22,7 @@ export interface Services {
   chat: ReturnType<typeof createChatService>;
   account: any;
   user: any;
-  eventEmitter: EventEmitterService;
+  eventEmitter: HubEventEmitter;
 }
 
 declare module 'fastify' {

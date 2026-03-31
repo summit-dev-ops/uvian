@@ -67,6 +67,7 @@
     "packages/*",
     "packages/services/*",
     "packages/utils/*",
+    "packages/plugins/*",
     "apps/*"
   ],
   "dependencies": {

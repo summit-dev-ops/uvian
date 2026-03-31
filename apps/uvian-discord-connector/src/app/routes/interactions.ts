@@ -1,11 +1,14 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { eventEmitter } from '../plugins/event-emitter.js';
 import {
   identityService,
   subscriptionService,
   userService,
   clients,
 } from '../services/index.js';
+import { generateRSAKeyPair } from '@org/utils-encryption';
+
+const INTAKE_API_URL = process.env.INTAKE_API_URL || 'http://localhost:8001';
+const INTAKE_API_KEY = process.env.SECRET_INTERNAL_API_KEY || '';
 
 interface DiscordInteraction {
   type: number;
@@ -74,7 +77,90 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
         if (interactionType === 2 && interaction.data?.name) {
           const commandName = interaction.data.name;
 
+          if (commandName === 'link') {
+            if (!identity?.user_id) {
+              reply.code(200).send({
+                type: 4,
+                data: {
+                  content:
+                    'Your Discord account is not linked to a Uvian account. Please sign in to Uvian first, then run /link again.',
+                },
+              });
+              return;
+            }
+
+            try {
+              const { publicKey } = generateRSAKeyPair();
+              const discordUsername =
+                interaction.member?.user?.username ||
+                interaction.user?.username ||
+                'unknown';
+
+              const intakeResponse = await fetch(
+                `${INTAKE_API_URL}/api/intakes`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': INTAKE_API_KEY,
+                  },
+                  body: JSON.stringify({
+                    title: 'Link Discord Account',
+                    description: `Link your Discord account (@${discordUsername}) to your Uvian account. This allows agents to respond to your messages.`,
+                    submitLabel: 'Link Account',
+                    publicKey,
+                    schema: { fields: [] },
+                    metadata: {
+                      type: 'discord_link',
+                      discordUserId: userId,
+                      discordUsername,
+                    },
+                    requiresAuth: true,
+                    expiresInSeconds: 300,
+                    createdBy: 'discord-bot',
+                  }),
+                }
+              );
+
+              if (!intakeResponse.ok) {
+                throw new Error(`Intake API returned ${intakeResponse.status}`);
+              }
+
+              const intakeResult = (await intakeResponse.json()) as {
+                url: string;
+              };
+
+              reply.code(200).send({
+                type: 4,
+                data: {
+                  content: `Click the link below to connect your Discord account to Uvian. You will need to sign in to your Uvian account.\n\n${intakeResult.url}`,
+                },
+              });
+              return;
+            } catch (error) {
+              fastify.log.error(error, 'Error creating link intake');
+              reply.code(200).send({
+                type: 4,
+                data: {
+                  content: 'Error creating link. Please try again.',
+                },
+              });
+              return;
+            }
+          }
+
           if (commandName === 'activate') {
+            if (!identity?.user_id) {
+              reply.code(200).send({
+                type: 4,
+                data: {
+                  content:
+                    'Your Discord account is not linked. Run /link first to connect your account.',
+                },
+              });
+              return;
+            }
+
             const agentNameOption = interaction.data.options?.find(
               (opt) => opt.name === 'agent'
             );
@@ -108,7 +194,11 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
 
               await subscriptionService
                 .scoped(clients)
-                .activateSubscription(agent.id, 'discord', channelId || 'dm');
+                .activateSubscription(
+                  agent.id,
+                  'discord.channel',
+                  channelId || 'dm'
+                );
 
               reply.code(200).send({
                 type: 4,
@@ -146,7 +236,7 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
                 .scoped(clients)
                 .deactivateSubscription(
                   identity.user_id,
-                  'discord',
+                  'discord.channel',
                   channelId || 'dm'
                 );
 
@@ -179,7 +269,7 @@ export default async function interactionsRoutes(fastify: FastifyInstance) {
             content += ` ${options}`;
           }
 
-          eventEmitter.emitMessageCreated(
+          fastify.eventEmitter.emitMessageCreated(
             {
               messageId: `interaction-${Date.now()}`,
               content,
