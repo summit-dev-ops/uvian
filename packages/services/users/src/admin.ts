@@ -11,7 +11,7 @@ export function createUserAdminService(
   return {
     async getUserById(userId: string): Promise<User | null> {
       const { data, error } = await clients.adminClient
-        .from('users')
+        .from('get_users')
         .select('id, email, raw_user_meta_data')
         .eq('id', userId)
         .single();
@@ -37,7 +37,7 @@ export function createUserAdminService(
       const limit = options?.limit || 10;
 
       let query = clients.adminClient
-        .from('users')
+        .from('get_users')
         .select('id, email, raw_user_meta_data');
 
       if (options?.includeAgents) {

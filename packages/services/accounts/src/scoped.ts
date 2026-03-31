@@ -195,7 +195,7 @@ export function createAccountsScopedService(
       const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
 
       const { data: users } = await clients.adminClient
-        .from('users')
+        .from('get_users')
         .select('id, email')
         .in('id', userIds);
 
@@ -242,7 +242,7 @@ export function createAccountsScopedService(
         .single();
 
       const { data: user } = await clients.adminClient
-        .from('users')
+        .from('get_users')
         .select('id, email')
         .eq('id', memberUserId)
         .single();
