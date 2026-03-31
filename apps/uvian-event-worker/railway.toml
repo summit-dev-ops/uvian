@@ -1,0 +1,19 @@
+[deploy]
+startCommand = "npx nx start uvian-event-worker --configuration=production"
+restartPolicyType = "on_failure"
+
+[deploy.watchPatterns]
+paths = [
+  "apps/uvian-event-worker/**",
+  "packages/uvian-events/**",
+  "nx.json",
+  "package.json",
+  "package-lock.json",
+  "tsconfig.base.json"
+]
+
+[environments.production]
+restartPolicyType = "on_failure"
+
+[environments.staging]
+restartPolicyType = "always"

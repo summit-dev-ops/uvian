@@ -1,0 +1,15 @@
+[deploy]
+startCommand = "cd apps/uvian-automation-worker && .venv/bin/python apps/uvian_automation_worker/main.py"
+restartPolicyType = "on_failure"
+
+[deploy.watchPatterns]
+paths = [
+  "apps/uvian-automation-worker/**",
+  "nx.json"
+]
+
+[environments.production]
+restartPolicyType = "on_failure"
+
+[environments.staging]
+restartPolicyType = "always"

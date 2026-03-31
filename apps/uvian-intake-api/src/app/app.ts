@@ -31,7 +31,11 @@ export async function app(fastify: FastifyInstance, _opts: AppOptions) {
   await fastify.register(intakesRoutes, { prefix: '/api' });
   await fastify.register(publicV1Routes, { prefix: '/api/public' });
 
-  fastify.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+  fastify.get('/api/health', async () => {
+    return {
+      status: 'ok',
+      service: 'uvian-intake-api',
+      timestamp: new Date().toISOString(),
+    };
   });
 }

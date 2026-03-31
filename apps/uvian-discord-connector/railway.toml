@@ -1,0 +1,20 @@
+[deploy]
+startCommand = "npx nx start uvian-discord-connector --configuration=production"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+
+[deploy.watchPatterns]
+paths = [
+  "apps/uvian-discord-connector/**",
+  "nx.json",
+  "package.json",
+  "package-lock.json",
+  "tsconfig.base.json"
+]
+
+[environments.production]
+restartPolicyType = "on_failure"
+
+[environments.staging]
+restartPolicyType = "always"
