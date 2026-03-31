@@ -7,7 +7,11 @@ import {
 } from '@org/plugins-event-emitter';
 import { createQueueService } from '@org/services-queue';
 import { redisConnection } from './cache';
-import { DiscordEvents, DiscordMessageCreatedData } from '@org/uvian-events';
+import {
+  DiscordEvents,
+  DiscordMessageCreatedData,
+  DiscordInteractionData,
+} from '@org/uvian-events';
 
 const queueService = createQueueService({ redisConnection });
 
@@ -19,6 +23,20 @@ export class DiscordEventEmitter extends BaseEventEmitter {
   ): void {
     const resolvedActorId = actorId || 'external';
     this.emit(DiscordEvents.MESSAGE_CREATED, source, data, resolvedActorId);
+  }
+
+  emitInteractionReceived(
+    data: DiscordInteractionData,
+    actorId: string,
+    source: string
+  ): void {
+    const resolvedActorId = actorId || 'external';
+    this.emit(
+      DiscordEvents.INTERACTION_RECEIVED,
+      source,
+      data,
+      resolvedActorId
+    );
   }
 }
 

@@ -62,7 +62,9 @@ export function registerDiscordHandlers(webhookHandler: any) {
       const payload = envelope.data as DiscordInteractionData;
 
       console.log('Discord interaction received:', {
+        interactionTypeName: payload.interactionTypeName,
         commandName: payload.commandName,
+        customId: payload.customId,
         externalChannelId: payload.externalChannelId,
         externalUserId: payload.externalUserId,
         source: envelope.source,
@@ -79,8 +81,12 @@ export function registerDiscordHandlers(webhookHandler: any) {
             type: 'discord_interaction',
             id: `interaction-${payload.externalMessageId || 'unknown'}`,
             data: {
+              interactionTypeName: payload.interactionTypeName,
               commandName: payload.commandName,
+              customId: payload.customId,
               options: payload.options,
+              values: payload.values,
+              modalData: payload.modalData,
               externalChannelId: payload.externalChannelId,
               externalUserId: payload.externalUserId,
             },

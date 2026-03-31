@@ -39,8 +39,12 @@ export interface DiscordMessageDeletedData {
 
 export interface DiscordInteractionData {
   interactionType: number;
+  interactionTypeName: string;
   commandName?: string;
+  customId?: string;
   options?: Array<{ name: string; value: string }>;
+  values?: string[];
+  modalData?: Record<string, string>;
   externalChannelId: string;
   externalUserId: string;
   externalMessageId?: string;

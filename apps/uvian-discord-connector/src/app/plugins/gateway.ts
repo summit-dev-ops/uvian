@@ -6,8 +6,19 @@ import {
   REST,
   Routes,
   SlashCommandBuilder,
+  Interaction,
+  ChatInputCommandInteraction,
+  MessageComponentInteraction,
+  ModalSubmitInteraction,
+  ContextMenuCommandInteraction,
 } from 'discord.js';
-import { identityService, clients } from '../services/index.js';
+import {
+  identityService,
+  subscriptionService,
+  userService,
+  clients,
+} from '../services/index.js';
+import { generateRSAKeyPair } from '@org/utils-encryption';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -15,7 +26,10 @@ declare module 'fastify' {
   }
 }
 
-const commands = [
+const INTAKE_API_URL = process.env.INTAKE_API_URL || 'http://localhost:8001';
+const INTAKE_API_KEY = process.env.SECRET_INTERNAL_API_KEY || '';
+
+export const commands = [
   new SlashCommandBuilder()
     .setName('link')
     .setDescription('Link your Discord account to Uvian')
@@ -95,6 +109,81 @@ export default fp(async (fastify) => {
     }
   });
 
+  client.on('interactionCreate', async (interaction: Interaction) => {
+    try {
+      const discordUserId =
+        interaction.user?.id || interaction.member?.user?.id;
+      const channelId = interaction.channelId || '';
+      const guildId = interaction.guildId || undefined;
+      const isDm = !interaction.guildId;
+
+      if (!discordUserId) {
+        fastify.log.warn('Interaction received without user ID');
+        return;
+      }
+
+      const identity = await identityService
+        .admin(clients)
+        .getIdentityByProviderUserId('discord', discordUserId);
+
+      const senderId = identity?.user_id || 'external';
+      const source = `/discord/${channelId}`;
+
+      if (interaction.isChatInputCommand()) {
+        await handleChatInputCommand(
+          fastify,
+          interaction as ChatInputCommandInteraction,
+          discordUserId,
+          channelId,
+          guildId,
+          isDm,
+          senderId,
+          source
+        );
+      } else if (interaction.isMessageComponent()) {
+        await handleMessageComponent(
+          fastify,
+          interaction as MessageComponentInteraction,
+          discordUserId,
+          channelId,
+          guildId,
+          isDm,
+          senderId,
+          source
+        );
+      } else if (interaction.isModalSubmit()) {
+        await handleModalSubmit(
+          fastify,
+          interaction as ModalSubmitInteraction,
+          discordUserId,
+          channelId,
+          guildId,
+          isDm,
+          senderId,
+          source
+        );
+      } else if (interaction.isContextMenuCommand()) {
+        await handleContextMenuCommand(
+          fastify,
+          interaction as ContextMenuCommandInteraction,
+          discordUserId,
+          channelId,
+          guildId,
+          isDm,
+          senderId,
+          source
+        );
+      } else {
+        fastify.log.warn(
+          { interactionType: interaction.type },
+          'Unhandled interaction type'
+        );
+      }
+    } catch (error) {
+      fastify.log.error(error, 'Error processing Discord interaction');
+    }
+  });
+
   client.on('ready', () => {
     fastify.log.info(`Discord Gateway connected as ${client.user?.tag}`);
   });
@@ -132,3 +221,339 @@ export default fp(async (fastify) => {
     await client.destroy();
   });
 });
+
+async function handleChatInputCommand(
+  fastify: any,
+  interaction: ChatInputCommandInteraction,
+  discordUserId: string,
+  channelId: string,
+  guildId: string | undefined,
+  isDm: boolean,
+  senderId: string,
+  source: string
+) {
+  const commandName = interaction.commandName;
+  const options = interaction.options.data.map((opt) => ({
+    name: opt.name,
+    value: opt.value?.toString() || '',
+  }));
+
+  if (commandName === 'link') {
+    await handleLinkCommand(fastify, interaction, discordUserId, senderId);
+    return;
+  }
+
+  if (commandName === 'activate') {
+    await handleActivateCommand(
+      fastify,
+      interaction,
+      discordUserId,
+      channelId,
+      senderId,
+      options
+    );
+    return;
+  }
+
+  if (commandName === 'deactivate') {
+    await handleDeactivateCommand(
+      fastify,
+      interaction,
+      discordUserId,
+      channelId,
+      senderId
+    );
+    return;
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  fastify.eventEmitter.emitInteractionReceived(
+    {
+      interactionType: interaction.type,
+      interactionTypeName: 'ChatInputCommand',
+      commandName,
+      options,
+      externalChannelId: channelId,
+      externalUserId: discordUserId,
+      externalMessageId: interaction.id,
+      guildId,
+      isDm,
+    },
+    senderId,
+    source
+  );
+
+  await interaction.editReply({
+    content: 'Interaction received and processing...',
+  });
+}
+
+async function handleMessageComponent(
+  fastify: any,
+  interaction: MessageComponentInteraction,
+  discordUserId: string,
+  channelId: string,
+  guildId: string | undefined,
+  isDm: boolean,
+  senderId: string,
+  source: string
+) {
+  const customId = interaction.customId;
+
+  await interaction.deferUpdate();
+
+  let values: string[] | undefined;
+  if (interaction.isStringSelectMenu()) {
+    values = interaction.values;
+  }
+
+  fastify.eventEmitter.emitInteractionReceived(
+    {
+      interactionType: interaction.type,
+      interactionTypeName: 'MessageComponent',
+      customId,
+      values,
+      externalChannelId: channelId,
+      externalUserId: discordUserId,
+      externalMessageId: interaction.id,
+      guildId,
+      isDm,
+    },
+    senderId,
+    source
+  );
+}
+
+async function handleModalSubmit(
+  fastify: any,
+  interaction: ModalSubmitInteraction,
+  discordUserId: string,
+  channelId: string,
+  guildId: string | undefined,
+  isDm: boolean,
+  senderId: string,
+  source: string
+) {
+  const customId = interaction.customId;
+  const modalData: Record<string, string> = {};
+
+  interaction.fields.fields.forEach((field) => {
+    if (field.type === 4) {
+      modalData[field.customId] = field.value;
+    }
+  });
+
+  await interaction.deferReply({ ephemeral: true });
+
+  fastify.eventEmitter.emitInteractionReceived(
+    {
+      interactionType: interaction.type,
+      interactionTypeName: 'ModalSubmit',
+      customId,
+      modalData,
+      externalChannelId: channelId,
+      externalUserId: discordUserId,
+      externalMessageId: interaction.id,
+      guildId,
+      isDm,
+    },
+    senderId,
+    source
+  );
+
+  await interaction.editReply({
+    content: 'Modal submission received and processing...',
+  });
+}
+
+async function handleContextMenuCommand(
+  fastify: any,
+  interaction: ContextMenuCommandInteraction,
+  discordUserId: string,
+  channelId: string,
+  guildId: string | undefined,
+  isDm: boolean,
+  senderId: string,
+  source: string
+) {
+  const commandName = interaction.commandName;
+
+  await interaction.deferReply({ ephemeral: true });
+
+  fastify.eventEmitter.emitInteractionReceived(
+    {
+      interactionType: interaction.type,
+      interactionTypeName: 'ContextMenuCommand',
+      commandName,
+      externalChannelId: channelId,
+      externalUserId: discordUserId,
+      externalMessageId: interaction.id,
+      guildId,
+      isDm,
+    },
+    senderId,
+    source
+  );
+
+  await interaction.editReply({
+    content: 'Context menu interaction received and processing...',
+  });
+}
+
+async function handleLinkCommand(
+  fastify: any,
+  interaction: ChatInputCommandInteraction,
+  discordUserId: string,
+  senderId: string
+) {
+  if (senderId === 'external') {
+    await interaction.reply({
+      content:
+        'Your Discord account is not linked to a Uvian account. Please sign in to Uvian first, then run /link again.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  try {
+    const { publicKey } = generateRSAKeyPair();
+    const discordUsername = interaction.user?.username || 'unknown';
+
+    const intakeResponse = await fetch(`${INTAKE_API_URL}/api/intakes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': INTAKE_API_KEY,
+      },
+      body: JSON.stringify({
+        title: 'Link Discord Account',
+        description: `Link your Discord account (@${discordUsername}) to your Uvian account. This allows agents to respond to your messages.`,
+        submitLabel: 'Link Account',
+        publicKey,
+        schema: { fields: [] },
+        metadata: {
+          type: 'discord_link',
+          discordUserId,
+          discordUsername,
+        },
+        requiresAuth: true,
+        expiresInSeconds: 300,
+        createdBy: 'discord-bot',
+      }),
+    });
+
+    if (!intakeResponse.ok) {
+      throw new Error(`Intake API returned ${intakeResponse.status}`);
+    }
+
+    const intakeResult = (await intakeResponse.json()) as {
+      url: string;
+    };
+
+    await interaction.reply({
+      content: `Click the link below to connect your Discord account to Uvian. You will need to sign in to your Uvian account.\n\n${intakeResult.url}`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    fastify.log.error(error, 'Error creating link intake');
+    await interaction.reply({
+      content: 'Error creating link. Please try again.',
+      ephemeral: true,
+    });
+  }
+}
+
+async function handleActivateCommand(
+  fastify: any,
+  interaction: ChatInputCommandInteraction,
+  discordUserId: string,
+  channelId: string,
+  senderId: string,
+  options: Array<{ name: string; value: string }>
+) {
+  if (senderId === 'external') {
+    await interaction.reply({
+      content:
+        'Your Discord account is not linked. Run /link first to connect your account.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const agentName = options.find((opt) => opt.name === 'agent')?.value;
+
+  if (!agentName) {
+    await interaction.reply({
+      content: 'Usage: /activate agent:<agent_name>',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  try {
+    const users = await userService.admin(clients).searchUsers({
+      query: agentName,
+      includeAgents: true,
+      limit: 1,
+    });
+    const agent = users[0];
+
+    if (!agent) {
+      await interaction.reply({
+        content: `Agent "${agentName}" not found.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await subscriptionService
+      .scoped(clients)
+      .activateSubscription(agent.id, 'discord.channel', channelId || 'dm');
+
+    await interaction.reply({
+      content: `Activated agent "${agentName}" for this channel.`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    fastify.log.error(error, 'Error activating agent');
+    await interaction.reply({
+      content: 'Error activating agent. Please try again.',
+      ephemeral: true,
+    });
+  }
+}
+
+async function handleDeactivateCommand(
+  fastify: any,
+  interaction: ChatInputCommandInteraction,
+  discordUserId: string,
+  channelId: string,
+  senderId: string
+) {
+  if (senderId === 'external') {
+    await interaction.reply({
+      content: 'Your Discord account is not linked. Please link it first.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  try {
+    await subscriptionService
+      .scoped(clients)
+      .deactivateSubscription(senderId, 'discord.channel', channelId || 'dm');
+
+    await interaction.reply({
+      content:
+        'Deactivated agent for this channel. All subscribed agents will now receive events.',
+      ephemeral: true,
+    });
+  } catch (error) {
+    fastify.log.error(error, 'Error deactivating agent');
+    await interaction.reply({
+      content: 'Error deactivating agent. Please try again.',
+      ephemeral: true,
+    });
+  }
+}
