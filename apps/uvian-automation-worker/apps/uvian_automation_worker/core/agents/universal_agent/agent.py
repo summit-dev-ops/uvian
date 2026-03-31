@@ -53,7 +53,7 @@ def build_agent(
     agent_builder.add_conditional_edges(
         "model_node",
         tools_condition,
-        {"tools": "tool_node", "__end__": "END"},
+        {"tools": "tool_node", "__end__": END},
     )
 
     agent_builder.add_edge("tool_node", "model_node")
