@@ -98,6 +98,10 @@ export default fp(async (fastify) => {
       return;
     }
 
+    if (request.headers['x-api-key']) {
+      return;
+    }
+
     const publicEndpoints: string[] = ['/api/agents/', '/api/webhooks/'];
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       request.url.startsWith(endpoint)

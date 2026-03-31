@@ -110,6 +110,10 @@ export default fp(async (fastify) => {
       return;
     }
 
+    if (request.headers['x-api-key']) {
+      return;
+    }
+
     const publicEndpoints: string[] = [];
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       request.url.startsWith(endpoint)
@@ -118,7 +122,6 @@ export default fp(async (fastify) => {
     if (!isPublicEndpoint) {
       await (fastify as any).authenticate(request, reply);
     } else {
-      // Ensure public endpoints still get an anonymous client
       await (fastify as any).authenticateOptional(request, reply);
     }
   });

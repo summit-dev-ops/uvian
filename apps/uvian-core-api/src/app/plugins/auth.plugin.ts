@@ -101,6 +101,10 @@ export default fp(async (fastify) => {
       return;
     }
 
+    if (request.headers['x-api-key']) {
+      return;
+    }
+
     const publicEndpoints: string[] = [];
     const isPublicEndpoint = publicEndpoints.some((endpoint) =>
       request.url.startsWith(endpoint)
