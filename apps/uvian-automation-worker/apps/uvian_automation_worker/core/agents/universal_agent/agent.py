@@ -7,6 +7,7 @@ from core.agents.utils.nodes.model_node import create_model_node
 from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.summarizer_node import create_summarize_node
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
+from core.agents.utils.nodes.throttle_node import throttle_node
 from core.agents.utils.nodes.tool_node import ToolNode
 from langgraph.prebuilt import tools_condition
 from langchain_core.tools import BaseTool
@@ -37,6 +38,7 @@ def build_agent(
     agent_builder.add_node("model_node", model_node)
     agent_builder.add_node("tool_node", tool_node)
     agent_builder.add_node("summarize_node", summarize_node)
+    agent_builder.add_node("throttle_node", throttle_node)
 
     agent_builder.add_edge(START, "check_context_node")
     agent_builder.add_edge("summarize_node", "model_node")
@@ -56,6 +58,7 @@ def build_agent(
         {"tools": "tool_node", "__end__": END},
     )
 
-    agent_builder.add_edge("tool_node", "model_node")
+    agent_builder.add_edge("tool_node", "throttle_node")
+    agent_builder.add_edge("throttle_node", "model_node")
     
     return agent_builder.compile(checkpointer=checkpointer)
