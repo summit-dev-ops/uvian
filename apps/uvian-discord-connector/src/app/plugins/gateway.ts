@@ -26,7 +26,9 @@ declare module 'fastify' {
   }
 }
 
-const INTAKE_API_URL = process.env.INTAKE_API_URL || 'http://localhost:8001';
+const INTAKE_API_URL = (
+  process.env.INTAKE_API_URL || 'http://localhost:8001'
+).replace(/\/+$/, '');
 const INTAKE_API_KEY = process.env.SECRET_INTERNAL_API_KEY || '';
 
 export const commands = [
@@ -119,6 +121,10 @@ export default fp(async (fastify) => {
 
       if (!discordUserId) {
         fastify.log.warn('Interaction received without user ID');
+        await safeReply(interaction, {
+          content: 'Something went wrong. Please try again.',
+          ephemeral: true,
+        });
         return;
       }
 
@@ -181,6 +187,10 @@ export default fp(async (fastify) => {
       }
     } catch (error) {
       fastify.log.error(error, 'Error processing Discord interaction');
+      await safeReply(interaction, {
+        content: 'Something went wrong. Please try again.',
+        ephemeral: true,
+      });
     }
   });
 
@@ -546,5 +556,22 @@ async function handleDeactivateCommand(
       content: 'Error deactivating agent. Please try again.',
       ephemeral: true,
     });
+  }
+}
+
+async function safeReply(
+  interaction: Interaction,
+  options: { content: string; ephemeral?: boolean }
+) {
+  try {
+    if (interaction.isRepliable()) {
+      if (interaction.deferred) {
+        await interaction.editReply(options.content);
+      } else if (!interaction.replied) {
+        await interaction.reply(options);
+      }
+    }
+  } catch {
+    // Interaction already expired, nothing we can do
   }
 }
