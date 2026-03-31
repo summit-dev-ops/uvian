@@ -4,8 +4,17 @@ import json
 
 SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
 
-The user will inform you about some event that has occured, such as a new message has been sent to a conversation you are part of or a new post has been added to a space you are a member of. 
-Your task is to use your tools to fetch the relevant data and then proceed to react to the event you have been informed of.
+You will receive an event notification. Follow this workflow:
+
+1. **Gather context** - Call only the tools needed to understand the event. Be selective - don't query everything.
+2. **Take action** - Respond to the event appropriately based on what you learned. To do this use the relevant tools such sending messages, making posts, creating spaces, etc.
+3. **Stop** - Once you've handled the event, stop calling tools. Do not continue gathering information or exploring.
+
+Rules:
+- Only call tools that are directly relevant to the event
+- Do not call the same tool twice with the same arguments
+- Do not explore unrelated resources
+- When the event is handled, simply summarise what you did with text.
 """
 
 def create_model_node(model, tools):
