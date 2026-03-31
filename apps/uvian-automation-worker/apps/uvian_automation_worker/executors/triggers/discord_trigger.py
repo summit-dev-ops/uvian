@@ -11,7 +11,8 @@ class DiscordMessageCreatedTrigger(BaseTrigger):
         return "com.uvian.discord.message_created"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        resource_data = event_data.get("data", {})
+        resource = event_data.get("resource", {})
+        resource_data = resource.get("data", {})
         
         content = resource_data.get("content", "")
         external_channel_id = resource_data.get("externalChannelId", "")
@@ -51,7 +52,8 @@ class DiscordInteractionReceivedTrigger(BaseTrigger):
         return "com.uvian.discord.interaction_received"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        resource_data = event_data.get("data", {})
+        resource = event_data.get("resource", {})
+        resource_data = resource.get("data", {})
         
         interaction_type_name = resource_data.get("interactionTypeName", "unknown")
         command_name = resource_data.get("commandName")
