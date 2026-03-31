@@ -12,7 +12,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
 
   webhookHandler.registerHandler(
     DiscordEvents.MESSAGE_CREATED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as DiscordMessageCreatedData;
 
       console.log('Discord message created:', {
@@ -29,7 +29,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
       await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
-          agentId: envelope.subject,
+          agentId: agentId,
           eventId: envelope.id,
           eventType: 'com.uvian.discord.message_created',
           actor: { id: envelope.subject, type: 'user' },
@@ -59,7 +59,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
 
   webhookHandler.registerHandler(
     DiscordEvents.INTERACTION_RECEIVED,
-    async (envelope: WebhookEnvelope) => {
+    async (envelope: WebhookEnvelope, agentId?: string) => {
       const payload = envelope.data as DiscordInteractionData;
 
       console.log('Discord interaction received:', {
@@ -75,7 +75,7 @@ export function registerDiscordHandlers(webhookHandler: any) {
       await jobService.scoped(clients).createEventJob({
         type: 'agent',
         input: {
-          agentId: envelope.subject,
+          agentId: agentId,
           eventId: envelope.id,
           eventType: 'com.uvian.discord.interaction_received',
           actor: { id: envelope.subject, type: 'user' },
