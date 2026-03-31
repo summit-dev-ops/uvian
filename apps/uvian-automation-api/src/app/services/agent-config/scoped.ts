@@ -47,7 +47,7 @@ export function createAgentConfigScopedService(
           account_id: payload.accountId,
           system_prompt: payload.systemPrompt || null,
           max_conversation_history: payload.maxConversationHistory ?? 50,
-          skills: payload.skills || [],
+          skills: payload.skills ||[],
           config: payload.config || {},
           is_active: true,
         })
@@ -109,42 +109,39 @@ export function createAgentConfigScopedService(
       return mapRow(data);
     },
 
+    // ------------------------------------------------------------------------
+    // LLM Links (Using Views & RPCs)
+    // ------------------------------------------------------------------------
+
     async getLlms(agentId: string): Promise<LinkedLlm[]> {
       const { data, error } = await clients.userClient
         .schema('core_automation')
-        .from('agent_llms')
-        .select('*, llms(*), secrets(*)')
+        .from('v_agent_llms_with_secrets')
+        .select('*')
         .eq('agent_id', agentId);
 
       if (error) throw new Error(error.message);
-      return (data || []).map((row: unknown): LinkedLlm => {
+      
+      return (data ||[]).map((row: unknown): LinkedLlm => {
         const r = row as Record<string, unknown>;
-        const llm = r.llms as Record<string, unknown>;
-        const secretRow = r.secrets as Record<string, unknown> | null;
         let apiKey: string | null = null;
 
-        if (secretRow?.encrypted_value) {
+        if (r.secret_encrypted_value) {
           try {
-            apiKey = decrypt(
-              secretRow.encrypted_value as string,
-              ENCRYPTION_SECRET
-            );
+            apiKey = decrypt(r.secret_encrypted_value as string, ENCRYPTION_SECRET);
           } catch (err) {
-            console.warn(
-              `Failed to decrypt LLM secret for llm_id=${llm.id}:`,
-              err
-            );
+            console.warn(`Failed to decrypt LLM secret for llm_id=${r.llm_id}:`, err);
           }
         }
 
         return {
-          id: String(llm.id),
-          name: String(llm.name),
-          type: String(llm.type),
-          model_name: String(llm.model_name),
-          base_url: String(llm.base_url),
+          id: String(r.llm_id),
+          name: String(r.llm_name),
+          type: String(r.llm_type),
+          model_name: String(r.model_name),
+          base_url: String(r.base_url),
           api_key: apiKey,
-          temperature: Number(llm.temperature),
+          temperature: Number(r.temperature),
           is_default: Boolean(r.is_default),
         };
       });
@@ -152,55 +149,38 @@ export function createAgentConfigScopedService(
 
     async linkLlm(agentId: string, payload: LinkLlmPayload): Promise<unknown> {
       const agent = await getAgentByIdInternal(clients.adminClient, agentId);
-      let secretId: string | null = null;
-
+      
+      let encryptedSecret: string | null = null;
       if (payload.secretValue) {
-        const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-        const { data, error } = await clients.adminClient
-          .schema('public')
-          .from('secrets')
-          .insert({
-            account_id: agent.account_id,
-            name: payload.secretName || 'LLM API Key',
-            value_type: 'text',
-            encrypted_value: encrypted,
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (error) throw new Error(error.message);
-        secretId = data.id;
+        encryptedSecret = encrypt(payload.secretValue, ENCRYPTION_SECRET);
       }
 
-      if (payload.isDefault) {
-        await clients.adminClient
-          .schema('core_automation')
-          .from('agent_llms')
-          .update({ is_default: false })
-          .eq('agent_id', agentId);
-      }
-
-      const { data, error } = await clients.adminClient
+      const { error } = await clients.adminClient
         .schema('core_automation')
-        .from('agent_llms')
-        .insert({
-          agent_id: agentId,
-          llm_id: payload.llmId,
-          secret_id: secretId,
-          is_default: payload.isDefault ?? false,
-        })
-        .select('*, llms(*), secrets(*)')
-        .single();
+        .rpc('link_agent_llm', {
+          p_agent_id: agentId,
+          p_llm_id: payload.llmId,
+          p_account_id: agent.account_id,
+          p_is_default: payload.isDefault ?? false,
+          p_secret_name: payload.secretName || 'LLM API Key',
+          p_encrypted_secret: encryptedSecret
+        });
 
       if (error) throw new Error(error.message);
+
+      // Fetch the newly created link from the view to return consistent data
+      const { data } = await clients.adminClient
+        .schema('core_automation')
+        .from('v_agent_llms_with_secrets')
+        .select('*')
+        .eq('agent_id', agentId)
+        .eq('llm_id', payload.llmId)
+        .single();
+
       return data;
     },
 
-    async unlinkLlm(
-      agentId: string,
-      llmId: string
-    ): Promise<{ success: boolean }> {
+    async unlinkLlm(agentId: string, llmId: string): Promise<{ success: boolean }> {
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('agent_llms')
@@ -217,115 +197,76 @@ export function createAgentConfigScopedService(
       llmId: string,
       payload: UpdateLlmLinkPayload
     ): Promise<unknown> {
-      const updateData: Record<string, unknown> = {};
-
-      if (payload.isDefault !== undefined) {
-        if (payload.isDefault) {
-          await clients.adminClient
-            .schema('core_automation')
-            .from('agent_llms')
-            .update({ is_default: false })
-            .eq('agent_id', agentId);
-        }
-        updateData.is_default = payload.isDefault;
+      if (payload.isDefault === undefined && !payload.secretValue) {
+        throw new Error('No update payload provided');
       }
 
+      const agent = await getAgentByIdInternal(clients.adminClient, agentId);
+      
+      let encryptedSecret: string | null = null;
       if (payload.secretValue) {
-        const { data: existingLink } = await clients.adminClient
-          .schema('core_automation')
-          .from('agent_llms')
-          .select('secret_id')
-          .eq('agent_id', agentId)
-          .eq('llm_id', llmId)
-          .single();
-
-        if (existingLink?.secret_id) {
-          const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-          const { error } = await clients.adminClient
-            .schema('core_automation')
-            .from('secrets')
-            .update({ encrypted_value: encrypted })
-            .eq('id', existingLink.secret_id);
-
-          if (error) throw new Error('Failed to update secret');
-        } else {
-          const agent = await getAgentByIdInternal(
-            clients.adminClient,
-            agentId
-          );
-          const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-          const { data, error } = await clients.adminClient
-            .schema('public')
-            .from('secrets')
-            .insert({
-              account_id: agent.account_id,
-              name: 'LLM API Key',
-              value_type: 'text',
-              encrypted_value: encrypted,
-              is_active: true,
-            })
-            .select()
-            .single();
-
-          if (error) throw new Error(error.message);
-          updateData.secret_id = data.id;
-        }
+        encryptedSecret = encrypt(payload.secretValue, ENCRYPTION_SECRET);
       }
 
-      const { data, error } = await clients.adminClient
+      const { error } = await clients.adminClient
         .schema('core_automation')
-        .from('agent_llms')
-        .update(updateData)
-        .eq('agent_id', agentId)
-        .eq('llm_id', llmId)
-        .select('*, llms(*), secrets(*)')
-        .single();
+        .rpc('update_agent_llm_link', {
+          p_agent_id: agentId,
+          p_llm_id: llmId,
+          p_account_id: agent.account_id,
+          p_is_default: payload.isDefault ?? null,
+          p_encrypted_secret: encryptedSecret
+        });
 
       if (error) throw new Error(error.message);
+
+      const { data } = await clients.adminClient
+        .schema('core_automation')
+        .from('v_agent_llms_with_secrets')
+        .select('*')
+        .eq('agent_id', agentId)
+        .eq('llm_id', llmId)
+        .single();
+
       return data;
     },
+
+    // ------------------------------------------------------------------------
+    // MCP Links (Using Views & RPCs)
+    // ------------------------------------------------------------------------
 
     async getMcps(agentId: string): Promise<LinkedMcp[]> {
       const { data, error } = await clients.userClient
         .schema('core_automation')
-        .from('agent_mcps')
-        .select('*, mcps(*), secrets(*)')
+        .from('v_agent_mcps_with_secrets')
+        .select('*')
         .eq('agent_id', agentId);
 
       if (error) throw new Error(error.message);
-      return (data || []).map((row: unknown): LinkedMcp => {
+
+      return (data ||[]).map((row: unknown): LinkedMcp => {
         const r = row as Record<string, unknown>;
-        const mcp = r.mcps as Record<string, unknown>;
-        const secretRow = r.secrets as Record<string, unknown> | null;
-        const authMethod = String(mcp?.auth_method || 'bearer');
+        const authMethod = String(r.auth_method || 'bearer');
         let authSecret: string | null = null;
 
-        if (secretRow?.encrypted_value) {
+        if (r.secret_encrypted_value) {
           try {
-            const raw = decrypt(
-              secretRow.encrypted_value as string,
-              ENCRYPTION_SECRET
-            );
+            const raw = decrypt(r.secret_encrypted_value as string, ENCRYPTION_SECRET);
             try {
               const authConfig = JSON.parse(raw);
-              authSecret = String(
-                (authConfig as Record<string, unknown>)[authMethod] ?? null
-              );
+              authSecret = String((authConfig as Record<string, unknown>)[authMethod] ?? null);
             } catch {
               authSecret = raw;
             }
           } catch (err) {
-            console.warn(
-              `Failed to decrypt MCP secret for mcp_id=${mcp?.id}:`,
-              err
-            );
+            console.warn(`Failed to decrypt MCP secret for mcp_id=${r.mcp_id}:`, err);
           }
         }
 
         return {
-          id: String(mcp.id),
-          name: String(mcp.name),
-          url: String(mcp.url),
+          id: String(r.mcp_id),
+          name: String(r.mcp_name),
+          url: String(r.mcp_url),
           auth_method: authMethod,
           _auth_secret: authSecret,
         };
@@ -334,46 +275,36 @@ export function createAgentConfigScopedService(
 
     async linkMcp(agentId: string, payload: LinkMcpPayload): Promise<unknown> {
       const agent = await getAgentByIdInternal(clients.adminClient, agentId);
-      let secretId: string | null = null;
-
+      
+      let encryptedSecret: string | null = null;
       if (payload.secretValue) {
-        const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-        const { data, error } = await clients.adminClient
-          .schema('public')
-          .from('secrets')
-          .insert({
-            account_id: agent.account_id,
-            name: payload.secretName || 'MCP Auth Config',
-            value_type: 'text',
-            encrypted_value: encrypted,
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (error) throw new Error(error.message);
-        secretId = data.id;
+        encryptedSecret = encrypt(payload.secretValue, ENCRYPTION_SECRET);
       }
 
-      const { data, error } = await clients.adminClient
+      const { error } = await clients.adminClient
         .schema('core_automation')
-        .from('agent_mcps')
-        .insert({
-          agent_id: agentId,
-          mcp_id: payload.mcpId,
-          secret_id: secretId,
-        })
-        .select('*, mcps(*), secrets(*)')
-        .single();
+        .rpc('link_agent_mcp', {
+          p_agent_id: agentId,
+          p_mcp_id: payload.mcpId,
+          p_account_id: agent.account_id,
+          p_secret_name: payload.secretName || 'MCP Auth Config',
+          p_encrypted_secret: encryptedSecret
+        });
 
       if (error) throw new Error(error.message);
+
+      const { data } = await clients.adminClient
+        .schema('core_automation')
+        .from('v_agent_mcps_with_secrets')
+        .select('*')
+        .eq('agent_id', agentId)
+        .eq('mcp_id', payload.mcpId)
+        .single();
+
       return data;
     },
 
-    async unlinkMcp(
-      agentId: string,
-      mcpId: string
-    ): Promise<{ success: boolean }> {
+    async unlinkMcp(agentId: string, mcpId: string): Promise<{ success: boolean }> {
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('agent_mcps')
@@ -390,6 +321,10 @@ export function createAgentConfigScopedService(
       mcpId: string,
       payload: UpdateMcpLinkPayload
     ): Promise<unknown> {
+      if (payload.isDefault === undefined && !payload.secretValue) {
+        throw new Error('No update payload provided');
+      }
+
       const agent = await getAgentByIdInternal(clients.adminClient, agentId);
       const { data: mcp } = await clients.adminClient
         .schema('core_automation')
@@ -402,73 +337,37 @@ export function createAgentConfigScopedService(
         throw new Error('MCP not found or does not belong to this account');
       }
 
-      const updateData: Record<string, unknown> = {};
-
-      if (payload.isDefault !== undefined) {
-        if (payload.isDefault) {
-          await clients.adminClient
-            .schema('core_automation')
-            .from('agent_mcps')
-            .update({ is_default: false })
-            .eq('agent_id', agentId);
-        }
-        updateData.is_default = payload.isDefault;
-      }
-
+      let encryptedSecret: string | null = null;
       if (payload.secretValue) {
-        const { data: existingLink } = await clients.adminClient
-          .schema('core_automation')
-          .from('agent_mcps')
-          .select('secret_id')
-          .eq('agent_id', agentId)
-          .eq('mcp_id', mcpId)
-          .single();
-
-        if (existingLink?.secret_id) {
-          const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-          const { error } = await clients.adminClient
-            .schema('core_automation')
-            .from('secrets')
-            .update({ encrypted_value: encrypted })
-            .eq('id', existingLink.secret_id);
-
-          if (error) throw new Error('Failed to update secret');
-        } else {
-          const encrypted = encrypt(payload.secretValue, ENCRYPTION_SECRET);
-          const { data, error } = await clients.adminClient
-            .schema('public')
-            .from('secrets')
-            .insert({
-              account_id: agent.account_id,
-              name: 'MCP Auth Config',
-              value_type: 'text',
-              encrypted_value: encrypted,
-              is_active: true,
-            })
-            .select()
-            .single();
-
-          if (error) throw new Error(error.message);
-          updateData.secret_id = data.id;
-        }
+        encryptedSecret = encrypt(payload.secretValue, ENCRYPTION_SECRET);
       }
 
-      if (Object.keys(updateData).length === 0) {
-        throw new Error('No update payload provided');
-      }
-
-      const { data, error } = await clients.adminClient
+      const { error } = await clients.adminClient
         .schema('core_automation')
-        .from('agent_mcps')
-        .update(updateData)
-        .eq('agent_id', agentId)
-        .eq('mcp_id', mcpId)
-        .select('*, mcps(*), secrets(*)')
-        .single();
+        .rpc('update_agent_mcp_link', {
+          p_agent_id: agentId,
+          p_mcp_id: mcpId,
+          p_account_id: agent.account_id,
+          p_is_default: payload.isDefault ?? null,
+          p_encrypted_secret: encryptedSecret
+        });
 
       if (error) throw new Error(error.message);
+
+      const { data } = await clients.adminClient
+        .schema('core_automation')
+        .from('v_agent_mcps_with_secrets')
+        .select('*')
+        .eq('agent_id', agentId)
+        .eq('mcp_id', mcpId)
+        .single();
+
       return data;
     },
+
+    // ------------------------------------------------------------------------
+    // Consolidated Secrets Retrieval
+    // ------------------------------------------------------------------------
 
     async getAgentSecrets(ownerUserId: string): Promise<AgentSecrets> {
       const secret = process.env.SECRET_INTERNAL_API_KEY;
@@ -482,83 +381,70 @@ export function createAgentConfigScopedService(
         .eq('is_active', true)
         .single();
 
-      if (error) {
-        console.log(error);
-      }
-
+      if (error) console.log(error);
       if (!agent) throw new Error('Agent not found');
 
-      const { data: llmRows } = await clients.adminClient
-        .schema('core_automation')
-        .from('agent_llms')
-        .select('*, llms(*), secrets(*)')
-        .eq('agent_id', agent.id);
+      // Fetch from the combined views
+      const [llmsRes, mcpsRes] = await Promise.all([
+        clients.adminClient
+          .schema('core_automation')
+          .from('v_agent_llms_with_secrets')
+          .select('*')
+          .eq('agent_id', agent.id),
+        clients.adminClient
+          .schema('core_automation')
+          .from('v_agent_mcps_with_secrets')
+          .select('*')
+          .eq('agent_id', agent.id)
+      ]);
 
-      const llms = (llmRows || []).map((row: unknown): LinkedLlm => {
+      const llms = (llmsRes.data ||[]).map((row: unknown): LinkedLlm => {
         const r = row as Record<string, unknown>;
-        const llm = r.llms as Record<string, unknown>;
-        const secretRow = r.secrets as Record<string, unknown> | null;
         let apiKey: string | null = null;
 
-        if (secretRow?.encrypted_value) {
+        if (r.secret_encrypted_value) {
           try {
-            apiKey = decrypt(secretRow.encrypted_value as string, secret);
+            apiKey = decrypt(r.secret_encrypted_value as string, secret);
           } catch (err) {
-            console.warn(
-              `Failed to decrypt LLM secret for llm_id=${llm.id}:`,
-              err
-            );
+            console.warn(`Failed to decrypt LLM secret for llm_id=${r.llm_id}:`, err);
           }
         }
 
         return {
-          id: String(llm.id),
-          name: String(llm.name),
-          type: String(llm.type),
-          model_name: String(llm.model_name),
-          base_url: String(llm.base_url),
+          id: String(r.llm_id),
+          name: String(r.llm_name),
+          type: String(r.llm_type),
+          model_name: String(r.model_name),
+          base_url: String(r.base_url),
           api_key: apiKey,
-          temperature: Number(llm.temperature),
+          temperature: Number(r.temperature),
           is_default: Boolean(r.is_default),
         };
       });
 
-      const { data: mcpRows } = await clients.adminClient
-        .schema('core_automation')
-        .from('agent_mcps')
-        .select('*, mcps(*), secrets(*)')
-        .eq('agent_id', agent.id);
-
-      const mcps = (mcpRows || []).map((row: unknown): LinkedMcp => {
+      const mcps = (mcpsRes.data ||[]).map((row: unknown): LinkedMcp => {
         const r = row as Record<string, unknown>;
-        const mcp = r.mcps as Record<string, unknown>;
-        const secretRow = r.secrets as Record<string, unknown> | null;
-        const authMethod = String(mcp?.auth_method || 'bearer');
+        const authMethod = String(r.auth_method || 'bearer');
         let authSecret: string | null = null;
 
-        if (secretRow?.encrypted_value) {
+        if (r.secret_encrypted_value) {
           try {
-            const raw = decrypt(secretRow.encrypted_value as string, secret);
+            const raw = decrypt(r.secret_encrypted_value as string, secret);
             try {
               const authConfig = JSON.parse(raw);
-              authSecret = String(
-                (authConfig as Record<string, unknown>)[authMethod] ?? ''
-              );
+              authSecret = String((authConfig as Record<string, unknown>)[authMethod] ?? '');
             } catch {
               authSecret = raw;
             }
           } catch (err) {
-            console.warn(
-              `Failed to decrypt MCP secret for mcp_id=${mcp?.id}:`,
-              err
-            );
+            console.warn(`Failed to decrypt MCP secret for mcp_id=${r.mcp_id}:`, err);
           }
         }
 
         return {
-          id: String(mcp.id),
-          name: String(mcp.name),
-          url: String(mcp.url),
+          id: String(r.mcp_id),
+          name: String(r.mcp_name),
+          url: String(r.mcp_url),
           auth_method: authMethod,
           _auth_secret: authSecret,
         };

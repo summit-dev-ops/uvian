@@ -8,7 +8,6 @@ import {
   GuildMember,
   Message,
   ThreadChannel,
-  TextBasedChannel,
 } from 'discord.js';
 import type { CacheService } from './cache.js';
 
@@ -83,12 +82,12 @@ function formatMessage(message: Message): DiscordMessage {
     edited_timestamp: message.editedAt?.toISOString() ?? null,
     attachments: message.attachments.map((a) => ({
       id: a.id,
-      filename: a.filename,
+      filename: a.name,
       url: a.url,
     })),
     embeds: message.embeds.map((e) => e.toJSON()),
-    message_reference: message.messageReference?.messageId
-      ? { message_id: message.messageReference.messageId }
+    message_reference: message.reference?.messageId
+      ? { message_id: message.reference.messageId }
       : null,
   };
 }
@@ -98,9 +97,9 @@ function formatChannel(channel: Channel): DiscordChannel | null {
   return {
     id: channel.id,
     type: channel.type,
-    name: channel.name ?? 'Unknown',
+    name: 'name' in channel ? (channel as any).name : 'Unknown',
     topic: 'topic' in channel ? (channel as any).topic : null,
-    parent_id: channel.parentId,
+    parent_id: 'parentId' in channel ? (channel as any).parentId : null,
   };
 }
 
@@ -129,9 +128,9 @@ function formatThreadInfo(channel: ThreadChannel): DiscordThreadInfo {
   return {
     id: channel.id,
     name: channel.name,
-    member_count: channel.memberCount,
-    message_count: channel.messageCount,
-    archived: channel.archived,
+    member_count: channel.memberCount ?? 0,
+    message_count: channel.messageCount ?? 0,
+    archived: channel.archived ?? false,
   };
 }
 
@@ -155,7 +154,7 @@ export default fp(async (fastify) => {
   }
 
   const cache: CacheService = (fastify as any).cache;
-  const discordClient = new Client({ intents: [] });
+  const discordClient = new Client({ intents:[] });
   await discordClient.login(botToken);
 
   const server = new McpServer({
@@ -184,7 +183,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -200,11 +199,11 @@ export default fp(async (fastify) => {
         const dmChannel = await user.createDM();
         await dmChannel.send(args.content);
         return {
-          content: [{ type: 'text', text: 'Message sent successfully' }],
+          content:[{ type: 'text', text: 'Message sent successfully' }],
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -232,7 +231,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -241,19 +240,19 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isTextBased()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not text-based' },
             ],
             isError: true,
           };
         }
-        await channel.send(args.content);
+        await (channel as any).send(args.content);
         return {
-          content: [{ type: 'text', text: 'Message sent successfully' }],
+          content:[{ type: 'text', text: 'Message sent successfully' }],
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -278,7 +277,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -292,7 +291,7 @@ export default fp(async (fastify) => {
           };
         }
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: JSON.stringify({
@@ -307,7 +306,7 @@ export default fp(async (fastify) => {
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -338,7 +337,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -347,7 +346,7 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isTextBased()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not text-based' },
             ],
             isError: true,
@@ -357,10 +356,10 @@ export default fp(async (fastify) => {
         const formatted = Array.from(messages.values())
           .reverse()
           .map(formatMessage);
-        return { content: [{ type: 'text', text: JSON.stringify(formatted) }] };
+        return { content:[{ type: 'text', text: JSON.stringify(formatted) }] };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -401,7 +400,7 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isTextBased()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not text-based' },
             ],
             isError: true,
@@ -414,10 +413,10 @@ export default fp(async (fastify) => {
         const formatted = Array.from(messages.values())
           .reverse()
           .map(formatMessage);
-        return { content: [{ type: 'text', text: JSON.stringify(formatted) }] };
+        return { content:[{ type: 'text', text: JSON.stringify(formatted) }] };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -449,7 +448,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -458,7 +457,7 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isTextBased()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not text-based' },
             ],
             isError: true,
@@ -474,7 +473,7 @@ export default fp(async (fastify) => {
         return { content: [{ type: 'text', text: JSON.stringify(formatted) }] };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -500,7 +499,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -509,7 +508,7 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isTextBased()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not text-based' },
             ],
             isError: true,
@@ -518,18 +517,18 @@ export default fp(async (fastify) => {
         const message = await channel.messages.fetch(args.message_id);
         if (!message) {
           return {
-            content: [{ type: 'text', text: 'Message not found' }],
+            content:[{ type: 'text', text: 'Message not found' }],
             isError: true,
           };
         }
         return {
-          content: [
+          content:[
             { type: 'text', text: JSON.stringify(formatMessage(message)) },
           ],
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -561,7 +560,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -570,14 +569,14 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isTextBased()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not text-based' },
             ],
             isError: true,
           };
         }
         const messages = await channel.messages.fetch({ limit: 100 });
-        const matching = messages
+        const matching = Array.from(messages.values())
           .filter((m) =>
             m.content.toLowerCase().includes(args.query.toLowerCase())
           )
@@ -586,7 +585,7 @@ export default fp(async (fastify) => {
         return { content: [{ type: 'text', text: JSON.stringify(matching) }] };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -617,7 +616,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -626,7 +625,7 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isThread()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not a thread' },
             ],
             isError: true,
@@ -639,7 +638,7 @@ export default fp(async (fastify) => {
         return { content: [{ type: 'text', text: JSON.stringify(formatted) }] };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -664,7 +663,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -680,7 +679,7 @@ export default fp(async (fastify) => {
           };
         }
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: JSON.stringify(formatThreadInfo(channel as ThreadChannel)),
@@ -689,7 +688,7 @@ export default fp(async (fastify) => {
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -714,7 +713,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -728,11 +727,11 @@ export default fp(async (fastify) => {
           };
         }
         return {
-          content: [{ type: 'text', text: JSON.stringify(formatGuild(guild)) }],
+          content:[{ type: 'text', text: JSON.stringify(formatGuild(guild)) }],
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -757,7 +756,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -766,19 +765,19 @@ export default fp(async (fastify) => {
         const guild = await discordClient.guilds.fetch(args.guild_id);
         if (!guild) {
           return {
-            content: [{ type: 'text', text: 'Guild not found' }],
+            content:[{ type: 'text', text: 'Guild not found' }],
             isError: true,
           };
         }
         const channels = await guild.channels.fetch();
         const formatted = Array.from(channels.values())
-          .filter((c): c is Channel => c !== null)
-          .map(formatChannel)
+          .filter((c): c is NonNullable<typeof c> => c !== null)
+          .map((c) => formatChannel(c as any))
           .filter((c): c is DiscordChannel => c !== null);
         return { content: [{ type: 'text', text: JSON.stringify(formatted) }] };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -804,7 +803,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -820,18 +819,18 @@ export default fp(async (fastify) => {
         const member = await guild.members.fetch(args.user_id);
         if (!member) {
           return {
-            content: [{ type: 'text', text: 'Member not found' }],
+            content:[{ type: 'text', text: 'Member not found' }],
             isError: true,
           };
         }
         return {
-          content: [
+          content:[
             { type: 'text', text: JSON.stringify(formatMember(member)) },
           ],
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -856,7 +855,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -870,13 +869,13 @@ export default fp(async (fastify) => {
           };
         }
         return {
-          content: [
+          content:[
             { type: 'text', text: JSON.stringify(formatChannel(channel)) },
           ],
         };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${
@@ -902,7 +901,7 @@ export default fp(async (fastify) => {
       try {
         if (!(await checkRateLimit())) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Rate limited. Please try again later.' },
             ],
             isError: true,
@@ -911,7 +910,7 @@ export default fp(async (fastify) => {
         const channel = await discordClient.channels.fetch(args.channel_id);
         if (!channel || !channel.isTextBased()) {
           return {
-            content: [
+            content:[
               { type: 'text', text: 'Channel not found or not text-based' },
             ],
             isError: true,
@@ -920,7 +919,7 @@ export default fp(async (fastify) => {
         const message = await channel.messages.fetch(args.message_id);
         if (!message) {
           return {
-            content: [{ type: 'text', text: 'Message not found' }],
+            content:[{ type: 'text', text: 'Message not found' }],
             isError: true,
           };
         }
@@ -932,7 +931,7 @@ export default fp(async (fastify) => {
         return { content: [{ type: 'text', text: JSON.stringify(reactions) }] };
       } catch (error) {
         return {
-          content: [
+          content:[
             {
               type: 'text',
               text: `Error: ${

@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { Client, GatewayIntentBits, Message, Channel } from 'discord.js';
+import { Client, GatewayIntentBits, Message } from 'discord.js';
 import { identityService, clients } from '../services/index.js';
 import { eventEmitter } from './event-emitter.js';
 
@@ -20,7 +20,7 @@ export default fp(async (fastify) => {
   }
 
   const client = new Client({
-    intents: [
+    intents:[
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
@@ -43,7 +43,7 @@ export default fp(async (fastify) => {
         guildId = message.guildId;
       }
 
-      const isDm = message.channel.isDMBased ? true : false;
+      const isDm = message.channel.isDMBased() ? true : false;
 
       const identity = await identityService
         .admin(clients)
