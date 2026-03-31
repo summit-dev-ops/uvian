@@ -28,7 +28,7 @@ def build_agent(
 
     model_node = create_model_node(llm, tools)
     summarize_node = create_summarize_node(llm, agent_name="DataBot")
-    tool_node = ToolNode(tools)
+    tool_node = ToolNode(tools,handle_tool_errors=True)
 
     def check_context_node(state: MessagesState) -> MessagesState:
         return state
