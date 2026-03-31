@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 
 def create_minimax_model(config: Dict[str, Any]) -> ChatOpenAI:
     return ChatOpenAI(
-        model="mimo-v2-omni-free",
+        model="qwen3.6-plus-free",
         stream_usage=True,
         temperature=0.6,
         base_url="https://opencode.ai/zen/v1/",

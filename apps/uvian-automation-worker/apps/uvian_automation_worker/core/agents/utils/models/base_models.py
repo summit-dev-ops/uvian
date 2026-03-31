@@ -12,10 +12,10 @@ from typing import Dict, Any
 #     )
 
 def create_runpod_model(config: Dict[str, Any]) -> ChatOpenAI:
-    return ChatOpenAI(
-        model="NousResearch/Hermes-4-70B-FP8",
+     return ChatOpenAI(
+        model="qwen3.6-plus-free",
         stream_usage=True,
         temperature=0.6,
         base_url="https://opencode.ai/zen/v1/",
-        api_key="sk-cBaoEPGlWz0F39wZ44jJj2C2lxgyAQhDdQdj7yHqE4ZI3w3LDufUMzKBUgN5ybT8",
+        api_key="sk-jhuUiZevarfMPxfZKoft8aF0xWq8hjm4vdfVrnfIdgpE39TivVOZCcwvSvJxNR9z",
     )
