@@ -405,17 +405,8 @@ async function handleLinkCommand(
   fastify: any,
   interaction: ChatInputCommandInteraction,
   discordUserId: string,
-  senderId: string
+  _senderId: string
 ) {
-  if (senderId === 'external') {
-    await interaction.reply({
-      content:
-        'Your Discord account is not linked to a Uvian account. Please sign in to Uvian first, then run /link again.',
-      ephemeral: true,
-    });
-    return;
-  }
-
   try {
     const { publicKey } = generateRSAKeyPair();
     const discordUsername = interaction.user?.username || 'unknown';
