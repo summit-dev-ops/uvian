@@ -27,7 +27,12 @@ export function createSubscriptionScopedService(
       userId: string,
       payload: CreateSubscriptionPayload
     ): Promise<Subscription> {
+      const subscriptionId = `${payload.resource_type.replace(/\./g, '_')}_${
+        payload.resource_id
+      }`;
+
       const insertData: Record<string, unknown> = {
+        id: subscriptionId,
         user_id: userId,
         resource_type: payload.resource_type,
         resource_id: payload.resource_id,
@@ -108,9 +113,15 @@ export function createSubscriptionScopedService(
         return data;
       }
 
+      const subscriptionId = `${resourceType.replace(
+        /\./g,
+        '_'
+      )}_${resourceId}`;
+
       const { data, error } = await clients.adminClient
         .from('subscriptions')
         .insert({
+          id: subscriptionId,
           user_id: userId,
           resource_type: resourceType,
           resource_id: resourceId,
