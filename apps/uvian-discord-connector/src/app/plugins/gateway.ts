@@ -512,15 +512,17 @@ async function handleActivateCommand(
       return;
     }
 
-    const { data: agentRecord, error: agentError } = await clients.adminClient
-      .schema('core_automation')
-      .from('agents')
+    const { data: membership, error: memberError } = await clients.adminClient
+      .from('account_members')
       .select('account_id')
-      .eq('owner_user_id', agent.id)
+      .eq('user_id', agent.id)
       .single();
 
-    if (agentError || !agentRecord) {
-      fastify.log.error(agentError, 'Failed to find agent record');
+    if (memberError || !membership) {
+      fastify.log.error(
+        memberError,
+        'Failed to find account membership for agent'
+      );
       await interaction.reply({
         content: `Agent "${agentName}" is not configured.`,
         ephemeral: true,
@@ -528,7 +530,7 @@ async function handleActivateCommand(
       return;
     }
 
-    const accountId = agentRecord.account_id;
+    const accountId = membership.account_id;
 
     await subscriptionService
       .scoped(clients)
