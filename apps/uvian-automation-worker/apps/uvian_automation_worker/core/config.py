@@ -13,3 +13,4 @@ QUEUE_NAME = "main-queue"
 # uvian Automation API
 UVIAN_AUTOMATION_API_URL = os.getenv("UVIAN_AUTOMATION_API_URL", "http://localhost:3001")
 UVIAN_INTERNAL_API_KEY = os.getenv("UVIAN_INTERNAL_API_KEY")
+HF_TOKEN = os.getenv("HF_TOKEN")
