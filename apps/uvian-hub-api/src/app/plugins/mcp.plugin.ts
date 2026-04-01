@@ -1127,7 +1127,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     async function validateResourceExists(
       resourceType: ResourceType,
       resourceId: string
-    ): Promise<{ exists: boolean; spaceId?: string }> {
+    ): Promise<{ exists: boolean; spaceId?: string; error?: string }> {
       const tableMap: Record<
         ResourceType,
         {
@@ -1150,6 +1150,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       };
 
       const config = tableMap[resourceType];
+      if (!config) {
+        return {
+          exists: false,
+          error: `Unknown resource type: ${resourceType}`,
+        };
+      }
+
       let query: any = clients.adminClient.from(config.table);
 
       if (config.schema) {
@@ -1157,28 +1164,43 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       }
 
       let queryResult;
-      if (config.needsSpaceId) {
-        queryResult = await query
-          .select('id, space_id')
-          .eq(config.column, resourceId)
-          .single();
-      } else {
-        queryResult = await query
-          .select('id')
-          .eq(config.column, resourceId)
-          .single();
+      try {
+        if (config.needsSpaceId) {
+          queryResult = await query
+            .select('id, space_id')
+            .eq(config.column, resourceId)
+            .single();
+        } else {
+          queryResult = await query
+            .select('id')
+            .eq(config.column, resourceId)
+            .single();
+        }
+      } catch (dbError: any) {
+        console.error('[generate_share_link] Database query error:', dbError);
+        return { exists: false, error: dbError.message };
       }
 
       const { data, error } = queryResult;
 
-      if (!error && data) {
-        if (config.needsSpaceId && data.space_id) {
-          return { exists: true, spaceId: data.space_id };
-        }
-        return { exists: true };
+      if (error) {
+        console.error('[generate_share_link] Query error:', error);
+        return { exists: false, error: error.message };
       }
 
-      return { exists: false };
+      if (!data) {
+        console.log(
+          '[generate_share_link] Resource not found:',
+          resourceType,
+          resourceId
+        );
+        return { exists: false };
+      }
+
+      if (config.needsSpaceId && data.space_id) {
+        return { exists: true, spaceId: data.space_id };
+      }
+      return { exists: true };
     }
 
     server.registerTool(
@@ -1201,18 +1223,25 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const { resourceType, resourceId, view = 'default' } = args;
 
+          console.log('[generate_share_link] Input:', {
+            resourceType,
+            resourceId,
+            view,
+          });
+
           const validation = await validateResourceExists(
             resourceType,
             resourceId
           );
+
+          console.log('[generate_share_link] Validation result:', validation);
+
           if (!validation.exists) {
+            const errorMsg = validation.error
+              ? `Error: ${validation.error}`
+              : `Error: Resource not found - ${resourceType} with ID ${resourceId} does not exist`;
             return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Error: Resource not found - ${resourceType} with ID ${resourceId} does not exist`,
-                },
-              ],
+              content: [{ type: 'text', text: errorMsg }],
               isError: true,
             };
           }

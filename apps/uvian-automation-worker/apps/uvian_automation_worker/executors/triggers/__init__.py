@@ -27,6 +27,7 @@ from executors.triggers.discord_trigger import (
     DiscordMessageCreatedTrigger,
     DiscordInteractionReceivedTrigger,
 )
+from executors.triggers.schedule_trigger import ScheduleTriggeredTrigger
 
 __all__ = [
     "BaseTrigger",

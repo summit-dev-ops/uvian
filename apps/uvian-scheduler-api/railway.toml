@@ -1,0 +1,17 @@
+[deploy]
+startCommand = "npx nx run @org/uvian-scheduler-api:serve:production"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+
+[deploy.watchPatterns]
+paths = [
+  "apps/uvian-scheduler-api/**",
+  "packages/services/queue/**"
+]
+
+[environments.production]
+restartPolicyType = "on_failure"
+
+[environments.staging]
+restartPolicyType = "always"

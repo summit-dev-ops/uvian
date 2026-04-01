@@ -8,6 +8,12 @@ export interface CreateQueueServiceConfig {
 export interface QueueService {
   getQueue(name: string): Queue;
   addJob(queueName: string, jobName: string, data: unknown): Promise<Job>;
+  addJobAt(
+    queueName: string,
+    jobName: string,
+    data: unknown,
+    timestamp: number
+  ): Promise<Job>;
 }
 
 export function createQueueService(
@@ -34,6 +40,17 @@ export function createQueueService(
     ): Promise<Job> {
       const queue = this.getQueue(queueName);
       return await queue.add(jobName, data);
+    },
+
+    async addJobAt(
+      queueName: string,
+      jobName: string,
+      data: unknown,
+      timestamp: number
+    ): Promise<Job> {
+      const queue = this.getQueue(queueName);
+      const delay = Math.max(0, timestamp - Date.now());
+      return await queue.add(jobName, data, { delay });
     },
   };
 }

@@ -1,0 +1,61 @@
+{
+  "name": "@org/uvian-scheduler-api",
+  "version": "0.0.1",
+  "private": true,
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "platform": "node",
+        "outputPath": "apps/uvian-scheduler-api/dist",
+        "format": ["cjs"],
+        "bundle": false,
+        "main": "apps/uvian-scheduler-api/src/main.ts",
+        "tsConfig": "apps/uvian-scheduler-api/tsconfig.app.json",
+        "esbuildOptions": {
+          "sourcemap": true,
+          "outExtension": {
+            ".js": ".js"
+          }
+        }
+      },
+      "configurations": {
+        "development": {},
+        "production": {
+          "esbuildOptions": {
+            "sourcemap": false,
+            "outExtension": {
+              ".js": ".js"
+            }
+          }
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "@org/uvian-scheduler-api:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "@org/uvian-scheduler-api:build:development"
+        },
+        "production": {
+          "buildTarget": "@org/uvian-scheduler-api:build:production"
+        }
+      }
+    },
+    "test": {
+      "options": {
+        "passWithNoTests": true
+      }
+    }
+  },
+  "nx": {}
+}
