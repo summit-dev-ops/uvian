@@ -7,9 +7,6 @@ import {
 } from '@org/uvian-events';
 
 const clients = { adminClient: adminSupabase, userClient: adminSupabase };
-const DISCORD_CONNECTOR_URL = (
-  process.env.DISCORD_CONNECTOR_URL || 'http://localhost:4000'
-).replace(/\/+$/, '');
 const INTERNAL_API_KEY = process.env.SECRET_INTERNAL_API_KEY || '';
 
 export function registerMcpProvisioningHandlers(webhookHandler: any) {
@@ -36,7 +33,8 @@ export function registerMcpProvisioningHandlers(webhookHandler: any) {
           );
         }
 
-        const apiKey = await createApiKeyForAgent(payload.agentId);
+        const baseUrl = payload.mcpUrl.replace(/\/v1\/mcp$/, '');
+        const apiKey = await createApiKeyForAgent(payload.agentId, baseUrl);
         await linkMcpToAgent(payload.agentId, mcpId, apiKey);
 
         console.log('MCP provisioning completed:', {
@@ -85,8 +83,11 @@ async function createDiscordMcp(
   return mcp.id;
 }
 
-async function createApiKeyForAgent(agentId: string): Promise<string> {
-  const response = await fetch(`${DISCORD_CONNECTOR_URL}/api/auth/api-key`, {
+async function createApiKeyForAgent(
+  agentId: string,
+  baseUrl: string
+): Promise<string> {
+  const response = await fetch(`${baseUrl}/api/auth/api-key`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
