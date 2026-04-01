@@ -578,13 +578,38 @@ async function handleDeactivateCommand(
   }
 
   try {
+    const channelIdentifier = channelId || 'dm';
+
+    const { data: subscription, error: fetchError } = await clients.adminClient
+      .from('subscriptions')
+      .select('user_id')
+      .eq('resource_type', 'discord.channel')
+      .eq('resource_id', channelIdentifier)
+      .eq('is_active', true)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      throw new Error(`Failed to find subscription: ${fetchError.message}`);
+    }
+
+    if (!subscription) {
+      await interaction.reply({
+        content: 'No agent is currently activated for this channel.',
+        ephemeral: true,
+      });
+      return;
+    }
+
     await subscriptionService
       .scoped(clients)
-      .deactivateSubscription(senderId, 'discord.channel', channelId || 'dm');
+      .deactivateSubscription(
+        subscription.user_id,
+        'discord.channel',
+        channelIdentifier
+      );
 
     await interaction.reply({
-      content:
-        'Deactivated agent for this channel. All subscribed agents will now receive events.',
+      content: 'Deactivated agent for this channel.',
       ephemeral: true,
     });
   } catch (error) {

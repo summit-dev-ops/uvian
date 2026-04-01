@@ -1100,6 +1100,205 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       }
     );
 
+    // ==========================================
+    // SHARE LINK TOOL
+    // ==========================================
+
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'https://app.uvian.com';
+
+    type ResourceType =
+      | 'space'
+      | 'note'
+      | 'post'
+      | 'conversation'
+      | 'account'
+      | 'user';
+    type ViewType = 'default' | 'edit' | 'members';
+
+    const ROUTE_MAP: Record<ResourceType, Partial<Record<ViewType, string>>> = {
+      space: { default: '/spaces', edit: '/spaces', members: '/spaces' },
+      note: { default: '/spaces' },
+      post: { default: '/spaces' },
+      conversation: { default: '/chats', members: '/chats' },
+      account: { default: '/accounts' },
+      user: { default: '/users' },
+    };
+
+    async function validateResourceExists(
+      resourceType: ResourceType,
+      resourceId: string
+    ): Promise<{ exists: boolean; spaceId?: string }> {
+      const tableMap: Record<
+        ResourceType,
+        {
+          table: string;
+          schema?: string;
+          column: string;
+          needsSpaceId?: boolean;
+        }
+      > = {
+        space: { table: 'spaces', column: 'id' },
+        note: { table: 'notes', column: 'id', needsSpaceId: true },
+        post: { table: 'posts', column: 'id', needsSpaceId: true },
+        conversation: {
+          table: 'conversations',
+          schema: 'core_hub',
+          column: 'id',
+        },
+        account: { table: 'accounts', schema: 'core_hub', column: 'id' },
+        user: { table: 'users', schema: 'auth', column: 'id' },
+      };
+
+      const config = tableMap[resourceType];
+      let query: any = clients.adminClient.from(config.table);
+
+      if (config.schema) {
+        query = query.schema(config.schema);
+      }
+
+      let queryResult;
+      if (config.needsSpaceId) {
+        queryResult = await query
+          .select('id, space_id')
+          .eq(config.column, resourceId)
+          .single();
+      } else {
+        queryResult = await query
+          .select('id')
+          .eq(config.column, resourceId)
+          .single();
+      }
+
+      const { data, error } = queryResult;
+
+      if (!error && data) {
+        if (config.needsSpaceId && data.space_id) {
+          return { exists: true, spaceId: data.space_id };
+        }
+        return { exists: true };
+      }
+
+      return { exists: false };
+    }
+
+    server.registerTool(
+      'generate_share_link',
+      {
+        inputSchema: z.object({
+          resourceType: z.enum([
+            'space',
+            'note',
+            'post',
+            'conversation',
+            'account',
+            'user',
+          ]),
+          resourceId: z.string(),
+          view: z.enum(['default', 'edit', 'members']).optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const { resourceType, resourceId, view = 'default' } = args;
+
+          const validation = await validateResourceExists(
+            resourceType,
+            resourceId
+          );
+          if (!validation.exists) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Error: Resource not found - ${resourceType} with ID ${resourceId} does not exist`,
+                },
+              ],
+              isError: true,
+            };
+          }
+
+          const routeConfig = ROUTE_MAP[resourceType];
+          if (!routeConfig) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Error: Unknown resource type: ${resourceType}`,
+                },
+              ],
+              isError: true,
+            };
+          }
+
+          const route = routeConfig[view];
+          if (!route) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Error: View '${view}' is not supported for resource type '${resourceType}'`,
+                },
+              ],
+              isError: true,
+            };
+          }
+
+          let fullPath: string;
+
+          if (resourceType === 'note' || resourceType === 'post') {
+            const resolvedSpaceId =
+              validation.spaceId ||
+              resourceId.split('_').slice(0, -1).join('_');
+            const resourceUuid = resourceId.split('_').pop();
+            if (resourceType === 'note') {
+              fullPath = `/spaces/${resolvedSpaceId}/notes/${resourceUuid}`;
+            } else {
+              fullPath = `/spaces/${resolvedSpaceId}/posts/${resourceUuid}`;
+            }
+          } else if (resourceType === 'space') {
+            fullPath =
+              view === 'default'
+                ? `/spaces/${resourceId}`
+                : view === 'edit'
+                ? `/spaces/${resourceId}/edit`
+                : `/spaces/${resourceId}/members`;
+          } else if (resourceType === 'conversation') {
+            fullPath =
+              view === 'members'
+                ? `/chats/${resourceId}/members`
+                : `/chats/${resourceId}`;
+          } else if (resourceType === 'account') {
+            fullPath = `/accounts/${resourceId}`;
+          } else if (resourceType === 'user') {
+            fullPath = `/users/${resourceId}`;
+          } else {
+            fullPath = `/${resourceType}s/${resourceId}`;
+          }
+
+          const fullUrl = `${FRONTEND_URL}${fullPath}`;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  url: fullUrl,
+                  resourceType,
+                  resourceId,
+                  view,
+                }),
+              },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
     console.log('[MCP] Server created with tools');
     return server;
   }
