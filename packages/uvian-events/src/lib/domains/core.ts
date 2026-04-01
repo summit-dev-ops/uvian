@@ -11,6 +11,7 @@ export const CoreEvents = {
   IDENTITY_CREATED: `${prefix}.core.identity.created`,
   IDENTITY_UPDATED: `${prefix}.core.identity.updated`,
   IDENTITY_DELETED: `${prefix}.core.identity.deleted`,
+  MCP_PROVISIONING_REQUESTED: `${prefix}.core.mcp-provisioning.requested`,
 } as const;
 
 export type CoreEventType = (typeof CoreEvents)[keyof typeof CoreEvents];
@@ -59,6 +60,14 @@ export interface IdentityDeletedData {
   userId: string;
 }
 
+export interface McpProvisioningRequestedData {
+  agentId: string;
+  accountId: string;
+  mcpType: string;
+  mcpUrl: string;
+  mcpName: string;
+}
+
 export type CoreEventData =
   | AutomationProviderCreatedData
   | AutomationProviderUpdatedData
@@ -67,4 +76,5 @@ export type CoreEventData =
   | SubscriptionDeletedData
   | IdentityCreatedData
   | IdentityUpdatedData
-  | IdentityDeletedData;
+  | IdentityDeletedData
+  | McpProvisioningRequestedData;

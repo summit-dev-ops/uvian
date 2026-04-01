@@ -19,6 +19,7 @@ import {
   clients,
 } from '../services/index.js';
 import { generateRSAKeyPair } from '@org/utils-encryption';
+import { CoreEvents } from '@org/uvian-events';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -30,6 +31,9 @@ const INTAKE_API_URL = (
   process.env.INTAKE_API_URL || 'http://localhost:8001'
 ).replace(/\/+$/, '');
 const INTAKE_API_KEY = process.env.SECRET_INTERNAL_API_KEY || '';
+const DISCORD_CONNECTOR_URL = (
+  process.env.DISCORD_CONNECTOR_URL || 'http://localhost:4000'
+).replace(/\/+$/, '');
 
 export const commands = [
   new SlashCommandBuilder()
@@ -508,9 +512,40 @@ async function handleActivateCommand(
       return;
     }
 
+    const { data: agentRecord, error: agentError } = await clients.adminClient
+      .schema('core_automation')
+      .from('agents')
+      .select('account_id')
+      .eq('owner_user_id', agent.id)
+      .single();
+
+    if (agentError || !agentRecord) {
+      fastify.log.error(agentError, 'Failed to find agent record');
+      await interaction.reply({
+        content: `Agent "${agentName}" is not configured.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const accountId = agentRecord.account_id;
+
     await subscriptionService
       .scoped(clients)
       .activateSubscription(agent.id, 'discord.channel', channelId || 'dm');
+
+    fastify.eventEmitter.emit(
+      CoreEvents.MCP_PROVISIONING_REQUESTED,
+      `/agents/${agent.id}/mcp-provisioning`,
+      {
+        agentId: agent.id,
+        accountId,
+        mcpType: 'discord',
+        mcpUrl: `${DISCORD_CONNECTOR_URL}/v1/mcp`,
+        mcpName: 'Discord',
+      },
+      senderId
+    );
 
     await interaction.reply({
       content: `Activated agent "${agentName}" for this channel.`,

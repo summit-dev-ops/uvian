@@ -65,6 +65,8 @@ const SUBSCRIPTION_EVENTS = [
   CoreEvents.SUBSCRIPTION_DELETED,
 ];
 
+const MCP_PROVISIONING_EVENT = CoreEvents.MCP_PROVISIONING_REQUESTED;
+
 export class EventRouter {
   async processEvent(event: CloudEvent): Promise<void> {
     console.log('[EventRouter] Processing event:', event.type, event.source);
@@ -112,6 +114,11 @@ export class EventRouter {
     if (this.isIntakeEvent(event.type)) {
       console.log('[EventRouter] Intake event detected:', event.type);
       await this.processIntakeEvent(event);
+      return;
+    }
+
+    if (event.type === MCP_PROVISIONING_EVENT) {
+      await this.processMcpProvisioningEvent(event);
       return;
     }
 
@@ -209,6 +216,71 @@ export class EventRouter {
       );
     } catch (error) {
       console.error('[EventRouter] Error invalidating provider cache:', error);
+    }
+  }
+
+  private async processMcpProvisioningEvent(event: CloudEvent): Promise<void> {
+    const data = event.data as { agentId?: string; accountId?: string };
+
+    if (!data.agentId || !data.accountId) {
+      console.log(
+        '[EventRouter] MCP provisioning event missing agentId or accountId'
+      );
+      return;
+    }
+
+    console.log(
+      '[EventRouter] Processing MCP provisioning event for agent:',
+      data.agentId
+    );
+
+    try {
+      const { data: providers, error } = await supabaseAdmin
+        .from('automaton_providers')
+        .select('*')
+        .eq('account_id', data.accountId)
+        .eq('type', 'internal')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (error) {
+        console.error(
+          '[EventRouter] Error fetching internal provider for MCP provisioning:',
+          error
+        );
+        return;
+      }
+
+      const internalProvider = providers?.[0];
+      if (!internalProvider) {
+        console.log(
+          '[EventRouter] No internal provider found for account:',
+          data.accountId
+        );
+        return;
+      }
+
+      const provider: SubscriptionProvider = {
+        subscription_id: 'mcp-provisioning',
+        subscription_is_active: true,
+        user_id: data.agentId,
+        resource_type: 'uvian.agent',
+        resource_id: data.agentId,
+        provider_id: internalProvider.id,
+        provider_name: internalProvider.name,
+        type: internalProvider.type,
+        url: internalProvider.url,
+        auth_method: internalProvider.auth_method,
+        auth_config: internalProvider.auth_config,
+        dependent_user_id: data.agentId,
+      };
+
+      await this.routeToProvider(provider, event);
+    } catch (error) {
+      console.error(
+        '[EventRouter] Error processing MCP provisioning event:',
+        error
+      );
     }
   }
 

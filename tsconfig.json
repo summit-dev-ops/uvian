@@ -59,6 +59,12 @@
     },
     {
       "path": "./packages/utils/cache"
+    },
+    {
+      "path": "./packages/plugins/event-emitter"
+    },
+    {
+      "path": "./apps/uvian-discord-connector"
     }
   ]
 }
