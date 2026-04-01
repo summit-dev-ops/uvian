@@ -2,7 +2,7 @@ from typing import List, Any, Optional, Dict
 from core.agents.utils.state import MessagesState
 from langgraph.graph import StateGraph, START, END
 from core.agents.utils.tools.base_tools import tools as base_tools
-from core.agents.utils.models import create_minimax_model
+from core.agents.utils.models import create_openai_model
 from core.agents.utils.nodes.model_node import create_model_node
 from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.summarizer_node import create_summarize_node
@@ -22,7 +22,7 @@ def build_agent(
         tools.extend(mcp_tools)
 
     llm_cfg = llm_config or {}
-    llm = create_minimax_model(llm_cfg)
+    llm = create_openai_model(llm_cfg)
 
     checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
