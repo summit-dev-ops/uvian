@@ -21,6 +21,12 @@
   "references": [
     {
       "path": "../../packages/services/queue/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/accounts/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/api-key/tsconfig.lib.json"
     }
   ]
 }

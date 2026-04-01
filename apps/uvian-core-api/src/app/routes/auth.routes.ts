@@ -74,10 +74,10 @@ export async function authRoutes(fastify: FastifyInstance) {
       try {
         const result = await apiKeyService
           .scoped(clients)
-          .createApiKey(targetUserId, { service: 'uvian-scheduler' });
+          .createApiKey(targetUserId, { service: 'core-api' });
         return reply.code(201).send(result);
       } catch (error) {
-        console.error('Failed to create API key:', error);
+        fastify.log.error({ error }, 'Failed to create API key');
         return reply.code(500).send({ error: 'Failed to create API key' });
       }
     }
@@ -141,10 +141,10 @@ export async function authRoutes(fastify: FastifyInstance) {
       try {
         await apiKeyService
           .scoped(clients)
-          .revokeApiKey(targetUserId, 'uvian-scheduler', apiKeyPrefix);
+          .revokeApiKey(targetUserId, 'core-api', apiKeyPrefix);
         return reply.send({ success: true });
       } catch (error) {
-        console.error('Failed to revoke API key:', error);
+        fastify.log.error({ error }, 'Failed to revoke API key');
         return reply.code(500).send({ error: 'Failed to revoke API key' });
       }
     }

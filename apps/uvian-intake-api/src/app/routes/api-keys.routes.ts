@@ -13,8 +13,22 @@ interface RevokeApiKeyBody {
 
 export default async function apiKeysRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: CreateApiKeyBody }>(
-    '/auth/api-key',
+    '/api/auth/api-key',
     {
+      preHandler: async (request, reply) => {
+        const internalKey = request.headers['x-api-key'];
+        const isInternalAuth =
+          internalKey === process.env.SECRET_INTERNAL_API_KEY;
+
+        if (isInternalAuth) return;
+
+        if (!request.user) {
+          return reply.code(401).send({
+            error: 'Unauthorized',
+            message: 'Authentication required',
+          });
+        }
+      },
       schema: {
         body: {
           type: 'object',
@@ -26,21 +40,31 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { userId: targetUserId } = request.body as CreateApiKeyBody;
+      const internalKey = request.headers['x-api-key'];
+      const isInternalAuth =
+        internalKey === process.env.SECRET_INTERNAL_API_KEY;
+
+      let targetUserId: string;
       const clients = {
         adminClient: adminSupabase,
         userClient: request.supabase,
       };
 
-      const hasAccess = await accountService
-        .admin(clients)
-        .checkAccountMembership(request.user!.id, targetUserId);
+      if (isInternalAuth) {
+        targetUserId = request.body.userId;
+      } else {
+        targetUserId = request.body.userId;
 
-      if (!hasAccess) {
-        return reply.code(403).send({
-          error: 'Forbidden',
-          message: 'Target user must be in the same account',
-        });
+        const hasAccess = await accountService
+          .admin(clients)
+          .checkAccountMembership(request.user!.id, targetUserId);
+
+        if (!hasAccess) {
+          return reply.code(403).send({
+            error: 'Forbidden',
+            message: 'Target user must be in the same account',
+          });
+        }
       }
 
       try {
@@ -56,8 +80,22 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
   );
 
   fastify.delete<{ Body: RevokeApiKeyBody }>(
-    '/auth/api-key',
+    '/api/auth/api-key',
     {
+      preHandler: async (request, reply) => {
+        const internalKey = request.headers['x-api-key'];
+        const isInternalAuth =
+          internalKey === process.env.SECRET_INTERNAL_API_KEY;
+
+        if (isInternalAuth) return;
+
+        if (!request.user) {
+          return reply.code(401).send({
+            error: 'Unauthorized',
+            message: 'Authentication required',
+          });
+        }
+      },
       schema: {
         body: {
           type: 'object',
@@ -70,22 +108,34 @@ export default async function apiKeysRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { userId: targetUserId, apiKeyPrefix } =
-        request.body as RevokeApiKeyBody;
+      const internalKey = request.headers['x-api-key'];
+      const isInternalAuth =
+        internalKey === process.env.SECRET_INTERNAL_API_KEY;
+
+      let targetUserId: string;
+      let apiKeyPrefix: string | undefined;
       const clients = {
         adminClient: adminSupabase,
         userClient: request.supabase,
       };
 
-      const hasAccess = await accountService
-        .admin(clients)
-        .checkAccountMembership(request.user!.id, targetUserId);
+      if (isInternalAuth) {
+        targetUserId = request.body.userId;
+        apiKeyPrefix = request.body.apiKeyPrefix;
+      } else {
+        targetUserId = request.user!.id;
+        apiKeyPrefix = request.body.apiKeyPrefix;
 
-      if (!hasAccess) {
-        return reply.code(403).send({
-          error: 'Forbidden',
-          message: 'Target user must be in the same account',
-        });
+        const hasAccess = await accountService
+          .admin(clients)
+          .checkAccountMembership(targetUserId, request.body.userId);
+
+        if (!hasAccess) {
+          return reply.code(403).send({
+            error: 'Forbidden',
+            message: 'Target user must be in the same account',
+          });
+        }
       }
 
       try {
