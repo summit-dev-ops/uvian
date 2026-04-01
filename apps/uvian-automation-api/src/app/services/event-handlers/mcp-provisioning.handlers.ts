@@ -35,7 +35,22 @@ export function registerMcpProvisioningHandlers(webhookHandler: any) {
 
         const baseUrl = payload.mcpUrl.replace(/\/v1\/mcp$/, '');
         const apiKey = await createApiKeyForAgent(payload.agentId, baseUrl);
-        await linkMcpToAgent(payload.agentId, mcpId, apiKey);
+
+        const { data: agentRecord, error: agentRecordError } =
+          await adminSupabase
+            .schema('core_automation')
+            .from('agents')
+            .select('id')
+            .eq('user_id', payload.agentId)
+            .single();
+
+        if (agentRecordError || !agentRecord) {
+          throw new Error(
+            `Agent record not found for user ${payload.agentId}: ${agentRecordError?.message}`
+          );
+        }
+
+        await linkMcpToAgent(agentRecord.id, mcpId, apiKey);
 
         console.log('MCP provisioning completed:', {
           agentId: payload.agentId,
