@@ -1,5 +1,5 @@
 [deploy]
-startCommand = "npx nx start uvian-intake-api --configuration=production"
+startCommand = "npx nx run @org/uvian-intake-api:serve"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

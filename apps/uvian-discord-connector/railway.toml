@@ -1,5 +1,5 @@
 [deploy]
-startCommand = "npx nx start uvian-discord-connector --configuration=production"
+startCommand = "npx nx run @org/uvian-discord-connector:serve"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"

@@ -1,5 +1,5 @@
 [deploy]
-startCommand = "npx nx start uvian-intake-web --configuration=production"
+startCommand = "npx nx run @org/uvian-intake-web:start"
 healthcheckPath = "/"
 healthcheckTimeout = 60
 restartPolicyType = "on_failure"

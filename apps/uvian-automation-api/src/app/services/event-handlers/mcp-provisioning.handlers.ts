@@ -33,9 +33,6 @@ export function registerMcpProvisioningHandlers(webhookHandler: any) {
           );
         }
 
-        const baseUrl = payload.mcpUrl.replace(/\/v1\/mcp$/, '');
-        const apiKey = await createApiKeyForAgent(payload.agentId, baseUrl);
-
         const { data: agentRecord, error: agentRecordError } =
           await adminSupabase
             .schema('core_automation')
@@ -49,6 +46,18 @@ export function registerMcpProvisioningHandlers(webhookHandler: any) {
             `Agent record not found for user ${payload.agentId}: ${agentRecordError?.message}`
           );
         }
+
+        const linkExists = await findExistingLink(agentRecord.id, mcpId);
+        if (linkExists) {
+          console.log('MCP link already exists, skipping:', {
+            agentId: payload.agentId,
+            mcpId,
+          });
+          return;
+        }
+
+        const baseUrl = payload.mcpUrl.replace(/\/v1\/mcp$/, '');
+        const apiKey = await createApiKeyForAgent(payload.agentId, baseUrl);
 
         await linkMcpToAgent(agentRecord.id, mcpId, apiKey);
 
@@ -79,6 +88,21 @@ async function findExistingMcp(
     .single();
 
   return data?.id || null;
+}
+
+async function findExistingLink(
+  agentId: string,
+  mcpId: string
+): Promise<boolean> {
+  const { data } = await adminSupabase
+    .schema('core_automation')
+    .from('agent_mcps')
+    .select('agent_id')
+    .eq('agent_id', agentId)
+    .eq('mcp_id', mcpId)
+    .single();
+
+  return !!data;
 }
 
 async function createDiscordMcp(
