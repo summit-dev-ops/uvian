@@ -1,4 +1,4 @@
-import fp from 'fastify-plugin';
+import { FastifyPluginAsync } from 'fastify';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
@@ -169,23 +169,28 @@ async function authenticateWithApiKey(apiKey: string): Promise<string | null> {
   return apiKeyRecord.user_id;
 }
 
-export default fp(async (fastify) => {
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  const applicationId = process.env.DISCORD_APPLICATION_ID;
+function extractToken(authHeader: string | undefined): string | null {
+  if (!authHeader) return null;
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') return null;
+  return parts[1];
+}
 
-  if (!botToken || !applicationId) {
-    fastify.log.warn('Discord env vars not set - MCP server will not start');
-    return;
-  }
-
-  const cache: CacheService = (fastify as any).cache;
-  const discordClient = new Client({ intents: [] });
-  await discordClient.login(botToken);
-
-  const server = new McpServer({
-    name: 'uvian-discord-connector',
-    version: '1.0.0',
-  });
+async function createDiscordServer(
+  discordClient: Client,
+  cache: CacheService | undefined
+): Promise<McpServer> {
+  const server = new McpServer(
+    {
+      name: 'uvian-discord-connector',
+      version: '1.0.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
 
   async function checkRateLimit(): Promise<boolean> {
     if (!cache) return true;
@@ -970,48 +975,98 @@ export default fp(async (fastify) => {
     }
   );
 
-  fastify.decorate('mcpServer', server);
+  return server;
+}
 
+export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const applicationId = process.env.DISCORD_APPLICATION_ID;
+
+  if (!botToken || !applicationId) {
+    fastify.log.warn('Discord env vars not set - MCP server will not start');
+    return;
+  }
+
+  const cache: CacheService = (fastify as any).cache;
+  const discordClient = new Client({ intents: [] });
+  await discordClient.login(botToken);
+
+  // ==========================================
+  // POST /v1/mcp - Receives JSON-RPC Messages (Stateless)
+  // ==========================================
   fastify.post('/v1/mcp', async (request, reply) => {
+    console.log('[MCP] ========== POST /v1/mcp START ==========');
+
     try {
       const authHeader = request.headers.authorization;
-      const token = authHeader?.startsWith('Bearer ')
-        ? authHeader.slice(7)
-        : null;
+      const token = extractToken(authHeader);
 
       if (!token) {
+        console.log('[MCP] No token, returning 401');
         return reply
           .code(401)
           .send({ error: 'Unauthorized', message: 'Missing token' });
       }
 
       if (token.startsWith('sk_agent_')) {
+        console.log('[MCP] Authenticating with raw API key...');
         const result = await authenticateWithApiKey(token);
         if (!result) {
+          console.log('[MCP] API key authentication failed');
           return reply
             .code(401)
             .send({ error: 'Unauthorized', message: 'Invalid API key' });
         }
+        console.log('[MCP] API key auth OK, user:', result);
       } else {
+        console.log('[MCP] Validating pre-issued JWT...');
         const jwtSecret = process.env.SUPABASE_JWT_SECRET;
         if (!jwtSecret) {
-          return reply.code(500).send({ error: 'Internal server error' });
+          console.log('[MCP] JWT_SECRET not configured');
+          return reply.code(500).send({
+            error: 'Internal server error',
+            message: 'JWT_SECRET not configured',
+          });
         }
-        const decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
-        if (!decoded.sub || decoded.role !== 'authenticated') {
+
+        let decoded: jwt.JwtPayload;
+        try {
+          decoded = jwt.verify(token, jwtSecret) as jwt.JwtPayload;
+        } catch (err) {
+          console.log('[MCP] JWT verification failed:', err);
           return reply
             .code(401)
             .send({ error: 'Unauthorized', message: 'Invalid token' });
         }
+
+        if (!decoded.sub || decoded.role !== 'authenticated') {
+          console.log('[MCP] Invalid JWT claims');
+          return reply
+            .code(401)
+            .send({ error: 'Unauthorized', message: 'Invalid token claims' });
+        }
+
+        console.log('[MCP] JWT auth OK, user:', decoded.sub);
       }
 
+      const server = await createDiscordServer(discordClient, cache);
       const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
+        sessionIdGenerator: undefined, // stateless mode
       });
 
+      console.log('[MCP] Connecting server to transport...');
       await server.connect(transport);
+
+      console.log('[MCP] Handling request...');
       await transport.handleRequest(request.raw, reply.raw, request.body);
+
+      console.log(
+        '[MCP] handleRequest returned, status:',
+        reply.raw.statusCode
+      );
+      console.log('[MCP] ========== POST /v1/mcp END ==========');
     } catch (error) {
+      console.log('[MCP] POST Error:', error);
       fastify.log.error(error, 'MCP POST error');
       try {
         if (!reply.raw.writableEnded) {
@@ -1023,15 +1078,25 @@ export default fp(async (fastify) => {
     }
   });
 
+  // GET /v1/mcp - Not supported in stateless mode
   fastify.get('/v1/mcp', async (_, reply) => {
+    console.log('[MCP] ========== GET /v1/mcp START ==========');
+    console.log('[MCP] GET not supported in stateless mode');
     reply
       .code(405)
       .header('Allow', 'POST')
       .send('Method Not Allowed - Use POST for stateless MCP');
+    console.log('[MCP] ========== GET /v1/mcp END ==========');
   });
+
+  fastify.decorate('mcpServer', null);
 
   fastify.addHook('onClose', async () => {
     fastify.log.info('Disconnecting Discord client for MCP');
     await discordClient.destroy();
   });
-});
+
+  fastify.log.info('MCP plugin registered');
+};
+
+export default mcpPlugin;
