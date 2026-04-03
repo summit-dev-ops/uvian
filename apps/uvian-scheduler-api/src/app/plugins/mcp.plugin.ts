@@ -129,7 +129,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           end: z.string().optional(),
           cronExpression: z.string().optional(),
           eventData: z.record(z.string(), z.unknown()).optional(),
-          subscriberIds: z.array(z.string().uuid()).optional(),
         }),
       },
       async (args): Promise<ToolResult> => {
@@ -140,6 +139,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             end: args.end,
             cronExpression: args.cronExpression,
             eventData: args.eventData,
+            subscriberIds: [userId],
           });
 
           return {

@@ -9,7 +9,7 @@ interface CreateScheduleBody {
   end?: string;
   cronExpression?: string;
   eventData?: Record<string, unknown>;
-  subscriberIds?: string[];
+  subscriberIds: string[];
 }
 
 interface UpdateScheduleBody {
@@ -46,8 +46,10 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             subscriberIds: {
               type: 'array',
               items: { type: 'string', format: 'uuid' },
+              minItems: 1,
             },
           },
+          required: ['subscriberIds'],
         },
       },
     },
@@ -73,9 +75,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           .scoped(clients)
           .createSchedule(userId, request.body);
 
-        if (request.body.subscriberIds?.length) {
-          await createSubscriptions(schedule.id, request.body.subscriberIds);
-        }
+        await createSubscriptions(schedule.id, request.body.subscriberIds);
 
         fastify.schedulerEmitter.emitEvent(
           ScheduleEvents.SCHEDULE_CREATED,
@@ -84,7 +84,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             scheduleId: schedule.id,
             type: schedule.type,
             cronExpression: schedule.cronExpression || undefined,
-            subscriberIds: request.body.subscriberIds || [],
+            subscriberIds: request.body.subscriberIds,
             createdBy: userId,
           },
           userId
