@@ -27,7 +27,8 @@ type ResourceType =
   | 'uvian.job'
   | 'uvian.ticket'
   | 'uvian.agent'
-  | 'discord.channel';
+  | 'discord.channel'
+  | 'uvian.schedule';
 
 const RESOURCE_TYPE_MAP: Record<string, ResourceType> = {
   conversations: 'uvian.conversation',
@@ -37,6 +38,7 @@ const RESOURCE_TYPE_MAP: Record<string, ResourceType> = {
   tickets: 'uvian.ticket',
   agents: 'uvian.agent',
   discord: 'discord.channel',
+  schedules: 'uvian.schedule',
 };
 
 const MEMBER_EVENT_TYPES = [

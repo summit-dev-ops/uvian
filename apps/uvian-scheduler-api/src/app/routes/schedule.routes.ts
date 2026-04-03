@@ -1,13 +1,22 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase, createUserClient } from '../clients/supabase.client';
-import { scheduleService } from '../services/factory';
+import { scheduleService, subscriptionService } from '../services/factory';
+import { ScheduleEvents } from '@org/uvian-events';
 
 interface CreateScheduleBody {
-  agentId: string;
-  description: string;
-  scheduledFor: string;
-  scheduleType?: 'one_time' | 'recurring';
+  type?: 'one_time' | 'recurring';
+  start?: string;
+  end?: string;
   cronExpression?: string;
+  eventData?: Record<string, unknown>;
+  subscriberIds?: string[];
+}
+
+interface UpdateScheduleBody {
+  start?: string;
+  end?: string;
+  cronExpression?: string;
+  eventData?: Record<string, unknown>;
 }
 
 interface ListSchedulesQuery {
@@ -28,15 +37,17 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['agentId', 'description', 'scheduledFor'],
           properties: {
-            agentId: { type: 'string', format: 'uuid' },
-            description: { type: 'string' },
-            scheduledFor: { type: 'string' },
-            scheduleType: { type: 'string', enum: ['one_time', 'recurring'] },
+            type: { type: 'string', enum: ['one_time', 'recurring'] },
+            start: { type: 'string' },
+            end: { type: 'string' },
             cronExpression: { type: 'string' },
+            eventData: { type: 'object', additionalProperties: true },
+            subscriberIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+            },
           },
-          additionalProperties: false,
         },
       },
     },
@@ -61,12 +72,99 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const schedule = await scheduleService
           .scoped(clients)
           .createSchedule(userId, request.body);
+
+        if (request.body.subscriberIds?.length) {
+          await createSubscriptions(schedule.id, request.body.subscriberIds);
+        }
+
+        fastify.schedulerEmitter.emitEvent(
+          ScheduleEvents.SCHEDULE_CREATED,
+          `/schedules/${schedule.id}`,
+          {
+            scheduleId: schedule.id,
+            type: schedule.type,
+            cronExpression: schedule.cronExpression || undefined,
+            subscriberIds: request.body.subscriberIds || [],
+            createdBy: userId,
+          },
+          userId
+        );
+
         reply.code(201).send(schedule);
       } catch (error: any) {
         console.error('Failed to create schedule:', error);
         reply
           .code(400)
           .send({ error: error.message || 'Failed to create schedule' });
+      }
+    }
+  );
+
+  fastify.put<{ Params: ScheduleParams; Body: UpdateScheduleBody }>(
+    '/api/schedules/:id',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          properties: {
+            start: { type: 'string' },
+            end: { type: 'string' },
+            cronExpression: { type: 'string' },
+            eventData: { type: 'object', additionalProperties: true },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{
+        Params: ScheduleParams;
+        Body: UpdateScheduleBody;
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: createUserClient(
+            request.headers.authorization?.replace('Bearer ', '') || ''
+          ),
+        };
+
+        const schedule = await scheduleService
+          .scoped(clients)
+          .updateSchedule(userId, request.params.id, request.body);
+
+        fastify.schedulerEmitter.emitEvent(
+          ScheduleEvents.SCHEDULE_UPDATED,
+          `/schedules/${schedule.id}`,
+          {
+            scheduleId: schedule.id,
+            updatedBy: userId,
+          },
+          userId
+        );
+
+        reply.send(schedule);
+      } catch (error: any) {
+        console.error('Failed to update schedule:', error);
+        reply
+          .code(400)
+          .send({ error: error.message || 'Failed to update schedule' });
       }
     }
   );
@@ -202,9 +300,20 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           ),
         };
 
-        await scheduleService
+        const schedule = await scheduleService
           .scoped(clients)
           .cancelSchedule(userId, request.params.id);
+
+        fastify.schedulerEmitter.emitEvent(
+          ScheduleEvents.SCHEDULE_CANCELLED,
+          `/schedules/${schedule.id}`,
+          {
+            scheduleId: schedule.id,
+            cancelledBy: userId,
+          },
+          userId
+        );
+
         reply.code(204).send();
       } catch (error: any) {
         if (error.message === 'Schedule not found') {
@@ -219,4 +328,122 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  fastify.post<{ Params: ScheduleParams }>(
+    '/api/schedules/:id/pause',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{ Params: ScheduleParams }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: createUserClient(
+            request.headers.authorization?.replace('Bearer ', '') || ''
+          ),
+        };
+
+        const schedule = await scheduleService
+          .scoped(clients)
+          .pauseSchedule(userId, request.params.id);
+        reply.send(schedule);
+      } catch (error: any) {
+        reply
+          .code(400)
+          .send({ error: error.message || 'Failed to pause schedule' });
+      }
+    }
+  );
+
+  fastify.post<{ Params: ScheduleParams }>(
+    '/api/schedules/:id/resume',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{ Params: ScheduleParams }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: createUserClient(
+            request.headers.authorization?.replace('Bearer ', '') || ''
+          ),
+        };
+
+        const schedule = await scheduleService
+          .scoped(clients)
+          .resumeSchedule(userId, request.params.id);
+        reply.send(schedule);
+      } catch (error: any) {
+        reply
+          .code(400)
+          .send({ error: error.message || 'Failed to resume schedule' });
+      }
+    }
+  );
+}
+
+async function createSubscriptions(
+  scheduleId: string,
+  subscriberIds: string[]
+): Promise<void> {
+  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+  const subService = subscriptionService.admin(clients);
+
+  const existingSubs = await subService.getSubscriptionsByResource(
+    'uvian.schedule',
+    scheduleId
+  );
+
+  const existingUserIds = new Set(existingSubs.map((s) => s.user_id));
+  const newSubscriberIds = subscriberIds.filter(
+    (uid) => !existingUserIds.has(uid)
+  );
+
+  if (newSubscriberIds.length === 0) return;
+
+  const scopedService = subscriptionService.scoped(clients);
+
+  for (const userId of newSubscriberIds) {
+    await scopedService.activateSubscription(
+      userId,
+      'uvian.schedule',
+      scheduleId
+    );
+  }
 }

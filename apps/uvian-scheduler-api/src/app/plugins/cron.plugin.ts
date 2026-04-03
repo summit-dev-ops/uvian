@@ -3,9 +3,11 @@ import cron from 'node-cron';
 import { adminSupabase } from '../clients/supabase.client';
 import { queueService } from '../services/factory';
 import { redisConnection } from '../clients/redis';
+import { createCloudEvent, ScheduleEvents } from '@org/uvian-events';
+import { scheduleService } from '../services/factory';
 
 const LOCK_KEY = 'scheduler:cron:lock';
-const LOCK_TTL = 60;
+const LOCK_TTL = 120;
 
 async function acquireLock(): Promise<boolean> {
   const result = await redisConnection.set(
@@ -27,94 +29,111 @@ async function syncSchedules(): Promise<{
   results: unknown[];
 }> {
   const now = new Date();
-  const windowEnd = new Date(now.getTime() + 10 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + 15 * 60 * 1000);
 
-  const { data: pendingSchedules, error: queryError } = await adminSupabase
-    .schema('core_automation')
-    .from('scheduled_tasks')
+  const { data: dueSchedules, error: queryError } = await adminSupabase
+    .schema('core_scheduler')
+    .from('schedules')
     .select('*')
-    .eq('status', 'pending')
-    .lte('scheduled_for', windowEnd.toISOString())
-    .gte('scheduled_for', now.toISOString());
+    .eq('status', 'active')
+    .lte('next_run_at', windowEnd.toISOString());
 
   if (queryError) {
-    console.error('Failed to query pending schedules:', queryError);
+    console.error('Failed to query due schedules:', queryError);
     return { processed: 0, results: [] };
   }
 
-  if (!pendingSchedules || pendingSchedules.length === 0) {
+  if (!dueSchedules || dueSchedules.length === 0) {
     return { processed: 0, results: [] };
   }
 
   const results = [];
 
-  for (const schedule of pendingSchedules) {
+  for (const row of dueSchedules) {
     try {
-      const jobId = crypto.randomUUID();
+      const schedule = mapRow(row);
+      const fireTime = new Date(schedule.nextRunAt);
+      const fireTimestamp = fireTime.getTime();
 
-      const { error: jobError } = await adminSupabase
-        .schema('core_automation')
-        .from('jobs')
-        .insert({
-          id: jobId,
-          type: 'agent',
-          status: 'queued',
-          agent_id: schedule.agent_id,
-          input: {
-            inputType: 'event',
-            eventType: 'schedule.triggered',
-            agentId: schedule.agent_id,
-            resource: {
-              type: 'schedule',
-              id: schedule.id,
-              data: {
-                scheduleId: schedule.id,
-                description: schedule.description,
-              },
-            },
-          },
-          input_type: 'scheduled',
-        });
+      const { data: freshCheck, error: freshError } = await adminSupabase
+        .schema('core_scheduler')
+        .from('schedules')
+        .select('status')
+        .eq('id', schedule.id)
+        .single();
 
-      if (jobError) {
-        console.error(
-          'Failed to create job for schedule:',
-          schedule.id,
-          jobError
-        );
+      if (freshError || freshCheck?.status !== 'active') {
         results.push({
           scheduleId: schedule.id,
-          status: 'error',
-          error: jobError.message,
+          status: 'skipped',
+          reason: 'no longer active',
         });
         continue;
       }
 
-      await queueService.addJob('main-queue', 'agent', { jobId });
+      const event = createCloudEvent({
+        type: ScheduleEvents.SCHEDULE_FIRED,
+        source: `/schedules/${schedule.id}`,
+        subject: schedule.userId,
+        data: {
+          scheduleId: schedule.id,
+          type: schedule.type,
+          eventData: schedule.eventData,
+          firedAt: fireTime.toISOString(),
+        },
+      });
 
-      const { error: updateError } = await adminSupabase
-        .schema('core_automation')
-        .from('scheduled_tasks')
-        .update({
-          status: 'queued',
-          job_id: jobId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', schedule.id);
+      await queueService.addJobAt(
+        'uvian-events',
+        'event',
+        event,
+        fireTimestamp
+      );
 
-      if (updateError) {
-        console.error(
-          'Failed to update schedule status:',
-          schedule.id,
-          updateError
+      const clients = {
+        adminClient: adminSupabase,
+        userClient: adminSupabase,
+      };
+      const scopedService = scheduleService.scoped(clients);
+
+      if (schedule.type === 'one_time') {
+        await scopedService.markCompleted(schedule.id);
+      } else {
+        const fullSchedule = await scopedService.getSchedule(
+          schedule.userId,
+          schedule.id
         );
+        const nextRunAt = scopedService.computeNextRunAt(fullSchedule);
+        if (nextRunAt) {
+          await adminSupabase
+            .schema('core_scheduler')
+            .from('schedules')
+            .update({
+              next_run_at: nextRunAt,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', schedule.id);
+        } else {
+          await adminSupabase
+            .schema('core_scheduler')
+            .from('schedules')
+            .update({
+              status: 'completed',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', schedule.id);
+        }
       }
 
-      results.push({ scheduleId: schedule.id, status: 'queued', jobId });
-    } catch (err) {
-      console.error('Failed to process schedule:', schedule.id, err);
       results.push({
         scheduleId: schedule.id,
+        status: 'queued',
+        fireAt: fireTime.toISOString(),
+      });
+    } catch (err) {
+      console.error('Failed to process schedule:', row.id, err);
+      results.push({
+        scheduleId: row.id,
         status: 'error',
         error: String(err),
       });
@@ -124,10 +143,21 @@ async function syncSchedules(): Promise<{
   return { processed: results.length, results };
 }
 
+function mapRow(row: Record<string, unknown>) {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    type: row.type as 'one_time' | 'recurring',
+    nextRunAt: row.next_run_at as string,
+    status: row.status as string,
+    eventData: (row.event_data as Record<string, unknown>) || {},
+  };
+}
+
 export default fp(async (fastify) => {
   let isRunning = false;
 
-  cron.schedule('*/10 * * * *', async () => {
+  cron.schedule('*/15 * * * *', async () => {
     if (isRunning) {
       console.log('[Cron] Previous sync still running, skipping...');
       return;
@@ -157,11 +187,16 @@ export default fp(async (fastify) => {
     }
   });
 
-  console.log('[Cron] Scheduler initialized with 10-minute interval');
+  console.log('[Cron] Scheduler initialized with 15-minute interval');
 
   fastify.decorate('runCronSync', async () => {
     if (isRunning) {
       return { status: 'already_running' };
+    }
+
+    const lockAcquired = await acquireLock();
+    if (!lockAcquired) {
+      return { status: 'lock_not_acquired' };
     }
 
     isRunning = true;
@@ -169,13 +204,14 @@ export default fp(async (fastify) => {
       return await syncSchedules();
     } finally {
       isRunning = false;
+      await releaseLock();
     }
   });
 
   fastify.get('/api/cron/status', async () => {
     return {
       status: 'running',
-      schedule: '*/10 * * * *',
+      schedule: '*/15 * * * *',
       isProcessing: isRunning,
     };
   });

@@ -7,6 +7,7 @@ import { registerSpaceHandlers } from './space.handlers';
 import { registerConversationEventHandlers } from './conversation.handlers';
 import { registerDiscordHandlers } from './discord.handlers';
 import { registerMcpProvisioningHandlers } from './mcp-provisioning.handlers';
+import { registerScheduleHandlers } from './schedule.handlers';
 
 export function registerAllEventHandlers() {
   registerChatHandlers(webhookHandlerService);
@@ -16,6 +17,7 @@ export function registerAllEventHandlers() {
   registerSpaceHandlers(webhookHandlerService);
   registerDiscordHandlers(webhookHandlerService);
   registerMcpProvisioningHandlers(webhookHandlerService);
+  registerScheduleHandlers(webhookHandlerService);
 
   const conversationHandlers = registerConversationEventHandlers();
   for (const { eventType, handler } of conversationHandlers) {
@@ -31,3 +33,4 @@ export * from './space.handlers';
 export * from './conversation.handlers';
 export * from './discord.handlers';
 export * from './mcp-provisioning.handlers';
+export * from './schedule.handlers';

@@ -5,6 +5,7 @@ import { createUserClient, adminSupabase } from '../clients/supabase.client';
 import { z } from 'zod';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
+import { scheduleService } from '../services/factory';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -113,48 +114,36 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       }
     );
 
+    const clients = {
+      adminClient: adminSupabase,
+      userClient: createUserClient(userJwt),
+    };
+    const svc = scheduleService.scoped(clients);
+
     server.registerTool(
       'create_schedule',
       {
         inputSchema: z.object({
-          agentId: z.string().uuid(),
-          description: z.string(),
-          scheduledFor: z.string(),
-          scheduleType: z.enum(['one_time', 'recurring']).optional(),
+          type: z.enum(['one_time', 'recurring']).optional(),
+          start: z.string().optional(),
+          end: z.string().optional(),
           cronExpression: z.string().optional(),
+          eventData: z.record(z.string(), z.unknown()).optional(),
+          subscriberIds: z.array(z.string().uuid()).optional(),
         }),
       },
       async (args): Promise<ToolResult> => {
         try {
-          const scheduleId = crypto.randomUUID();
-          const now = new Date().toISOString();
-
-          const { data: schedule, error } = await adminSupabase
-            .schema('core_automation')
-            .from('scheduled_tasks')
-            .insert({
-              id: scheduleId,
-              user_id: userId,
-              agent_id: args.agentId,
-              description: args.description,
-              schedule_type: args.scheduleType || 'one_time',
-              scheduled_for: args.scheduledFor,
-              cron_expression: args.cronExpression || null,
-              status: 'pending',
-              retry_count: 0,
-              max_retries: 3,
-              created_at: now,
-              updated_at: now,
-            })
-            .select()
-            .single();
-
-          if (error || !schedule) {
-            throw new Error(error?.message || 'Failed to create schedule');
-          }
+          const schedule = await svc.createSchedule(userId, {
+            type: args.type,
+            start: args.start,
+            end: args.end,
+            cronExpression: args.cronExpression,
+            eventData: args.eventData,
+          });
 
           return {
-            content: [{ type: 'text', text: JSON.stringify(mapRow(schedule)) }],
+            content: [{ type: 'text', text: JSON.stringify(schedule) }],
           };
         } catch (error) {
           return {
@@ -170,35 +159,20 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       {
         inputSchema: z.object({
           status: z
-            .enum(['pending', 'queued', 'completed', 'cancelled', 'failed'])
+            .enum(['active', 'paused', 'completed', 'cancelled'])
             .optional(),
           limit: z.number().optional(),
         }),
       },
       async (args): Promise<ToolResult> => {
         try {
-          let query = adminSupabase
-            .schema('core_automation')
-            .from('scheduled_tasks')
-            .select('*')
-            .eq('user_id', userId)
-            .order('scheduled_for', { ascending: true });
-
-          if (args.status) {
-            query = query.eq('status', args.status);
-          }
-          if (args.limit) {
-            query = query.limit(args.limit);
-          }
-
-          const { data, error } = await query;
-
-          if (error) throw new Error(error.message);
-
-          const schedules = (data || []).map((row) => mapRow(row));
+          const result = await svc.listSchedules(userId, {
+            status: args.status,
+            limit: args.limit,
+          });
 
           return {
-            content: [{ type: 'text', text: JSON.stringify(schedules) }],
+            content: [{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
           return {
@@ -218,20 +192,10 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const { data, error } = await adminSupabase
-            .schema('core_automation')
-            .from('scheduled_tasks')
-            .select('*')
-            .eq('id', args.scheduleId)
-            .eq('user_id', userId)
-            .single();
-
-          if (error || !data) {
-            throw new Error('Schedule not found');
-          }
+          const schedule = await svc.getSchedule(userId, args.scheduleId);
 
           return {
-            content: [{ type: 'text', text: JSON.stringify(mapRow(data)) }],
+            content: [{ type: 'text', text: JSON.stringify(schedule) }],
           };
         } catch (error) {
           return {
@@ -251,42 +215,88 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const { data: existing, error: fetchError } = await adminSupabase
-            .schema('core_automation')
-            .from('scheduled_tasks')
-            .select('*')
-            .eq('id', args.scheduleId)
-            .eq('user_id', userId)
-            .single();
-
-          if (fetchError || !existing) {
-            throw new Error('Schedule not found');
-          }
-
-          if (existing.status !== 'pending' && existing.status !== 'queued') {
-            throw new Error(
-              'Cannot cancel schedule that is not pending or queued'
-            );
-          }
-
-          const { data, error } = await adminSupabase
-            .schema('core_automation')
-            .from('scheduled_tasks')
-            .update({
-              status: 'cancelled',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', args.scheduleId)
-            .eq('user_id', userId)
-            .select()
-            .single();
-
-          if (error || !data) {
-            throw new Error('Failed to cancel schedule');
-          }
+          const schedule = await svc.cancelSchedule(userId, args.scheduleId);
 
           return {
-            content: [{ type: 'text', text: JSON.stringify(mapRow(data)) }],
+            content: [{ type: 'text', text: JSON.stringify(schedule) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'pause_schedule',
+      {
+        inputSchema: z.object({
+          scheduleId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const schedule = await svc.pauseSchedule(userId, args.scheduleId);
+
+          return {
+            content: [{ type: 'text', text: JSON.stringify(schedule) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'resume_schedule',
+      {
+        inputSchema: z.object({
+          scheduleId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const schedule = await svc.resumeSchedule(userId, args.scheduleId);
+
+          return {
+            content: [{ type: 'text', text: JSON.stringify(schedule) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'update_schedule',
+      {
+        inputSchema: z.object({
+          scheduleId: z.string(),
+          start: z.string().optional(),
+          end: z.string().optional(),
+          cronExpression: z.string().optional(),
+          eventData: z.record(z.string(), z.unknown()).optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const { scheduleId, ...updateData } = args;
+          const schedule = await svc.updateSchedule(
+            userId,
+            scheduleId,
+            updateData
+          );
+
+          return {
+            content: [{ type: 'text', text: JSON.stringify(schedule) }],
           };
         } catch (error) {
           return {
@@ -412,24 +422,5 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
   console.log('Scheduler MCP plugin registered');
 };
-
-function mapRow(row: Record<string, unknown>) {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    agentId: row.agent_id,
-    description: row.description,
-    scheduleType: row.schedule_type,
-    scheduledFor: row.scheduled_for,
-    cronExpression: row.cron_expression,
-    status: row.status,
-    retryCount: row.retry_count,
-    maxRetries: row.max_retries,
-    jobId: row.job_id,
-    lastError: row.last_error,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
 
 export default mcpPlugin;
