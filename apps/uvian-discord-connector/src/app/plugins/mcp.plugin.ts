@@ -227,9 +227,18 @@ async function createDiscordServer(
           };
         }
         const dmChannel = await user.createDM();
-        await dmChannel.send(args.content);
+        const sentMessage = await dmChannel.send(args.content);
         return {
-          content: [{ type: 'text', text: 'Message sent successfully' }],
+          content: [
+            {
+              type: 'text',
+              text: `Direct message sent successfully to ${user.username}#${
+                user.discriminator
+              } (user ID: ${args.user_id}). Message ID: ${
+                sentMessage.id
+              }. Sent at: ${sentMessage.createdAt.toISOString()}.`,
+            },
+          ],
         };
       } catch (error) {
         return {
@@ -276,9 +285,20 @@ async function createDiscordServer(
             isError: true,
           };
         }
-        await (channel as any).send(args.content);
+        const sentMessage = await (channel as any).send(args.content);
+        const channelName =
+          'name' in channel ? (channel as any).name : args.channel_id;
         return {
-          content: [{ type: 'text', text: 'Message sent successfully' }],
+          content: [
+            {
+              type: 'text',
+              text: `Message sent successfully to #${channelName} (channel ID: ${
+                args.channel_id
+              }). Message ID: ${
+                sentMessage.id
+              }. Sent at: ${sentMessage.createdAt.toISOString()}.`,
+            },
+          ],
         };
       } catch (error) {
         return {
