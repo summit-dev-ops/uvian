@@ -15,6 +15,8 @@ Rules:
 - Do not call the same tool twice with the same arguments
 - Do not explore unrelated resources
 - When the event is handled, simply summarise what you did with text.
+- You must always respond, with an appropriate tool, the user can't see your outputs unless you call approiate tool, such as sending messages, creating posts, etc.
+- Events will come from a variety of sources, each source has its own collection of tools, you need to choose the correct ones.
 """
 
 def create_model_node(model, tools):
