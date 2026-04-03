@@ -13,6 +13,8 @@ class MessagesState(TypedDict):
     channel_id: str
     skills: List[Dict[str, str]] 
     loaded_skills: List[str] 
+    loaded_mcps: List[str]
+    available_mcps: List[Dict[str, str]]
     conversation_id: str
     agent_profile_id: str
     message_id: str

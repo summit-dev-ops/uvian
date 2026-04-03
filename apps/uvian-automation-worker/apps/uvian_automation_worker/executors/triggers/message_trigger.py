@@ -39,6 +39,7 @@ External User: {external_user_id or 'unknown'}"""
                     "platform": platform,
                     "external_channel_id": external_channel_id,
                     "external_user_id": external_user_id,
+                    "timestamp": resource_data.get("createdAt"),
                 }
             )
         
@@ -56,6 +57,7 @@ Content: {content}"""
                 "conversation_id": context.get("conversationId"),
                 "sender_id": actor_id,
                 "asset_ids": resource_data.get("assetIds", []),
+                "timestamp": resource_data.get("createdAt"),
             }
         )
 
@@ -86,5 +88,6 @@ Context: conversation {context.get('conversationId')}"""
             metadata={
                 "conversation_id": context.get("conversationId") or resource_id,
                 "user_id": actor_id,
+                "timestamp": resource_data.get("createdAt"),
             }
         )

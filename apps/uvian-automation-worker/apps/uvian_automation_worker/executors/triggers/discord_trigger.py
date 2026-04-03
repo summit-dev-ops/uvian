@@ -39,6 +39,7 @@ External User: {external_user_id}"""
                 "guild_id": guild_id,
                 "is_dm": is_dm,
                 "platform": "discord",
+                "timestamp": resource_data.get("timestamp") or resource_data.get("createdAt"),
             }
         )
 
@@ -118,5 +119,6 @@ class DiscordInteractionReceivedTrigger(BaseTrigger):
                 "external_channel_id": external_channel_id,
                 "external_user_id": external_user_id,
                 "platform": "discord",
+                "timestamp": resource_data.get("timestamp") or resource_data.get("createdAt"),
             }
         )

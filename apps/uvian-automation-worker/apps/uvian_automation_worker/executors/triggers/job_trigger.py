@@ -34,6 +34,7 @@ JobType: {job_type}"""
                 "actor_id": actor_id,
                 "actor_type": actor_type,
                 "input_payload": resource_data.get("inputPayload"),
+                "timestamp": resource_data.get("createdAt"),
             }
         )
 

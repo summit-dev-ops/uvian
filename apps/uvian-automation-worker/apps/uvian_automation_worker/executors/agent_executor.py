@@ -16,7 +16,8 @@ from typing import List, Any
 from executors.base import BaseExecutor, JobData, JobResult
 from executors.triggers import TriggerRegistry
 from core.agents.universal_agent.agent import build_agent
-from clients.mcp import create_mcp_registry
+from core.agents.utils.mcp_mapping import get_mcps_for_event
+from clients.mcp import create_mcp_registry, build_mcp_registry
 from clients.auth import get_agent_secrets
 from repositories.process_threads import process_thread_repository
 from core.logging import worker_logger
@@ -122,10 +123,22 @@ class AgentExecutor(BaseExecutor):
                     "temperature": llm.get("temperature"),
                 }
 
+        all_mcp_configs = secrets.get("mcps", [])
+        preloaded_mcp_configs = get_mcps_for_event(event_type, all_mcp_configs)
+        
         mcp_tools = []
-        if secrets.get("mcps"):
-            worker_logger.info_job(job_id, "Loading MCP tools from DB...")
-            mcp_tools = await create_mcp_registry(secrets["mcps"])
+        if preloaded_mcp_configs:
+            worker_logger.info_job(job_id, f"Pre-loading MCP tools for event: {[c.get('id') for c in preloaded_mcp_configs]}")
+            mcp_tools = await create_mcp_registry(preloaded_mcp_configs)
+            worker_logger.info_job(job_id, f"Pre-loaded {len(mcp_tools)} MCP tools")
+
+        mcp_registry = None
+        available_mcps = []
+        if all_mcp_configs:
+            worker_logger.info_job(job_id, "Building MCP registry for on-demand loading...")
+            mcp_registry = await build_mcp_registry(all_mcp_configs)
+            available_mcps = mcp_registry.get_condensed_catalog()
+            worker_logger.info_job(job_id, f"Available MCPs for on-demand loading: {[m['id'] for m in available_mcps]}")
 
         channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
         agent_input = None
@@ -138,6 +151,8 @@ class AgentExecutor(BaseExecutor):
                 "custom_instructions": "",
                 "agent_name": "Agent",
                 "loaded_skills": [],
+                "loaded_mcps": [],
+                "available_mcps": available_mcps,
                 "llm_calls": 0,
                 "channel_id": channel,
                 "conversation_id": conversation_id,
@@ -155,11 +170,14 @@ class AgentExecutor(BaseExecutor):
 
 
         config = {"configurable": {"thread_id": thread_id}}
+        if mcp_registry:
+            config["configurable"]["mcp_registry"] = mcp_registry
+
         full_response: List[Any] = []
         try:
             worker_logger.info_job(job_id, f"Starting agent with config: {config}")
             worker_logger.info_job(job_id, f"Agent input: {str(agent_input)[:500]}...")
-            agent = build_agent(mcp_tools, llm_config)
+            agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
             async for chunk,_m in agent.astream(
                 agent_input,
                 config=config, 

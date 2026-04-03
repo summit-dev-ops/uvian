@@ -11,11 +11,13 @@ from core.agents.utils.nodes.throttle_node import throttle_node
 from core.agents.utils.nodes.tool_node import ToolNode
 from langgraph.prebuilt import tools_condition
 from langchain_core.tools import BaseTool
+from clients.mcp import MCPRegistry
 
 
 def build_agent(
     mcp_tools: Optional[List[BaseTool]] = None,
     llm_config: Optional[Dict[str, Any]] = None,
+    mcp_registry: Optional[MCPRegistry] = None,
 ) -> Any:
     tools = base_tools.copy()
     if mcp_tools:
@@ -27,9 +29,9 @@ def build_agent(
     checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
 
-    model_node = create_model_node(llm, tools)
+    model_node = create_model_node(llm, tools, mcp_registry=mcp_registry)
     summarize_node = create_summarize_node(llm, agent_name="DataBot")
-    tool_node = ToolNode(tools,handle_tool_errors=True)
+    tool_node = ToolNode(tools, handle_tool_errors=True, mcp_registry=mcp_registry)
 
     def check_context_node(state: MessagesState) -> MessagesState:
         return state

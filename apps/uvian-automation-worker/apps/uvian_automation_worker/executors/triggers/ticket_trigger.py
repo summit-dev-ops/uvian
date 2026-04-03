@@ -41,6 +41,7 @@ Priority: {priority.upper()}"""
                 "priority": priority,
                 "created_by": actor_id,
                 "space_id": context.get("spaceId"),
+                "timestamp": resource_data.get("createdAt"),
             }
         )
 
@@ -79,5 +80,6 @@ Resource: ticket/{resource_id}"""
                 "status": status,
                 "priority": priority,
                 "updated_by": actor_id,
+                "timestamp": resource_data.get("updatedAt"),
             }
         )

@@ -1,6 +1,6 @@
 from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
-from langchain_core.messages import ToolMessage, AIMessage
+from langchain_core.messages import ToolMessage
 from core.logging import worker_logger
 
 search_skills_schema = {
@@ -24,7 +24,6 @@ def search_skills(
     worker_logger.info(f"[search_skills] Called with query: {kargs.get('query')}")
 
     skills = runtime.state.get("skills")
-    # Skill not found
     available = ", ".join(s["name"] for s in skills)
     return f"Available skills: {available}"
 
@@ -53,7 +52,6 @@ def load_skill(
     skill_name = kargs["skill_name"]
     worker_logger.info(f"[load_skill] Called with skill_name: {skill_name}, loaded: {loaded_skills}")
     
-    # Find and return the requested skill
     for skill in skills:
         if skill["name"] == skill_name and not skill in loaded_skills:
             worker_logger.info(f"[load_skill] Loading skill: {skill_name}")
@@ -63,13 +61,122 @@ def load_skill(
                     "messages": [ToolMessage(f"Loaded skill: {skill_name}\n\n{skill['content']}", tool_call_id=runtime.tool_call_id)]
                 }
             )
-    
         
-    # Skill not found
     available = ", ".join(s["name"] for s in skills)
     worker_logger.info(f"[load_skill] Skill not found: {skill_name}")
     return f"Skill '{skill_name}' not found. Available skills: {available}"
 
 
-# Augment the LLM with tools
-tools = [load_skill]
+list_mcps_schema = {
+    "type": "object",
+    "properties": {},
+    "required": []
+}
+
+@tool(args_schema=list_mcps_schema)
+def list_mcps(
+    runtime: ToolRuntime | None = None, **kargs) -> str:
+    """List all available MCP tool servers you can load. Each MCP provides a set of tools for a specific platform or service.
+
+    Use this to discover what additional tool sets are available beyond your currently loaded tools.
+    """
+    available_mcps = runtime.state.get("available_mcps") or []
+    loaded_mcps = runtime.state.get("loaded_mcps") or []
+    
+    if not available_mcps:
+        return "No additional MCP tool servers are available."
+    
+    lines = []
+    for mcp in available_mcps:
+        mcp_id = mcp["id"]
+        tool_count = mcp.get("tool_count", 0)
+        status = "LOADED" if mcp_id in loaded_mcps else "available"
+        lines.append(f"- **{mcp_id}**: {tool_count} tools [{status}]")
+    
+    result = "Available MCP tool servers:\n" + "\n".join(lines)
+    worker_logger.info(f"[list_mcps] Returning {len(available_mcps)} MCPs")
+    return result
+
+
+load_mcp_schema = {
+    "type": "object",
+    "properties": {
+        "mcp_id": {"type": "string"},
+    },
+    "required": ["mcp_id"]
+}
+
+@tool(args_schema=load_mcp_schema)
+async def load_mcp(
+    runtime: ToolRuntime | None = None, **kargs) -> Command:
+    """Load an MCP tool server to make its tools available.
+
+    After loading, the tools from this MCP will be available for use in subsequent steps.
+    You can see available MCPs with the list_mcps tool.
+
+    Args:
+        mcp_id: The ID of the MCP server to load (e.g., "discord", "uvian-hub")
+    """
+    mcp_id = kargs["mcp_id"]
+    loaded_mcps = runtime.state.get("loaded_mcps") or []
+    available_mcps = runtime.state.get("available_mcps") or []
+    
+    if mcp_id in loaded_mcps:
+        worker_logger.info(f"[load_mcp] MCP already loaded: {mcp_id}")
+        return Command(
+            update={
+                "messages": [ToolMessage(
+                    f"MCP '{mcp_id}' is already loaded. Its tools are available.",
+                    tool_call_id=runtime.tool_call_id,
+                )]
+            }
+        )
+    
+    mcp_info = next((m for m in available_mcps if m["id"] == mcp_id), None)
+    if not mcp_info:
+        available_ids = ", ".join(m["id"] for m in available_mcps)
+        worker_logger.warning(f"[load_mcp] MCP not found: {mcp_id}")
+        return Command(
+            update={
+                "messages": [ToolMessage(
+                    f"MCP '{mcp_id}' not found. Available MCPs: {available_ids}",
+                    tool_call_id=runtime.tool_call_id,
+                )]
+            }
+        )
+    
+    registry = runtime.config["configurable"].get("mcp_registry")
+    if not registry:
+        worker_logger.error(f"[load_mcp] No MCPRegistry in config")
+        return Command(
+            update={
+                "messages": [ToolMessage(
+                    f"Error: MCP registry not available.",
+                    tool_call_id=runtime.tool_call_id,
+                )]
+            }
+        )
+    
+    from clients.mcp import MCPRegistry
+    if isinstance(registry, MCPRegistry):
+        tools = await registry.get_tools_for_mcp(mcp_id)
+        tool_names = [t.name for t in tools]
+        tool_list = ", ".join(tool_names)
+        worker_logger.info(f"[load_mcp] Loaded MCP '{mcp_id}' with {len(tools)} tools: {tool_list}")
+        response_text = (
+            f"SUCCESS: Loaded MCP '{mcp_id}' with {len(tools)} tools.\n"
+            f"Tools now available: {tool_list}"
+        )
+    else:
+        worker_logger.warning(f"[load_mcp] Registry is not an MCPRegistry instance")
+        response_text = f"SUCCESS: Tools for MCP '{mcp_id}' are now available."
+    
+    return Command(
+        update={
+            "loaded_mcps": loaded_mcps + [mcp_id],
+            "messages": [ToolMessage(response_text, tool_call_id=runtime.tool_call_id)]
+        }
+    )
+
+
+tools = [load_skill, list_mcps, load_mcp]

@@ -33,6 +33,7 @@ Role: {role}"""
                 "space_id": context.get("spaceId") or resource_id,
                 "user_id": actor_id,
                 "role": role,
+                "timestamp": resource_data.get("createdAt"),
             }
         )
 
@@ -70,6 +71,7 @@ Changed: {old_role} -> {new_role}"""
                 "user_id": actor_id,
                 "old_role": old_role,
                 "new_role": new_role,
+                "timestamp": resource_data.get("createdAt"),
             }
         )
 
@@ -105,5 +107,6 @@ Name: {name}"""
                 "space_id": context.get("spaceId") or resource_id,
                 "name": name,
                 "created_by": actor_id,
+                "timestamp": resource_data.get("createdAt"),
             }
         )

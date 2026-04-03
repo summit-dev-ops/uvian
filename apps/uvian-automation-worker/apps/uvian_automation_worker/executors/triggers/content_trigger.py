@@ -30,6 +30,7 @@ Context: space {context.get('spaceId')}"""
                 "post_id": resource_id,
                 "author_id": actor_id,
                 "space_id": context.get("spaceId"),
+                "timestamp": resource_data.get("createdAt"),
             }
         )
 
@@ -63,6 +64,7 @@ Title: {title}"""
                 "note_id": resource_id,
                 "title": title,
                 "updated_by": actor_id,
+                "timestamp": resource_data.get("updatedAt"),
             }
         )
 
@@ -100,5 +102,6 @@ Context: space {context.get('spaceId')}, conversation {context.get('conversation
                 "size_bytes": resource_data.get("sizeBytes"),
                 "space_id": context.get("spaceId"),
                 "conversation_id": context.get("conversationId"),
+                "timestamp": resource_data.get("createdAt"),
             }
         )

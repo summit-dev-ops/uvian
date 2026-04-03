@@ -748,6 +748,7 @@ class ToolNode(RunnableCallable):
         messages_key: str = "messages",
         wrap_tool_call: ToolCallWrapper | None = None,
         awrap_tool_call: AsyncToolCallWrapper | None = None,
+        mcp_registry: Any = None,
     ) -> None:
         """Initialize `ToolNode` with tools and configuration.
 
@@ -762,6 +763,8 @@ class ToolNode(RunnableCallable):
                 Enables retries, caching, request modification, and control flow.
             awrap_tool_call: Async wrapper function to intercept tool execution.
                 If not provided, falls back to wrap_tool_call for async execution.
+            mcp_registry: Optional MCPRegistry for dynamically resolving tools from
+                loaded MCPs at runtime.
         """
         super().__init__(self._func, self._afunc, name=name, tags=tags, trace=False)
         self._tools_by_name: dict[str, BaseTool] = {}
@@ -770,6 +773,8 @@ class ToolNode(RunnableCallable):
         self._messages_key = messages_key
         self._wrap_tool_call = wrap_tool_call
         self._awrap_tool_call = awrap_tool_call
+        self._mcp_registry = mcp_registry
+        self._mcp_tool_cache: dict[str, BaseTool] = {}
         for tool in tools:
             if not isinstance(tool, BaseTool):
                 tool_ = create_tool(cast("type[BaseTool]", tool))
@@ -778,6 +783,25 @@ class ToolNode(RunnableCallable):
             self._tools_by_name[tool_.name] = tool_
             # Build injected args mapping once during initialization in a single pass
             self._injected_args[tool_.name] = _get_all_injected_args(tool_)
+
+    async def _resolve_tool_from_mcp_registry(self, tool_name: str) -> BaseTool | None:
+        if not self._mcp_registry:
+            return None
+        if tool_name in self._mcp_tool_cache:
+            return self._mcp_tool_cache[tool_name]
+        try:
+            from clients.mcp import MCPRegistry
+            if not isinstance(self._mcp_registry, MCPRegistry):
+                return None
+            for mcp_id in self._mcp_registry._tool_cache:
+                tools = await self._mcp_registry.get_tools_for_mcp(mcp_id)
+                for tool in tools:
+                    self._mcp_tool_cache[tool.name] = tool
+                    if tool.name == tool_name:
+                        return tool
+        except Exception:
+            pass
+        return None
 
     @property
     def tools_by_name(self) -> dict[str, BaseTool]:
@@ -1161,6 +1185,11 @@ class ToolNode(RunnableCallable):
         # Validation is deferred to _execute_tool_async to allow interceptors
         # to short-circuit requests for unregistered tools
         tool = self.tools_by_name.get(call["name"])
+        if tool is None and self._mcp_registry:
+            tool = await self._resolve_tool_from_mcp_registry(call["name"])
+            if tool:
+                self._tools_by_name[tool.name] = tool
+                self._injected_args[tool.name] = _get_all_injected_args(tool)
 
         # Create the tool request with state and runtime
         tool_request = ToolCallRequest(
