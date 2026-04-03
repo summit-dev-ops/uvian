@@ -18,7 +18,7 @@ function getClients(request: FastifyRequest) {
   };
 }
 
-export async function authRoutes(fastify: FastifyInstance) {
+export default async function authRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: CreateApiKeyBody }>(
     '/api/auth/api-key',
     {
