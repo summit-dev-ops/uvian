@@ -585,16 +585,24 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
     return server;
   }
-  fastify.post('/v1/mcp', async (request, reply) => {
-    const apiKey = request.headers['x-api-key'];
+  function extractToken(authHeader: string | undefined): string | null {
+    if (!authHeader) return null;
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') return null;
+    return parts[1];
+  }
 
-    if (!apiKey || typeof apiKey !== 'string') {
+  fastify.post('/v1/mcp', async (request, reply) => {
+    const authHeader = request.headers.authorization;
+    const token = extractToken(authHeader);
+
+    if (!token) {
       return reply
         .code(401)
-        .send({ error: 'Unauthorized', message: 'Missing API key' });
+        .send({ error: 'Unauthorized', message: 'Missing token' });
     }
 
-    const authResult = await authenticateWithApiKey(apiKey);
+    const authResult = await authenticateWithApiKey(token);
     if (!authResult) {
       return reply
         .code(401)
