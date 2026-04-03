@@ -13,6 +13,7 @@ class MCPServer:
         auth_method: str,
         auth_secret: str | None,
         jwt_secret: str | None = None,
+        name: str | None = None,
     ):
         self._mcp_id = mcp_id
         self._url = url
@@ -20,6 +21,7 @@ class MCPServer:
         self._auth_secret = auth_secret
         self._jwt_secret = jwt_secret
         self._tools: List[BaseTool] | None = None
+        self._name = name or mcp_id
 
     @property
     def mcp_id(self) -> str:
@@ -27,7 +29,7 @@ class MCPServer:
 
     @property
     def name(self) -> str:
-        return self._mcp_id
+        return self._name
 
     async def get_tools(self) -> List[BaseTool]:
         if self._tools is not None:
@@ -110,7 +112,7 @@ class MCPRegistry:
                 "id": mcp_id,
                 "name": server.name,
                 "tool_count": tool_count,
-                "description": f"{tool_count} tools available",
+                "description": f"{server.name} MCP server",
             })
         return result
 
@@ -130,6 +132,7 @@ async def create_mcp_registry(mcp_configs: list) -> List[BaseTool]:
             auth_method=cfg.get("auth_method", "bearer"),
             auth_secret=cfg.get("_auth_secret"),
             jwt_secret=cfg.get("_jwt_secret"),
+            name=cfg.get("name"),
         )
         tools.extend(await server.get_tools())
     return tools
@@ -150,6 +153,7 @@ async def build_mcp_registry(mcp_configs: list) -> MCPRegistry:
             auth_method=cfg.get("auth_method", "bearer"),
             auth_secret=cfg.get("_auth_secret"),
             jwt_secret=cfg.get("_jwt_secret"),
+            name=cfg.get("name"),
         )
         registry.register_server(server)
     return registry
