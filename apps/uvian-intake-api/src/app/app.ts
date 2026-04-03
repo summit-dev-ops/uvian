@@ -27,7 +27,7 @@ export async function app(fastify: FastifyInstance, _opts: AppOptions) {
   await fastify.register(internalAuthPlugin);
   await fastify.register(eventEmitterPlugin);
 
-  await fastify.register(apiKeysRoutes, { prefix: '/api' });
+  await fastify.register(apiKeysRoutes);
   await fastify.register(intakesRoutes, { prefix: '/api' });
   await fastify.register(publicV1Routes, { prefix: '/api/public' });
 
