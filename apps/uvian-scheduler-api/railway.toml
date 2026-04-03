@@ -1,5 +1,5 @@
 [deploy]
-startCommand = "npx nx run @org/uvian-scheduler-api:serve:production"
+startCommand = "npx nx run @org/uvian-scheduler-api:serve"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
