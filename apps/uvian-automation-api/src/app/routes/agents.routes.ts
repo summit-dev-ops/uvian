@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
 import { encrypt } from '@org/utils-encryption';
+import { configureAgent } from '../services';
 
 interface SystemConfig {
   name: string;
@@ -90,8 +91,6 @@ export default async function agentRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      const internalApiKey = encryptionSecret;
-
       try {
         const encryptedApiKey = encrypt(api_key, encryptionSecret);
 
@@ -172,19 +171,26 @@ export default async function agentRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const mcpResults = await bootstrapMcps(
-          agent.id,
-          account_id,
-          user_id,
-          systems,
-          internalApiKey
-        );
+        const systemConfigs = systems || DEFAULT_SYSTEM_CONFIGS;
+        const resolvedSystems = systemConfigs
+          .map((config) => ({
+            ...config,
+            url: config.url || getSystemUrl(config.name),
+            name: getMcpDisplayName(config.name),
+          }))
+          .filter(
+            (config): config is SystemConfig & { url: string } => !!config.url
+          );
+
+        const result = await configureAgent(agent.id, {
+          mcps: resolvedSystems,
+        });
 
         reply.send({
           success: true,
           message: 'Agent initialized',
           agentId: agent.id,
-          mcps: mcpResults,
+          mcps: result.mcps,
         });
       } catch (error: any) {
         reply
@@ -193,121 +199,4 @@ export default async function agentRoutes(fastify: FastifyInstance) {
       }
     }
   );
-}
-
-async function bootstrapMcps(
-  agentId: string,
-  accountId: string,
-  userId: string,
-  providedSystems: SystemConfig[] | undefined,
-  internalApiKey: string
-): Promise<Array<{ success: boolean; system: string; error?: string }>> {
-  const results: Array<{ success: boolean; system: string; error?: string }> =
-    [];
-
-  const systemConfigs = providedSystems || DEFAULT_SYSTEM_CONFIGS;
-
-  for (const config of systemConfigs) {
-    const mcpUrl = config.url || getSystemUrl(config.name);
-
-    if (!mcpUrl) {
-      results.push({
-        success: false,
-        system: config.name,
-        error: 'URL not configured',
-      });
-      continue;
-    }
-
-    try {
-      const upsertResult = await adminSupabase
-        .schema('core_automation')
-        .from('mcps')
-        .upsert(
-          {
-            account_id: accountId,
-            name: getMcpDisplayName(config.name),
-            type: 'external',
-            auth_method: 'bearer',
-            url: `${mcpUrl}/v1/mcp`,
-            config: {
-              system: config.name,
-              description: `${getMcpDisplayName(config.name)} MCP`,
-            },
-            is_active: true,
-          },
-          { onConflict: 'account_id,name' }
-        )
-        .select()
-        .single();
-
-      if (upsertResult.error) {
-        throw new Error(`Failed to upsert MCP: ${upsertResult.error.message}`);
-      }
-
-      const mcp = upsertResult.data;
-
-      const apiKeyResponse = await fetch(`${mcpUrl}/api/auth/api-key`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': internalApiKey,
-        },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (!apiKeyResponse.ok) {
-        const errorText = await apiKeyResponse.text();
-        throw new Error(`Failed to create API key: ${errorText}`);
-      }
-
-      const apiKeyData = (await apiKeyResponse.json()) as { apiKey: string };
-      const mcpApiKey = apiKeyData.apiKey;
-
-      const encryptedApiKey = encrypt(mcpApiKey, internalApiKey);
-
-      const secretResult = await adminSupabase
-        .schema('public')
-        .from('secrets')
-        .insert({
-          account_id: accountId,
-          name: `${getMcpDisplayName(config.name)} API Key`,
-          value_type: 'text',
-          encrypted_value: encryptedApiKey,
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      if (secretResult.error) {
-        throw new Error(
-          `Failed to create secret: ${secretResult.error.message}`
-        );
-      }
-
-      const linkResult = await adminSupabase
-        .schema('core_automation')
-        .from('agent_mcps')
-        .insert({
-          agent_id: agentId,
-          mcp_id: mcp.id,
-          secret_id: secretResult.data.id,
-        });
-
-      if (linkResult.error) {
-        throw new Error(`Failed to link MCP: ${linkResult.error.message}`);
-      }
-
-      results.push({ success: true, system: config.name });
-    } catch (error: any) {
-      console.error(`Failed to bootstrap ${config.name}:`, error);
-      results.push({
-        success: false,
-        system: config.name,
-        error: error.message,
-      });
-    }
-  }
-
-  return results;
 }

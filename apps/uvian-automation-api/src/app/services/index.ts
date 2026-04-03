@@ -10,4 +10,5 @@ export { createMcpService, mcpService } from './mcp';
 export { createTicketService, ticketService } from './ticket';
 export { createAgentConfigService, agentConfigService } from './agent-config';
 export { createJobService, jobService } from './job';
+export { configureAgent } from './agent-bootstrap';
 export { webhookHandlerService } from './webhook-handler.service';
