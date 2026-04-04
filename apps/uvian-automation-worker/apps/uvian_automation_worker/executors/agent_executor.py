@@ -19,7 +19,7 @@ from executors.triggers import TriggerRegistry
 from core.agents.universal_agent.agent import build_agent
 from core.agents.utils.mcp_mapping import get_mcps_for_event
 from core.agents.utils.skill_mapping import get_skills_for_event
-from clients.mcp import create_mcp_registry, build_mcp_registry, PersistentMCPClient
+from clients.mcp import create_mcp_registry, PersistentMCPClient, MCPRegistry
 from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills
 from repositories.process_threads import process_thread_repository
@@ -137,32 +137,34 @@ class AgentExecutor(BaseExecutor):
         available_mcps = []
 
         if all_mcp_configs:
-            worker_logger.info_job(job_id, "Building persistent MCP registry...")
-            mcp_registry = await build_mcp_registry(all_mcp_configs, persistent_client=persistent_client)
+            worker_logger.info_job(job_id, "Registering MCP servers...")
+            for cfg in all_mcp_configs:
+                if cfg.get("url"):
+                    persistent_client.add_server(
+                        mcp_id=cfg["id"],
+                        url=cfg["url"],
+                        auth_method=cfg.get("auth_method", "bearer"),
+                        auth_secret=cfg.get("_auth_secret"),
+                        jwt_secret=cfg.get("_jwt_secret"),
+                        name=cfg.get("name"),
+                    )
+            
+            worker_logger.info_job(job_id, "Connecting to all MCP servers in parallel...")
+            await persistent_client.connect_all()
+            
+            worker_logger.info_job(job_id, "Fetching tool metadata from all MCP servers...")
+            await persistent_client.fetch_all_metadata()
             
             if preloaded_mcp_configs:
                 worker_logger.info_job(job_id, f"Pre-loading MCP tools for event: {[c.get('id') for c in preloaded_mcp_configs]}")
                 for cfg in preloaded_mcp_configs:
-                    if cfg.get("url"):
-                        from clients.mcp import MCPServer
-                        server = MCPServer(
-                            mcp_id=cfg["id"],
-                            url=cfg["url"],
-                            auth_method=cfg.get("auth_method", "bearer"),
-                            auth_secret=cfg.get("_auth_secret"),
-                            jwt_secret=cfg.get("_jwt_secret"),
-                            name=cfg.get("name"),
-                        )
-                        tools = await persistent_client.load_tools(cfg["id"], server)
-                        mcp_tools.extend(tools)
+                    tools = await persistent_client.load_tools(cfg["id"])
+                    mcp_tools.extend(tools)
                 worker_logger.info_job(job_id, f"Pre-loaded {len(mcp_tools)} MCP tools from persistent sessions")
             
-            worker_logger.info_job(job_id, "Fetching tool metadata from MCP servers...")
-            for mcp_id in mcp_registry._servers:
-                await mcp_registry.ensure_metadata_loaded(mcp_id)
-            
-            available_mcps = mcp_registry.get_rich_catalog()
+            available_mcps = persistent_client.get_rich_catalog()
             worker_logger.info_job(job_id, f"Available MCPs: {[m['name'] for m in available_mcps]}")
+            mcp_registry = MCPRegistry(client=persistent_client)
 
         worker_logger.info_job(job_id, "Loading agent skills from automation-api...")
         all_skills = await get_agent_skills(agent_user_id)
