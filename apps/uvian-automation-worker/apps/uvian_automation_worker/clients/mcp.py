@@ -1,9 +1,9 @@
 from typing import List, Dict, Any, Optional
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_mcp_adapters.sessions import create_session
 from langchain_core.tools import BaseTool
 from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
 import time
 import jwt as pyjwt
 
@@ -118,15 +118,9 @@ class PersistentMCPClient:
         if mcp_id in self._sessions:
             return self._sessions[mcp_id]
 
-        headers = server._build_headers()
-        gen = streamablehttp_client(
-            url=server._url,
-            headers=headers,
-        )
-        read_stream, write_stream, get_session_id = await gen.__aenter__()
-
-        session = ClientSession(read_stream, write_stream)
-        await session.initialize()
+        connection = server._build_connection_config()
+        gen = create_session(connection)
+        session = await gen.__aenter__()
 
         self._sessions[mcp_id] = session
         self._generators[mcp_id] = gen
