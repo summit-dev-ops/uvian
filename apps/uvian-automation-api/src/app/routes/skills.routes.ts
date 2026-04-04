@@ -56,25 +56,6 @@ export default async function skillRoutes(fastify: FastifyInstance) {
       }
     }
   );
-
-  fastify.get(
-    '/api/config/skills/:skillId',
-    { preHandler: [fastify.authenticate] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { skillId } = request.params as any as { skillId: string };
-        const clients = {
-          adminClient: adminSupabase,
-          userClient: request.supabase,
-        };
-        const skill = await skillService.scoped(clients).get(skillId);
-        return reply.send({ skill });
-      } catch (error: any) {
-        return reply.code(500).send({ error: error.message });
-      }
-    }
-  );
-
   fastify.put(
     '/api/config/skills/:skillId',
     {

@@ -5,7 +5,8 @@ import { createUserClient, adminSupabase } from '../clients/supabase.client';
 import { z } from 'zod';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
-import { scheduleService } from '../services/factory';
+import { scheduleService, subscriptionService } from '../services/factory';
+import { ScheduleEvents } from '@org/uvian-events';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -93,6 +94,36 @@ function extractUserIdFromJwt(token: string): string {
   }
 }
 
+async function createSubscriptions(
+  scheduleId: string,
+  subscriberIds: string[]
+): Promise<void> {
+  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+  const subService = subscriptionService.admin(clients);
+
+  const existingSubs = await subService.getSubscriptionsByResource(
+    'uvian.schedule',
+    scheduleId
+  );
+
+  const existingUserIds = new Set(existingSubs.map((s) => s.user_id));
+  const newSubscriberIds = subscriberIds.filter(
+    (uid) => !existingUserIds.has(uid)
+  );
+
+  if (newSubscriberIds.length === 0) return;
+
+  const scopedService = subscriptionService.scoped(clients);
+
+  for (const userId of newSubscriberIds) {
+    await scopedService.activateSubscription(
+      userId,
+      'uvian.schedule',
+      scheduleId
+    );
+  }
+}
+
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   async function createAuthenticatedServer(
     userId: string,
@@ -141,6 +172,21 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             eventData: args.eventData,
             subscriberIds: [userId],
           });
+
+          await createSubscriptions(schedule.id, [userId]);
+
+          fastify.schedulerEmitter.emitEvent(
+            ScheduleEvents.SCHEDULE_CREATED,
+            `/schedules/${schedule.id}`,
+            {
+              scheduleId: schedule.id,
+              type: schedule.type,
+              cronExpression: schedule.cronExpression || undefined,
+              subscriberIds: [userId],
+              createdBy: userId,
+            },
+            userId
+          );
 
           return {
             content: [{ type: 'text', text: JSON.stringify(schedule) }],
