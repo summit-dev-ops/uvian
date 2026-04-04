@@ -24,6 +24,7 @@ class ScheduleTriggeredTrigger(BaseTrigger):
         context_parts.append(f"Schedule ID: {schedule_id}")
         context_parts.append(f"Schedule type: {schedule_type}")
         context_parts.append(f"Fired at: {fired_at}")
+        context_parts.append(f"Current Time: {{current_time}}")
 
         if payload:
             extra = {k: v for k, v in payload.items() if k not in ("description", "message")}

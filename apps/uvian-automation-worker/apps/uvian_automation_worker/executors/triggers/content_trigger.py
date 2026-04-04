@@ -22,6 +22,9 @@ class PostCreatedTrigger(BaseTrigger):
 Actor: {actor_id}
 Resource: post/{resource_id}
 Context: space {context.get('spaceId')}"""
+        timestamp = resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -30,7 +33,7 @@ Context: space {context.get('spaceId')}"""
                 "post_id": resource_id,
                 "author_id": actor_id,
                 "space_id": context.get("spaceId"),
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )
 
@@ -56,6 +59,9 @@ class NoteUpdatedTrigger(BaseTrigger):
 Actor: {actor_id}
 Resource: note/{resource_id}
 Title: {title}"""
+        timestamp = resource_data.get("updatedAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -64,7 +70,7 @@ Title: {title}"""
                 "note_id": resource_id,
                 "title": title,
                 "updated_by": actor_id,
-                "timestamp": resource_data.get("updatedAt"),
+                "timestamp": timestamp,
             }
         )
 
@@ -91,6 +97,9 @@ Resource: asset/{resource_id}
 Filename: {filename}
 MimeType: {mime_type}
 Context: space {context.get('spaceId')}, conversation {context.get('conversationId')}"""
+        timestamp = resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -102,6 +111,6 @@ Context: space {context.get('spaceId')}, conversation {context.get('conversation
                 "size_bytes": resource_data.get("sizeBytes"),
                 "space_id": context.get("spaceId"),
                 "conversation_id": context.get("conversationId"),
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )

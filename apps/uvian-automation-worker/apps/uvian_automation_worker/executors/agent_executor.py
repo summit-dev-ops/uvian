@@ -13,6 +13,7 @@ This refactored version is significantly smaller and more maintainable
 than the original monolith.
 """
 from typing import List, Any
+from datetime import datetime, timezone
 from executors.base import BaseExecutor, JobData, JobResult
 from executors.triggers import TriggerRegistry
 from core.agents.universal_agent.agent import build_agent
@@ -157,6 +158,13 @@ class AgentExecutor(BaseExecutor):
         channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
         agent_input = None
         if not is_resume:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+            if "{current_time}" in message_content:
+                message_content = message_content.replace("{current_time}", current_time)
+            else:
+                message_content += f"\nCurrent Time: {current_time}"
+
             initial_messages = []
             for skill in preloaded_skills:
                 content = skill.get("content", {})

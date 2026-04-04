@@ -24,9 +24,12 @@ class DiscordMessageCreatedTrigger(BaseTrigger):
         if guild_id:
             channel_type = f"server channel"
         
+        timestamp = resource_data.get("timestamp") or resource_data.get("createdAt")
         message_content = f"""[Discord] User in {channel_type} said: {content}
 External Channel: {external_channel_id}
 External User: {external_user_id}"""
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -39,7 +42,7 @@ External User: {external_user_id}"""
                 "guild_id": guild_id,
                 "is_dm": is_dm,
                 "platform": "discord",
-                "timestamp": resource_data.get("timestamp") or resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )
 
@@ -106,6 +109,10 @@ class DiscordInteractionReceivedTrigger(BaseTrigger):
                 f"External User: {external_user_id}"
             )
         
+        timestamp = resource_data.get("timestamp") or resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
+        
         return TriggerMessage(
             content=message_content,
             event_type=self.event_type,
@@ -119,6 +126,6 @@ class DiscordInteractionReceivedTrigger(BaseTrigger):
                 "external_channel_id": external_channel_id,
                 "external_user_id": external_user_id,
                 "platform": "discord",
-                "timestamp": resource_data.get("timestamp") or resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )

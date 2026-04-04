@@ -1,6 +1,18 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from datetime import datetime
+
+
+def format_timestamp(ts: Optional[str]) -> Optional[str]:
+    """Format a timestamp string for display. Returns ISO 8601 or None."""
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    except (ValueError, AttributeError):
+        return ts
 
 
 @dataclass

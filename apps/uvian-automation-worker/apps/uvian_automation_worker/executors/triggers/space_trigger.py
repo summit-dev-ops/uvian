@@ -25,6 +25,9 @@ Actor: {actor_id}
 Resource: space/{resource_id}
 Context: space {context.get('spaceId') or resource_id}
 Role: {role}"""
+        timestamp = resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -33,7 +36,7 @@ Role: {role}"""
                 "space_id": context.get("spaceId") or resource_id,
                 "user_id": actor_id,
                 "role": role,
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )
 
@@ -62,6 +65,9 @@ Actor: {actor_id}
 Resource: space/{resource_id}
 Context: space {context.get('spaceId') or resource_id}
 Changed: {old_role} -> {new_role}"""
+        timestamp = resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -71,7 +77,7 @@ Changed: {old_role} -> {new_role}"""
                 "user_id": actor_id,
                 "old_role": old_role,
                 "new_role": new_role,
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )
 
@@ -99,6 +105,9 @@ Actor: {actor_id}
 Resource: space/{resource_id}
 Context: space {context.get('spaceId') or resource_id}
 Name: {name}"""
+        timestamp = resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -107,6 +116,6 @@ Name: {name}"""
                 "space_id": context.get("spaceId") or resource_id,
                 "name": name,
                 "created_by": actor_id,
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )

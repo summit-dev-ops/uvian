@@ -24,9 +24,12 @@ class MessageCreatedTrigger(BaseTrigger):
         external_user_id = resource_data.get("externalUserId")
         
         if platform and platform != "internal":
+            timestamp = resource_data.get("createdAt")
             message_content = f"""[{platform}] User said: {content}
 External Channel: {external_channel_id or 'unknown'}
 External User: {external_user_id or 'unknown'}"""
+            if timestamp:
+                message_content += f"\nEvent Time: {timestamp}"
             
             return TriggerMessage(
                 content=message_content,
@@ -39,15 +42,18 @@ External User: {external_user_id or 'unknown'}"""
                     "platform": platform,
                     "external_channel_id": external_channel_id,
                     "external_user_id": external_user_id,
-                    "timestamp": resource_data.get("createdAt"),
+                    "timestamp": timestamp,
                 }
             )
         
+        timestamp = resource_data.get("createdAt")
         message_content = f"""Event: message.created
 Actor: {actor_id}
 Resource: message/{resource_id}
 Context: conversation {context.get('conversationId')}
 Content: {content}"""
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -57,7 +63,7 @@ Content: {content}"""
                 "conversation_id": context.get("conversationId"),
                 "sender_id": actor_id,
                 "asset_ids": resource_data.get("assetIds", []),
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )
 
@@ -81,6 +87,9 @@ class ConversationMemberJoinedTrigger(BaseTrigger):
 Actor: {actor_id}
 Resource: conversation/{resource_id}
 Context: conversation {context.get('conversationId')}"""
+        timestamp = resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -88,6 +97,6 @@ Context: conversation {context.get('conversationId')}"""
             metadata={
                 "conversation_id": context.get("conversationId") or resource_id,
                 "user_id": actor_id,
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )

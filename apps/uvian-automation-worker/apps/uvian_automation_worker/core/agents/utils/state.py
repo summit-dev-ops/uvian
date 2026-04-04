@@ -1,5 +1,5 @@
 from langchain.messages import AnyMessage
-from typing import TypedDict, List, Dict
+from typing import TypedDict, List, Dict, Any
 from typing_extensions import TypedDict, Annotated
 import operator
 
@@ -18,6 +18,7 @@ class MessagesState(TypedDict):
     conversation_id: str
     agent_profile_id: str
     message_id: str
+    event_metadata: Dict[str, Any]
 
 
 class Skill(TypedDict):  

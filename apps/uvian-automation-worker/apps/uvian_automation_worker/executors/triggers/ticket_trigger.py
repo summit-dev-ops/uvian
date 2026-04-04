@@ -30,6 +30,9 @@ Title: {title}
 Priority: {priority.upper()}"""
         if description:
             message_content += f"\nDescription: {description}"
+        timestamp = resource_data.get("createdAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -41,7 +44,7 @@ Priority: {priority.upper()}"""
                 "priority": priority,
                 "created_by": actor_id,
                 "space_id": context.get("spaceId"),
-                "timestamp": resource_data.get("createdAt"),
+                "timestamp": timestamp,
             }
         )
 
@@ -71,6 +74,9 @@ Resource: ticket/{resource_id}"""
             message_content += f"\nStatus: {status}"
         if priority:
             message_content += f"\nPriority: {priority}"
+        timestamp = resource_data.get("updatedAt")
+        if timestamp:
+            message_content += f"\nEvent Time: {timestamp}"
         
         return TriggerMessage(
             content=message_content,
@@ -80,6 +86,6 @@ Resource: ticket/{resource_id}"""
                 "status": status,
                 "priority": priority,
                 "updated_by": actor_id,
-                "timestamp": resource_data.get("updatedAt"),
+                "timestamp": timestamp,
             }
         )
