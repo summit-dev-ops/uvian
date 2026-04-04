@@ -118,9 +118,27 @@ def list_mcps(
     for mcp in available_mcps:
         display_name = mcp.get("name", mcp["id"])
         status = "LOADED" if mcp["id"] in loaded_mcps else "available"
-        lines.append(f"- **{display_name}**: {mcp.get('description', '')} [{status}]")
+        usage = mcp.get("usage_guidance", "")
+        tool_descriptions = mcp.get("tool_descriptions", [])
+        
+        header = f"### **{display_name}** [{status}]"
+        lines.append(header)
+        
+        if usage:
+            lines.append(f"  Use for: {usage}")
+        
+        if tool_descriptions:
+            lines.append(f"  Tools ({len(tool_descriptions)}):")
+            for td in tool_descriptions:
+                lines.append(f"    - {td}")
+        else:
+            tool_count = mcp.get("tool_count", 0)
+            if tool_count > 0:
+                lines.append(f"  Tools: {tool_count} available (load this MCP to see details)")
+        
+        lines.append("")
     
-    result = "Available MCP tool servers:\n" + "\n".join(lines)
+    result = "## Available MCP Tool Servers\n\n" + "\n".join(lines)
     worker_logger.info(f"[list_mcps] Returning {len(available_mcps)} MCPs")
     return result
 

@@ -21,6 +21,7 @@ class MCPServer:
         self._auth_secret = auth_secret
         self._jwt_secret = jwt_secret
         self._tools: List[BaseTool] | None = None
+        self._tool_metadata: List[Dict[str, Any]] | None = None
         self._name = name or mcp_id
 
     @property
@@ -44,6 +45,33 @@ class MCPServer:
         client = MultiServerMCPClient(config)
         self._tools = await client.get_tools()
         return self._tools
+
+    async def get_tool_metadata(self) -> List[Dict[str, Any]]:
+        """Fetch raw tool metadata from the MCP server without creating LangChain wrappers.
+
+        Calls tools/list JSON-RPC directly — much cheaper than get_tools().
+        """
+        if self._tool_metadata is not None:
+            return self._tool_metadata
+        config = {
+            "uvian-hub": {
+                "transport": "http",
+                "url": self._url,
+                "headers": self._build_headers(),
+            }
+        }
+        client = MultiServerMCPClient(config)
+        async with client.session("uvian-hub") as session:
+            result = await session.list_tools()
+            self._tool_metadata = [
+                {
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "inputSchema": tool.inputSchema,
+                }
+                for tool in result.tools
+            ]
+        return self._tool_metadata
 
     def get_tool_descriptions(self, tools: List[BaseTool] | None = None) -> List[Dict[str, str]]:
         if tools is None:
@@ -75,6 +103,7 @@ class MCPRegistry:
     def __init__(self):
         self._servers: Dict[str, MCPServer] = {}
         self._tool_cache: Dict[str, List[BaseTool]] = {}
+        self._metadata_cache: Dict[str, List[Dict[str, Any]]] = {}
 
     def register_server(self, server: MCPServer) -> None:
         self._servers[server.mcp_id] = server
@@ -92,27 +121,62 @@ class MCPRegistry:
     async def get_tools_for_mcp(self, mcp_id: str) -> List[BaseTool]:
         return await self.ensure_tools_loaded(mcp_id)
 
+    async def ensure_metadata_loaded(self, mcp_id: str) -> List[Dict[str, Any]]:
+        if mcp_id in self._metadata_cache:
+            return self._metadata_cache[mcp_id]
+        server = self._servers.get(mcp_id)
+        if not server:
+            return []
+        metadata = await server.get_tool_metadata()
+        self._metadata_cache[mcp_id] = metadata
+        return metadata
+
+    async def get_tool_metadata_for_mcp(self, mcp_id: str) -> List[Dict[str, Any]]:
+        return await self.ensure_metadata_loaded(mcp_id)
+
     async def list_all_mcps(self) -> List[Dict[str, Any]]:
         result = []
         for mcp_id, server in self._servers.items():
-            tools = self._tool_cache.get(mcp_id, [])
+            metadata = self._metadata_cache.get(mcp_id, [])
             result.append({
                 "id": mcp_id,
                 "name": server.name,
-                "tools": server.get_tool_descriptions(tools),
+                "tools": server.get_tool_descriptions(self._tool_cache.get(mcp_id, [])),
+                "tool_metadata": metadata,
             })
         return result
 
     def get_condensed_catalog(self) -> List[Dict[str, Any]]:
         result = []
         for mcp_id, server in self._servers.items():
-            tools = self._tool_cache.get(mcp_id, [])
-            tool_count = len(tools)
+            metadata = self._metadata_cache.get(mcp_id, [])
+            tool_names = [t["name"] for t in metadata]
             result.append({
                 "id": mcp_id,
                 "name": server.name,
-                "tool_count": tool_count,
+                "tool_count": len(metadata),
+                "tool_names": tool_names,
                 "description": f"{server.name} MCP server",
+            })
+        return result
+
+    def get_rich_catalog(self) -> List[Dict[str, Any]]:
+        """Get catalog with tool names, descriptions, and usage guidance."""
+        from core.agents.utils.mcp_catalog import get_usage_guidance
+        result = []
+        for mcp_id, server in self._servers.items():
+            metadata = self._metadata_cache.get(mcp_id, [])
+            tool_descriptions = [
+                f"{t['name']}: {t['description']}" if t.get('description') else t['name']
+                for t in metadata
+            ]
+            usage = get_usage_guidance(server.name)
+            result.append({
+                "id": mcp_id,
+                "name": server.name,
+                "tool_count": len(metadata),
+                "tool_descriptions": tool_descriptions,
+                "usage_guidance": usage,
             })
         return result
 

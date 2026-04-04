@@ -25,6 +25,8 @@ from repositories.process_threads import process_thread_repository
 from core.logging import worker_logger
 from langgraph.types import Command
 from langchain.messages import HumanMessage
+from langchain_core.messages import ToolMessage
+from core.agents.utils.tools.base_tools import flatten_skill_content
 import uuid
 
 
@@ -139,8 +141,13 @@ class AgentExecutor(BaseExecutor):
         if all_mcp_configs:
             worker_logger.info_job(job_id, "Building MCP registry for on-demand loading...")
             mcp_registry = await build_mcp_registry(all_mcp_configs)
-            available_mcps = mcp_registry.get_condensed_catalog()
-            worker_logger.info_job(job_id, f"Available MCPs for on-demand loading: {[m['id'] for m in available_mcps]}")
+            
+            worker_logger.info_job(job_id, "Fetching tool metadata from MCP servers...")
+            for mcp_id in mcp_registry._servers:
+                await mcp_registry.ensure_metadata_loaded(mcp_id)
+            
+            available_mcps = mcp_registry.get_rich_catalog()
+            worker_logger.info_job(job_id, f"Available MCPs: {[m['name'] for m in available_mcps]}")
 
         worker_logger.info_job(job_id, "Loading agent skills from automation-api...")
         all_skills = await get_agent_skills(agent_user_id)
@@ -150,10 +157,25 @@ class AgentExecutor(BaseExecutor):
         channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
         agent_input = None
         if not is_resume:
+            initial_messages = []
+            for skill in preloaded_skills:
+                content = skill.get("content", {})
+                if isinstance(content, dict):
+                    formatted_content = flatten_skill_content(content)
+                elif isinstance(content, str):
+                    formatted_content = content
+                else:
+                    formatted_content = str(content)
+                initial_messages.append(
+                    ToolMessage(
+                        f"Loaded skill: {skill['name']}\n\n{formatted_content}",
+                        tool_call_id=f"preload-{skill['name']}",
+                    )
+                )
+            initial_messages.append(HumanMessage(content=message_content))
+
             agent_input = {
-                "messages": [
-                    HumanMessage(content=message_content)
-                ],
+                "messages": initial_messages,
                 "skills": preloaded_skills,
                 "custom_instructions": "",
                 "agent_name": "Agent",
