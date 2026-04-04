@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase, createUserClient } from '../clients/supabase.client';
 import { scheduleService, subscriptionService } from '../services/factory';
 import { ScheduleEvents } from '@org/uvian-events';
+import { fireSchedule, SYNC_INTERVAL_MINUTES } from '../plugins/cron.plugin';
 
 interface CreateScheduleBody {
   type?: 'one_time' | 'recurring';
@@ -77,6 +78,32 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
 
         await createSubscriptions(schedule.id, request.body.subscriberIds);
 
+        const now = new Date();
+        const windowEnd = new Date(
+          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000
+        );
+        const nextRun = new Date(schedule.nextRunAt);
+
+        if (nextRun <= windowEnd) {
+          try {
+            await fireSchedule(
+              schedule.id,
+              userId,
+              schedule.type,
+              schedule.eventData || {},
+              nextRun
+            );
+            console.log(
+              `[Immediate Fire] Schedule ${schedule.id} queued immediately`
+            );
+          } catch (err) {
+            console.error(
+              `[Immediate Fire] Failed to fire schedule ${schedule.id}:`,
+              err
+            );
+          }
+        }
+
         fastify.schedulerEmitter.emitEvent(
           ScheduleEvents.SCHEDULE_CREATED,
           `/schedules/${schedule.id}`,
@@ -148,6 +175,32 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const schedule = await scheduleService
           .scoped(clients)
           .updateSchedule(userId, request.params.id, request.body);
+
+        const now = new Date();
+        const windowEnd = new Date(
+          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000
+        );
+        const nextRun = new Date(schedule.nextRunAt);
+
+        if (nextRun <= windowEnd) {
+          try {
+            await fireSchedule(
+              schedule.id,
+              userId,
+              schedule.type,
+              schedule.eventData || {},
+              nextRun
+            );
+            console.log(
+              `[Immediate Fire] Schedule ${schedule.id} queued immediately on update`
+            );
+          } catch (err) {
+            console.error(
+              `[Immediate Fire] Failed to fire schedule ${schedule.id}:`,
+              err
+            );
+          }
+        }
 
         fastify.schedulerEmitter.emitEvent(
           ScheduleEvents.SCHEDULE_UPDATED,
@@ -408,6 +461,33 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const schedule = await scheduleService
           .scoped(clients)
           .resumeSchedule(userId, request.params.id);
+
+        const now = new Date();
+        const windowEnd = new Date(
+          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000
+        );
+        const nextRun = new Date(schedule.nextRunAt);
+
+        if (nextRun <= windowEnd) {
+          try {
+            await fireSchedule(
+              schedule.id,
+              userId,
+              schedule.type,
+              schedule.eventData || {},
+              nextRun
+            );
+            console.log(
+              `[Immediate Fire] Schedule ${schedule.id} queued immediately on resume`
+            );
+          } catch (err) {
+            console.error(
+              `[Immediate Fire] Failed to fire schedule ${schedule.id}:`,
+              err
+            );
+          }
+        }
+
         reply.send(schedule);
       } catch (error: any) {
         reply

@@ -6,6 +6,21 @@ import { redisConnection } from '../clients/redis';
 import { createCloudEvent, ScheduleEvents } from '@org/uvian-events';
 import { scheduleService } from '../services/factory';
 
+const VALID_INTERVALS = [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60];
+
+export const SYNC_INTERVAL_MINUTES = (() => {
+  const raw = process.env.SCHEDULER_SYNC_INTERVAL_MINUTES || 15;
+  const value = raw ? Number(raw) : 15;
+  if (!Number.isInteger(value) || !VALID_INTERVALS.includes(value)) {
+    throw new Error(
+      `SCHEDULER_SYNC_INTERVAL_MINUTES must be a divisor of 60 (${VALID_INTERVALS.join(
+        ', '
+      )}), got: ${raw}`
+    );
+  }
+  return value;
+})();
+
 const LOCK_KEY = 'scheduler:cron:lock';
 const LOCK_TTL = 120;
 
@@ -24,12 +39,70 @@ async function releaseLock(): Promise<void> {
   await redisConnection.del(LOCK_KEY);
 }
 
+export async function fireSchedule(
+  scheduleId: string,
+  userId: string,
+  type: 'one_time' | 'recurring',
+  eventData: Record<string, unknown>,
+  fireTime: Date
+): Promise<{ status: string; fireAt?: string }> {
+  const fireTimestamp = fireTime.getTime();
+
+  const event = createCloudEvent({
+    type: ScheduleEvents.SCHEDULE_FIRED,
+    source: `/schedules/${scheduleId}`,
+    subject: userId,
+    data: {
+      scheduleId,
+      type,
+      eventData,
+      firedAt: fireTime.toISOString(),
+    },
+  });
+
+  await queueService.addJobAt('uvian-events', 'event', event, fireTimestamp);
+
+  const clients = {
+    adminClient: adminSupabase,
+    userClient: adminSupabase,
+  };
+  const scopedService = scheduleService.scoped(clients);
+
+  if (type === 'one_time') {
+    await scopedService.markCompleted(scheduleId);
+  } else {
+    const fullSchedule = await scopedService.getSchedule(userId, scheduleId);
+    const nextRunAt = scopedService.computeNextRunAt(fullSchedule);
+    if (nextRunAt) {
+      await adminSupabase
+        .schema('core_scheduler')
+        .from('schedules')
+        .update({
+          next_run_at: nextRunAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', scheduleId);
+    } else {
+      await adminSupabase
+        .schema('core_scheduler')
+        .from('schedules')
+        .update({
+          status: 'completed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', scheduleId);
+    }
+  }
+
+  return { status: 'queued', fireAt: fireTime.toISOString() };
+}
+
 async function syncSchedules(): Promise<{
   processed: number;
   results: unknown[];
 }> {
   const now = new Date();
-  const windowEnd = new Date(now.getTime() + 15 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000);
 
   const { data: dueSchedules, error: queryError } = await adminSupabase
     .schema('core_scheduler')
@@ -53,7 +126,6 @@ async function syncSchedules(): Promise<{
     try {
       const schedule = mapRow(row);
       const fireTime = new Date(schedule.nextRunAt);
-      const fireTimestamp = fireTime.getTime();
 
       const { data: freshCheck, error: freshError } = await adminSupabase
         .schema('core_scheduler')
@@ -71,65 +143,15 @@ async function syncSchedules(): Promise<{
         continue;
       }
 
-      const event = createCloudEvent({
-        type: ScheduleEvents.SCHEDULE_FIRED,
-        source: `/schedules/${schedule.id}`,
-        subject: schedule.userId,
-        data: {
-          scheduleId: schedule.id,
-          type: schedule.type,
-          eventData: schedule.eventData,
-          firedAt: fireTime.toISOString(),
-        },
-      });
-
-      await queueService.addJobAt(
-        'uvian-events',
-        'event',
-        event,
-        fireTimestamp
+      const result = await fireSchedule(
+        schedule.id,
+        schedule.userId,
+        schedule.type,
+        schedule.eventData,
+        fireTime
       );
 
-      const clients = {
-        adminClient: adminSupabase,
-        userClient: adminSupabase,
-      };
-      const scopedService = scheduleService.scoped(clients);
-
-      if (schedule.type === 'one_time') {
-        await scopedService.markCompleted(schedule.id);
-      } else {
-        const fullSchedule = await scopedService.getSchedule(
-          schedule.userId,
-          schedule.id
-        );
-        const nextRunAt = scopedService.computeNextRunAt(fullSchedule);
-        if (nextRunAt) {
-          await adminSupabase
-            .schema('core_scheduler')
-            .from('schedules')
-            .update({
-              next_run_at: nextRunAt,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', schedule.id);
-        } else {
-          await adminSupabase
-            .schema('core_scheduler')
-            .from('schedules')
-            .update({
-              status: 'completed',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', schedule.id);
-        }
-      }
-
-      results.push({
-        scheduleId: schedule.id,
-        status: 'queued',
-        fireAt: fireTime.toISOString(),
-      });
+      results.push({ scheduleId: schedule.id, ...result });
     } catch (err) {
       console.error('Failed to process schedule:', row.id, err);
       results.push({
@@ -157,7 +179,7 @@ function mapRow(row: Record<string, unknown>) {
 export default fp(async (fastify) => {
   let isRunning = false;
 
-  cron.schedule('*/15 * * * *', async () => {
+  cron.schedule(`*/${SYNC_INTERVAL_MINUTES} * * * *`, async () => {
     if (isRunning) {
       console.log('[Cron] Previous sync still running, skipping...');
       return;
@@ -187,7 +209,9 @@ export default fp(async (fastify) => {
     }
   });
 
-  console.log('[Cron] Scheduler initialized with 15-minute interval');
+  console.log(
+    `[Cron] Scheduler initialized with ${SYNC_INTERVAL_MINUTES}-minute interval`
+  );
 
   fastify.decorate('runCronSync', async () => {
     if (isRunning) {
@@ -211,7 +235,7 @@ export default fp(async (fastify) => {
   fastify.get('/api/cron/status', async () => {
     return {
       status: 'running',
-      schedule: '*/15 * * * *',
+      schedule: `*/${SYNC_INTERVAL_MINUTES} * * * *`,
       isProcessing: isRunning,
     };
   });
