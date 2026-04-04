@@ -8,6 +8,7 @@ import {
   agentConfigService,
   llmService,
   mcpService,
+  skillService,
 } from '../services';
 import type { UpdateAgentConfigPayload } from '../services/agent-config';
 import { generateRSAKeyPair, decryptRSA } from '@org/utils-encryption';
@@ -286,7 +287,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           accountId: z.string(),
           systemPrompt: z.string().optional(),
           maxConversationHistory: z.number().optional(),
-          skills: z.array(z.record(z.string(), z.unknown())).optional(),
           config: z.record(z.string(), z.unknown()).optional(),
         }),
       },
@@ -299,7 +299,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               accountId: args.accountId,
               systemPrompt: args.systemPrompt,
               maxConversationHistory: args.maxConversationHistory,
-              skills: args.skills,
               config: args.config,
             });
           return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
@@ -339,7 +338,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           agentId: z.string(),
           systemPrompt: z.string().optional(),
           maxConversationHistory: z.number().optional(),
-          skills: z.array(z.record(z.string(), z.unknown())).optional(),
           config: z.record(z.string(), z.unknown()).optional(),
           isActive: z.boolean().optional(),
         }),
@@ -349,8 +347,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const payload: UpdateAgentConfigPayload = {
             systemPrompt: args.systemPrompt,
             maxConversationHistory: args.maxConversationHistory,
-            skills:
-              args.skills as unknown as UpdateAgentConfigPayload['skills'],
             config: args.config,
             isActive: args.isActive,
           };
@@ -650,6 +646,203 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
             .getMcps(args.agentId);
           return { content: [{ type: 'text', text: JSON.stringify(mcps) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'create_skill',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          name: z.string(),
+          description: z.string(),
+          content: z.record(z.string(), z.unknown()),
+          autoLoadEvents: z.array(z.string()).optional(),
+          isPrivate: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const skill = await skillService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .create({
+              accountId: args.accountId,
+              name: args.name,
+              description: args.description,
+              content: args.content,
+              autoLoadEvents: args.autoLoadEvents,
+              isPrivate: args.isPrivate,
+            });
+          return { content: [{ type: 'text', text: JSON.stringify(skill) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'list_skills',
+      {
+        inputSchema: z.object({ accountId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const skills = await skillService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .list(args.accountId);
+          return { content: [{ type: 'text', text: JSON.stringify(skills) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_skill',
+      {
+        inputSchema: z.object({ skillId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const skill = await skillService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .get(args.skillId);
+          return { content: [{ type: 'text', text: JSON.stringify(skill) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'update_skill',
+      {
+        inputSchema: z.object({
+          skillId: z.string(),
+          name: z.string().optional(),
+          description: z.string().optional(),
+          content: z.record(z.string(), z.unknown()).optional(),
+          autoLoadEvents: z.array(z.string()).optional(),
+          isPrivate: z.boolean().optional(),
+          isActive: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const { skillId, ...updateData } = args;
+          const skill = await skillService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .update(skillId, updateData);
+          return { content: [{ type: 'text', text: JSON.stringify(skill) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'delete_skill',
+      {
+        inputSchema: z.object({ skillId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          await skillService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .delete(args.skillId);
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ success: true }) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'link_skill',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          skillId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const link = await agentConfigService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .linkSkill(args.agentId, { skillId: args.skillId });
+          return { content: [{ type: 'text', text: JSON.stringify(link) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'unlink_skill',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          skillId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          await agentConfigService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .unlinkSkill(args.agentId, args.skillId);
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ success: true }) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_agent_skills',
+      {
+        inputSchema: z.object({ agentId: z.string() }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const skills = await agentConfigService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .getSkills(args.agentId);
+          return { content: [{ type: 'text', text: JSON.stringify(skills) }] };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],

@@ -17,8 +17,10 @@ from executors.base import BaseExecutor, JobData, JobResult
 from executors.triggers import TriggerRegistry
 from core.agents.universal_agent.agent import build_agent
 from core.agents.utils.mcp_mapping import get_mcps_for_event
+from core.agents.utils.skill_mapping import get_skills_for_event
 from clients.mcp import create_mcp_registry, build_mcp_registry
 from clients.auth import get_agent_secrets
+from clients.config import get_agent_skills
 from repositories.process_threads import process_thread_repository
 from core.logging import worker_logger
 from langgraph.types import Command
@@ -140,6 +142,11 @@ class AgentExecutor(BaseExecutor):
             available_mcps = mcp_registry.get_condensed_catalog()
             worker_logger.info_job(job_id, f"Available MCPs for on-demand loading: {[m['id'] for m in available_mcps]}")
 
+        worker_logger.info_job(job_id, "Loading agent skills from automation-api...")
+        all_skills = await get_agent_skills(agent_user_id)
+        preloaded_skills = get_skills_for_event(event_type, all_skills)
+        worker_logger.info_job(job_id, f"Loaded {len(all_skills)} skills, {len(preloaded_skills)} match event: {[s.get('name') for s in preloaded_skills]}")
+
         channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
         agent_input = None
         if not is_resume:
@@ -147,10 +154,10 @@ class AgentExecutor(BaseExecutor):
                 "messages": [
                     HumanMessage(content=message_content)
                 ],
-                "skills": [],
+                "skills": preloaded_skills,
                 "custom_instructions": "",
                 "agent_name": "Agent",
-                "loaded_skills": [],
+                "loaded_skills": [s.get("name") for s in preloaded_skills],
                 "loaded_mcps": [],
                 "available_mcps": available_mcps,
                 "llm_calls": 0,
@@ -169,7 +176,7 @@ class AgentExecutor(BaseExecutor):
                 agent_input = None 
 
 
-        config = {"configurable": {"thread_id": thread_id}}
+        config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
         if mcp_registry:
             config["configurable"]["mcp_registry"] = mcp_registry
 

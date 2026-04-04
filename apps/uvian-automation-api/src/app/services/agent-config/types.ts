@@ -10,14 +10,12 @@ export interface CreateAgentConfigPayload {
   accountId: string;
   systemPrompt?: string;
   maxConversationHistory?: number;
-  skills?: Record<string, unknown>[];
   config?: Record<string, unknown>;
 }
 
 export interface UpdateAgentConfigPayload {
   systemPrompt?: string;
   maxConversationHistory?: number;
-  skills?: Record<string, unknown>[];
   config?: Record<string, unknown>;
   isActive?: boolean;
 }
@@ -45,13 +43,16 @@ export interface UpdateMcpLinkPayload {
   isDefault?: boolean;
 }
 
+export interface LinkSkillPayload {
+  skillId: string;
+}
+
 export interface AgentConfigRecord {
   id: string;
   ownerUserId: string;
   accountId: string;
   systemPrompt?: string;
   maxConversationHistory: number;
-  skills: Record<string, unknown>[];
   config: Record<string, unknown>;
   isActive: boolean;
   createdAt: string;
@@ -75,6 +76,16 @@ export interface LinkedMcp {
   url: string;
   auth_method: string;
   _auth_secret?: string | null;
+}
+
+export interface LinkedSkill {
+  id: string;
+  name: string;
+  description: string;
+  content: Record<string, unknown>;
+  autoLoadEvents: string[];
+  isPrivate: boolean;
+  linkConfig: Record<string, unknown>;
 }
 
 export interface AgentSecrets {
@@ -106,6 +117,9 @@ export interface AgentConfigScopedService {
     mcpId: string,
     payload: UpdateMcpLinkPayload
   ): Promise<unknown>;
+  getSkills(agentId: string): Promise<LinkedSkill[]>;
+  linkSkill(agentId: string, payload: LinkSkillPayload): Promise<unknown>;
+  unlinkSkill(agentId: string, skillId: string): Promise<{ success: boolean }>;
   getAgentSecrets(ownerUserId: string): Promise<AgentSecrets>;
 }
 

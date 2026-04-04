@@ -7,3 +7,4 @@ export * from './lib/domains/tickets.js';
 export * from './lib/domains/users.js';
 export * from './lib/domains/accounts.js';
 export * from './lib/domains/agents.js';
+export * from './lib/domains/skills.js';

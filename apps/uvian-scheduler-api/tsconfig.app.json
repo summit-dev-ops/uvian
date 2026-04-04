@@ -20,6 +20,9 @@
   ],
   "references": [
     {
+      "path": "../../packages/services/subscription/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/services/queue/tsconfig.lib.json"
     },
     {
@@ -27,6 +30,12 @@
     },
     {
       "path": "../../packages/services/api-key/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/plugins/event-emitter/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/uvian-events/tsconfig.lib.json"
     }
   ]
 }

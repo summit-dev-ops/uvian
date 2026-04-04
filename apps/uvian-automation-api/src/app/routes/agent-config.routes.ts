@@ -26,6 +26,35 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.get<{ Params: { agentUserId: string } }>(
+    '/api/agents/:agentUserId/skills',
+    { preHandler: [fastify.authenticateInternal] },
+    async (request, reply) => {
+      try {
+        const { agentUserId } = request.params;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: adminSupabase,
+        };
+        const agent = await agentConfigService
+          .scoped(clients)
+          .getByUserId(agentUserId);
+        if (!agent) {
+          return reply.code(404).send({ error: 'Agent not found' });
+        }
+        const skills = await agentConfigService
+          .scoped(clients)
+          .getSkills(agent.id);
+        return reply.send({ skills });
+      } catch (error: any) {
+        fastify.log.error(error);
+        return reply
+          .code(500)
+          .send({ error: error.message || 'Failed to fetch agent skills' });
+      }
+    }
+  );
+
   fastify.get(
     '/api/config/agents/:agentUserId',
     { preHandler: [fastify.authenticate] },
@@ -44,12 +73,13 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
         if (!agent)
           return reply.code(404).send({ error: 'Agent config not found' });
 
-        const [llms, mcps] = await Promise.all([
+        const [llms, mcps, skills] = await Promise.all([
           agentConfigService.scoped(clients).getLlms(agent.id),
           agentConfigService.scoped(clients).getMcps(agent.id),
+          agentConfigService.scoped(clients).getSkills(agent.id),
         ]);
 
-        return reply.send({ agent, llms, mcps });
+        return reply.send({ agent, llms, mcps, skills });
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
       }
@@ -69,7 +99,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
             accountId: { type: 'string' },
             systemPrompt: { type: 'string' },
             maxConversationHistory: { type: 'number' },
-            skills: { type: 'array', items: { type: 'object' } },
             config: { type: 'object' },
           },
           additionalProperties: false,
@@ -89,7 +118,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
           accountId: body.accountId,
           systemPrompt: body.systemPrompt,
           maxConversationHistory: body.maxConversationHistory,
-          skills: body.skills,
           config: body.config,
         });
 
@@ -115,7 +143,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
           properties: {
             systemPrompt: { type: 'string' },
             maxConversationHistory: { type: 'number' },
-            skills: { type: 'array', items: { type: 'object' } },
             config: { type: 'object' },
             isActive: { type: 'boolean' },
           },
@@ -135,7 +162,6 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
         const agent = await agentConfigService.scoped(clients).update(agentId, {
           systemPrompt: body.systemPrompt,
           maxConversationHistory: body.maxConversationHistory,
-          skills: body.skills,
           config: body.config,
           isActive: body.isActive,
         });

@@ -3,6 +3,27 @@ from langgraph.types import Command
 from langchain_core.messages import ToolMessage
 from core.logging import worker_logger
 
+
+def flatten_skill_content(content: dict, prefix: str = "") -> str:
+    """Flatten nested JSON skill content into readable text with path-like headers."""
+    lines = []
+    for key, value in content.items():
+        path = f"{prefix}/{key}" if prefix else key
+        if isinstance(value, dict):
+            lines.append(flatten_skill_content(value, path))
+        elif isinstance(value, list):
+            lines.append(f"## {path}\n")
+            for item in value:
+                if isinstance(item, dict):
+                    lines.append(flatten_skill_content(item, path))
+                else:
+                    lines.append(f"- {item}")
+            lines.append("")
+        else:
+            lines.append(f"## {path}\n{value}\n")
+    return "\n".join(lines)
+
+
 search_skills_schema = {
     "type": "object",
     "properties": {
@@ -53,12 +74,19 @@ def load_skill(
     worker_logger.info(f"[load_skill] Called with skill_name: {skill_name}, loaded: {loaded_skills}")
     
     for skill in skills:
-        if skill["name"] == skill_name and not skill in loaded_skills:
+        if skill["name"] == skill_name and skill_name not in loaded_skills:
             worker_logger.info(f"[load_skill] Loading skill: {skill_name}")
+            content = skill.get("content", {})
+            if isinstance(content, dict):
+                formatted_content = flatten_skill_content(content)
+            elif isinstance(content, str):
+                formatted_content = content
+            else:
+                formatted_content = str(content)
             return Command(
                 update={
                     "loaded_skills": loaded_skills + [skill_name],  
-                    "messages": [ToolMessage(f"Loaded skill: {skill_name}\n\n{skill['content']}", tool_call_id=runtime.tool_call_id)]
+                    "messages": [ToolMessage(f"Loaded skill: {skill_name}\n\n{formatted_content}", tool_call_id=runtime.tool_call_id)]
                 }
             )
         
