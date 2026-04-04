@@ -6,7 +6,6 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 import time
 import jwt as pyjwt
-import asyncio
 
 
 class MCPServer:
@@ -112,8 +111,7 @@ class PersistentMCPClient:
 
     def __init__(self):
         self._sessions: Dict[str, ClientSession] = {}
-        self._transports: Dict[str, tuple] = {}
-        self._tasks: Dict[str, asyncio.Task] = {}
+        self._generators: Dict[str, Any] = {}
 
     async def connect(self, mcp_id: str, server: MCPServer) -> ClientSession:
         """Open a persistent connection to an MCP server and return the session."""
@@ -121,16 +119,17 @@ class PersistentMCPClient:
             return self._sessions[mcp_id]
 
         headers = server._build_headers()
-        read_stream, write_stream, get_session_id = streamablehttp_client(
+        gen = streamablehttp_client(
             url=server._url,
             headers=headers,
         )
+        read_stream, write_stream, get_session_id = await gen.__aenter__()
 
         session = ClientSession(read_stream, write_stream)
         await session.initialize()
 
         self._sessions[mcp_id] = session
-        self._transports[mcp_id] = (read_stream, write_stream)
+        self._generators[mcp_id] = gen
         return session
 
     async def load_tools(self, mcp_id: str, server: MCPServer) -> List[BaseTool]:
@@ -152,31 +151,15 @@ class PersistentMCPClient:
         ]
 
     async def close(self):
-        """Close all persistent sessions and clean up transport tasks."""
-        for mcp_id, session in self._sessions.items():
+        """Close all persistent sessions and clean up transport generators."""
+        for mcp_id, gen in self._generators.items():
             try:
-                await session.__aexit__(None, None, None)
-            except Exception:
-                pass
-
-        for mcp_id, (read_stream, write_stream) in self._transports.items():
-            try:
-                if hasattr(read_stream, 'aclose'):
-                    await read_stream.aclose()
-                if hasattr(write_stream, 'aclose'):
-                    await write_stream.aclose()
-            except Exception:
-                pass
-
-        for task in self._tasks.values():
-            try:
-                task.cancel()
+                await gen.__aexit__(None, None, None)
             except Exception:
                 pass
 
         self._sessions.clear()
-        self._transports.clear()
-        self._tasks.clear()
+        self._generators.clear()
 
 
 class MCPRegistry:
