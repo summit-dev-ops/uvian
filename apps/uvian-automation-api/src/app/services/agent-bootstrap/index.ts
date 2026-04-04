@@ -43,8 +43,6 @@ async function bootstrapMcps(
 
   for (const config of systems) {
     try {
-      const mcpUrl = `${config.url}/v1/mcp`;
-
       const upsertResult = await adminSupabase
         .schema('core_automation')
         .from('mcps')
@@ -54,7 +52,7 @@ async function bootstrapMcps(
             name: config.name,
             type: config.apiKey ? 'external' : 'integrated',
             auth_method: 'bearer',
-            url: mcpUrl,
+            url: config.url,
             config: {
               system: config.service,
               description: `${config.name} MCP`,
