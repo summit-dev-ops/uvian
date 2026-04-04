@@ -1,8 +1,12 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_core.tools import BaseTool
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
 import time
 import jwt as pyjwt
+import asyncio
 
 
 class MCPServer:
@@ -32,34 +36,35 @@ class MCPServer:
     def name(self) -> str:
         return self._name
 
+    def _build_connection_config(self) -> dict:
+        return {
+            "transport": "streamable_http",
+            "url": self._url,
+            "headers": self._build_headers(),
+        }
+
     async def get_tools(self) -> List[BaseTool]:
+        """Load tools using a new session per call (stateless, legacy behavior)."""
         if self._tools is not None:
             return self._tools
-        config = {
-            "uvian-hub": {
-                "transport": "http",
-                "url": self._url,
-                "headers": self._build_headers(),
-            }
-        }
+        config = {"uvian-hub": self._build_connection_config()}
         client = MultiServerMCPClient(config)
         self._tools = await client.get_tools()
         return self._tools
 
-    async def get_tool_metadata(self) -> List[Dict[str, Any]]:
-        """Fetch raw tool metadata from the MCP server without creating LangChain wrappers.
+    async def get_tools_from_session(self, session: ClientSession) -> List[BaseTool]:
+        """Load tools from an existing persistent session.
 
-        Calls tools/list JSON-RPC directly — much cheaper than get_tools().
+        Tools created this way will reuse the same session for all invocations,
+        enabling stateful MCP servers.
         """
+        return await load_mcp_tools(session)
+
+    async def get_tool_metadata(self) -> List[Dict[str, Any]]:
+        """Fetch raw tool metadata from the MCP server without creating LangChain wrappers."""
         if self._tool_metadata is not None:
             return self._tool_metadata
-        config = {
-            "uvian-hub": {
-                "transport": "http",
-                "url": self._url,
-                "headers": self._build_headers(),
-            }
-        }
+        config = {"uvian-hub": self._build_connection_config()}
         client = MultiServerMCPClient(config)
         async with client.session("uvian-hub") as session:
             result = await session.list_tools()
@@ -97,13 +102,91 @@ class MCPServer:
         return {}
 
 
+class PersistentMCPClient:
+    """Manages long-lived MCP sessions for stateful tool execution.
+
+    Unlike the default behavior where a new session is created per tool call,
+    this keeps sessions alive for the entire agent run, enabling stateful MCPs
+    (conversation context, auth sessions, subscriptions).
+    """
+
+    def __init__(self):
+        self._sessions: Dict[str, ClientSession] = {}
+        self._transports: Dict[str, tuple] = {}
+        self._tasks: Dict[str, asyncio.Task] = {}
+
+    async def connect(self, mcp_id: str, server: MCPServer) -> ClientSession:
+        """Open a persistent connection to an MCP server and return the session."""
+        if mcp_id in self._sessions:
+            return self._sessions[mcp_id]
+
+        headers = server._build_headers()
+        read_stream, write_stream, get_session_id = streamablehttp_client(
+            url=server._url,
+            headers=headers,
+        )
+
+        session = ClientSession(read_stream, write_stream)
+        await session.initialize()
+
+        self._sessions[mcp_id] = session
+        self._transports[mcp_id] = (read_stream, write_stream)
+        return session
+
+    async def load_tools(self, mcp_id: str, server: MCPServer) -> List[BaseTool]:
+        """Load tools from a persistent session, creating the connection if needed."""
+        session = await self.connect(mcp_id, server)
+        return await server.get_tools_from_session(session)
+
+    async def get_tool_metadata(self, mcp_id: str, server: MCPServer) -> List[Dict[str, Any]]:
+        """Fetch tool metadata using the persistent session."""
+        session = await self.connect(mcp_id, server)
+        result = await session.list_tools()
+        return [
+            {
+                "name": tool.name,
+                "description": tool.description or "",
+                "inputSchema": tool.inputSchema,
+            }
+            for tool in result.tools
+        ]
+
+    async def close(self):
+        """Close all persistent sessions and clean up transport tasks."""
+        for mcp_id, session in self._sessions.items():
+            try:
+                await session.__aexit__(None, None, None)
+            except Exception:
+                pass
+
+        for mcp_id, (read_stream, write_stream) in self._transports.items():
+            try:
+                if hasattr(read_stream, 'aclose'):
+                    await read_stream.aclose()
+                if hasattr(write_stream, 'aclose'):
+                    await write_stream.aclose()
+            except Exception:
+                pass
+
+        for task in self._tasks.values():
+            try:
+                task.cancel()
+            except Exception:
+                pass
+
+        self._sessions.clear()
+        self._transports.clear()
+        self._tasks.clear()
+
+
 class MCPRegistry:
     """Manages MCP server connections with lazy per-MCP tool loading."""
 
-    def __init__(self):
+    def __init__(self, persistent_client: Optional[PersistentMCPClient] = None):
         self._servers: Dict[str, MCPServer] = {}
         self._tool_cache: Dict[str, List[BaseTool]] = {}
         self._metadata_cache: Dict[str, List[Dict[str, Any]]] = {}
+        self._persistent_client = persistent_client
 
     def register_server(self, server: MCPServer) -> None:
         self._servers[server.mcp_id] = server
@@ -114,7 +197,10 @@ class MCPRegistry:
         server = self._servers.get(mcp_id)
         if not server:
             return []
-        tools = await server.get_tools()
+        if self._persistent_client:
+            tools = await self._persistent_client.load_tools(mcp_id, server)
+        else:
+            tools = await server.get_tools()
         self._tool_cache[mcp_id] = tools
         return tools
 
@@ -127,7 +213,10 @@ class MCPRegistry:
         server = self._servers.get(mcp_id)
         if not server:
             return []
-        metadata = await server.get_tool_metadata()
+        if self._persistent_client:
+            metadata = await self._persistent_client.get_tool_metadata(mcp_id, server)
+        else:
+            metadata = await server.get_tool_metadata()
         self._metadata_cache[mcp_id] = metadata
         return metadata
 
@@ -180,6 +269,11 @@ class MCPRegistry:
             })
         return result
 
+    async def close(self):
+        """Close all persistent sessions."""
+        if self._persistent_client:
+            await self._persistent_client.close()
+
 
 async def create_mcp_registry(mcp_configs: list) -> List[BaseTool]:
     """Legacy function: loads ALL tools from ALL MCP configs.
@@ -202,12 +296,13 @@ async def create_mcp_registry(mcp_configs: list) -> List[BaseTool]:
     return tools
 
 
-async def build_mcp_registry(mcp_configs: list) -> MCPRegistry:
+async def build_mcp_registry(mcp_configs: list, persistent_client: Optional[PersistentMCPClient] = None) -> MCPRegistry:
     """Build an MCPRegistry from a list of MCP configs.
 
     Registers all servers but does NOT load tools eagerly.
+    If a persistent_client is provided, tools will be loaded from persistent sessions.
     """
-    registry = MCPRegistry()
+    registry = MCPRegistry(persistent_client=persistent_client)
     for cfg in mcp_configs:
         if not cfg.get("url"):
             continue

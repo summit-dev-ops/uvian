@@ -19,7 +19,7 @@ from executors.triggers import TriggerRegistry
 from core.agents.universal_agent.agent import build_agent
 from core.agents.utils.mcp_mapping import get_mcps_for_event
 from core.agents.utils.skill_mapping import get_skills_for_event
-from clients.mcp import create_mcp_registry, build_mcp_registry
+from clients.mcp import create_mcp_registry, build_mcp_registry, PersistentMCPClient
 from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills
 from repositories.process_threads import process_thread_repository
@@ -131,17 +131,31 @@ class AgentExecutor(BaseExecutor):
         all_mcp_configs = secrets.get("mcps", [])
         preloaded_mcp_configs = get_mcps_for_event(event_type, all_mcp_configs)
         
+        persistent_client = PersistentMCPClient()
         mcp_tools = []
-        if preloaded_mcp_configs:
-            worker_logger.info_job(job_id, f"Pre-loading MCP tools for event: {[c.get('id') for c in preloaded_mcp_configs]}")
-            mcp_tools = await create_mcp_registry(preloaded_mcp_configs)
-            worker_logger.info_job(job_id, f"Pre-loaded {len(mcp_tools)} MCP tools")
-
         mcp_registry = None
         available_mcps = []
+
         if all_mcp_configs:
-            worker_logger.info_job(job_id, "Building MCP registry for on-demand loading...")
-            mcp_registry = await build_mcp_registry(all_mcp_configs)
+            worker_logger.info_job(job_id, "Building persistent MCP registry...")
+            mcp_registry = await build_mcp_registry(all_mcp_configs, persistent_client=persistent_client)
+            
+            if preloaded_mcp_configs:
+                worker_logger.info_job(job_id, f"Pre-loading MCP tools for event: {[c.get('id') for c in preloaded_mcp_configs]}")
+                for cfg in preloaded_mcp_configs:
+                    if cfg.get("url"):
+                        from clients.mcp import MCPServer
+                        server = MCPServer(
+                            mcp_id=cfg["id"],
+                            url=cfg["url"],
+                            auth_method=cfg.get("auth_method", "bearer"),
+                            auth_secret=cfg.get("_auth_secret"),
+                            jwt_secret=cfg.get("_jwt_secret"),
+                            name=cfg.get("name"),
+                        )
+                        tools = await persistent_client.load_tools(cfg["id"], server)
+                        mcp_tools.extend(tools)
+                worker_logger.info_job(job_id, f"Pre-loaded {len(mcp_tools)} MCP tools from persistent sessions")
             
             worker_logger.info_job(job_id, "Fetching tool metadata from MCP servers...")
             for mcp_id in mcp_registry._servers:
@@ -242,4 +256,7 @@ class AgentExecutor(BaseExecutor):
                     "event_type": event_type,
                 }
             }
+        finally:
+            if persistent_client:
+                await persistent_client.close()
             
