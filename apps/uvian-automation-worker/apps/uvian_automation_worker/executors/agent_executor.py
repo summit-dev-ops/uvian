@@ -135,131 +135,125 @@ class AgentExecutor(BaseExecutor):
         mcp_registry = None
         available_mcps = []
 
-        async def _setup_and_run():
-            nonlocal mcp_tools, mcp_registry, available_mcps
-
-            async with PersistentMCPClient() as persistent_client:
-                if all_mcp_configs:
-                    worker_logger.info_job(job_id, "Registering MCP servers...")
-                    for cfg in all_mcp_configs:
-                        if cfg.get("url"):
-                            persistent_client.add_server(
-                                mcp_id=cfg["id"],
-                                url=cfg["url"],
-                                auth_method=cfg.get("auth_method", "bearer"),
-                                auth_secret=cfg.get("_auth_secret"),
-                                jwt_secret=cfg.get("_jwt_secret"),
-                                name=cfg.get("name"),
-                            )
-                    
-                    worker_logger.info_job(job_id, "Connecting to all MCP servers in parallel...")
-                    await persistent_client.connect_all()
-                    
-                    worker_logger.info_job(job_id, "Fetching tool metadata from all MCP servers...")
-                    await persistent_client.fetch_all_metadata()
-                    
-                    if preloaded_mcp_configs:
-                        worker_logger.info_job(job_id, f"Pre-loading MCP tools for event: {[c.get('id') for c in preloaded_mcp_configs]}")
-                        for cfg in preloaded_mcp_configs:
-                            tools = await persistent_client.load_tools(cfg["id"])
-                            mcp_tools.extend(tools)
-                        worker_logger.info_job(job_id, f"Pre-loaded {len(mcp_tools)} MCP tools from persistent sessions")
-                    
-                    available_mcps = persistent_client.get_rich_catalog()
-                    worker_logger.info_job(job_id, f"Available MCPs: {[m['name'] for m in available_mcps]}")
-                    mcp_registry = MCPRegistry(client=persistent_client)
-
-                worker_logger.info_job(job_id, "Loading agent skills from automation-api...")
-                all_skills = await get_agent_skills(agent_user_id)
-                preloaded_skills = get_skills_for_event(event_type, all_skills)
-                worker_logger.info_job(job_id, f"Loaded {len(all_skills)} skills, {len(preloaded_skills)} match event: {[s.get('name') for s in preloaded_skills]}")
-
-                channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
-                agent_input = None
-                if not is_resume:
-                    current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-
-                    if "{current_time}" in message_content:
-                        message_content = message_content.replace("{current_time}", current_time)
-                    else:
-                        message_content += f"\nCurrent Time: {current_time}"
-
-                    initial_messages = []
-                    for skill in preloaded_skills:
-                        content = skill.get("content", {})
-                        if isinstance(content, dict):
-                            formatted_content = flatten_skill_content(content)
-                        elif isinstance(content, str):
-                            formatted_content = content
-                        else:
-                            formatted_content = str(content)
-                        initial_messages.append(
-                            ToolMessage(
-                                f"Loaded skill: {skill['name']}\n\n{formatted_content}",
-                                tool_call_id=f"preload-{skill['name']}",
-                            )
+        async with PersistentMCPClient() as persistent_client:
+            if all_mcp_configs:
+                worker_logger.info_job(job_id, "Registering MCP servers...")
+                for cfg in all_mcp_configs:
+                    if cfg.get("url"):
+                        persistent_client.add_server(
+                            mcp_id=cfg["id"],
+                            url=cfg["url"],
+                            auth_method=cfg.get("auth_method", "bearer"),
+                            auth_secret=cfg.get("_auth_secret"),
+                            jwt_secret=cfg.get("_jwt_secret"),
+                            name=cfg.get("name"),
                         )
-                    initial_messages.append(HumanMessage(content=message_content))
+                
+                worker_logger.info_job(job_id, "Connecting to all MCP servers...")
+                await persistent_client.connect_all()
+                
+                worker_logger.info_job(job_id, "Fetching tool metadata from all MCP servers...")
+                await persistent_client.fetch_all_metadata()
+                
+                if preloaded_mcp_configs:
+                    worker_logger.info_job(job_id, f"Pre-loading MCP tools for event: {[c.get('id') for c in preloaded_mcp_configs]}")
+                    for cfg in preloaded_mcp_configs:
+                        tools = await persistent_client.load_tools(cfg["id"])
+                        mcp_tools.extend(tools)
+                    worker_logger.info_job(job_id, f"Pre-loaded {len(mcp_tools)} MCP tools from persistent sessions")
+                
+                available_mcps = persistent_client.get_rich_catalog()
+                worker_logger.info_job(job_id, f"Available MCPs: {[m['name'] for m in available_mcps]}")
+                mcp_registry = MCPRegistry(client=persistent_client)
 
-                    agent_input = {
-                        "messages": initial_messages,
-                        "skills": preloaded_skills,
-                        "custom_instructions": "",
-                        "agent_name": "Agent",
-                        "loaded_skills": [s.get("name") for s in preloaded_skills],
-                        "loaded_mcps": [],
-                        "available_mcps": available_mcps,
-                        "llm_calls": 0,
-                        "channel_id": channel,
-                        "conversation_id": conversation_id,
-                        "agent_user_id": agent_user_id,
-                        "message_id": str(uuid.uuid4()),
-                        "event_type": event_type,
-                        "event_metadata": event_metadata,
-                    }
+            worker_logger.info_job(job_id, "Loading agent skills from automation-api...")
+            all_skills = await get_agent_skills(agent_user_id)
+            preloaded_skills = get_skills_for_event(event_type, all_skills)
+            worker_logger.info_job(job_id, f"Loaded {len(all_skills)} skills, {len(preloaded_skills)} match event: {[s.get('name') for s in preloaded_skills]}")
+
+            channel: str = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
+            agent_input = None
+            if not is_resume:
+                current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+                if "{current_time}" in message_content:
+                    message_content = message_content.replace("{current_time}", current_time)
                 else:
-                    resolution_payload = inputs.get("resolutionPayload")
-                    if resolution_payload:
-                        agent_input = Command(resume=resolution_payload) 
+                    message_content += f"\nCurrent Time: {current_time}"
+
+                initial_messages = []
+                for skill in preloaded_skills:
+                    content = skill.get("content", {})
+                    if isinstance(content, dict):
+                        formatted_content = flatten_skill_content(content)
+                    elif isinstance(content, str):
+                        formatted_content = content
                     else:
-                        agent_input = None 
+                        formatted_content = str(content)
+                    initial_messages.append(
+                        ToolMessage(
+                            f"Loaded skill: {skill['name']}\n\n{formatted_content}",
+                            tool_call_id=f"preload-{skill['name']}",
+                        )
+                    )
+                initial_messages.append(HumanMessage(content=message_content))
 
-                config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
-                if mcp_registry:
-                    config["configurable"]["mcp_registry"] = mcp_registry
+                agent_input = {
+                    "messages": initial_messages,
+                    "skills": preloaded_skills,
+                    "custom_instructions": "",
+                    "agent_name": "Agent",
+                    "loaded_skills": [s.get("name") for s in preloaded_skills],
+                    "loaded_mcps": [],
+                    "available_mcps": available_mcps,
+                    "llm_calls": 0,
+                    "channel_id": channel,
+                    "conversation_id": conversation_id,
+                    "agent_user_id": agent_user_id,
+                    "message_id": str(uuid.uuid4()),
+                    "event_type": event_type,
+                    "event_metadata": event_metadata,
+                }
+            else:
+                resolution_payload = inputs.get("resolutionPayload")
+                if resolution_payload:
+                    agent_input = Command(resume=resolution_payload) 
+                else:
+                    agent_input = None 
 
-                full_response: List[Any] = []
-                try:
-                    worker_logger.info_job(job_id, f"Starting agent with config: {config}")
-                    worker_logger.info_job(job_id, f"Agent input: {str(agent_input)[:500]}...")
-                    agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
-                    async for chunk,_m in agent.astream(
-                        agent_input,
-                        config=config, 
-                        stream_mode="messages" 
-                    ):
-                        full_response.append(chunk)
-                    
-                    worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
+            config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
+            if mcp_registry:
+                config["configurable"]["mcp_registry"] = mcp_registry
 
-                    return {
-                        "status": "completed",
-                        "result": {
-                            "event_type": event_type,
-                            "conversationId": conversation_id,
-                            "resourceId": resource_id,
-                        }
+            full_response: List[Any] = []
+            try:
+                worker_logger.info_job(job_id, f"Starting agent with config: {config}")
+                worker_logger.info_job(job_id, f"Agent input: {str(agent_input)[:500]}...")
+                agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
+                async for chunk,_m in agent.astream(
+                    agent_input,
+                    config=config, 
+                    stream_mode="messages" 
+                ):
+                    full_response.append(chunk)
+                
+                worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
+
+                return {
+                    "status": "completed",
+                    "result": {
+                        "event_type": event_type,
+                        "conversationId": conversation_id,
+                        "resourceId": resource_id,
                     }
+                }
 
-                except Exception as e:
-                    worker_logger.error(f"Error executing agent: {e}", exception=e)
-                    return {
-                        "status": "failed",
-                        "result": {
-                            "error": str(e),
-                            "event_type": event_type,
-                        }
+            except Exception as e:
+                worker_logger.error(f"Error executing agent: {e}", exception=e)
+                return {
+                    "status": "failed",
+                    "result": {
+                        "error": str(e),
+                        "event_type": event_type,
                     }
-
-        return await _setup_and_run()
-            
+                }
