@@ -8,6 +8,7 @@ import time
 import jwt as pyjwt
 import asyncio
 from contextlib import AsyncExitStack
+from core.logging import worker_logger
 
 
 def _build_headers(auth_method: str, auth_secret: str | None, jwt_secret: str | None = None) -> dict:
@@ -77,8 +78,17 @@ class PersistentMCPClient:
         return session
 
     async def connect_all(self):
-        """Open persistent connections to all registered servers in parallel."""
-        await asyncio.gather(*[self.connect(mcp_id) for mcp_id in self._connections])
+        """Open persistent connections to all registered servers in parallel.
+        Individual server failures are logged but don't block other servers."""
+        async def _connect(mcp_id: str):
+            try:
+                await asyncio.wait_for(self.connect(mcp_id), timeout=15)
+            except asyncio.TimeoutError:
+                worker_logger.warning(f"[mcp] Connection timeout for '{mcp_id}'")
+            except Exception as e:
+                worker_logger.warning(f"[mcp] Failed to connect to '{mcp_id}': {e}")
+
+        await asyncio.gather(*[_connect(mcp_id) for mcp_id in self._connections])
 
     async def load_tools(self, mcp_id: str) -> List[BaseTool]:
         """Load tools from a specific server. Will lazily connect if not already connected."""
@@ -111,8 +121,17 @@ class PersistentMCPClient:
         return metadata
 
     async def fetch_all_metadata(self):
-        """Fetch tool metadata from all connected servers in parallel."""
-        await asyncio.gather(*[self.get_tool_metadata(mcp_id) for mcp_id in self._connections])
+        """Fetch tool metadata from all connected servers in parallel.
+        Individual server failures are logged but don't block other servers."""
+        async def _fetch(mcp_id: str):
+            try:
+                await asyncio.wait_for(self.get_tool_metadata(mcp_id), timeout=10)
+            except asyncio.TimeoutError:
+                worker_logger.warning(f"[mcp] Metadata fetch timeout for '{mcp_id}'")
+            except Exception as e:
+                worker_logger.warning(f"[mcp] Failed to fetch metadata for '{mcp_id}': {e}")
+
+        await asyncio.gather(*[_fetch(mcp_id) for mcp_id in self._connections])
 
     def get_rich_catalog(self) -> List[Dict[str, Any]]:
         """Get catalog of all servers with tool info and usage guidance."""
