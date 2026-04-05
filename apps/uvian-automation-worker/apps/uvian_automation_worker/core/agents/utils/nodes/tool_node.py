@@ -1019,6 +1019,7 @@ class ToolNode(RunnableCallable):
 
             # Error is handled - create error ToolMessage
             content = _handle_tool_error(e, flag=self._handle_tool_errors)
+            worker_logger.warning(f"[tool_node] {call['name']} args={call['args']} → ERROR: {content}")
             return ToolMessage(
                 content=content,
                 name=call["name"],
@@ -1032,6 +1033,7 @@ class ToolNode(RunnableCallable):
             return self._validate_tool_command(response, request.tool_call, input_type)
         if isinstance(response, ToolMessage):
             response.content = cast("str | list", msg_content_output(response.content))
+            worker_logger.info(f"[tool_node] {call['name']} args={call['args']} → {response.content}")
             return response
 
         msg = f"Tool {call['name']} returned unexpected type: {type(response)}"
@@ -1177,6 +1179,7 @@ class ToolNode(RunnableCallable):
 
             # Error is handled - create error ToolMessage
             content = _handle_tool_error(e, flag=self._handle_tool_errors)
+            worker_logger.warning(f"[tool_node] {call['name']} args={call['args']} → ERROR: {content}")
             return ToolMessage(
                 content=content,
                 name=call["name"],
@@ -1190,6 +1193,7 @@ class ToolNode(RunnableCallable):
             return self._validate_tool_command(response, request.tool_call, input_type)
         if isinstance(response, ToolMessage):
             response.content = cast("str | list", msg_content_output(response.content))
+            worker_logger.info(f"[tool_node] {call['name']} args={call['args']} → {response.content}")
             return response
 
         msg = f"Tool {call['name']} returned unexpected type: {type(response)}"
