@@ -7,6 +7,7 @@ from mcp import ClientSession
 import time
 import jwt as pyjwt
 import asyncio
+from contextlib import AsyncExitStack
 
 
 def _build_headers(auth_method: str, auth_secret: str | None, jwt_secret: str | None = None) -> dict:
@@ -38,50 +39,65 @@ class PersistentMCPClient:
 
     Opens long-lived sessions that persist across tool invocations, enabling
     stateful MCP servers (conversation context, auth sessions, subscriptions).
+    Safely manages background async tasks using AsyncExitStack.
     """
 
     def __init__(self):
         self._connections: Dict[str, dict] = {}
         self._names: Dict[str, str] = {}
         self._sessions: Dict[str, ClientSession] = {}
-        self._generators: Dict[str, Any] = {}
         self._tool_cache: Dict[str, List[BaseTool]] = {}
         self._metadata_cache: Dict[str, List[Dict[str, Any]]] = {}
+        self.exit_stack = AsyncExitStack()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
 
     def add_server(self, mcp_id: str, url: str, auth_method: str, auth_secret: str | None, jwt_secret: str | None = None, name: str | None = None):
-        """Register an MCP server connection. Does not connect yet."""
+        """Register an MCP server configuration. Does NOT connect yet."""
         self._connections[mcp_id] = _build_connection_config(url, auth_method, auth_secret, jwt_secret)
         self._names[mcp_id] = name or mcp_id
 
+    async def connect(self, mcp_id: str) -> ClientSession:
+        """Dynamically open a persistent connection to a single registered server."""
+        if mcp_id in self._sessions:
+            return self._sessions[mcp_id]
+
+        if mcp_id not in self._connections:
+            raise ValueError(f"MCP server '{mcp_id}' is not registered.")
+
+        connection = self._connections[mcp_id]
+        gen = create_session(connection)
+        session = await self.exit_stack.enter_async_context(gen)
+
+        self._sessions[mcp_id] = session
+        return session
+
     async def connect_all(self):
         """Open persistent connections to all registered servers in parallel."""
-        async def _connect(mcp_id: str):
-            connection = self._connections[mcp_id]
-            gen = create_session(connection)
-            session = await gen.__aenter__()
-            self._sessions[mcp_id] = session
-            self._generators[mcp_id] = gen
-
-        await asyncio.gather(*[_connect(mcp_id) for mcp_id in self._connections])
+        await asyncio.gather(*[self.connect(mcp_id) for mcp_id in self._connections])
 
     async def load_tools(self, mcp_id: str) -> List[BaseTool]:
-        """Load tools from a specific server using its persistent session."""
+        """Load tools from a specific server. Will lazily connect if not already connected."""
         if mcp_id in self._tool_cache:
             return self._tool_cache[mcp_id]
-        session = self._sessions.get(mcp_id)
-        if not session:
-            return []
+
+        session = await self.connect(mcp_id)
+
         tools = await load_mcp_tools(session)
         self._tool_cache[mcp_id] = tools
         return tools
 
     async def get_tool_metadata(self, mcp_id: str) -> List[Dict[str, Any]]:
-        """Fetch tool metadata from a specific server."""
+        """Fetch tool metadata from a specific server. Lazily connects if needed."""
         if mcp_id in self._metadata_cache:
             return self._metadata_cache[mcp_id]
-        session = self._sessions.get(mcp_id)
-        if not session:
-            return []
+
+        session = await self.connect(mcp_id)
+
         result = await session.list_tools()
         metadata = [
             {
@@ -119,24 +135,15 @@ class PersistentMCPClient:
         return result
 
     async def close(self):
-        """Close all persistent sessions."""
-        for mcp_id, gen in self._generators.items():
-            try:
-                await gen.__aexit__(None, None, None)
-            except Exception:
-                pass
+        """Safely close all persistent sessions and anyio background tasks."""
+        await self.exit_stack.aclose()
         self._sessions.clear()
-        self._generators.clear()
         self._tool_cache.clear()
         self._metadata_cache.clear()
 
 
 class MCPRegistry:
-    """Thin wrapper around PersistentMCPClient for agent framework compatibility.
-
-    The agent framework expects MCPRegistry.get_tools_for_mcp(mcp_id) — this
-    delegates to the persistent client.
-    """
+    """Thin wrapper around PersistentMCPClient for agent framework compatibility."""
 
     def __init__(self, client: Optional[PersistentMCPClient] = None):
         self._client = client
@@ -172,9 +179,5 @@ async def create_mcp_registry(mcp_configs: list) -> List[BaseTool]:
 
 
 async def build_mcp_registry(mcp_configs: list, persistent_client: Optional[PersistentMCPClient] = None) -> MCPRegistry:
-    """Build an MCPRegistry from a list of MCP configs.
-
-    If a persistent_client is provided, it should already have servers registered
-    and connections established. The registry just wraps it for framework compatibility.
-    """
+    """Build an MCPRegistry from a list of MCP configs."""
     return MCPRegistry(client=persistent_client)
