@@ -88,6 +88,7 @@ from langgraph.store.base import BaseStore  # noqa: TC002
 from langgraph.types import Command, Send, StreamWriter
 from pydantic import BaseModel, ValidationError
 from typing_extensions import TypeVar, Unpack
+from core.logging import worker_logger
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -793,14 +794,37 @@ class ToolNode(RunnableCallable):
             from clients.mcp import MCPRegistry
             if not isinstance(self._mcp_registry, MCPRegistry):
                 return None
-            for mcp_id in self._mcp_registry._tool_cache:
+            if not self._mcp_registry._client:
+                return None
+            for mcp_id in self._mcp_registry._client._tool_cache:
                 tools = await self._mcp_registry.get_tools_for_mcp(mcp_id)
                 for tool in tools:
                     self._mcp_tool_cache[tool.name] = tool
                     if tool.name == tool_name:
                         return tool
-        except Exception:
-            pass
+        except Exception as e:
+            worker_logger.error(f"[ToolNode] Failed to resolve tool '{tool_name}' from MCP registry: {e}")
+        return None
+
+    def _resolve_tool_from_mcp_registry_sync(self, tool_name: str) -> BaseTool | None:
+        if not self._mcp_registry:
+            return None
+        if tool_name in self._mcp_tool_cache:
+            return self._mcp_tool_cache[tool_name]
+        try:
+            from clients.mcp import MCPRegistry
+            if not isinstance(self._mcp_registry, MCPRegistry):
+                return None
+            if not self._mcp_registry._client:
+                return None
+            for mcp_id in self._mcp_registry._client._tool_cache:
+                tools = self._mcp_registry._client._tool_cache.get(mcp_id, [])
+                for tool in tools:
+                    self._mcp_tool_cache[tool.name] = tool
+                    if tool.name == tool_name:
+                        return tool
+        except Exception as e:
+            worker_logger.error(f"[ToolNode] Failed to resolve tool '{tool_name}' from MCP registry (sync): {e}")
         return None
 
     @property
@@ -1032,6 +1056,11 @@ class ToolNode(RunnableCallable):
         # Validation is deferred to _execute_tool_sync to allow interceptors
         # to short-circuit requests for unregistered tools
         tool = self.tools_by_name.get(call["name"])
+        if tool is None and self._mcp_registry:
+            tool = self._resolve_tool_from_mcp_registry_sync(call["name"])
+            if tool:
+                self._tools_by_name[tool.name] = tool
+                self._injected_args[tool.name] = _get_all_injected_args(tool)
 
         # Create the tool request with state and runtime
         tool_request = ToolCallRequest(
