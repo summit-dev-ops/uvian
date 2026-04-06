@@ -1319,6 +1319,7 @@ class ToolNode(RunnableCallable):
                 requested_tool=requested_tool,
                 available_tools=", ".join(all_tool_names),
             )
+            worker_logger.warning(f"[tool_node] {requested_tool} args={call['args']} → ERROR: {content}")
             return ToolMessage(
                 content, name=requested_tool, tool_call_id=call["id"], status="error"
             )
