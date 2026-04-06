@@ -1,18 +1,17 @@
 from typing import List, Dict, Any
-from clients.supabase import get_supabase_client
+from clients.supabase import supabase_client
 from core.logging import worker_logger
 
 
 class ThreadInboxRepository:
     def __init__(self):
-        self.client = get_supabase_client()
+        self.db = supabase_client.client.schema("core_automation")
 
     async def fetch_pending_messages(self, thread_id: str) -> List[Dict[str, Any]]:
         """Fetch all pending messages for a given thread_id, ordered by creation time."""
         try:
             result = (
-                self.client.schema("core_automation")
-                .from_("thread_inbox")
+                self.db.table("thread_inbox")
                 .select("*")
                 .eq("thread_id", thread_id)
                 .eq("status", "pending")
@@ -33,8 +32,7 @@ class ThreadInboxRepository:
 
         try:
             (
-                self.client.schema("core_automation")
-                .from_("thread_inbox")
+                self.db.table("thread_inbox")
                 .update({"status": "processed"})
                 .in_("id", message_ids)
                 .execute()
