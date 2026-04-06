@@ -1,16 +1,12 @@
 import { redisConnection } from '../clients/redis';
 import { WebhookEnvelope, WebhookResponse } from '@org/uvian-events';
+import { generateThreadId } from '../utils/thread-id';
+import { threadInboxService } from './thread-inbox.service';
+import { queueService } from './factory';
 
 const PROCESSED_EVENTS_TTL = 24 * 60 * 60;
 
-export type EventHandler = (
-  envelope: WebhookEnvelope,
-  agentId?: string
-) => Promise<void>;
-
 export class WebhookHandlerService {
-  private handlers: Map<string, EventHandler> = new Map();
-
   async isEventProcessed(eventId: string): Promise<boolean> {
     const key = `processed_event:${eventId}`;
     const result = await redisConnection.exists(key);
@@ -20,10 +16,6 @@ export class WebhookHandlerService {
   async markEventProcessed(eventId: string): Promise<void> {
     const key = `processed_event:${eventId}`;
     await redisConnection.setex(key, PROCESSED_EVENTS_TTL, '1');
-  }
-
-  registerHandler(eventType: string, handler: EventHandler): void {
-    this.handlers.set(eventType, handler);
   }
 
   async handleEvent(
@@ -42,23 +34,35 @@ export class WebhookHandlerService {
 
     await this.markEventProcessed(envelope.id);
 
-    const handler = this.handlers.get(envelope.type);
-
-    if (!handler) {
-      console.warn(`No handler registered for event type: ${envelope.type}`);
+    if (!agentId) {
+      console.warn(`No agentId provided for event: ${envelope.type}`);
       return {
         accepted: true,
         event_id: envelope.id,
-        message: 'Event received, no handler registered',
+        message: 'Event received, no agentId provided',
       };
     }
 
     try {
-      await handler(envelope, agentId);
+      const threadId = generateThreadId(
+        agentId,
+        envelope.type,
+        envelope.data as Record<string, unknown>
+      );
+
+      await threadInboxService.insertEvent(threadId, agentId, envelope);
+
+      await queueService.addJob(
+        'main-queue',
+        'thread-wakeup',
+        { threadId, agentId },
+        { jobId: threadId }
+      );
+
       return {
         accepted: true,
         event_id: envelope.id,
-        message: 'Event processed successfully',
+        message: 'Event queued to thread inbox',
       };
     } catch (error) {
       console.error(`Error processing event ${envelope.type}:`, error);

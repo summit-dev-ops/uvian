@@ -1,139 +1,203 @@
-# Uvian Web - Next.js Frontend Application
+# uvian-web
 
-[![Next.js](https://img.shields.io/badge/Next.js-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+Main Uvian web application - a modern real-time chat and collaboration platform with conversational messaging, collaborative workspaces (Spaces), account management, notes, posts, assets, and support.
 
-**Uvian Web** is the frontend application for the platform, built with Next.js 16 and React 19. It provides a modern, responsive user interface with real-time messaging capabilities, AI integration, and enterprise-grade user experience.
+## Tech Stack
 
----
+| Technology                | Purpose                                  |
+| ------------------------- | ---------------------------------------- |
+| **Next.js 16**            | React framework (App Router)             |
+| **React 19**              | UI library                               |
+| **TypeScript**            | Type safety                              |
+| **Tailwind CSS**          | Utility-first styling                    |
+| **@org/ui**               | Shared shadcn/ui component library       |
+| **TanStack Query**        | Server state management                  |
+| **Zustand + immer**       | Client state (persisted to localStorage) |
+| **Socket.io Client**      | Real-time WebSocket communication        |
+| **Supabase Auth**         | Email/password authentication            |
+| **React Hook Form + Zod** | Form handling with validation            |
 
-## 🏗️ Architecture Overview
-
-### **Technology Stack**
-
-| Technology           | Version | Purpose                              |
-| -------------------- | ------- | ------------------------------------ |
-| **Next.js**          | 16      | React framework with App Router      |
-| **React**            | 19      | UI library with latest features      |
-| **TypeScript**       | 5.9+    | Type safety and developer experience |
-| **Tailwind CSS**     | 3.4+    | Utility-first styling framework      |
-| **Zustand**          | Latest  | Client-side state management         |
-| **TanStack Query**   | Latest  | Server state management              |
-| **React Hook Form**  | Latest  | Form handling and validation         |
-| **Zod**              | Latest  | Schema validation                    |
-| **Socket.io Client** | Latest  | Real-time communication              |
-| **Supabase Auth**    | Latest  | Authentication and user management   |
-
-
-### **Domain-Driven Architecture**
-
-The application follows a strict domain-driven architecture with clear separation:
-
-#### **Domain Structure**
+## Directory Structure
 
 ```
-lib/domains/[domain]/
-├── api/                 # TanStack Query queries & mutations
-├── store/               # Zustand store slices
-├── types.ts            # Domain-specific types
-└── utils.ts            # Data transformers (apiToUi)
+apps/uvian-web/
+├── src/
+│   ├── proxy.ts                         # Next.js middleware (auth routing)
+│   ├── app/
+│   │   ├── layout.tsx                   # Root layout with all providers
+│   │   ├── styles.css                   # Global styles (from @org/ui)
+│   │   ├── (public)/
+│   │   │   └── page.tsx                 # Landing page
+│   │   ├── (authenticated)/
+│   │   │   ├── layout.tsx               # Full-viewport flex container
+│   │   │   ├── home/page.tsx            # Dashboard
+│   │   │   ├── chats/                   # Conversations + messages
+│   │   │   ├── spaces/                  # Workspaces + notes + posts
+│   │   │   ├── accounts/                # Account management
+│   │   │   ├── users/                   # User management
+│   │   │   ├── settings/page.tsx        # User settings
+│   │   │   ├── onboarding/page.tsx      # Profile completion flow
+│   │   │   ├── explore/page.tsx         # Coming soon
+│   │   │   └── support/                 # FAQ, contact, search
+│   │   └── auth/                        # Sign-in, sign-up, confirm, reset
+│   ├── components/
+│   │   ├── auth/                        # Auth form components
+│   │   ├── features/                    # Domain-specific features (12)
+│   │   ├── providers/                   # React context providers
+│   │   └── shared/                      # Reusable UI components
+│   └── lib/
+│       ├── actions/                     # BaseAction type system
+│       ├── api/                         # API client layer (axios)
+│       ├── auth/                        # Auth context + Zod schemas
+│       ├── domains/                     # Domain-driven architecture (10)
+│       ├── hooks/                       # Shared hooks
+│       ├── stores/                      # Zustand store composition
+│       └── supabase/                    # Supabase client factories
+├── specs/
+│   └── index.spec.tsx                   # Landing page test
+├── next.config.js
+├── tailwind.config.js
+├── postcss.config.js
+└── package.json
 ```
 
-#### **Feature Layer**
+## Environment Variables
+
+| Variable                               | Purpose              |
+| -------------------------------------- | -------------------- |
+| `NEXT_PUBLIC_SOCKET_URL`               | WebSocket server URL |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon key    |
+| `NEXT_PUBLIC_API_URL`                  | Backend API base URL |
+| `UVIAN_HUB_API_URL`                    | Uvian Hub API URL    |
+
+## Pages/Routes
+
+### Public
+
+| Route | Description                     |
+| ----- | ------------------------------- |
+| `/`   | Landing page with feature cards |
+
+### Auth
+
+| Route                   | Description                          |
+| ----------------------- | ------------------------------------ |
+| `/auth/sign-in`         | Email/password login                 |
+| `/auth/sign-up`         | Registration with email confirmation |
+| `/auth/confirm-sign-up` | Email verification handler           |
+| `/auth/reset-password`  | Password reset request               |
+
+### Authenticated (protected by middleware)
+
+| Route                             | Description                 |
+| --------------------------------- | --------------------------- |
+| `/home`                           | Dashboard with nav cards    |
+| `/chats`                          | Conversations list          |
+| `/chats/[conversationId]`         | Individual chat view        |
+| `/chats/[conversationId]/members` | Manage conversation members |
+| `/spaces`                         | Spaces list                 |
+| `/spaces/[spaceId]`               | Space overview              |
+| `/spaces/[spaceId]/edit`          | Edit space                  |
+| `/spaces/[spaceId]/members`       | Manage space members        |
+| `/spaces/[spaceId]/notes`         | Space notes                 |
+| `/spaces/[spaceId]/posts`         | Space posts                 |
+| `/accounts`                       | Accounts list               |
+| `/accounts/[accountId]`           | Account detail              |
+| `/accounts/[accountId]/edit`      | Edit account                |
+| `/accounts/[accountId]/members`   | Manage account members      |
+| `/users`                          | Users list                  |
+| `/users/[userId]`                 | User profile                |
+| `/users/[userId]/edit`            | Edit user                   |
+| `/settings`                       | User settings               |
+| `/onboarding`                     | Profile completion flow     |
+| `/explore`                        | Coming soon                 |
+| `/support`                        | Support hub                 |
+| `/support/faq`                    | FAQ browser                 |
+| `/support/contact`                | Contact support form        |
+| `/support/search`                 | Support search              |
+
+## Architecture
+
+### React Server Components (RSC)
+
+- **Server components by default** - page components are async server components
+- **Client components when needed** - auth forms, settings, onboarding use `'use client'`
+- **Params unwrapping** - server components use `await params`, client components use `use(params)`
+
+### State Management
+
+| Type         | Solution                                     |
+| ------------ | -------------------------------------------- |
+| Server state | TanStack Query (2-5 min stale time, retry 3) |
+| Client state | Zustand + immer (persisted to localStorage)  |
+| Auth state   | React Context (AuthProvider)                 |
+| Socket state | React Context (SocketProvider)               |
+
+### Domain-Driven Architecture
+
+Each domain in `lib/domains/[domain]/` follows:
+
+- `api/` - TanStack Query queries.ts and mutations.ts with optimistic updates
+- `store/` - Zustand slice (chat, user, spaces, profile)
+- `types.ts` - UI types (MessageUI, SpaceUI, etc.)
+- `utils.ts` - API-to-UI transformers
+
+### Page Layout System
+
+Consistent compositional pattern:
 
 ```
-components/features/[feature]/
-├── hooks/              # Feature orchestrators
-├── components/         # UI components
-├── index.ts            # Public feature API
-└── types.ts            # Feature-specific types
+<ModalProvider>
+  <PageWrapper>
+    <PageWrapperSidebar>
+    <PageWrapperContent>
+      <PageContainer>
+        <PageHeader><Breadcrumb /><PageActions /></PageHeader>
+        <PageContent><FeatureInterface /></PageContent>
+        <PageModals />
+      </PageContainer>
+    </PageWrapperContent>
+  </PageWrapper>
+</ModalProvider>
 ```
 
----
+### Action System
 
-## 🎨 Design System
+Typed `BaseAction<P, O>` pattern with `canPerform()` guards and `perform()` execution. Context includes queryClient, store, router.
 
-### **Tailwind Configuration**
+### Real-Time Messaging
 
-The application uses a custom Tailwind configuration with:
+Socket.io with Supabase token auth. Events: `join_conversation`, `send_message`, `new_message`, `conversation_updated`. Supports streaming tokens with `isDelta`/`isComplete`.
 
-- **Custom Color Palette**: CSS custom properties for theming
-- **Extended Animations**: Custom keyframes and transitions
-- **Dark Mode Support**: CSS variable-based theming
-- **Component Integration**: Optimized for shadcn/ui components
+### Profile Types
 
-### **UI Component Library**
+`human` | `agent` | `system` | `admin`
 
-#### **shadcn/ui Components**
+## Commands
 
-- Built on Radix UI primitives
-- Accessible and customizable
-- Consistent design language
-- Type-safe component APIs
+```bash
+# Serve (development)
+npx nx serve uvian-web
 
-#### **Custom Components**
+# Build
+npx nx build @org/uvian-web
 
-- Business-specific components
-- Domain-driven component organization
-- Reusable across features
-- Consistent styling patterns
+# Test
+npx nx test @org/uvian-web
 
-### **Icon System**
+# Lint
+npx nx lint @org/uvian-web
 
-- **Lucide React**: Consistent icon library
-- **Custom Icons**: Domain-specific icons
-- **Icon Components**: Type-safe icon usage
-- **Theming Support**: Icon color theming
-
----
-
-## 🔧 Configuration
-
-### **Environment Variables**
-
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-
-# API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001
-
-# Application Settings
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Feature Flags
-NEXT_PUBLIC_ENABLE_AI=true
-NEXT_PUBLIC_ENABLE_FILE_UPLOAD=true
+# Typecheck
+npx nx typecheck @org/uvian-web
 ```
 
-### **Key Configuration Files**
+## Deployment
 
-| File                 | Purpose                                    |
-| -------------------- | ------------------------------------------ |
-| `next.config.js`     | Next.js configuration with Nx integration  |
-| `tailwind.config.js` | Tailwind CSS with custom design tokens     |
-| `tsconfig.json`      | TypeScript configuration with path mapping |
-| `postcss.config.js`  | PostCSS configuration for Tailwind         |
-| `components.json`    | shadcn/ui component library configuration  |
+Deployed on **Railway**.
 
-### **Path Mapping**
-
-TypeScript path mapping configured for clean imports:
-
-- `~/*` maps to `./src/*`
-- Enables cleaner import statements
-- Better IDE support and refactoring
-
----
-
-## 📚 Additional Resources
-
-- **Main Project README**: [`../../README.md`](../../README.md)
-- **Architecture Guidelines**: [`.agents/rules/architecture.md`](../../.agents/rules/architecture.md)
-- **Agent Guidelines**: [`../AGENTS.md`](../AGENTS.md)
-- **Nx Documentation**: [https://nx.dev](https://nx.dev)
-- **Next.js Documentation**: [https://nextjs.org/docs](https://nextjs.org/docs)
-
+- **Start command:** `npx nx run @org/uvian-web:start`
+- **Health check:** `GET /` (60s timeout)
+- **Restart policy:** `on_failure` (production), `always` (staging)
+- **Watch patterns:** `apps/uvian-web/**`, `packages/ui/**`, `nx.json`, `package.json`, `package-lock.json`, `tsconfig.base.json`

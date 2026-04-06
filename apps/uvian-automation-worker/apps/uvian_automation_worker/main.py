@@ -61,14 +61,48 @@ async def process_job(job, token):
     """
     BullMQ Job Processor with dependency injection architecture.
     1. Reads jobId from queue.
-    2. Fetches full job from Supabase.
+    2. Fetches full job from Supabase (or uses inline data for thread-wakeup).
     3. Resolves appropriate executor using dependency injection.
     4. Executes job through typed executor interface.
     5. Updates Supabase with result.
     """
     job_id: str = job.data.get("jobId")
+    job_type: str = job.data.get("type", "unknown")
+    thread_id: str = job.data.get("threadId")
+    agent_id: str = job.data.get("agentId")
+
+    # Handle thread-wakeup jobs that carry data inline instead of DB reference
+    if job_type == "thread-wakeup" and thread_id and agent_id:
+        worker_logger.info_job(thread_id, "Thread-wakeup job picked up. Processing inline data...")
+
+        job_record = {
+            "id": thread_id,
+            "type": "thread-wakeup",
+            "input": {
+                "inputType": "thread-wakeup",
+                "threadId": thread_id,
+                "agentId": agent_id,
+            },
+        }
+
+        job_type = "agent"
+
+        try:
+            executor = factory.get_executor(job_type)
+        except ValueError as e:
+            error_msg = f"No executor found for job type: {job_type}"
+            worker_logger.error_job(thread_id, error_msg, exception=e)
+            return {"status": "failed", "error": error_msg, "job_type": job_type}
+
+        try:
+            result: JobResult = await executor.execute(job_record)
+            worker_logger.info_job(thread_id, "Thread-wakeup job completed successfully.")
+            return result
+        except Exception as e:
+            worker_logger.error_job(thread_id, "Thread-wakeup execution failed", exception=e)
+            return {"status": "failed", "error": str(e)}
+
     if not job_id:
-        # Fallback for old jobs or manual tests not following schema
         worker_logger.warning_job("Worker", "No jobId in payload. Using BullMQ job.id as fallback if mapped.")
         job_id = str(job.data.get("id", job.id))
 

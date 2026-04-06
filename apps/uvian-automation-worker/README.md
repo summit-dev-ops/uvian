@@ -1,80 +1,221 @@
-# Uvian Worker - Python Background Processing
+# uvian-automation-worker
 
-[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Poetry](https://img.shields.io/badge/Poetry-60A5FA?logo=poetry&logoColor=white)](https://python-poetry.org/)
-[![BullMQ](https://img.shields.io/badge/BullMQ-FF6C37?logo=bull&logoColor=white)](https://docs.bullmq.io/)
-[![RunPod](https://img.shields.io/badge/RunPod-FF6C37?logo=runpod&logoColor=white)](https://runpod.ai/)
-[![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)](https://redis.io/)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+Python background processing service that consumes jobs from a BullMQ/Redis queue and processes them through a LangGraph-powered AI agent. Handles event-driven automation with MCP tool integration and skill-based capabilities.
 
-**Uvian Worker** is the Python background processing service. It handles AI-powered chat processing, job queue management, and asynchronous operations using BullMQ, Redis, and integrations with RunPod for AI inference.
+## Tech Stack
 
+| Technology                 | Purpose                         |
+| -------------------------- | ------------------------------- |
+| **Python 3.14.2**          | Runtime                         |
+| **Poetry**                 | Package management              |
+| **BullMQ (Python)**        | Job queue consumer              |
+| **Redis**                  | Queue backend + pub/sub         |
+| **Supabase**               | PostgreSQL database             |
+| **LangGraph**              | AI agent framework (StateGraph) |
+| **LangChain**              | LLM orchestration               |
+| **langchain-mcp-adapters** | MCP protocol integration        |
+| **OpenAI SDK**             | LLM API client (via HF Router)  |
+| **Jinja2**                 | Templating                      |
+| **cryptography**           | Cryptographic operations        |
+| **httpx**                  | HTTP client                     |
+| **pytest**                 | Testing                         |
+| **flake8**                 | Linting                         |
 
-## **Core Architecture Patterns**
+## Directory Structure
 
-#### **1. Repository Pattern**
-
-Clean data access with dedicated repositories for each entity:
-
-- **JobRepository**: Background job management and status tracking
-- **ConversationRepository**: Chat conversation handling
-- **MessageRepository**: Message CRUD operations
-
-### **2. Executor Pattern**
-
-Modular job processing with specialized executors:
-
-- **BaseExecutor**: Abstract base class defining the executor interface
-
-### **3. Event-Driven Architecture**
-
-Redis pub/sub for inter-service communication:
-
-- **Event Publishing**: Worker publishes events for API consumption
-- **Event Subscription**: Worker subscribes to system events
-
----
-
-## ⚙️ Job Processing Pipeline
-
-### **Worker Lifecycle**
-
-```mermaid
-graph TD
-    A[Worker Startup] --> B[Connect to Redis]
-    B --> C[Connect to Supabase]
-    C --> D[Register Executors]
-    D --> E[Start Job Processor]
-    E --> F[Process Jobs]
-    F --> G[Handle Events]
-    G --> F
+```
+apps/uvian-automation-worker/
+├── pyproject.toml                       # Poetry config + dependencies
+├── poetry.lock                          # Locked dependencies
+├── project.json                         # Nx project config
+├── railway.toml                         # Railway deployment config
+├── .env                                 # Environment variables
+├── .flake8                              # Linting config (max-line-length=120)
+├── tests/
+│   ├── __init__.py
+│   └── conftest.py
+└── apps/uvian_automation_worker/
+    ├── main.py                          # Entry point: BullMQ worker loop
+    ├── core/
+    │   ├── config.py                    # Centralized configuration
+    │   ├── logging.py                   # WorkerLogger with job-context logging
+    │   ├── events.py                    # EventsClient (Redis pub/sub)
+    │   ├── db.py                        # Legacy database interface
+    │   ├── dependency_injection.py      # DI Container + ExecutorFactory
+    │   └── utils/
+    │       └── naming.py                # camelCase <-> snake_case conversion
+    ├── clients/
+    │   ├── supabase.py                  # SupabaseClient singleton
+    │   ├── config.py                    # get_agent_skills()
+    │   ├── auth.py                      # get_agent_secrets()
+    │   └── mcp.py                       # PersistentMCPClient + MCPRegistry
+    ├── repositories/
+    │   ├── jobs.py                      # JobRepository (core_automation.jobs)
+    │   ├── checkpoints.py               # CheckpointRepository (LangGraph state)
+    │   └── process_threads.py           # ProcessThreadRepository
+    ├── executors/
+    │   ├── base.py                      # BaseExecutor (ABC)
+    │   ├── config.py                    # System message config
+    │   ├── agent_executor.py            # AgentExecutor (main executor)
+    │   └── triggers/
+    │       ├── base.py                  # BaseTrigger + TriggerRegistry
+    │       ├── message_trigger.py       # message.created, conversation.member_joined
+    │       ├── ticket_trigger.py        # ticket.created, ticket.updated
+    │       ├── content_trigger.py       # post.created, note.updated, asset.uploaded
+    │       ├── space_trigger.py         # space.member_joined, space.created, etc.
+    │       ├── job_trigger.py           # job.created, job.cancelled, job.retry
+    │       ├── discord_trigger.py       # discord.message_created, discord.interaction_received
+    │       └── schedule_trigger.py      # schedule.schedule_fired
+    └── core/agents/
+        ├── universal_agent/
+        │   └── agent.py                 # build_agent(): LangGraph StateGraph
+        └── utils/
+            ├── state.py                 # MessagesState TypedDict
+            ├── templates.py             # Jinja2 transcript template
+            ├── tokens.py                # Token counting + context routing
+            ├── skill_mapping.py         # Event-to-skill filtering
+            ├── mcp_mapping.py           # Event-to-MCP filtering
+            ├── mcp_catalog.py           # MCP usage guidance
+            ├── models/
+            │   └── base_models.py       # ChatOpenAI via HF Router
+            ├── nodes/
+            │   ├── model_node.py        # LLM call with dynamic tools
+            │   ├── tool_node.py         # Tool execution (vendored)
+            │   ├── throttle_node.py     # 2s rate limiting
+            │   └── summarizer_node.py   # Context summarization
+            ├── tools/
+            │   ├── base_tools.py        # search_skills, load_skill, list_mcps, load_mcp
+            │   └── end_task_tool.py     # end_task tool
+            ├── edges/
+            │   └── should_continue.py   # Routing: tools vs END
+            └── memory/
+                └── base_memory.py       # PostgresAsyncCheckpointer
 ```
 
-### **Job Processing Flow**
+## Environment Variables
 
-```typescript
-// Step-by-step job processing pipeline
-1. API creates job → Stores job in Supabase
-2. API adds job to BullMQ queue
-3. Worker fetches job from Redis
-4. Worker updates job status to 'processing'
-5. Worker dispatches to appropriate executor
-6. Executor processes job (e.g., calls RunPod AI)
-7. Worker updates job status to 'completed'/'failed'
-8. Worker publishes result via Redis events
-9. API receives event and broadcasts to WebSocket clients
+| Variable                   | Purpose                   | Default                 |
+| -------------------------- | ------------------------- | ----------------------- |
+| `REDIS_HOST`               | Redis host                | `localhost`             |
+| `REDIS_PORT`               | Redis port                | `6379`                  |
+| `REDIS_PASSWORD`           | Redis password            | (optional)              |
+| `REDIS_FAMILY`             | Redis database number     | `1`                     |
+| `UVIAN_AUTOMATION_API_URL` | Automation API URL        | `http://localhost:3001` |
+| `UVIAN_INTERNAL_API_KEY`   | Internal API key          | (required)              |
+| `HF_TOKEN`                 | HuggingFace API token     | (required)              |
+| `SUPABASE_URL`             | Supabase project URL      | (required)              |
+| `SUPABASE_SECRET_KEY`      | Supabase service role key | (required)              |
+
+## Job Processing Pipeline
+
+```
+API creates job in Supabase (core_automation.jobs)
+    |
+    v
+API adds { jobId: "<uuid>" } to BullMQ "main-queue"
+    |
+    v
+Worker picks up job (concurrency: 50)
+    |
+    v
+Fetches full job record from Supabase
+    |
+    v
+Determines job type -> resolves executor via DI container
+    |
+    v
+Event jobs transformed to "agent" type
+    |
+    v
+AgentExecutor processes:
+  - Derives trigger message from TriggerRegistry
+  - Fetches agent secrets (LLM config, MCP configs)
+  - Fetches agent skills
+  - Creates/uses process thread
+  - Builds LangGraph agent with MCP tools + skills
+  - Streams execution via astream(stream_mode="messages")
+    |
+    v
+Updates job status to completed/failed
 ```
 
-## 📚 Additional Resources
+## LangGraph Agent Architecture
 
-- **Main Project README**: [`../../README.md`](../../README.md)
-- **Architecture Guidelines**: [`.agents/rules/architecture.md`](../../.agents/rules/architecture.md)
-- **Agent Guidelines**: [`../AGENTS.md`](../AGENTS.md)
-- **Poetry Documentation**: [https://python-poetry.org/docs](https://python-poetry.org/docs)
-- **BullMQ Documentation**: [https://docs.bullmq.io](https://docs.bullmq.io)
-- **RunPod Documentation**: [https://runpod.ai/docs](https://runpod.ai/docs)
-- **Supabase Python Client**: [https://supabase.com/docs/reference/python](https://supabase.com/docs/reference/python)
+```
+START -> check_context_node -> (summarize_node | model_node)
+model_node -> (tool_node | END) [via tools_condition]
+tool_node -> throttle_node -> model_node
+```
 
----
+| Node               | Purpose                                                     |
+| ------------------ | ----------------------------------------------------------- |
+| check_context_node | Routes to summarize if context too large (>7692 tokens)     |
+| model_node         | LLM call with dynamic tools, skills, MCP integration        |
+| tool_node          | Executes tool calls (base tools + MCP tools)                |
+| throttle_node      | 2-second rate limit delay                                   |
+| summarize_node     | Compresses old conversation history (keeps last 6 messages) |
 
-**Built with ❤️ using Python, asyncio, and modern async programming patterns.**
+### Agent Tools
+
+- `search_skills` - List available skills
+- `load_skill` - Load skill content into context
+- `list_mcps` - List available MCP tool servers
+- `load_mcp` - Dynamically load MCP server tools
+
+### LLM Configuration
+
+- **Model:** MiniMaxAI/MiniMax-M2.5 via HuggingFace Router
+- **Temperature:** 0.6
+- **Rate limit:** 0.4 req/s
+- **Per-agent override** via secrets (model_name, base_url, api_key, temperature)
+
+## Trigger Registry (17 event types)
+
+| Trigger  | Events                                                                        |
+| -------- | ----------------------------------------------------------------------------- |
+| Message  | `message.created`, `conversation.member_joined`                               |
+| Ticket   | `ticket.created`, `ticket.updated`                                            |
+| Content  | `post.created`, `note.updated`, `asset.uploaded`                              |
+| Space    | `space.member_joined`, `space.member_role_changed`, `space.created`           |
+| Job      | `job.created`, `job.cancelled`, `job.retry`                                   |
+| Discord  | `com.uvian.discord.message_created`, `com.uvian.discord.interaction_received` |
+| Schedule | `com.uvian.schedule.schedule_fired`                                           |
+
+## Architecture
+
+- **Dependency Injection** - full DI container with ExecutorFactory, thread-safe singletons
+- **Repository Pattern** - clean data access layer (jobs, checkpoints, process threads)
+- **Trigger Registry** - decorator-based registration (`@TriggerRegistry.register("event.type")`)
+- **Persistent MCP connections** via AsyncExitStack
+- **PostgreSQL checkpointing** - custom PostgresAsyncCheckpointer for LangGraph state
+- **Context window management** - automatic summarization at 8192 token threshold
+- **Dual Redis** - BullMQ (db 0) + pub/sub events (db 1)
+
+## Commands
+
+```bash
+# Install dependencies
+poetry install --with dev
+
+# Serve (run worker)
+npx nx serve uvian-automation-worker
+
+# Build
+npx nx build uvian-automation-worker
+
+# Test
+npx nx test uvian-automation-worker
+# or: poetry run pytest tests/
+
+# Lint
+npx nx lint uvian-automation-worker
+# or: flake8 with max-line-length=120
+```
+
+## Deployment
+
+Deployed on **Railway**.
+
+- **Start command:** `cd apps/uvian-automation-worker && .venv/bin/python apps/uvian_automation_worker/main.py`
+- **Restart policy:** `on_failure` (production), `always` (staging)
+- **Watch patterns:** `apps/uvian-automation-worker/**`, `nx.json`

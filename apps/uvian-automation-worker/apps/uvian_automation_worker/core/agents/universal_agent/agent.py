@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from core.agents.utils.tools.base_tools import tools as base_tools
 from core.agents.utils.models import create_openai_model
 from core.agents.utils.nodes.model_node import create_model_node
+from core.agents.utils.nodes.fetch_inbox_node import fetch_inbox_node
 from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.summarizer_node import create_summarize_node
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
@@ -36,13 +37,34 @@ def build_agent(
     def check_context_node(state: MessagesState) -> MessagesState:
         return state
 
+    def route_after_inbox(state: MessagesState) -> str:
+        """Route to check_context_node if messages were added, otherwise end if no pending tools."""
+        if state.get("inbox_messages_added", 0) > 0:
+            return "check_context_node"
+
+        last_message = state["messages"][-1] if state["messages"] else None
+        if last_message and hasattr(last_message, "tool_calls") and last_message.tool_calls:
+            return "check_context_node"
+
+        return "__end__"
+
+    agent_builder.add_node("fetch_inbox_node", fetch_inbox_node)
     agent_builder.add_node("check_context_node", check_context_node)
     agent_builder.add_node("model_node", model_node)
     agent_builder.add_node("tool_node", tool_node)
     agent_builder.add_node("summarize_node", summarize_node)
     agent_builder.add_node("throttle_node", throttle_node)
 
-    agent_builder.add_edge(START, "check_context_node")
+    agent_builder.add_edge(START, "fetch_inbox_node")
+    agent_builder.add_conditional_edges(
+        "fetch_inbox_node",
+        route_after_inbox,
+        {
+            "check_context_node": "check_context_node",
+            "__end__": END,
+        },
+    )
+
     agent_builder.add_edge("summarize_node", "model_node")
 
     agent_builder.add_conditional_edges(
@@ -50,8 +72,8 @@ def build_agent(
         check_context,
         {
             "summarize_node": "summarize_node",
-            "model_node": "model_node"
-        }
+            "model_node": "model_node",
+        },
     )
 
     agent_builder.add_conditional_edges(
@@ -61,6 +83,6 @@ def build_agent(
     )
 
     agent_builder.add_edge("tool_node", "throttle_node")
-    agent_builder.add_edge("throttle_node", "model_node")
-    
+    agent_builder.add_edge("throttle_node", "fetch_inbox_node")
+
     return agent_builder.compile(checkpointer=checkpointer)

@@ -1,4 +1,4 @@
-import { Queue, Job } from 'bullmq';
+import { Queue, Job, JobsOptions } from 'bullmq';
 import Redis from 'ioredis';
 
 export interface CreateQueueServiceConfig {
@@ -7,7 +7,12 @@ export interface CreateQueueServiceConfig {
 
 export interface QueueService {
   getQueue(name: string): Queue;
-  addJob(queueName: string, jobName: string, data: unknown): Promise<Job>;
+  addJob(
+    queueName: string,
+    jobName: string,
+    data: unknown,
+    options?: JobsOptions
+  ): Promise<Job>;
   addJobAt(
     queueName: string,
     jobName: string,
@@ -36,10 +41,11 @@ export function createQueueService(
     async addJob(
       queueName: string,
       jobName: string,
-      data: unknown
+      data: unknown,
+      options?: JobsOptions
     ): Promise<Job> {
       const queue = this.getQueue(queueName);
-      return await queue.add(jobName, data);
+      return await queue.add(jobName, data, options);
     },
 
     async addJobAt(

@@ -19,6 +19,8 @@ class MessagesState(TypedDict):
     agent_profile_id: str
     message_id: str
     event_metadata: Dict[str, Any]
+    thread_id: str
+    inbox_messages_added: int
 
 
 class Skill(TypedDict):  

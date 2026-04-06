@@ -852,6 +852,118 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       }
     );
 
+    server.registerTool(
+      'set_agent_memory',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          key: z.string(),
+          value: z.record(z.string(), z.unknown()),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const { data, error } = await adminSupabase
+            .schema('core_automation')
+            .from('agent_shared_memory')
+            .upsert(
+              {
+                agent_id: args.agentId,
+                key: args.key,
+                value: args.value,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'agent_id,key' }
+            )
+            .select()
+            .single();
+
+          if (error) throw new Error(error.message);
+
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ success: true, data }) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'get_agent_memory',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+          key: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const { data, error } = await adminSupabase
+            .schema('core_automation')
+            .from('agent_shared_memory')
+            .select('*')
+            .eq('agent_id', args.agentId)
+            .eq('key', args.key)
+            .single();
+
+          if (error || !data) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ error: 'Key not found' }),
+                },
+              ],
+              isError: true,
+            };
+          }
+
+          return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    server.registerTool(
+      'list_agent_memory_keys',
+      {
+        inputSchema: z.object({
+          agentId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const { data, error } = await adminSupabase
+            .schema('core_automation')
+            .from('agent_shared_memory')
+            .select('key, updated_at')
+            .eq('agent_id', args.agentId)
+            .order('updated_at', { ascending: false });
+
+          if (error) throw new Error(error.message);
+
+          return {
+            content: [{ type: 'text', text: JSON.stringify(data || []) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
     return server;
   }
 
