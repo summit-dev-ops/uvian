@@ -53,8 +53,8 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
         metadata_bytes = decode_supabase_bytea(row["metadata"])
 
         # 3. Deserialize using loads_typed
-        checkpoint = self.serde.loads_typed(("json", checkpoint_bytes))
-        metadata = self.serde.loads_typed(("json", metadata_bytes))
+        checkpoint = self.serde.loads_typed(("msgpack", checkpoint_bytes))
+        metadata = self.serde.loads_typed(("msgpack", metadata_bytes))
         
         # 4. Determine Parent Config
         parent_config = None
@@ -149,8 +149,8 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
                         "checkpoint_id": row["checkpoint_id"],
                     }
                 },
-                checkpoint=self.serde.loads_typed(("json", checkpoint_bytes)),
-                metadata=self.serde.loads_typed(("json", metadata_bytes)),
+                checkpoint=self.serde.loads_typed(("msgpack", checkpoint_bytes)),
+                metadata=self.serde.loads_typed(("msgpack", metadata_bytes)),
                 parent_config={
                     "configurable": {
                         "thread_id": thread_id,
