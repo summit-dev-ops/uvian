@@ -41,7 +41,11 @@ def build_agent(
         """Route to check_context_node if messages were added, otherwise end if no pending tools."""
         if state.get("inbox_messages_added", 0) > 0:
             return "check_context_node"
-
+        
+        # If messages exist (from initial input), process them even if no new inbox messages
+        if state.get("messages"):
+            return "check_context_node"
+        
         last_message = state["messages"][-1] if state["messages"] else None
         if last_message and hasattr(last_message, "tool_calls") and last_message.tool_calls:
             return "check_context_node"
@@ -55,7 +59,8 @@ def build_agent(
     agent_builder.add_node("summarize_node", summarize_node)
     agent_builder.add_node("throttle_node", throttle_node)
 
-    agent_builder.add_edge(START, "fetch_inbox_node")
+    # Graph starts at check_context_node - initial messages handled before entering graph
+    agent_builder.add_edge(START, "check_context_node")
     agent_builder.add_conditional_edges(
         "fetch_inbox_node",
         route_after_inbox,
@@ -82,7 +87,9 @@ def build_agent(
         {"tools": "tool_node", "__end__": END},
     )
 
-    agent_builder.add_edge("tool_node", "throttle_node")
-    agent_builder.add_edge("throttle_node", "fetch_inbox_node")
+    # After tools run, check for new inbox messages before throttling
+    agent_builder.add_edge("tool_node", "fetch_inbox_node")
+    agent_builder.add_edge("fetch_inbox_node", "throttle_node")
+    agent_builder.add_edge("throttle_node", "check_context_node")
 
     return agent_builder.compile(checkpointer=checkpointer)
