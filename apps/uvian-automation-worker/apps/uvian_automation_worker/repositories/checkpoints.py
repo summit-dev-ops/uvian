@@ -40,8 +40,8 @@ class CheckpointRepository:
             result = query.execute()
 
             if result.data:
-                # Use helper to normalize keys (though DB is already snake_case)
-                return from_db_format(self.table_name, result.data[0])
+                # Return raw data - checkpointer expects snake_case keys
+                return dict(result.data[0]) if hasattr(result.data[0], 'keys') else result.data[0]
 
             return None
         except Exception as e:
