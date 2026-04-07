@@ -22,9 +22,14 @@ export class WebhookHandlerService {
     envelope: WebhookEnvelope,
     agentId?: string
   ): Promise<WebhookResponse> {
+    console.log(
+      `[webhook] Incoming event: type=${envelope.type}, id=${envelope.id}, source=${envelope.source}, agentId=${agentId}`
+    );
+
     const alreadyProcessed = await this.isEventProcessed(envelope.id);
 
     if (alreadyProcessed) {
+      console.log(`[webhook] Event already processed in Redis: ${envelope.id}`);
       return {
         accepted: true,
         event_id: envelope.id,
@@ -33,9 +38,10 @@ export class WebhookHandlerService {
     }
 
     await this.markEventProcessed(envelope.id);
+    console.log(`[webhook] Marked event as processed in Redis: ${envelope.id}`);
 
     if (!agentId) {
-      console.warn(`No agentId provided for event: ${envelope.type}`);
+      console.warn(`[webhook] No agentId provided for event: ${envelope.type}`);
       return {
         accepted: true,
         event_id: envelope.id,
@@ -49,8 +55,18 @@ export class WebhookHandlerService {
         envelope.type,
         envelope.data as Record<string, unknown>
       );
+      console.log(
+        `[webhook] Generated threadId: ${threadId} for event ${envelope.id}`
+      );
 
-      await threadInboxService.insertEvent(threadId, agentId, envelope);
+      const inboxId = await threadInboxService.insertEvent(
+        threadId,
+        agentId,
+        envelope
+      );
+      console.log(
+        `[webhook] Inserted into thread_inbox: id=${inboxId}, threadId=${threadId}`
+      );
 
       await queueService.addJob(
         'main-queue',
@@ -58,6 +74,7 @@ export class WebhookHandlerService {
         { type: 'thread-wakeup', threadId, agentId },
         { jobId: threadId }
       );
+      console.log(`[webhook] Enqueued thread-wakeup job: threadId=${threadId}`);
 
       return {
         accepted: true,
@@ -65,7 +82,10 @@ export class WebhookHandlerService {
         message: 'Event queued to thread inbox',
       };
     } catch (error) {
-      console.error(`Error processing event ${envelope.type}:`, error);
+      console.error(
+        `[webhook] Error processing event ${envelope.type}:`,
+        error
+      );
       return {
         accepted: true,
         event_id: envelope.id,
