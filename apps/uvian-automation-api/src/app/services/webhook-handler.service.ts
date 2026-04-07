@@ -3,6 +3,8 @@ import { WebhookEnvelope, WebhookResponse } from '@org/uvian-events';
 import { generateThreadId } from '../utils/thread-id';
 import { threadInboxService } from './thread-inbox.service';
 import { queueService } from './factory';
+import { adminSupabase } from '../clients/supabase.client';
+import { randomUUID } from 'crypto';
 
 const PROCESSED_EVENTS_TTL = 24 * 60 * 60;
 
@@ -59,22 +61,35 @@ export class WebhookHandlerService {
         `[webhook] Generated threadId: ${threadId} for event ${envelope.id}`
       );
 
-      const inboxId = await threadInboxService.insertEvent(
-        threadId,
-        agentId,
-        envelope
-      );
+      await threadInboxService.insertEvent(threadId, agentId, envelope);
       console.log(
-        `[webhook] Inserted into thread_inbox: id=${inboxId}, threadId=${threadId}`
+        `[webhook] Inserted into thread_inbox for threadId=${threadId}`
       );
 
-      await queueService.addJob(
-        'main-queue',
-        'thread-wakeup',
-        { type: 'thread-wakeup', threadId, agentId },
-        { jobId: threadId }
-      );
-      console.log(`[webhook] Enqueued thread-wakeup job: threadId=${threadId}`);
+      const jobId = randomUUID();
+      const { error: jobError } = await adminSupabase
+        .schema('core_automation')
+        .from('jobs')
+        .insert({
+          id: jobId,
+          type: 'thread-wakeup',
+          input_type: 'event',
+          input: {
+            inputType: 'thread-wakeup',
+            threadId,
+            agentId,
+          },
+          agent_id: agentId || null,
+        });
+
+      if (jobError) {
+        console.error(`[webhook] Failed to create job row:`, jobError);
+        throw new Error(`Failed to create job: ${jobError.message}`);
+      }
+      console.log(`[webhook] Created job row: ${jobId}`);
+
+      await queueService.addJob('main-queue', 'thread-wakeup', { jobId });
+      console.log(`[webhook] Enqueued job to BullMQ: jobId=${jobId}`);
 
       return {
         accepted: true,
