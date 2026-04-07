@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage
-from core.agents.utils.state import MessagesState
+from core.agents.utils.state import MessagesState, MESSAGES_REPLACE
 from core.logging import worker_logger
 
 def create_summarize_node(model, agent_name: str):
@@ -54,6 +54,8 @@ Keep under 150 words."""),
         new_messages = system_msgs + [summary_message] + recent
         
         worker_logger.info(f"[summarize_node] EXIT: summarized {len(old)} → {len(new_messages)} messages")
-        return {"messages": new_messages}
+        
+        # Replace messages using special marker for our custom reducer
+        return {"messages": [SystemMessage(content=MESSAGES_REPLACE)] + new_messages}
     
     return summarize_node

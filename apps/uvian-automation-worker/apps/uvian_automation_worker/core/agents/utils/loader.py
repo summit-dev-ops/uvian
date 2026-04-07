@@ -167,12 +167,12 @@ async def prepare_for_events(
     skills: List[Dict[str, Any]],
     mcp_configs: List[Dict[str, Any]],
     persistent_client
-) -> Tuple[HumanMessage, List[ToolMessage], List[BaseTool], List[str], List[str]]:
+) -> Tuple[HumanMessage, List[BaseTool], List[Dict[str, Any]], List[str]]:
     """Composed function: transform event and load related MCPs/skills.
     
     This is the main entry point that combines:
     1. Event -> HumanMessage transformation
-    2. Skills filtering and preload messages
+    2. Skills filtering (returns full skill objects)
     3. MCPs filtering and tool loading
     
     Args:
@@ -183,26 +183,22 @@ async def prepare_for_events(
         persistent_client: PersistentMCPClient for MCP connections
         
     Returns:
-        Tuple of (human_message, preload_messages, mcp_tools, matched_skill_names, matched_mcp_names)
+        Tuple of (human_message, mcp_tools, matched_skills, matched_mcp_names)
     """
     event_message = transform_event(event_type, event_data)
     
     matched_skills = filter_skills([event_type], skills)
-    skill_messages = prepare_skill_messages(matched_skills)
-    matched_skill_names = [s.get("name", "") for s in matched_skills if s.get("name")]
     
     matched_mcp_configs = filter_mcps([event_type], mcp_configs)
-    mcp_messages, mcp_tools = await load_mcps(matched_mcp_configs, persistent_client)
+    _, mcp_tools = await load_mcps(matched_mcp_configs, persistent_client)
     matched_mcp_names = [c.get("name", c.get("id", "")) for c in matched_mcp_configs]
-    
-    preload_messages = skill_messages + mcp_messages
     
     worker_logger.info(
         f"[EventLoader] Prepared event: {event_type}, "
         f"skills={len(matched_skills)}, mcps={len(matched_mcp_configs)}, tools={len(mcp_tools)}"
     )
     
-    return event_message, preload_messages, mcp_tools, matched_skill_names, matched_mcp_names
+    return event_message, mcp_tools, matched_skills, matched_mcp_names
 
 
 async def prepare_for_inbox_events(
@@ -210,7 +206,7 @@ async def prepare_for_inbox_events(
     skills: List[Dict[str, Any]],
     mcp_configs: List[Dict[str, Any]],
     persistent_client
-) -> Tuple[List[HumanMessage], List[ToolMessage], List[BaseTool], List[str], List[str], List[str]]:
+) -> Tuple[List[HumanMessage], List[BaseTool], List[Dict[str, Any]], List[str]]:
     """Prepare all events from inbox - transform and load resources for all unique event types.
     
     Called by subscription node to process multiple pending inbox messages.
@@ -223,23 +219,19 @@ async def prepare_for_inbox_events(
         persistent_client: PersistentMCPClient for MCP connections
         
     Returns:
-        Tuple of (human_messages, preload_messages, mcp_tools, processed_message_ids, matched_skill_names, matched_mcp_names)
+        Tuple of (human_messages, mcp_tools, matched_skills, matched_mcp_names)
     """
     if not pending_messages:
-        return [], [], [], [], [], []
+        return [], [], [], []
     
     unique_event_types = list(set(msg["event_type"] for msg in pending_messages))
     worker_logger.info(f"[EventLoader] Processing {len(pending_messages)} messages, event types: {unique_event_types}")
     
     matched_skills = filter_skills(unique_event_types, skills)
-    skill_messages = prepare_skill_messages(matched_skills)
-    matched_skill_names = [s.get("name", "") for s in matched_skills if s.get("name")]
     
     matched_mcp_configs = filter_mcps(unique_event_types, mcp_configs)
-    mcp_messages, mcp_tools = await load_mcps(matched_mcp_configs, persistent_client)
+    _, mcp_tools = await load_mcps(matched_mcp_configs, persistent_client)
     matched_mcp_names = [c.get("name", c.get("id", "")) for c in matched_mcp_configs]
-    
-    preload_messages = skill_messages + mcp_messages
     
     human_messages = []
     processed_ids = []
@@ -258,4 +250,4 @@ async def prepare_for_inbox_events(
         f"skills={len(matched_skills)}, mcps={len(matched_mcp_configs)}, tools={len(mcp_tools)}"
     )
     
-    return human_messages, preload_messages, mcp_tools, processed_ids, matched_skill_names, matched_mcp_names
+    return human_messages, mcp_tools, matched_skills, matched_mcp_names

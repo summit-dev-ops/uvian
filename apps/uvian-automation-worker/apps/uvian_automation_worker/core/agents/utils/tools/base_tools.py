@@ -58,7 +58,7 @@ load_skill_schema = {
 }
 @tool(args_schema=load_skill_schema)
 def load_skill(
-    runtime: ToolRuntime | None = None, **kargs) -> str:
+    runtime: ToolRuntime | None = None, **kargs) -> Command:
     """Load the full content of a skill into the agent's context.
 
     Use this when you need detailed information about how to handle a specific
@@ -69,30 +69,55 @@ def load_skill(
         skill_name: The name of the skill to load (e.g., "expense_reporting", "travel_booking")
     """
     loaded_skills = runtime.state.get("loaded_skills") or []
-    skills = runtime.state.get("skills")
+    available_skills = runtime.state.get("available_skills") or []
+    loaded_skill_names = [s.get("name") for s in loaded_skills if isinstance(s, dict) and s.get("name")]
     skill_name = kargs["skill_name"]
-    worker_logger.info(f"[load_skill] Called with skill_name: {skill_name}, loaded: {loaded_skills}")
     
-    for skill in skills:
-        if skill["name"] == skill_name and skill_name not in loaded_skills:
-            worker_logger.info(f"[load_skill] Loading skill: {skill_name}")
-            content = skill.get("content", {})
-            if isinstance(content, dict):
-                formatted_content = flatten_skill_content(content)
-            elif isinstance(content, str):
-                formatted_content = content
-            else:
-                formatted_content = str(content)
-            return Command(
-                update={
-                    "loaded_skills": loaded_skills + [skill_name],  
-                    "messages": [ToolMessage(f"Loaded skill: {skill_name}\n\n{formatted_content}", tool_call_id=runtime.tool_call_id)]
-                }
-            )
-        
-    available = ", ".join(s["name"] for s in skills)
-    worker_logger.info(f"[load_skill] Skill not found: {skill_name}")
-    return f"Skill '{skill_name}' not found. Available skills: {available}"
+    skill_info = next((s for s in available_skills if s.get("name", "").lower() == skill_name.lower()), None)
+    
+    if not skill_info:
+        available = ", ".join(s.get("name", "unknown") for s in available_skills)
+        worker_logger.info(f"[load_skill] Skill not found: {skill_name}")
+        return Command(update={
+            "messages": [ToolMessage(
+                f"Skill '{skill_name}' not found. Available skills: {available}",
+                tool_call_id=runtime.tool_call_id
+            )]
+        })
+    
+    skill_name_found = skill_info.get("name", "")
+    
+    if skill_name_found in loaded_skill_names:
+        worker_logger.info(f"[load_skill] Skill already loaded: {skill_name_found}")
+        return Command(update={
+            "messages": [ToolMessage(
+                f"Skill '{skill_name_found}' is already loaded.",
+                tool_call_id=runtime.tool_call_id
+            )]
+        })
+    
+    worker_logger.info(f"[load_skill] Loading skill: {skill_name_found}")
+    
+    from core.agents.utils.tools.base_tools import flatten_skill_content
+    content = skill_info.get("content", "")
+    if isinstance(content, dict):
+        formatted_content = flatten_skill_content(content)
+    elif isinstance(content, str):
+        formatted_content = content
+    else:
+        formatted_content = str(content)
+    
+    new_skill_entry = {
+        "name": skill_name_found,
+        "description": skill_info.get("description", ""),
+        "content": formatted_content
+    }
+    
+    return Command(
+        update={
+            "loaded_skills": loaded_skills + [new_skill_entry]
+        }
+    )
 
 
 list_mcps_schema = {
@@ -110,31 +135,27 @@ def list_mcps(
     """
     available_mcps = runtime.state.get("available_mcps") or []
     loaded_mcps = runtime.state.get("loaded_mcps") or []
+    loaded_mcp_names = [m.get("name") for m in loaded_mcps if isinstance(m, dict)]
     
     if not available_mcps:
         return "No additional MCP tool servers are available."
     
     lines = []
     for mcp in available_mcps:
-        display_name = mcp.get("name", mcp["id"])
-        status = "LOADED" if mcp["id"] in loaded_mcps else "available"
-        usage = mcp.get("usage_guidance", "")
-        tool_descriptions = mcp.get("tool_descriptions", [])
+        display_name = mcp.get("name", mcp.get("id", "unknown"))
+        mcp_name = mcp.get("name", "")
+        status = "LOADED" if mcp_name in loaded_mcp_names else "available"
+        tool_names = mcp.get("tool_names", [])
         
         header = f"### **{display_name}** [{status}]"
         lines.append(header)
         
-        if usage:
-            lines.append(f"  Use for: {usage}")
+        description = mcp.get("description", "")
+        if description:
+            lines.append(f"  {description}")
         
-        if tool_descriptions:
-            lines.append(f"  Tools ({len(tool_descriptions)}):")
-            for td in tool_descriptions:
-                lines.append(f"    - {td}")
-        else:
-            tool_count = mcp.get("tool_count", 0)
-            if tool_count > 0:
-                lines.append(f"  Tools: {tool_count} available (load this MCP to see details)")
+        if tool_names:
+            lines.append(f"  Tools: {', '.join(tool_names)}")
         
         lines.append("")
     
@@ -165,13 +186,14 @@ async def load_mcp(
     mcp_input = kargs["mcp_id"]
     loaded_mcps = runtime.state.get("loaded_mcps") or []
     available_mcps = runtime.state.get("available_mcps") or []
+    loaded_mcp_names = [m.get("name") for m in loaded_mcps if isinstance(m, dict) and m.get("name")]
     
     mcp_info = next((m for m in available_mcps if m.get("name", "").lower() == mcp_input.lower()), None)
     if not mcp_info:
-        mcp_info = next((m for m in available_mcps if m["id"] == mcp_input), None)
+        mcp_info = next((m for m in available_mcps if m.get("id") == mcp_input), None)
     
     if not mcp_info:
-        available_names = ", ".join(m.get("name", m["id"]) for m in available_mcps)
+        available_names = ", ".join(m.get("name", "unknown") for m in available_mcps)
         worker_logger.warning(f"[load_mcp] MCP not found: {mcp_input}")
         return Command(
             update={
@@ -182,10 +204,9 @@ async def load_mcp(
             }
         )
     
-    mcp_key = mcp_info["id"]
-    mcp_name = mcp_info.get("name", mcp_key)
+    mcp_name = mcp_info.get("name", "")
     
-    if mcp_key in loaded_mcps:
+    if mcp_name in loaded_mcp_names:
         worker_logger.info(f"[load_mcp] MCP already loaded: {mcp_name}")
         return Command(
             update={
@@ -209,11 +230,13 @@ async def load_mcp(
         )
     
     from clients.mcp import MCPRegistry
+    tools = []
     if isinstance(registry, MCPRegistry):
-        tools = await registry.get_tools_for_mcp(mcp_key)
+        mcp_id = mcp_info.get("id")
+        tools = await registry.get_tools_for_mcp(mcp_id)
         tool_names = [t.name for t in tools]
         tool_list = ", ".join(tool_names)
-        worker_logger.info(f"[load_mcp] Loaded MCP '{mcp_name}' ({mcp_key}) with {len(tools)} tools: {tool_list}")
+        worker_logger.info(f"[load_mcp] Loaded MCP '{mcp_name}' with {len(tools)} tools: {tool_list}")
         response_text = (
             f"SUCCESS: Loaded MCP '{mcp_name}' with {len(tools)} tools.\n"
             f"Tools now available: {tool_list}"
@@ -222,10 +245,15 @@ async def load_mcp(
         worker_logger.warning(f"[load_mcp] Registry is not an MCPRegistry instance")
         response_text = f"SUCCESS: Tools for MCP '{mcp_name}' are now available."
     
+    new_mcp_entry = {
+        "name": mcp_name,
+        "description": mcp_info.get("description", ""),
+        "tools": tools
+    }
+    
     return Command(
         update={
-            "loaded_mcps": loaded_mcps + [mcp_key],
-            "messages": [ToolMessage(response_text, tool_call_id=runtime.tool_call_id)]
+            "loaded_mcps": loaded_mcps + [new_mcp_entry]
         }
     )
 

@@ -1,7 +1,6 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
 from core.logging import worker_logger
-import json
 
 SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
 
@@ -32,24 +31,64 @@ Rules:
 
 def create_model_node(model, base_tools, mcp_registry=None):
     async def llm_call(state: dict, config: RunnableConfig):
-        active_tools = list(base_tools)
+        msg_count = len(state.get("messages", []))
+        worker_logger.info(f"[model_node] ENTER (messages={msg_count})")
         
-        model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
-        
-        skills = state.get("skills", [])
         loaded_skills = state.get("loaded_skills", [])
+        available_skills = state.get("available_skills", [])
+        loaded_skill_names = [s.get("name") for s in loaded_skills if s.get("name")]
+        
         skills_section = ""
-        if skills:
-            skills_list = [f"- **{s['name']}**: {s['description']}" for s in skills if s.get("name") not in loaded_skills]
-            skills_section = "\n\n## Available Skills\n\n" + "\n".join(skills_list)
+        
+        unloaded_skills = [s for s in available_skills if s.get("name") not in loaded_skill_names]
+        if unloaded_skills:
+            skills_list = [f"- **{s['name']}**: {s.get('description', '')}" for s in unloaded_skills]
+            skills_section += "\n\n## Available Skills\n\n" + "\n".join(skills_list)
+        
+        if loaded_skills:
+            loaded_list = [f"### {s['name']}\n{s.get('content', '')}" for s in loaded_skills if s.get("name")]
+            skills_section += "\n\n## Loaded Skills\n\n" + "\n\n".join(loaded_list)
+        
+        available_mcps = state.get("available_mcps", [])
+        loaded_mcps = state.get("loaded_mcps", [])
+        loaded_mcp_names = [m.get("name") for m in loaded_mcps if m.get("name")]
+        
+        mcps_section = ""
+        
+        unloaded_mcps = [m for m in available_mcps if m.get("name") not in loaded_mcp_names]
+        if unloaded_mcps:
+            mcps_list = []
+            for m in unloaded_mcps:
+                tool_names = m.get("tool_names", [])
+                tool_str = ", ".join(tool_names[:5])
+                if len(tool_names) > 5:
+                    tool_str += f" (+{len(tool_names) - 5} more)"
+                mcps_list.append(f"- **{m.get('name', 'unknown')}**: {m.get('description', '')} (tools: {tool_str})")
+            mcps_section += "\n\n## Available MCP Servers\n\n" + "\n".join(mcps_list)
+        
+        if loaded_mcps:
+            loaded_mcp_list = []
+            for m in loaded_mcps:
+                tools = m.get("tools", [])
+                tool_names = ", ".join([t.get("name", "") for t in tools]) if tools else "no tools"
+                loaded_mcp_list.append(f"### {m.get('name', 'unknown')}\n{m.get('description', '')}\nAvailable tools: {tool_names}")
+            mcps_section += "\n\n## Loaded MCP Servers\n\n" + "\n\n".join(loaded_mcp_list)
         
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
-            custom_instructions=state.get("custom_instructions", "")
-        ) + skills_section
+            custom_instructions= state.get("custom_instructions", "")
+        ) + mcps_section + skills_section
+        
+        loaded_mcp_tools = []
+        for mcp in loaded_mcps:
+            loaded_mcp_tools.extend(mcp.get("tools", []))
+        
+        active_tools = list(base_tools) + list(loaded_mcp_tools)
+        
+        model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
+        
         messages = [SystemMessage(content=formatted_system_prompt)] + state["messages"]
         
-        # Log all messages in state for debugging
         worker_logger.info(f"[model_node] State messages count: {len(state.get('messages', []))}")
         for i, msg in enumerate(state.get('messages', [])):
             msg_preview = msg.content[:200] if hasattr(msg, 'content') else str(msg)[:200]
@@ -68,7 +107,6 @@ def create_model_node(model, base_tools, mcp_registry=None):
 
         tool_calls = getattr(response, "tool_calls", []) or []
         
-        # Log the full response content
         response_content = response.content if hasattr(response, 'content') else str(response)
         worker_logger.info(f"[model_node] === LLM RESPONSE START ===")
         worker_logger.info(f"[model_node] Response content: {response_content[:500] if response_content else 'EMPTY'}")

@@ -128,11 +128,11 @@ class AgentExecutor(BaseExecutor):
                 mcp_registry = MCPRegistry(client=persistent_client)
             
             if not is_resume:
-                event_message, preload_messages, mcp_tools, matched_skill_names, matched_mcp_names = await prepare_for_events(
+                event_message, mcp_tools, matched_skills, matched_mcp_names = await prepare_for_events(
                     event_type=event_type,
                     event_data=inputs,
                     skills=all_skills,
-                    mcp_configs=all_mcp_configs,
+                    mcp_configs=relevant_mcp_configs,
                     persistent_client=persistent_client,
                 )
                 
@@ -143,19 +143,45 @@ class AgentExecutor(BaseExecutor):
                 else:
                     message_content += f"\nCurrent Time: {current_time}"
                 
-                initial_messages = preload_messages + [HumanMessage(content=message_content)]
+                available_skills = [
+                    {"name": s.get("name"), "description": s.get("description", "")}
+                    for s in all_skills if s.get("name")
+                ]
+                
+                loaded_skills = [
+                    {"name": s.get("name"), "description": s.get("description", ""), "content": s.get("content", "")}
+                    for s in matched_skills if s.get("name")
+                ]
+                
+                available_mcps_data = persistent_client.get_rich_catalog() if relevant_mcp_configs else []
+                available_mcps = [
+                    {"name": m.get("name"), "description": m.get("description", ""), 
+                     "tool_names": [t.get("name") for t in m.get("tools", [])]}
+                    for m in available_mcps_data
+                ]
+                
+                loaded_mcps = []
+                if matched_mcp_names:
+                    for mcp in available_mcps_data:
+                        if mcp.get("name") in matched_mcp_names:
+                            loaded_mcps.append({
+                                "name": mcp.get("name"),
+                                "description": mcp.get("description", ""),
+                                "tools": mcp.get("tools", [])
+                            })
+                
+                initial_messages = [HumanMessage(content=message_content)]
                 
                 channel = f"conversation:{conversation_id}:messages" if conversation_id else f"agent:{agent_user_id}:messages"
                 
                 agent_input = {
                     "messages": initial_messages,
-                    "skills": all_skills,
-                    "available_mcp_configs": all_mcp_configs,
+                    "available_skills": available_skills,
+                    "loaded_skills": loaded_skills,
+                    "available_mcps": available_mcps,
+                    "loaded_mcps": loaded_mcps,
                     "custom_instructions": "",
                     "agent_name": "Agent",
-                    "loaded_skills": matched_skill_names,
-                    "loaded_mcps": matched_mcp_names,
-                    "available_mcps": available_mcps,
                     "llm_calls": 0,
                     "channel_id": channel,
                     "conversation_id": conversation_id or "",
@@ -291,10 +317,10 @@ class AgentExecutor(BaseExecutor):
                 
                 await persistent_client.connect_all()
                 await persistent_client.fetch_all_metadata()
-                available_mcps = persistent_client.get_rich_catalog()
-                mcp_registry = MCPRegistry(client=persistent_client)
+            available_mcps_catalog = persistent_client.get_rich_catalog() if relevant_mcp_configs else []
+            mcp_registry = MCPRegistry(client=persistent_client)
             
-            human_messages, preload_messages, mcp_tools, processed_ids, matched_skill_names, matched_mcp_names = await prepare_for_inbox_events(
+            human_messages, mcp_tools, matched_skills, matched_mcp_names = await prepare_for_inbox_events(
                 pending_messages=pending_messages,
                 skills=all_skills,
                 mcp_configs=relevant_mcp_configs,
@@ -304,16 +330,40 @@ class AgentExecutor(BaseExecutor):
             if processed_ids:
                 await thread_inbox_repository.mark_processed(processed_ids)
             
+            available_skills = [
+                {"name": s.get("name"), "description": s.get("description", "")}
+                for s in all_skills if s.get("name")
+            ]
+            
+            loaded_skills = [
+                {"name": s.get("name"), "description": s.get("description", ""), "content": s.get("content", "")}
+                for s in matched_skills if s.get("name")
+            ]
+            
+            available_mcps = [
+                {"name": m.get("name"), "description": m.get("description", ""), 
+                 "tool_names": [t.get("name") for t in m.get("tools", [])]}
+                for m in available_mcps_catalog
+            ]
+            
+            loaded_mcps = []
+            for mcp in available_mcps_catalog:
+                if mcp.get("name") in matched_mcp_names:
+                    loaded_mcps.append({
+                        "name": mcp.get("name"),
+                        "description": mcp.get("description", ""),
+                        "tools": mcp.get("tools", [])
+                    })
+            
             channel = f"agent:{agent_user_id}:messages"
             agent_input = {
-                "messages": preload_messages + human_messages,
-                "skills": all_skills,
-                "available_mcp_configs": all_mcp_configs,
+                "messages": human_messages,
+                "available_skills": available_skills,
+                "loaded_skills": loaded_skills,
+                "available_mcps": available_mcps,
+                "loaded_mcps": loaded_mcps,
                 "custom_instructions": "",
                 "agent_name": "Agent",
-                "loaded_skills": matched_skill_names,
-                "loaded_mcps": matched_mcp_names,
-                "available_mcps": available_mcps,
                 "llm_calls": 0,
                 "channel_id": channel,
                 "conversation_id": "",

@@ -13,6 +13,7 @@ from core.agents.utils.nodes.tool_node import ToolNode
 from langgraph.prebuilt import tools_condition
 from langchain_core.tools import BaseTool
 from clients.mcp import MCPRegistry
+from core.logging import worker_logger
 
 
 def build_agent(
@@ -35,6 +36,8 @@ def build_agent(
     tool_node = ToolNode(tools, handle_tool_errors=True, mcp_registry=mcp_registry)
 
     def check_context_node(state: MessagesState) -> MessagesState:
+        msg_count = len(state.get("messages", []))
+        worker_logger.info(f"[check_context_node] ENTER (messages={msg_count})")
         return state
 
     agent_builder.add_node("fetch_inbox_node", fetch_inbox_node)
