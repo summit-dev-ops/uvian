@@ -15,6 +15,8 @@ class MessagesState(TypedDict):
     loaded_skills: List[str] 
     loaded_mcps: List[str]
     available_mcps: List[Dict[str, str]]
+    available_mcp_configs: List[Dict[str, Any]]
+    all_skills_list: List[Dict[str, Any]]
     conversation_id: str
     agent_profile_id: str
     message_id: str

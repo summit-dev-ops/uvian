@@ -300,11 +300,34 @@ class AgentExecutor(BaseExecutor):
         available_mcps = []
         preloaded_skills = []
         all_skills = []
+        preloaded_mcp_configs = []
 
         async with PersistentMCPClient() as persistent_client:
-            if all_mcp_configs:
+            # Fetch pending messages to determine relevant event types
+            from repositories.thread_inbox import thread_inbox_repository
+            pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
+            event_types = list(set(msg["event_type"] for msg in pending_messages)) if pending_messages else []
+            worker_logger.info_job(job_id, f"Inbox event types: {event_types}")
+
+            # Filter MCPs based on event types
+            if event_types and all_mcp_configs:
+                relevant_mcp_configs = []
+                for event_type in event_types:
+                    relevant_mcp_configs.extend(get_mcps_for_event(event_type, all_mcp_configs))
+                # Deduplicate by MCP id
+                seen = set()
+                preloaded_mcp_configs = []
+                for cfg in relevant_mcp_configs:
+                    if cfg["id"] not in seen:
+                        seen.add(cfg["id"])
+                        preloaded_mcp_configs.append(cfg)
+                worker_logger.info_job(job_id, f"Pre-loading MCPs for events: {[c.get('name') for c in preloaded_mcp_configs]}")
+            else:
+                preloaded_mcp_configs = all_mcp_configs
+
+            if preloaded_mcp_configs:
                 worker_logger.info_job(job_id, "Registering MCP servers...")
-                for cfg in all_mcp_configs:
+                for cfg in preloaded_mcp_configs:
                     if cfg.get("url"):
                         persistent_client.add_server(
                             mcp_id=cfg["id"],
@@ -333,6 +356,23 @@ class AgentExecutor(BaseExecutor):
                 job_id, f"Loaded {len(all_skills)} skills: {[s.get('name') for s in all_skills]}"
             )
 
+            # Filter skills based on event types
+            if event_types and all_skills:
+                relevant_skills = []
+                for event_type in event_types:
+                    relevant_skills.extend(get_skills_for_event(event_type, all_skills))
+                # Deduplicate by skill name
+                seen_skills = set()
+                preloaded_skills = []
+                for skill in relevant_skills:
+                    name = skill.get("name", "")
+                    if name not in seen_skills:
+                        seen_skills.add(name)
+                        preloaded_skills.append(skill)
+                worker_logger.info_job(job_id, f"Pre-loading skills for events: {[s.get('name') for s in preloaded_skills]}")
+            else:
+                preloaded_skills = all_skills
+
             channel = f"agent:{agent_user_id}:messages"
             agent_input = {
                 "messages": [],
@@ -342,6 +382,8 @@ class AgentExecutor(BaseExecutor):
                 "loaded_skills": [],
                 "loaded_mcps": [],
                 "available_mcps": available_mcps,
+                "available_mcp_configs": preloaded_mcp_configs,
+                "all_skills_list": all_skills,
                 "llm_calls": 0,
                 "channel_id": channel,
                 "conversation_id": "",
