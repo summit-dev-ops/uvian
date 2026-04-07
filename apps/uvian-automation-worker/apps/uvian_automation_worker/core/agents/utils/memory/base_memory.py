@@ -36,7 +36,11 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
         checkpoint_id = config["configurable"].get("checkpoint_id")
 
         # 1. Fetch from DB
-        row = await checkpoint_repository.get_checkpoint(thread_id, checkpoint_id)
+        try:
+            row = await checkpoint_repository.get_checkpoint(thread_id, checkpoint_id)
+        except Exception as e:
+            print(f"[checkpointer] get_tuple failed for thread_id={thread_id}: {e}")
+            return None
         
         if not row:
             return None
@@ -90,13 +94,16 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
         metadata_hex = f"\\x{metadata_bytes.hex()}"
 
         # 3. Save to Repo
-        await checkpoint_repository.insert_checkpoint({
-            "thread_id": thread_id,
-            "checkpoint_id": checkpoint["id"],
-            "checkpoint_data": checkpoint_hex,  # Pass the hex string directly
-            "metadata": metadata_hex,           # Pass the hex string directly
-            "parent_id": parent_id
-        })
+        try:
+            await checkpoint_repository.insert_checkpoint({
+                "thread_id": thread_id,
+                "checkpoint_id": checkpoint["id"],
+                "checkpoint_data": checkpoint_hex,  # Pass the hex string directly
+                "metadata": metadata_hex,           # Pass the hex string directly
+                "parent_id": parent_id
+            })
+        except Exception as e:
+            print(f"[checkpointer] aput failed for thread_id={thread_id}: {e}")
 
         return {
             "configurable": {
@@ -117,11 +124,15 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
         thread_id = config["configurable"]["thread_id"]
         before_id = before["configurable"].get("checkpoint_id") if before else None
 
-        rows = await checkpoint_repository.list_checkpoints(
-            thread_id, 
-            limit=limit or 10,
-            before_checkpoint_id=before_id 
-        )
+        try:
+            rows = await checkpoint_repository.list_checkpoints(
+                thread_id, 
+                limit=limit or 10,
+                before_checkpoint_id=before_id 
+            )
+        except Exception as e:
+            print(f"[checkpointer] alist failed for thread_id={thread_id}: {e}")
+            rows = []
 
         for row in rows:
             # Decode the hex strings

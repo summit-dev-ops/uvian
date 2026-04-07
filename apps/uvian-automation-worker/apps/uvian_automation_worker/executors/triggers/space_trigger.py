@@ -11,21 +11,18 @@ class SpaceMemberJoinedTrigger(BaseTrigger):
         return "space.member_joined"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
-        context = event_data.get("context", {})
+        actor_id = event_data.get("actorId", "unknown")
+        resource_id = event_data.get("id", "unknown")
+        space_id = event_data.get("spaceId") or resource_id
         
-        role = resource_data.get("role", "member")
+        role = event_data.get("role", "member")
         
         message_content = f"""Event: space.member_joined
 Actor: {actor_id}
 Resource: space/{resource_id}
-Context: space {context.get('spaceId') or resource_id}
+Context: space {space_id}
 Role: {role}"""
-        timestamp = resource_data.get("createdAt")
+        timestamp = event_data.get("createdAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -33,7 +30,7 @@ Role: {role}"""
             content=message_content,
             event_type=self.event_type,
             metadata={
-                "space_id": context.get("spaceId") or resource_id,
+                "space_id": space_id,
                 "user_id": actor_id,
                 "role": role,
                 "timestamp": timestamp,
@@ -50,22 +47,19 @@ class SpaceMemberRoleChangedTrigger(BaseTrigger):
         return "space.member_role_changed"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
-        context = event_data.get("context", {})
+        actor_id = event_data.get("actorId", "unknown")
+        resource_id = event_data.get("id", "unknown")
+        space_id = event_data.get("spaceId") or resource_id
         
-        old_role = resource_data.get("oldRole", "unknown")
-        new_role = resource_data.get("newRole", "unknown")
+        old_role = event_data.get("oldRole", "unknown")
+        new_role = event_data.get("newRole", "unknown")
         
         message_content = f"""Event: space.member_role_changed
 Actor: {actor_id}
 Resource: space/{resource_id}
-Context: space {context.get('spaceId') or resource_id}
+Context: space {space_id}
 Changed: {old_role} -> {new_role}"""
-        timestamp = resource_data.get("createdAt")
+        timestamp = event_data.get("createdAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -73,7 +67,7 @@ Changed: {old_role} -> {new_role}"""
             content=message_content,
             event_type=self.event_type,
             metadata={
-                "space_id": context.get("spaceId") or resource_id,
+                "space_id": space_id,
                 "user_id": actor_id,
                 "old_role": old_role,
                 "new_role": new_role,
@@ -91,21 +85,18 @@ class SpaceCreatedTrigger(BaseTrigger):
         return "space.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
-        context = event_data.get("context", {})
+        actor_id = event_data.get("actorId", "unknown")
+        resource_id = event_data.get("id", "unknown")
+        space_id = event_data.get("spaceId") or resource_id
         
-        name = resource_data.get("name", "unknown")
+        name = event_data.get("name", "unknown")
         
         message_content = f"""Event: space.created
 Actor: {actor_id}
 Resource: space/{resource_id}
-Context: space {context.get('spaceId') or resource_id}
+Context: space {space_id}
 Name: {name}"""
-        timestamp = resource_data.get("createdAt")
+        timestamp = event_data.get("createdAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -113,7 +104,7 @@ Name: {name}"""
             content=message_content,
             event_type=self.event_type,
             metadata={
-                "space_id": context.get("spaceId") or resource_id,
+                "space_id": space_id,
                 "name": name,
                 "created_by": actor_id,
                 "timestamp": timestamp,

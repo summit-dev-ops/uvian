@@ -11,20 +11,17 @@ class MessageCreatedTrigger(BaseTrigger):
         return "message.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "")
-        resource_data = resource.get("data", {})
-        context = event_data.get("context", {})
+        actor_id = event_data.get("actorId", "unknown")
+        message_id = event_data.get("messageId") or event_data.get("id", "")
+        conversation_id = event_data.get("conversationId")
         
-        content = resource_data.get("content", "")
-        platform = resource_data.get("platform")
-        external_channel_id = resource_data.get("externalChannelId")
-        external_user_id = resource_data.get("externalUserId")
+        content = event_data.get("content", "")
+        platform = event_data.get("platform")
+        external_channel_id = event_data.get("externalChannelId")
+        external_user_id = event_data.get("externalUserId")
         
         if platform and platform != "internal":
-            timestamp = resource_data.get("createdAt")
+            timestamp = event_data.get("createdAt")
             message_content = f"""[{platform}] User said: {content}
 External Channel: {external_channel_id or 'unknown'}
 External User: {external_user_id or 'unknown'}"""
@@ -35,10 +32,10 @@ External User: {external_user_id or 'unknown'}"""
                 content=message_content,
                 event_type=self.event_type,
                 metadata={
-                    "message_id": resource_id,
-                    "conversation_id": context.get("conversationId"),
+                    "message_id": message_id,
+                    "conversation_id": conversation_id,
                     "sender_id": actor_id,
-                    "asset_ids": resource_data.get("assetIds", []),
+                    "asset_ids": event_data.get("assetIds", []),
                     "platform": platform,
                     "external_channel_id": external_channel_id,
                     "external_user_id": external_user_id,
@@ -46,11 +43,11 @@ External User: {external_user_id or 'unknown'}"""
                 }
             )
         
-        timestamp = resource_data.get("createdAt")
+        timestamp = event_data.get("createdAt")
         message_content = f"""Event: message.created
 Actor: {actor_id}
-Resource: message/{resource_id}
-Context: conversation {context.get('conversationId')}
+Resource: message/{message_id}
+Context: conversation {conversation_id}
 Content: {content}"""
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
@@ -59,10 +56,10 @@ Content: {content}"""
             content=message_content,
             event_type=self.event_type,
             metadata={
-                "message_id": resource_id,
-                "conversation_id": context.get("conversationId"),
+                "message_id": message_id,
+                "conversation_id": conversation_id,
                 "sender_id": actor_id,
-                "asset_ids": resource_data.get("assetIds", []),
+                "asset_ids": event_data.get("assetIds", []),
                 "timestamp": timestamp,
             }
         )
@@ -77,17 +74,15 @@ class ConversationMemberJoinedTrigger(BaseTrigger):
         return "conversation.member_joined"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "")
-        context = event_data.get("context", {})
+        actor_id = event_data.get("actorId", "unknown")
+        resource_id = event_data.get("id", "")
+        conversation_id = event_data.get("conversationId")
         
         message_content = f"""Event: conversation.member_joined
 Actor: {actor_id}
 Resource: conversation/{resource_id}
-Context: conversation {context.get('conversationId')}"""
-        timestamp = resource_data.get("createdAt")
+Context: conversation {conversation_id}"""
+        timestamp = event_data.get("createdAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -95,7 +90,7 @@ Context: conversation {context.get('conversationId')}"""
             content=message_content,
             event_type=self.event_type,
             metadata={
-                "conversation_id": context.get("conversationId") or resource_id,
+                "conversation_id": conversation_id or resource_id,
                 "user_id": actor_id,
                 "timestamp": timestamp,
             }

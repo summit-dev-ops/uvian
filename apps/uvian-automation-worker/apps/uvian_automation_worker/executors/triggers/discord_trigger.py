@@ -11,20 +11,19 @@ class DiscordMessageCreatedTrigger(BaseTrigger):
         return "com.uvian.discord.message_created"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        resource = event_data.get("resource", {})
-        resource_data = resource.get("data", {})
-        
-        content = resource_data.get("content", "")
-        external_channel_id = resource_data.get("externalChannelId", "")
-        external_user_id = resource_data.get("externalUserId", "")
-        guild_id = resource_data.get("guildId")
-        is_dm = resource_data.get("isDm", False)
+        content = event_data.get("content", "")
+        external_channel_id = event_data.get("externalChannelId", "")
+        external_user_id = event_data.get("externalUserId", "")
+        guild_id = event_data.get("guildId")
+        is_dm = event_data.get("isDm", False)
+        message_id = event_data.get("messageId") or event_data.get("externalMessageId")
+        actor_id = event_data.get("actorId", "unknown")
         
         channel_type = "DM" if is_dm else "channel"
         if guild_id:
-            channel_type = f"server channel"
+            channel_type = "server channel"
         
-        timestamp = resource_data.get("timestamp") or resource_data.get("createdAt")
+        timestamp = event_data.get("timestamp") or event_data.get("createdAt")
         message_content = f"""[Discord] User in {channel_type} said: {content}
 External Channel: {external_channel_id}
 External User: {external_user_id}"""
@@ -35,13 +34,14 @@ External User: {external_user_id}"""
             content=message_content,
             event_type=self.event_type,
             metadata={
-                "message_id": resource_data.get("messageId"),
+                "message_id": message_id,
                 "external_channel_id": external_channel_id,
                 "external_user_id": external_user_id,
-                "external_message_id": resource_data.get("externalMessageId"),
+                "external_message_id": event_data.get("externalMessageId"),
                 "guild_id": guild_id,
                 "is_dm": is_dm,
                 "platform": "discord",
+                "actor_id": actor_id,
                 "timestamp": timestamp,
             }
         )
@@ -56,17 +56,15 @@ class DiscordInteractionReceivedTrigger(BaseTrigger):
         return "com.uvian.discord.interaction_received"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        resource = event_data.get("resource", {})
-        resource_data = resource.get("data", {})
-        
-        interaction_type_name = resource_data.get("interactionTypeName", "unknown")
-        command_name = resource_data.get("commandName")
-        custom_id = resource_data.get("customId")
-        options = resource_data.get("options", [])
-        values = resource_data.get("values", [])
-        modal_data = resource_data.get("modalData", {})
-        external_channel_id = resource_data.get("externalChannelId", "")
-        external_user_id = resource_data.get("externalUserId", "")
+        interaction_type_name = event_data.get("interactionTypeName", "unknown")
+        command_name = event_data.get("commandName")
+        custom_id = event_data.get("customId")
+        options = event_data.get("options", [])
+        values = event_data.get("values", [])
+        modal_data = event_data.get("modalData", {})
+        external_channel_id = event_data.get("externalChannelId", "")
+        external_user_id = event_data.get("externalUserId", "")
+        actor_id = event_data.get("actorId", "unknown")
         
         if interaction_type_name == "ChatInputCommand":
             options_str = ", ".join(
@@ -109,7 +107,7 @@ class DiscordInteractionReceivedTrigger(BaseTrigger):
                 f"External User: {external_user_id}"
             )
         
-        timestamp = resource_data.get("timestamp") or resource_data.get("createdAt")
+        timestamp = event_data.get("timestamp") or event_data.get("createdAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -125,6 +123,7 @@ class DiscordInteractionReceivedTrigger(BaseTrigger):
                 "modal_data": modal_data,
                 "external_channel_id": external_channel_id,
                 "external_user_id": external_user_id,
+                "actor_id": actor_id,
                 "platform": "discord",
                 "timestamp": timestamp,
             }

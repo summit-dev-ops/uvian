@@ -11,20 +11,17 @@ class JobCreatedTrigger(BaseTrigger):
         return "job.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        actor_type = actor.get("type", "system")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
+        actor_id = event_data.get("actorId", "unknown")
+        actor_type = event_data.get("actorType", "system")
+        resource_id = event_data.get("id", "unknown")
         
-        job_type = resource_data.get("jobType", "unknown")
+        job_type = event_data.get("jobType", "unknown")
         
         message_content = f"""Event: job.created
 Actor: {actor_id} ({actor_type})
 Resource: job/{resource_id}
 JobType: {job_type}"""
-        timestamp = resource_data.get("createdAt")
+        timestamp = event_data.get("createdAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -36,7 +33,7 @@ JobType: {job_type}"""
                 "job_type": job_type,
                 "actor_id": actor_id,
                 "actor_type": actor_type,
-                "input_payload": resource_data.get("inputPayload"),
+                "input_payload": event_data.get("inputPayload"),
                 "timestamp": timestamp,
             }
         )
@@ -51,13 +48,11 @@ class JobCancelledTrigger(BaseTrigger):
         return "job.cancelled"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
+        resource_id = event_data.get("id", "unknown")
         
         message_content = f"""Event: job.cancelled
 Resource: job/{resource_id}"""
-        timestamp = resource_data.get("createdAt") or resource_data.get("updatedAt")
+        timestamp = event_data.get("createdAt") or event_data.get("updatedAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -80,13 +75,11 @@ class JobRetryTrigger(BaseTrigger):
         return "job.retry"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
+        resource_id = event_data.get("id", "unknown")
         
         message_content = f"""Event: job.retry
 Resource: job/{resource_id}"""
-        timestamp = resource_data.get("createdAt") or resource_data.get("updatedAt")
+        timestamp = event_data.get("createdAt") or event_data.get("updatedAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         

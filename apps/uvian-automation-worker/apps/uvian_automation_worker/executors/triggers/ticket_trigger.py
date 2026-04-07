@@ -11,26 +11,23 @@ class TicketCreatedTrigger(BaseTrigger):
         return "ticket.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
-        context = event_data.get("context", {})
+        actor_id = event_data.get("actorId", "unknown")
+        resource_id = event_data.get("id", "unknown")
         
-        title = resource_data.get("title", "")
-        description = resource_data.get("description", "")
-        priority = resource_data.get("priority", "medium")
+        title = event_data.get("title", "")
+        description = event_data.get("description", "")
+        priority = event_data.get("priority", "medium")
+        space_id = event_data.get("spaceId")
         
         message_content = f"""Event: ticket.created
 Actor: {actor_id}
 Resource: ticket/{resource_id}
-Context: space {context.get('spaceId')}
+Context: space {space_id}
 Title: {title}
 Priority: {priority.upper()}"""
         if description:
             message_content += f"\nDescription: {description}"
-        timestamp = resource_data.get("createdAt")
+        timestamp = event_data.get("createdAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
@@ -43,7 +40,7 @@ Priority: {priority.upper()}"""
                 "description": description,
                 "priority": priority,
                 "created_by": actor_id,
-                "space_id": context.get("spaceId"),
+                "space_id": space_id,
                 "timestamp": timestamp,
             }
         )
@@ -58,14 +55,11 @@ class TicketUpdatedTrigger(BaseTrigger):
         return "ticket.updated"
     
     def create_message(self, event_data: Dict[str, Any]) -> TriggerMessage:
-        actor = event_data.get("actor", {})
-        actor_id = actor.get("id", "unknown")
-        resource = event_data.get("resource", {})
-        resource_id = resource.get("id", "unknown")
-        resource_data = resource.get("data", {})
+        actor_id = event_data.get("actorId", "unknown")
+        resource_id = event_data.get("id", "unknown")
         
-        status = resource_data.get("status", "")
-        priority = resource_data.get("priority", "")
+        status = event_data.get("status", "")
+        priority = event_data.get("priority", "")
         
         message_content = f"""Event: ticket.updated
 Actor: {actor_id}
@@ -74,7 +68,7 @@ Resource: ticket/{resource_id}"""
             message_content += f"\nStatus: {status}"
         if priority:
             message_content += f"\nPriority: {priority}"
-        timestamp = resource_data.get("updatedAt")
+        timestamp = event_data.get("updatedAt")
         if timestamp:
             message_content += f"\nEvent Time: {timestamp}"
         
