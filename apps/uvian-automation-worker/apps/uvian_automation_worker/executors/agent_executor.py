@@ -344,6 +344,12 @@ class AgentExecutor(BaseExecutor):
                 worker_logger.info_job(job_id, "Fetching tool metadata from all MCP servers...")
                 await persistent_client.fetch_all_metadata()
 
+                worker_logger.info_job(job_id, f"Pre-loading MCP tools for events: {[c.get('name') for c in preloaded_mcp_configs]}")
+                for cfg in preloaded_mcp_configs:
+                    tools = await persistent_client.load_tools(cfg["id"])
+                    mcp_tools.extend(tools)
+                worker_logger.info_job(job_id, f"Pre-loaded {len(mcp_tools)} MCP tools from persistent sessions")
+
                 available_mcps = persistent_client.get_rich_catalog()
                 worker_logger.info_job(
                     job_id, f"Available MCPs: {[m['name'] for m in available_mcps]}"
