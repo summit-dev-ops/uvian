@@ -6,13 +6,13 @@ from core.agents.event_transformers.base import (
 )
 
 
-@EventTransformerRegistry.register("ticket.created")
+@EventTransformerRegistry.register("com.uvian.ticket.created")
 class TicketCreatedTransformer(BaseEventTransformer):
-    """Transform ticket.created events into AI-readable messages."""
+    """Transform com.uvian.ticket.created events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "ticket.created"
+        return "com.uvian.ticket.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -23,7 +23,7 @@ class TicketCreatedTransformer(BaseEventTransformer):
         priority = event_data.get("priority", "medium")
         space_id = event_data.get("spaceId")
         
-        message_content = f"""Event: ticket.created
+        message_content = f"""Event: com.uvian.ticket.created
 Actor: {actor_id}
 Resource: ticket/{resource_id}
 Context: space {space_id}
@@ -50,13 +50,13 @@ Priority: {priority.upper()}"""
         )
 
 
-@EventTransformerRegistry.register("ticket.updated")
+@EventTransformerRegistry.register("com.uvian.ticket.updated")
 class TicketUpdatedTransformer(BaseEventTransformer):
-    """Transform ticket.updated events into AI-readable messages."""
+    """Transform com.uvian.ticket.updated events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "ticket.updated"
+        return "com.uvian.ticket.updated"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -65,7 +65,7 @@ class TicketUpdatedTransformer(BaseEventTransformer):
         status = event_data.get("status", "")
         priority = event_data.get("priority", "")
         
-        message_content = f"""Event: ticket.updated
+        message_content = f"""Event: com.uvian.ticket.updated
 Actor: {actor_id}
 Resource: ticket/{resource_id}"""
         if status:

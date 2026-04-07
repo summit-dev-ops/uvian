@@ -5,10 +5,6 @@ from core.agents.event_transformers.base import (
     BaseEventTransformer,
     EventMessage,
     EventTransformerRegistry,
-    # Backwards compatibility aliases
-    BaseTrigger,
-    TriggerMessage,
-    TriggerRegistry,
 )
 from core.agents.event_transformers.message_transformer import (
     MessageCreatedTransformer,
@@ -43,8 +39,20 @@ __all__ = [
     "BaseEventTransformer",
     "EventMessage",
     "EventTransformerRegistry",
-    # Backwards compatibility
-    "BaseTrigger",
-    "TriggerMessage",
-    "TriggerRegistry",
+    "MessageCreatedTransformer",
+    "ConversationMemberJoinedTransformer",
+    "TicketCreatedTransformer",
+    "TicketUpdatedTransformer",
+    "PostCreatedTransformer",
+    "NoteUpdatedTransformer",
+    "AssetUploadedTransformer",
+    "SpaceMemberJoinedTransformer",
+    "SpaceMemberRoleChangedTransformer",
+    "SpaceCreatedTransformer",
+    "JobCreatedTransformer",
+    "JobCancelledTransformer",
+    "JobRetryTransformer",
+    "DiscordMessageCreatedTransformer",
+    "DiscordInteractionReceivedTransformer",
+    "ScheduleTriggeredTransformer",
 ]

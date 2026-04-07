@@ -7,10 +7,16 @@ from bullmq import Worker
 from core.dependency_injection import get_executor_factory, setup_default_executors
 from core.logging import worker_logger
 from executors.base import JobResult
-from executors.triggers import TriggerRegistry
+from core.agents.event_transformers import EventTransformerRegistry
 
-# Import all triggers to register them
-import executors.triggers
+# Import all transformers to register them with the registry
+import core.agents.event_transformers.message_transformer
+import core.agents.event_transformers.ticket_transformer
+import core.agents.event_transformers.content_transformer
+import core.agents.event_transformers.space_transformer
+import core.agents.event_transformers.job_transformer
+import core.agents.event_transformers.discord_transformer
+import core.agents.event_transformers.schedule_transformer
 
 # Configure standardized logging
 logging.basicConfig(
@@ -20,7 +26,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Event type prefixes that should be handled as agent events
-EVENT_PREFIXES = ['message.', 'ticket.', 'post.', 'note.', 'asset.', 'space.', 'conversation.', 'job.']
+EVENT_PREFIXES = [
+    'com.uvian.message.',
+    'com.uvian.conversation.',
+    'com.uvian.ticket.',
+    'com.uvian.post.',
+    'com.uvian.note.',
+    'com.uvian.asset.',
+    'com.uvian.space.',
+    'com.uvian.job.',
+    'com.uvian.discord.',
+    'com.uvian.schedule.',
+]
 
 
 def is_event_job(job_type: str) -> bool:
@@ -45,7 +62,7 @@ def transform_event_to_agent_message(job_record: dict) -> dict:
     
     worker_logger.info_job(job_record.get("id"), f"Preparing event job: {event_type}")
     
-    # Just ensure type is 'agent' - the executor will derive the message from TriggerRegistry
+    # Just ensure type is 'agent' - the executor will derive the message from EventTransformerRegistry
     job_record["type"] = "agent"
     
     return job_record
@@ -55,7 +72,7 @@ def transform_event_to_agent_message(job_record: dict) -> dict:
 factory = get_executor_factory()
 setup_default_executors()
 
-worker_logger.info(f"Registered event triggers: {TriggerRegistry.list_registered()}")
+worker_logger.info(f"Registered event transformers: {EventTransformerRegistry.list_registered()}")
 
 async def process_job(job, token):
     """

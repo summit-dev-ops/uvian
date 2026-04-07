@@ -84,9 +84,3 @@ class EventTransformerRegistry:
     def list_registered(cls) -> list[str]:
         """List all registered event types."""
         return list(cls._transformers.keys())
-
-
-# Backwards compatibility aliases
-TriggerMessage = EventMessage
-BaseTrigger = BaseEventTransformer
-TriggerRegistry = EventTransformerRegistry

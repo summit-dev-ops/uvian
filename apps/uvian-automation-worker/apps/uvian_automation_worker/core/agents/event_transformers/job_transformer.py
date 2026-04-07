@@ -6,13 +6,13 @@ from core.agents.event_transformers.base import (
 )
 
 
-@EventTransformerRegistry.register("job.created")
+@EventTransformerRegistry.register("com.uvian.job.created")
 class JobCreatedTransformer(BaseEventTransformer):
-    """Transform job.created events into AI-readable messages."""
+    """Transform com.uvian.job.created events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "job.created"
+        return "com.uvian.job.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -21,7 +21,7 @@ class JobCreatedTransformer(BaseEventTransformer):
         
         job_type = event_data.get("jobType", "unknown")
         
-        message_content = f"""Event: job.created
+        message_content = f"""Event: com.uvian.job.created
 Actor: {actor_id} ({actor_type})
 Resource: job/{resource_id}
 JobType: {job_type}"""
@@ -43,18 +43,18 @@ JobType: {job_type}"""
         )
 
 
-@EventTransformerRegistry.register("job.cancelled")
+@EventTransformerRegistry.register("com.uvian.job.cancelled")
 class JobCancelledTransformer(BaseEventTransformer):
-    """Transform job.cancelled events into AI-readable messages."""
+    """Transform com.uvian.job.cancelled events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "job.cancelled"
+        return "com.uvian.job.cancelled"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         resource_id = event_data.get("id", "unknown")
         
-        message_content = f"""Event: job.cancelled
+        message_content = f"""Event: com.uvian.job.cancelled
 Resource: job/{resource_id}"""
         timestamp = event_data.get("createdAt") or event_data.get("updatedAt")
         if timestamp:
@@ -70,18 +70,18 @@ Resource: job/{resource_id}"""
         )
 
 
-@EventTransformerRegistry.register("job.retry")
+@EventTransformerRegistry.register("com.uvian.job.retry")
 class JobRetryTransformer(BaseEventTransformer):
-    """Transform job.retry events into AI-readable messages."""
+    """Transform com.uvian.job.retry events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "job.retry"
+        return "com.uvian.job.retry"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         resource_id = event_data.get("id", "unknown")
         
-        message_content = f"""Event: job.retry
+        message_content = f"""Event: com.uvian.job.retry
 Resource: job/{resource_id}"""
         timestamp = event_data.get("createdAt") or event_data.get("updatedAt")
         if timestamp:

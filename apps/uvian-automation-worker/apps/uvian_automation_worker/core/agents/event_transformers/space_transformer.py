@@ -6,13 +6,13 @@ from core.agents.event_transformers.base import (
 )
 
 
-@EventTransformerRegistry.register("space.member_joined")
+@EventTransformerRegistry.register("com.uvian.space.member_joined")
 class SpaceMemberJoinedTransformer(BaseEventTransformer):
-    """Transform space.member_joined events into AI-readable messages."""
+    """Transform com.uvian.space.member_joined events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "space.member_joined"
+        return "com.uvian.space.member_joined"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -21,7 +21,7 @@ class SpaceMemberJoinedTransformer(BaseEventTransformer):
         
         role = event_data.get("role", "member")
         
-        message_content = f"""Event: space.member_joined
+        message_content = f"""Event: com.uvian.space.member_joined
 Actor: {actor_id}
 Resource: space/{resource_id}
 Context: space {space_id}
@@ -42,13 +42,13 @@ Role: {role}"""
         )
 
 
-@EventTransformerRegistry.register("space.member_role_changed")
+@EventTransformerRegistry.register("com.uvian.space.member_role_changed")
 class SpaceMemberRoleChangedTransformer(BaseEventTransformer):
-    """Transform space.member_role_changed events into AI-readable messages."""
+    """Transform com.uvian.space.member_role_changed events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "space.member_role_changed"
+        return "com.uvian.space.member_role_changed"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -58,7 +58,7 @@ class SpaceMemberRoleChangedTransformer(BaseEventTransformer):
         old_role = event_data.get("oldRole", "unknown")
         new_role = event_data.get("newRole", "unknown")
         
-        message_content = f"""Event: space.member_role_changed
+        message_content = f"""Event: com.uvian.space.member_role_changed
 Actor: {actor_id}
 Resource: space/{resource_id}
 Context: space {space_id}
@@ -80,13 +80,13 @@ Changed: {old_role} -> {new_role}"""
         )
 
 
-@EventTransformerRegistry.register("space.created")
+@EventTransformerRegistry.register("com.uvian.space.created")
 class SpaceCreatedTransformer(BaseEventTransformer):
-    """Transform space.created events into AI-readable messages."""
+    """Transform com.uvian.space.created events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "space.created"
+        return "com.uvian.space.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -95,7 +95,7 @@ class SpaceCreatedTransformer(BaseEventTransformer):
         
         name = event_data.get("name", "unknown")
         
-        message_content = f"""Event: space.created
+        message_content = f"""Event: com.uvian.space.created
 Actor: {actor_id}
 Resource: space/{resource_id}
 Context: space {space_id}

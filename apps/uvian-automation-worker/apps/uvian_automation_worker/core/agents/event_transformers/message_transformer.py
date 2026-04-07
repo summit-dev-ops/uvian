@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from core.agents.event_transformers.base import (
     BaseEventTransformer,
     EventMessage,
@@ -6,13 +6,13 @@ from core.agents.event_transformers.base import (
 )
 
 
-@EventTransformerRegistry.register("message.created")
+@EventTransformerRegistry.register("com.uvian.message.created")
 class MessageCreatedTransformer(BaseEventTransformer):
-    """Transform message.created events into AI-readable messages."""
+    """Transform com.uvian.message.created events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "message.created"
+        return "com.uvian.message.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -48,7 +48,7 @@ External User: {external_user_id or 'unknown'}"""
             )
         
         timestamp = event_data.get("createdAt")
-        message_content = f"""Event: message.created
+        message_content = f"""Event: com.uvian.message.created
 Actor: {actor_id}
 Resource: message/{message_id}
 Context: conversation {conversation_id}
@@ -69,20 +69,20 @@ Content: {content}"""
         )
 
 
-@EventTransformerRegistry.register("conversation.member_joined")
+@EventTransformerRegistry.register("com.uvian.conversation.member_joined")
 class ConversationMemberJoinedTransformer(BaseEventTransformer):
-    """Transform conversation.member_joined events into AI-readable messages."""
+    """Transform com.uvian.conversation.member_joined events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "conversation.member_joined"
+        return "com.uvian.conversation.member_joined"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "")
         conversation_id = event_data.get("conversationId")
         
-        message_content = f"""Event: conversation.member_joined
+        message_content = f"""Event: com.uvian.conversation.member_joined
 Actor: {actor_id}
 Resource: conversation/{resource_id}
 Context: conversation {conversation_id}"""

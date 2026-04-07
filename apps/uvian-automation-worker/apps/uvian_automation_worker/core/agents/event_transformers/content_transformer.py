@@ -6,20 +6,20 @@ from core.agents.event_transformers.base import (
 )
 
 
-@EventTransformerRegistry.register("post.created")
+@EventTransformerRegistry.register("com.uvian.post.created")
 class PostCreatedTransformer(BaseEventTransformer):
-    """Transform post.created events into AI-readable messages."""
+    """Transform com.uvian.post.created events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "post.created"
+        return "com.uvian.post.created"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "unknown")
         space_id = event_data.get("spaceId")
         
-        message_content = f"""Event: post.created
+        message_content = f"""Event: com.uvian.post.created
 Actor: {actor_id}
 Resource: post/{resource_id}
 Context: space {space_id}"""
@@ -39,13 +39,13 @@ Context: space {space_id}"""
         )
 
 
-@EventTransformerRegistry.register("note.updated")
+@EventTransformerRegistry.register("com.uvian.note.updated")
 class NoteUpdatedTransformer(BaseEventTransformer):
-    """Transform note.updated events into AI-readable messages."""
+    """Transform com.uvian.note.updated events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "note.updated"
+        return "com.uvian.note.updated"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
@@ -53,7 +53,7 @@ class NoteUpdatedTransformer(BaseEventTransformer):
         
         title = event_data.get("title", "")
         
-        message_content = f"""Event: note.updated
+        message_content = f"""Event: com.uvian.note.updated
 Actor: {actor_id}
 Resource: note/{resource_id}
 Title: {title}"""
@@ -73,13 +73,13 @@ Title: {title}"""
         )
 
 
-@EventTransformerRegistry.register("asset.uploaded")
+@EventTransformerRegistry.register("com.uvian.asset.uploaded")
 class AssetUploadedTransformer(BaseEventTransformer):
-    """Transform asset.uploaded events into AI-readable messages."""
+    """Transform com.uvian.asset.uploaded events into AI-readable messages."""
     
     @property
     def event_type(self) -> str:
-        return "asset.uploaded"
+        return "com.uvian.asset.uploaded"
     
     def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
         resource_id = event_data.get("id", "unknown")
@@ -89,7 +89,7 @@ class AssetUploadedTransformer(BaseEventTransformer):
         filename = event_data.get("filename", "unknown")
         mime_type = event_data.get("mimeType", "")
         
-        message_content = f"""Event: asset.uploaded
+        message_content = f"""Event: com.uvian.asset.uploaded
 Resource: asset/{resource_id}
 Filename: {filename}
 MimeType: {mime_type}
