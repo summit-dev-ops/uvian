@@ -22,14 +22,22 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     Uses EventLoader for event transformation. MCP/skill loading is handled
     by the executor at startup - this node focuses on message transformation.
     """
+    existing_messages = state.get("messages", [])
+    worker_logger.info(f"[fetch_inbox_node] Existing messages in state: {len(existing_messages)}")
+    
     thread_id = state.get("thread_id")
     if not thread_id:
         worker_logger.warning("[fetch_inbox_node] No thread_id in state, skipping inbox check")
         return {"inbox_messages_added": 0}
 
     pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
+    
+    worker_logger.info(f"[fetch_inbox_node] Pending messages in inbox: {len(pending_messages)}")
 
     if not pending_messages:
+        if existing_messages:
+            worker_logger.info(f"[fetch_inbox_node] No pending messages, keeping existing {len(existing_messages)} messages")
+            return {"inbox_messages_added": 0}
         return {"inbox_messages_added": 0}
 
     worker_logger.info(
@@ -77,6 +85,10 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     worker_logger.info(
         f"[fetch_inbox_node] Added {len(new_messages)} messages, skills loaded: {newly_loaded}"
     )
+
+    # If there were existing messages and we're adding new ones, log the combined state
+    if existing_messages:
+        worker_logger.info(f"[fetch_inbox_node] Replacing {len(existing_messages)} existing messages with {len(new_messages)} new messages")
 
     return {
         "messages": skill_messages + new_messages,

@@ -179,16 +179,29 @@ class AgentExecutor(BaseExecutor):
             full_response: List[Any] = []
             try:
                 worker_logger.info_job(job_id, f"Starting agent with config: {config}")
+                worker_logger.info_job(job_id, f"Agent input messages: {len(agent_input.get('messages', []))}")
+                for i, msg in enumerate(agent_input.get('messages', [])):
+                    msg_content = msg.content[:200] if hasattr(msg, 'content') else str(msg)[:200]
+                    msg_type = getattr(msg, 'type', 'unknown')
+                    worker_logger.info_job(job_id, f"  Input message {i}: type={msg_type}, content={msg_content}...")
+                
                 agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
                 async for chunk, _m in agent.astream(
                     agent_input,
                     config=config,
                     stream_mode="messages",
                 ):
+                    chunk_type = type(chunk).__name__
+                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
+                    worker_logger.info_job(job_id, f"Stream chunk: type={chunk_type}, content={chunk_content[:200] if chunk_content else 'EMPTY'}...")
                     full_response.append(chunk)
                 
                 worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
                 
+                for i, chunk in enumerate(full_response):
+                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
+                    worker_logger.info_job(job_id, f"Response {i}: {chunk_content[:500] if chunk_content else 'EMPTY'}...")
+
                 return {
                     "status": "completed",
                     "result": {
@@ -317,16 +330,29 @@ class AgentExecutor(BaseExecutor):
             full_response: List[Any] = []
             try:
                 worker_logger.info_job(job_id, f"Starting agent with config: {config}")
+                worker_logger.info_job(job_id, f"Agent input messages: {len(agent_input.get('messages', []))}")
+                for i, msg in enumerate(agent_input.get('messages', [])):
+                    msg_content = msg.content[:200] if hasattr(msg, 'content') else str(msg)[:200]
+                    msg_type = getattr(msg, 'type', 'unknown')
+                    worker_logger.info_job(job_id, f"  Input message {i}: type={msg_type}, content={msg_content}...")
+                
                 agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
                 async for chunk, _m in agent.astream(
                     agent_input,
                     config=config,
                     stream_mode="messages",
                 ):
+                    chunk_type = type(chunk).__name__
+                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
+                    worker_logger.info_job(job_id, f"Stream chunk: type={chunk_type}, content={chunk_content[:200] if chunk_content else 'EMPTY'}...")
                     full_response.append(chunk)
                 
                 worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
                 
+                for i, chunk in enumerate(full_response):
+                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
+                    worker_logger.info_job(job_id, f"Response {i}: {chunk_content[:500] if chunk_content else 'EMPTY'}...")
+
                 return {
                     "status": "completed",
                     "result": {

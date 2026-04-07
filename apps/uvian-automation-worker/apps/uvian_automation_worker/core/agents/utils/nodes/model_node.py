@@ -49,6 +49,13 @@ def create_model_node(model, base_tools, mcp_registry=None):
         ) + skills_section
         messages = [SystemMessage(content=formatted_system_prompt)] + state["messages"]
         
+        # Log all messages in state for debugging
+        worker_logger.info(f"[model_node] State messages count: {len(state.get('messages', []))}")
+        for i, msg in enumerate(state.get('messages', [])):
+            msg_preview = msg.content[:200] if hasattr(msg, 'content') else str(msg)[:200]
+            msg_type = getattr(msg, 'type', 'unknown')
+            worker_logger.info(f"[model_node] Message {i}: type={msg_type}, content={msg_preview}...")
+        
         last_user_msg = ""
         for msg in reversed(messages):
             if hasattr(msg, "type") and msg.type == "human":
@@ -60,11 +67,16 @@ def create_model_node(model, base_tools, mcp_registry=None):
         response = model_with_tools.invoke(messages)
 
         tool_calls = getattr(response, "tool_calls", []) or []
-        response_preview = response.content[:200] if hasattr(response, "content") else "no content"
-        worker_logger.info(f"[model_node] LLM response: content={response_preview}... tool_calls={len(tool_calls)}")
-        if tool_calls:
-            for tc in tool_calls:
-                worker_logger.info(f"[model_node] Tool call: {tc.get('name')} args={str(tc.get('args', {}))[:200]}")
+        
+        # Log the full response content
+        response_content = response.content if hasattr(response, 'content') else str(response)
+        worker_logger.info(f"[model_node] === LLM RESPONSE START ===")
+        worker_logger.info(f"[model_node] Response content: {response_content[:500] if response_content else 'EMPTY'}")
+        worker_logger.info(f"[model_node] Response type: {type(response)}")
+        worker_logger.info(f"[model_node] Tool calls: {len(tool_calls)}")
+        for tc in tool_calls:
+            worker_logger.info(f"[model_node] Tool call: {tc.get('name')} args={str(tc.get('args', {}))[:200]}")
+        worker_logger.info(f"[model_node] === LLM RESPONSE END ===")
 
         return {
             "messages": [response],
