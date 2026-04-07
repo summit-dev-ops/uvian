@@ -46,6 +46,7 @@ class PersistentMCPClient:
     def __init__(self):
         self._connections: Dict[str, dict] = {}
         self._names: Dict[str, str] = {}
+        self._name_to_id: Dict[str, str] = {}
         self._sessions: Dict[str, ClientSession] = {}
         self._tool_cache: Dict[str, List[BaseTool]] = {}
         self._metadata_cache: Dict[str, List[Dict[str, Any]]] = {}
@@ -61,20 +62,28 @@ class PersistentMCPClient:
         """Register an MCP server configuration. Does NOT connect yet."""
         self._connections[mcp_id] = _build_connection_config(url, auth_method, auth_secret, jwt_secret)
         self._names[mcp_id] = name or mcp_id
+        if name:
+            self._name_to_id[name] = mcp_id
 
     async def connect(self, mcp_id: str) -> ClientSession:
-        """Dynamically open a persistent connection to a single registered server."""
-        if mcp_id in self._sessions:
-            return self._sessions[mcp_id]
+        """Dynamically open a persistent connection to a single registered server.
+        
+        Accepts either the server's UUID (mcp_id) or its friendly name."""
+        resolved_id = mcp_id
+        if mcp_id not in self._connections and mcp_id in self._name_to_id:
+            resolved_id = self._name_to_id[mcp_id]
+        
+        if resolved_id in self._sessions:
+            return self._sessions[resolved_id]
 
-        if mcp_id not in self._connections:
+        if resolved_id not in self._connections:
             raise ValueError(f"MCP server '{mcp_id}' is not registered.")
 
-        connection = self._connections[mcp_id]
+        connection = self._connections[resolved_id]
         gen = create_session(connection)
         session = await self.exit_stack.enter_async_context(gen)
 
-        self._sessions[mcp_id] = session
+        self._sessions[resolved_id] = session
         return session
 
     async def connect_all(self):
@@ -91,21 +100,29 @@ class PersistentMCPClient:
 
     async def load_tools(self, mcp_id: str) -> List[BaseTool]:
         """Load tools from a specific server. Will lazily connect if not already connected."""
-        if mcp_id in self._tool_cache:
-            return self._tool_cache[mcp_id]
+        resolved_id = mcp_id
+        if mcp_id not in self._connections and mcp_id in self._name_to_id:
+            resolved_id = self._name_to_id[mcp_id]
+        
+        if resolved_id in self._tool_cache:
+            return self._tool_cache[resolved_id]
 
-        session = await self.connect(mcp_id)
+        session = await self.connect(resolved_id)
 
         tools = await load_mcp_tools(session)
-        self._tool_cache[mcp_id] = tools
+        self._tool_cache[resolved_id] = tools
         return tools
 
     async def get_tool_metadata(self, mcp_id: str) -> List[Dict[str, Any]]:
         """Fetch tool metadata from a specific server. Lazily connects if needed."""
-        if mcp_id in self._metadata_cache:
-            return self._metadata_cache[mcp_id]
+        resolved_id = mcp_id
+        if mcp_id not in self._connections and mcp_id in self._name_to_id:
+            resolved_id = self._name_to_id[mcp_id]
+        
+        if resolved_id in self._metadata_cache:
+            return self._metadata_cache[resolved_id]
 
-        session = await self.connect(mcp_id)
+        session = await self.connect(resolved_id)
 
         result = await session.list_tools()
         metadata = [
@@ -116,7 +133,7 @@ class PersistentMCPClient:
             }
             for tool in result.tools
         ]
-        self._metadata_cache[mcp_id] = metadata
+        self._metadata_cache[resolved_id] = metadata
         return metadata
 
     async def fetch_all_metadata(self):
