@@ -55,7 +55,7 @@ export class WebhookHandlerService {
       await queueService.addJob(
         'main-queue',
         'thread-wakeup',
-        { threadId, agentId },
+        { type: 'thread-wakeup', threadId, agentId },
         { jobId: threadId }
       );
 
