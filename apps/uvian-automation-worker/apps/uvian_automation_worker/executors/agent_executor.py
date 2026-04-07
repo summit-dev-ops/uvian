@@ -320,7 +320,7 @@ class AgentExecutor(BaseExecutor):
             available_mcps_catalog = persistent_client.get_rich_catalog() if relevant_mcp_configs else []
             mcp_registry = MCPRegistry(client=persistent_client)
             
-            human_messages, mcp_tools, matched_skills, matched_mcp_names = await prepare_for_inbox_events(
+            human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids = await prepare_for_inbox_events(
                 pending_messages=pending_messages,
                 skills=all_skills,
                 mcp_configs=relevant_mcp_configs,
