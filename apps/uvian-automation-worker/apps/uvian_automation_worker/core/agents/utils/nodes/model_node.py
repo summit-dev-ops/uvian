@@ -32,21 +32,7 @@ Rules:
 
 def create_model_node(model, base_tools, mcp_registry=None):
     async def llm_call(state: dict, config: RunnableConfig):
-        loaded_mcps = state.get("loaded_mcps", [])
-        
         active_tools = list(base_tools)
-        
-        if loaded_mcps and mcp_registry:
-            from clients.mcp import MCPRegistry
-            if isinstance(mcp_registry, MCPRegistry):
-                extra = []
-                for mcp_id in loaded_mcps:
-                    tools = await mcp_registry.get_tools_for_mcp(mcp_id)
-                    extra.extend(tools)
-                active_tools.extend(extra)
-                worker_logger.info(f"[model_node] Loaded {len(extra)} tools from {len(loaded_mcps)} MCPs: {loaded_mcps}")
-            else:
-                worker_logger.warning(f"[model_node] mcp_registry is not an MCPRegistry instance")
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
         
@@ -54,7 +40,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
         loaded_skills = state.get("loaded_skills", [])
         skills_section = ""
         if skills:
-            skills_list = [f"- **{s['name']}**: {s['description']}" for s in skills if not s in loaded_skills]
+            skills_list = [f"- **{s['name']}**: {s['description']}" for s in skills if s.get("name") not in loaded_skills]
             skills_section = "\n\n## Available Skills\n\n" + "\n".join(skills_list)
         
         formatted_system_prompt = SYSTEM_PROMPT.format(

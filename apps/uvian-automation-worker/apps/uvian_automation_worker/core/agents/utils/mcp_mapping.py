@@ -1,38 +1,23 @@
 from typing import List, Dict, Any
 
 
-EVENT_PREFIX_TO_MCP_NAMES: Dict[str, List[str]] = {
-    "com.uvian.discord.": ["discord"],
-    "message.": ["uvian hub"],
-    "conversation.": ["uvian hub"],
-    "ticket.": ["uvian hub"],
-    "post.": ["uvian hub"],
-    "note.": ["uvian hub"],
-    "asset.": ["uvian hub"],
-    "space.": ["uvian hub"],
-    "job.": ["uvian hub"],
-}
-
-
 def get_mcps_for_event(event_type: str, all_mcp_configs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Filter MCP configs to only those relevant for the given event type.
+    """Filter MCP configs to those relevant for the given event type.
 
-    Matches by MCP name (case-insensitive) against a hardcoded event-to-MCP mapping.
-    Falls back to returning all MCP configs if no mapping exists.
+    First checks MCP config's auto_load_events field (database-driven).
+    Falls back to returning all MCP configs if no configs have auto_load_events set
+    (backwards compatibility for existing MCP configs).
     """
-    matched_mcp_names: List[str] = []
-    for prefix, mcp_names in EVENT_PREFIX_TO_MCP_NAMES.items():
-        if event_type.startswith(prefix):
-            matched_mcp_names.extend(mcp_names)
-
-    if not matched_mcp_names:
+    has_auto_load = any(cfg.get("auto_load_events") for cfg in all_mcp_configs)
+    
+    if not has_auto_load:
         return all_mcp_configs
-
-    seen = set()
-    unique_mcp_names = []
-    for name in matched_mcp_names:
-        if name not in seen:
-            seen.add(name)
-            unique_mcp_names.append(name)
-
-    return [cfg for cfg in all_mcp_configs if cfg.get("name", "").lower() in unique_mcp_names]
+    
+    matched = []
+    for cfg in all_mcp_configs:
+        auto_load_events = cfg.get("auto_load_events", [])
+        for pattern in auto_load_events:
+            if event_type == pattern or event_type.startswith(pattern):
+                matched.append(cfg)
+                break
+    return matched

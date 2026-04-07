@@ -1,36 +1,98 @@
-# Import all trigger modules to register them with the registry
-from executors.triggers.base import BaseTrigger, TriggerMessage, TriggerRegistry
-from executors.triggers.message_trigger import (
+# Backwards compatibility - re-export from new event_transformers location
+from core.agents.event_transformers import (
+    BaseEventTransformer,
+    EventMessage,
+    EventTransformerRegistry,
+    BaseTrigger,
+    TriggerMessage,
+    TriggerRegistry,
+)
+
+# Import all transformers to register them
+from core.agents.event_transformers.message_transformer import (
+    MessageCreatedTransformer,
+    ConversationMemberJoinedTransformer,
     MessageCreatedTrigger,
     ConversationMemberJoinedTrigger,
 )
-from executors.triggers.ticket_trigger import (
+from core.agents.event_transformers.ticket_transformer import (
+    TicketCreatedTransformer,
+    TicketUpdatedTransformer,
     TicketCreatedTrigger,
     TicketUpdatedTrigger,
 )
-from executors.triggers.content_trigger import (
+from core.agents.event_transformers.content_transformer import (
+    PostCreatedTransformer,
+    NoteUpdatedTransformer,
+    AssetUploadedTransformer,
     PostCreatedTrigger,
     NoteUpdatedTrigger,
     AssetUploadedTrigger,
 )
-from executors.triggers.space_trigger import (
+from core.agents.event_transformers.space_transformer import (
+    SpaceMemberJoinedTransformer,
+    SpaceMemberRoleChangedTransformer,
+    SpaceCreatedTransformer,
     SpaceMemberJoinedTrigger,
     SpaceMemberRoleChangedTrigger,
     SpaceCreatedTrigger,
 )
-from executors.triggers.job_trigger import (
+from core.agents.event_transformers.job_transformer import (
+    JobCreatedTransformer,
+    JobCancelledTransformer,
+    JobRetryTransformer,
     JobCreatedTrigger,
     JobCancelledTrigger,
     JobRetryTrigger,
 )
-from executors.triggers.discord_trigger import (
+from core.agents.event_transformers.discord_transformer import (
+    DiscordMessageCreatedTransformer,
+    DiscordInteractionReceivedTransformer,
     DiscordMessageCreatedTrigger,
     DiscordInteractionReceivedTrigger,
 )
-from executors.triggers.schedule_trigger import ScheduleTriggeredTrigger
+from core.agents.event_transformers.schedule_transformer import (
+    ScheduleTriggeredTransformer,
+    ScheduleTriggeredTrigger,
+)
 
 __all__ = [
+    "BaseEventTransformer",
+    "EventMessage",
+    "EventTransformerRegistry",
     "BaseTrigger",
-    "TriggerMessage", 
+    "TriggerMessage",
     "TriggerRegistry",
+    "MessageCreatedTransformer",
+    "ConversationMemberJoinedTransformer",
+    "MessageCreatedTrigger",
+    "ConversationMemberJoinedTrigger",
+    "TicketCreatedTransformer",
+    "TicketUpdatedTransformer",
+    "TicketCreatedTrigger",
+    "TicketUpdatedTrigger",
+    "PostCreatedTransformer",
+    "NoteUpdatedTransformer",
+    "AssetUploadedTransformer",
+    "PostCreatedTrigger",
+    "NoteUpdatedTrigger",
+    "AssetUploadedTrigger",
+    "SpaceMemberJoinedTransformer",
+    "SpaceMemberRoleChangedTransformer",
+    "SpaceCreatedTransformer",
+    "SpaceMemberJoinedTrigger",
+    "SpaceMemberRoleChangedTrigger",
+    "SpaceCreatedTrigger",
+    "JobCreatedTransformer",
+    "JobCancelledTransformer",
+    "JobRetryTransformer",
+    "JobCreatedTrigger",
+    "JobCancelledTrigger",
+    "JobRetryTrigger",
+    "DiscordMessageCreatedTransformer",
+    "DiscordInteractionReceivedTransformer",
+    "DiscordMessageCreatedTrigger",
+    "DiscordInteractionReceivedTrigger",
+    "ScheduleTriggeredTransformer",
+    "ScheduleTriggeredTrigger",
 ]
