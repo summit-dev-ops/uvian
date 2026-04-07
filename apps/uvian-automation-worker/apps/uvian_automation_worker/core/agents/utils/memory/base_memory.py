@@ -12,12 +12,15 @@ from repositories.checkpoints import checkpoint_repository
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 
-def decode_supabase_bytea(hex_str: str) -> bytes:
-    """Converts Supabase PostgREST bytea hex string back to bytes."""
-    if isinstance(hex_str, str) and hex_str.startswith(r"\x"):
-        return bytes.fromhex(hex_str[2:])
-    # Fallback in case it somehow returns raw bytes or unformatted string
-    return hex_str if isinstance(hex_str, bytes) else hex_str.encode("utf-8")
+def decode_supabase_bytea(value: Any) -> bytes:
+    """Converts Supabase PostgREST bytea value back to bytes."""
+    if isinstance(value, bytes):
+        return value
+    if isinstance(value, str):
+        if value.startswith(r"\x"):
+            return bytes.fromhex(value[2:])
+        return value.encode("utf-8")
+    return b""
 
 
 class PostgresAsyncCheckpointer(BaseCheckpointSaver):
