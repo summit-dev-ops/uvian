@@ -30,6 +30,43 @@ class AgentExecutor(BaseExecutor):
     def __init__(self):
         self.agent_name = "agent_executor"
         worker_logger.info(f"Initializing {self.agent_name}")
+
+    async def _log_final_state(self, job_id: str, config: dict):
+        """Log the actual state from checkpoint after execution completes."""
+        from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
+        
+        checkpointer = PostgresAsyncCheckpointer()
+        
+        try:
+            checkpoint_tuple = await checkpointer.aget_tuple(config)
+            if not checkpoint_tuple or not checkpoint_tuple.checkpoint:
+                worker_logger.info_job(job_id, "Final state: No checkpoint found")
+                return
+            
+            checkpoint = checkpoint_tuple.checkpoint
+            
+            # Log messages
+            messages = checkpoint.get("messages", [])
+            worker_logger.info_job(job_id, f"Final state - {len(messages)} messages:")
+            for i, msg in enumerate(messages):
+                msg_type = getattr(msg, "type", "unknown")
+                msg_content = getattr(msg, "content", "")[:300] if hasattr(msg, "content") else str(msg)[:300]
+                worker_logger.info_job(job_id, f"  [{i}] {msg_type}: {msg_content}...")
+            
+            # Log conversation_summary
+            summary = checkpoint.get("conversation_summary", "")
+            if summary:
+                worker_logger.info_job(job_id, f"Conversation summary: {summary[:500]}...")
+            
+            # Log loaded_skills
+            loaded_skills = checkpoint.get("loaded_skills", [])
+            worker_logger.info_job(job_id, f"Loaded skills ({len(loaded_skills)}): {[s.get('name') for s in loaded_skills]}")
+            
+            # Log loaded_mcps
+            loaded_mcps = checkpoint.get("loaded_mcps", [])
+            worker_logger.info_job(job_id, f"Loaded MCPs ({len(loaded_mcps)}): {[m.get('name') for m in loaded_mcps]}")
+        except Exception as e:
+            worker_logger.info_job(job_id, f"Final state logging error: {e}")
         
     async def execute(self, job_data: JobData) -> JobResult:
         """Execute an agent job using EventLoader for unified event processing."""
@@ -217,16 +254,11 @@ class AgentExecutor(BaseExecutor):
                     config=config,
                     stream_mode="messages",
                 ):
-                    chunk_type = type(chunk).__name__
-                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
-                    worker_logger.info_job(job_id, f"Stream chunk: type={chunk_type}, content={chunk_content[:200] if chunk_content else 'EMPTY'}...")
                     full_response.append(chunk)
                 
                 worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
-                
-                for i, chunk in enumerate(full_response):
-                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
-                    worker_logger.info_job(job_id, f"Response {i}: {chunk_content[:500] if chunk_content else 'EMPTY'}...")
+
+                await self._log_final_state(job_id, config)
 
                 return {
                     "status": "completed",
@@ -392,16 +424,11 @@ class AgentExecutor(BaseExecutor):
                     config=config,
                     stream_mode="messages",
                 ):
-                    chunk_type = type(chunk).__name__
-                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
-                    worker_logger.info_job(job_id, f"Stream chunk: type={chunk_type}, content={chunk_content[:200] if chunk_content else 'EMPTY'}...")
                     full_response.append(chunk)
                 
                 worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
-                
-                for i, chunk in enumerate(full_response):
-                    chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
-                    worker_logger.info_job(job_id, f"Response {i}: {chunk_content[:500] if chunk_content else 'EMPTY'}...")
+
+                await self._log_final_state(job_id, config)
 
                 return {
                     "status": "completed",
