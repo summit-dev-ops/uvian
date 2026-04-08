@@ -34,6 +34,7 @@ class MessagesState(TypedDict):
     event_metadata: Dict[str, Any]
     thread_id: str
     inbox_messages_added: int
+    conversation_summary: str
 
 
 class Skill(TypedDict):

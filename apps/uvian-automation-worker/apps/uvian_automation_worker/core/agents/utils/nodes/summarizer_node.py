@@ -11,7 +11,6 @@ def create_summarize_node(model, agent_name: str):
         # Separate: keep recent, summarize old
         RECENT_TO_KEEP = 6  # Last 3 exchanges (user+ai)
         
-        system_msgs = [m for m in messages if isinstance(m, SystemMessage)]
         other_msgs = [m for m in messages if not isinstance(m, SystemMessage)]
         
         recent = other_msgs[-RECENT_TO_KEEP:] if len(other_msgs) > RECENT_TO_KEEP else other_msgs
@@ -45,17 +44,14 @@ Keep under 150 words."""),
             summary_prompt.format_messages(old_text=old_text)
         )
         
-        # Create new message list: system + summary + recent
-        summary_message = SystemMessage(
-            content=f"CONVERSATION SUMMARY:\n{summary_response.content}",
-            name="context_summary"
-        )
-        
-        new_messages = system_msgs + [summary_message] + recent
+        new_messages = recent
         
         worker_logger.info(f"[summarize_node] EXIT: summarized {len(old)} → {len(new_messages)} messages")
         
-        # Replace messages using special marker for our custom reducer
-        return {"messages": [SystemMessage(content=MESSAGES_REPLACE)] + new_messages}
+        # Replace messages using special marker for our custom reducer, store summary in state
+        return {
+            "messages": [SystemMessage(content=MESSAGES_REPLACE)] + new_messages,
+            "conversation_summary": summary_response.content
+        }
     
     return summarize_node

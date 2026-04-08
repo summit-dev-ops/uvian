@@ -79,6 +79,11 @@ def create_model_node(model, base_tools, mcp_registry=None):
             custom_instructions= state.get("custom_instructions", "")
         ) + mcps_section + skills_section
         
+        # Prepend conversation summary if exists
+        conversation_summary = state.get("conversation_summary", "")
+        if conversation_summary:
+            formatted_system_prompt = f"Previous Conversation Summary:\n{conversation_summary}\n\n" + formatted_system_prompt
+        
         loaded_mcp_tools = []
         for mcp in loaded_mcps:
             loaded_mcp_tools.extend(mcp.get("tools", []))
