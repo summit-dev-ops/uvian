@@ -28,7 +28,7 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     thread_id = state.get("thread_id")
     if not thread_id:
         worker_logger.warning("[fetch_inbox_node] No thread_id in state, skipping inbox check")
-        return {"inbox_messages_added": 0}
+        return {"messages": [], "inbox_messages_added": 0}
 
     pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
     
@@ -37,8 +37,8 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     if not pending_messages:
         if existing_messages:
             worker_logger.info(f"[fetch_inbox_node] No pending messages, keeping existing {len(existing_messages)} messages")
-            return {"inbox_messages_added": 0}
-        return {"inbox_messages_added": 0}
+            return {"messages": [], "inbox_messages_added": 0}
+        return {"messages": [], "inbox_messages_added": 0}
 
     worker_logger.info(
         f"[fetch_inbox_node] Found {len(pending_messages)} pending messages for thread {thread_id}"
