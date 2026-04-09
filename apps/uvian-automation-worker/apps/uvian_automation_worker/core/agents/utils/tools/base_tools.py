@@ -1,7 +1,6 @@
 from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
 from langchain_core.messages import ToolMessage
-from core.logging import worker_logger
 
 
 def flatten_skill_content(content: dict, prefix: str = "") -> str:
@@ -42,8 +41,6 @@ def search_skills(
     Args:
         query: simple query string you associate with the request you have: (copy writing, roleplaying, pricing strategy)
     """
-    worker_logger.info(f"[search_skills] Called with query: {kargs.get('query')}")
-
     skills = runtime.state.get("skills")
     available = ", ".join(s["name"] for s in skills)
     return f"Available skills: {available}"
@@ -77,7 +74,6 @@ def load_skill(
     
     if not skill_info:
         available = ", ".join(s.get("name", "unknown") for s in available_skills)
-        worker_logger.info(f"[load_skill] Skill not found: {skill_name}")
         return Command(update={
             "messages": [ToolMessage(
                 f"Skill '{skill_name}' not found. Available skills: {available}",
@@ -88,7 +84,6 @@ def load_skill(
     skill_name_found = skill_info.get("name", "")
     
     if skill_name_found in loaded_skill_names:
-        worker_logger.info(f"[load_skill] Skill already loaded: {skill_name_found}")
         return Command(update={
             "messages": [ToolMessage(
                 f"Skill '{skill_name_found}' is already loaded.",
@@ -96,7 +91,7 @@ def load_skill(
             )]
         })
     
-    worker_logger.info(f"[load_skill] Loading skill: {skill_name_found}")
+    from core.agents.utils.tools.base_tools import flatten_skill_content
     
     from core.agents.utils.tools.base_tools import flatten_skill_content
     content = skill_info.get("content", "")
@@ -115,7 +110,11 @@ def load_skill(
     
     return Command(
         update={
-            "loaded_skills": loaded_skills + [new_skill_entry]
+            "loaded_skills": loaded_skills + [new_skill_entry],
+            "messages": [ToolMessage(
+                f"Successfully loaded skill '{skill_name_found}'. Content has been added to your context.",
+                tool_call_id=runtime.tool_call_id
+            )]
         }
     )
 
@@ -160,7 +159,6 @@ def list_mcps(
         lines.append("")
     
     result = "## Available MCP Tool Servers\n\n" + "\n".join(lines)
-    worker_logger.info(f"[list_mcps] Returning {len(available_mcps)} MCPs")
     return result
 
 
@@ -194,7 +192,6 @@ async def load_mcp(
     
     if not mcp_info:
         available_names = ", ".join(m.get("name", "unknown") for m in available_mcps)
-        worker_logger.warning(f"[load_mcp] MCP not found: {mcp_input}")
         return Command(
             update={
                 "messages": [ToolMessage(
@@ -207,7 +204,6 @@ async def load_mcp(
     mcp_name = mcp_info.get("name", "")
     
     if mcp_name in loaded_mcp_names:
-        worker_logger.info(f"[load_mcp] MCP already loaded: {mcp_name}")
         return Command(
             update={
                 "messages": [ToolMessage(
@@ -219,7 +215,6 @@ async def load_mcp(
     
     registry = runtime.config["configurable"].get("mcp_registry")
     if not registry:
-        worker_logger.error(f"[load_mcp] No MCPRegistry in config")
         return Command(
             update={
                 "messages": [ToolMessage(
@@ -236,13 +231,11 @@ async def load_mcp(
         tools = await registry.get_tools_for_mcp(mcp_id)
         tool_names = [t.name for t in tools]
         tool_list = ", ".join(tool_names)
-        worker_logger.info(f"[load_mcp] Loaded MCP '{mcp_name}' with {len(tools)} tools: {tool_list}")
         response_text = (
             f"SUCCESS: Loaded MCP '{mcp_name}' with {len(tools)} tools.\n"
             f"Tools now available: {tool_list}"
         )
     else:
-        worker_logger.warning(f"[load_mcp] Registry is not an MCPRegistry instance")
         response_text = f"SUCCESS: Tools for MCP '{mcp_name}' are now available."
     
     new_mcp_entry = {

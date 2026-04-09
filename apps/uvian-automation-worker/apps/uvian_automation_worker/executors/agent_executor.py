@@ -25,55 +25,10 @@ import uuid
 
 
 class AgentExecutor(BaseExecutor):
-    """Refactored executor for agent-based jobs using EventLoader."""
     
-    def __init__(self):
-        self.agent_name = "agent_executor"
-        worker_logger.info(f"Initializing {self.agent_name}")
-
-    async def _log_final_state(self, job_id: str, config: dict):
-        """Log the actual state from checkpoint after execution completes."""
-        from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
-        
-        checkpointer = PostgresAsyncCheckpointer()
-        
-        try:
-            checkpoint_tuple = await checkpointer.aget_tuple(config)
-            if not checkpoint_tuple or not checkpoint_tuple.checkpoint:
-                worker_logger.info_job(job_id, "Final state: No checkpoint found")
-                return
-            
-            checkpoint = checkpoint_tuple.checkpoint
-            
-            # Log messages
-            messages = checkpoint.get("messages", [])
-            worker_logger.info_job(job_id, f"Final state - {len(messages)} messages:")
-            for i, msg in enumerate(messages):
-                msg_type = getattr(msg, "type", "unknown")
-                msg_content = getattr(msg, "content", "")[:300] if hasattr(msg, "content") else str(msg)[:300]
-                worker_logger.info_job(job_id, f"  [{i}] {msg_type}: {msg_content}...")
-            
-            # Log conversation_summary
-            summary = checkpoint.get("conversation_summary", "")
-            if summary:
-                worker_logger.info_job(job_id, f"Conversation summary: {summary[:500]}...")
-            
-            # Log loaded_skills
-            loaded_skills = checkpoint.get("loaded_skills", [])
-            worker_logger.info_job(job_id, f"Loaded skills ({len(loaded_skills)}): {[s.get('name') for s in loaded_skills]}")
-            
-            # Log loaded_mcps
-            loaded_mcps = checkpoint.get("loaded_mcps", [])
-            worker_logger.info_job(job_id, f"Loaded MCPs ({len(loaded_mcps)}): {[m.get('name') for m in loaded_mcps]}")
-        except Exception as e:
-            worker_logger.info_job(job_id, f"Final state logging error: {e}")
-        
     async def execute(self, job_data: JobData) -> JobResult:
-        """Execute an agent job using EventLoader for unified event processing."""
         job_id = job_data["id"]
         inputs = job_data.get("input", {})
-        
-        worker_logger.info_job(job_id, "AgentExecutor: Starting agent job")
         
         job_type = job_data.get("type")
         input_type = inputs.get("inputType")
@@ -87,8 +42,6 @@ class AgentExecutor(BaseExecutor):
         event_type = inputs.get("eventType")
         if not event_type:
             raise ValueError("eventType is required in job input")
-        
-        worker_logger.info_job(job_id, f"Processing event: {event_type}")
         
         agent_user_id = inputs.get("agentId") or inputs.get("agent_user_id") or job_data.get("agent_id")
         if not agent_user_id:
@@ -104,17 +57,12 @@ class AgentExecutor(BaseExecutor):
         is_resume = inputs.get("isResume", False)
         
         if not thread_id:
-            worker_logger.info_job(job_id, "Creating new thread for agent execution")
             thread_id = str(uuid.uuid4())
             created_thread = await process_thread_repository.create_thread(
                 thread_id=thread_id,
                 agent_profile_id=agent_user_id,
                 metadata=None
             )
-            if not created_thread:
-                worker_logger.warning_job(job_id, "Failed to create thread in DB, continuing with in-memory thread")
-        
-        worker_logger.info_job(job_id, f"Thread ID: {thread_id}, Agent ID: {agent_user_id}")
         
         secrets = await get_agent_secrets(agent_user_id)
         
@@ -147,7 +95,6 @@ class AgentExecutor(BaseExecutor):
         
         async with PersistentMCPClient() as persistent_client:
             if relevant_mcp_configs:
-                worker_logger.info_job(job_id, f"Registering {len(relevant_mcp_configs)} relevant MCPs...")
                 for cfg in relevant_mcp_configs:
                     if cfg.get("url"):
                         persistent_client.add_server(
@@ -241,13 +188,6 @@ class AgentExecutor(BaseExecutor):
             
             full_response: List[Any] = []
             try:
-                worker_logger.info_job(job_id, f"Starting agent with config: {config}")
-                worker_logger.info_job(job_id, f"Agent input messages: {len(agent_input.get('messages', []))}")
-                for i, msg in enumerate(agent_input.get('messages', [])):
-                    msg_content = msg.content[:200] if hasattr(msg, 'content') else str(msg)[:200]
-                    msg_type = getattr(msg, 'type', 'unknown')
-                    worker_logger.info_job(job_id, f"  Input message {i}: type={msg_type}, content={msg_content}...")
-                
                 agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
                 async for chunk, _m in agent.astream(
                     agent_input,
@@ -255,10 +195,6 @@ class AgentExecutor(BaseExecutor):
                     stream_mode="messages",
                 ):
                     full_response.append(chunk)
-                
-                worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
-
-                await self._log_final_state(job_id, config)
 
                 return {
                     "status": "completed",
@@ -269,7 +205,6 @@ class AgentExecutor(BaseExecutor):
                     },
                 }
             except Exception as e:
-                worker_logger.error(f"Error executing agent: {e}", exception=e)
                 return {
                     "status": "failed",
                     "result": {
@@ -279,15 +214,12 @@ class AgentExecutor(BaseExecutor):
                 }
     
     async def _execute_thread_wakeup(self, job_data: JobData, inputs: dict) -> JobResult:
-        """Execute a thread-wakeup job that processes the inbox for a given thread."""
         job_id = job_data["id"]
         thread_id = inputs.get("threadId")
         agent_user_id = inputs.get("agentId")
         
         if not thread_id or not agent_user_id:
             raise ValueError("threadId and agentId are required for thread-wakeup jobs")
-        
-        worker_logger.info_job(job_id, f"Thread wakeup: thread={thread_id}, agent={agent_user_id}")
         
         secrets = await get_agent_secrets(agent_user_id)
         
@@ -335,7 +267,6 @@ class AgentExecutor(BaseExecutor):
         
         async with PersistentMCPClient() as persistent_client:
             if relevant_mcp_configs:
-                worker_logger.info_job(job_id, f"Registering {len(relevant_mcp_configs)} relevant MCPs...")
                 for cfg in relevant_mcp_configs:
                     if cfg.get("url"):
                         persistent_client.add_server(
@@ -411,13 +342,6 @@ class AgentExecutor(BaseExecutor):
             
             full_response: List[Any] = []
             try:
-                worker_logger.info_job(job_id, f"Starting agent with config: {config}")
-                worker_logger.info_job(job_id, f"Agent input messages: {len(agent_input.get('messages', []))}")
-                for i, msg in enumerate(agent_input.get('messages', [])):
-                    msg_content = msg.content[:200] if hasattr(msg, 'content') else str(msg)[:200]
-                    msg_type = getattr(msg, 'type', 'unknown')
-                    worker_logger.info_job(job_id, f"  Input message {i}: type={msg_type}, content={msg_content}...")
-                
                 agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
                 async for chunk, _m in agent.astream(
                     agent_input,
@@ -425,10 +349,6 @@ class AgentExecutor(BaseExecutor):
                     stream_mode="messages",
                 ):
                     full_response.append(chunk)
-                
-                worker_logger.info_job(job_id, f"Agent completed with {len(full_response)} response chunks")
-
-                await self._log_final_state(job_id, config)
 
                 return {
                     "status": "completed",
@@ -438,7 +358,6 @@ class AgentExecutor(BaseExecutor):
                     },
                 }
             except Exception as e:
-                worker_logger.error(f"Error executing agent: {e}", exception=e)
                 return {
                     "status": "failed",
                     "result": {

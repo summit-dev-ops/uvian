@@ -15,25 +15,14 @@ from core.agents.event_transformers import EventTransformerRegistry, EventMessag
 from core.agents.utils.skill_mapping import get_skills_for_event
 from core.agents.utils.mcp_mapping import get_mcps_for_event
 from core.agents.utils.tools.base_tools import flatten_skill_content
-from core.logging import worker_logger
 
 
 def transform_event(event_type: str, event_data: Dict[str, Any]) -> Optional[HumanMessage]:
-    """Transform event data into a HumanMessage using EventTransformerRegistry.
-    
-    Args:
-        event_type: The type of event (e.g., 'message.created')
-        event_data: The event payload data
-        
-    Returns:
-        HumanMessage with AI-readable content, or None if no transformer found
-    """
     event_message = EventTransformerRegistry.create_message(event_type, event_data)
     
     if event_message:
         return HumanMessage(content=event_message.content)
     
-    worker_logger.warning(f"[EventLoader] No transformer found for event type: {event_type}")
     return HumanMessage(content=f"Event received: {event_type}")
 
 
@@ -138,8 +127,6 @@ async def load_mcps(
     info_messages = []
     loaded_tools = []
     
-    worker_logger.info(f"[EventLoader] Loading {len(mcp_configs)} MCPs: {[c.get('name') for c in mcp_configs]}")
-    
     for cfg in mcp_configs:
         mcp_name = cfg.get("name", cfg.get("id", "unknown"))
         
@@ -150,9 +137,7 @@ async def load_mcps(
                 content=f"Auto-loaded MCP server: {mcp_name}. This server provides tools for handling events.",
                 tool_call_id=f"preload-mcp-{mcp_name}",
             ))
-            worker_logger.info(f"[EventLoader] Loaded {len(tools)} tools from MCP: {mcp_name}")
         except Exception as e:
-            worker_logger.warning(f"[EventLoader] Failed to load MCP {mcp_name}: {e}")
             info_messages.append(ToolMessage(
                 content=f"Failed to load MCP server: {mcp_name}. Error: {str(e)}",
                 tool_call_id=f"preload-mcp-{mcp_name}",
@@ -193,11 +178,6 @@ async def prepare_for_events(
     _, mcp_tools = await load_mcps(matched_mcp_configs, persistent_client)
     matched_mcp_names = [c.get("name", c.get("id", "")) for c in matched_mcp_configs]
     
-    worker_logger.info(
-        f"[EventLoader] Prepared event: {event_type}, "
-        f"skills={len(matched_skills)}, mcps={len(matched_mcp_configs)}, tools={len(mcp_tools)}"
-    )
-    
     return event_message, mcp_tools, matched_skills, matched_mcp_names
 
 
@@ -225,7 +205,6 @@ async def prepare_for_inbox_events(
         return [], [], [], [], []
     
     unique_event_types = list(set(msg["event_type"] for msg in pending_messages))
-    worker_logger.info(f"[EventLoader] Processing {len(pending_messages)} messages, event types: {unique_event_types}")
     
     matched_skills = filter_skills(unique_event_types, skills)
     
@@ -244,10 +223,5 @@ async def prepare_for_inbox_events(
         event_message = transform_event(event_type, payload)
         human_messages.append(event_message)
         processed_ids.append(message_id)
-    
-    worker_logger.info(
-        f"[EventLoader] Prepared inbox: {len(unique_event_types)} event types, "
-        f"skills={len(matched_skills)}, mcps={len(matched_mcp_configs)}, tools={len(mcp_tools)}"
-    )
     
     return human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids
