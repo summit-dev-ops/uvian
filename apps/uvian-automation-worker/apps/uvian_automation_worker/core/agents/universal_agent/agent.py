@@ -43,14 +43,13 @@ def build_agent(
     # Graph starts at throttle_node - check_context handles initial routing
     agent_builder.add_edge(START, "throttle_node")
 
-    # Check context after throttling - handles routing and termination
+    # Check context after throttling - handles routing (summarize vs model)
     agent_builder.add_conditional_edges(
         "throttle_node",
         check_context,
         {
             "summarize_node": "summarize_node",
             "model_node": "model_node",
-            "__end__": END,
         },
     )
 

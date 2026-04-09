@@ -7,21 +7,10 @@ def count_tokens(messages: list, system_prompt: str = "") -> int:
     return total_chars // 4  # Rough: 4 chars/token
 
 def check_context(state: MessagesState) -> str:
-    """Decide whether to summarize, proceed to LLM, or end.
-    
-    Termination condition: No new inbox messages AND agent has already responded.
-    """
+    """Decide whether to summarize or proceed to LLM."""
     MAX_TOKENS = 8192
     SAFETY_BUFFER = 500  # Reserve for output + tool calls
     TRIGGER_THRESHOLD = MAX_TOKENS - SAFETY_BUFFER
-    
-    # Check termination condition: no new messages + agent has responded
-    inbox_added = state.get("inbox_messages_added", 0)
-    llm_calls = state.get("llm_calls", 0)
-    
-    if inbox_added == 0 and llm_calls > 0:
-        worker_logger.info("[check_context] → Routing to '__end__' (no new messages, agent completed)")
-        return "__end__"
     
     # Get system prompt if present
     system_msgs = [m for m in state["messages"] if isinstance(m, SystemMessage)]
