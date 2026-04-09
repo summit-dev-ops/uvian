@@ -14,8 +14,8 @@ export const SYNC_INTERVAL_MINUTES = (() => {
   if (!Number.isInteger(value) || !VALID_INTERVALS.includes(value)) {
     throw new Error(
       `SCHEDULER_SYNC_INTERVAL_MINUTES must be a divisor of 60 (${VALID_INTERVALS.join(
-        ', '
-      )}), got: ${raw}`
+        ', ',
+      )}), got: ${raw}`,
     );
   }
   return value;
@@ -30,7 +30,7 @@ async function acquireLock(): Promise<boolean> {
     Date.now().toString(),
     'EX',
     LOCK_TTL,
-    'NX'
+    'NX',
   );
   return result === 'OK';
 }
@@ -44,7 +44,7 @@ export async function fireSchedule(
   userId: string,
   type: 'one_time' | 'recurring',
   eventData: Record<string, unknown>,
-  fireTime: Date
+  fireTime: Date,
 ): Promise<{ status: string; fireAt?: string }> {
   const fireTimestamp = fireTime.getTime();
 
@@ -61,6 +61,15 @@ export async function fireSchedule(
   });
 
   await queueService.addJobAt('uvian-events', 'event', event, fireTimestamp);
+
+  // Update last_executed_at when schedule is fired
+  await adminSupabase
+    .schema('core_scheduler')
+    .from('schedules')
+    .update({
+      last_executed_at: new Date().toISOString(),
+    })
+    .eq('id', scheduleId);
 
   const clients = {
     adminClient: adminSupabase,
@@ -148,7 +157,7 @@ async function syncSchedules(): Promise<{
         schedule.userId,
         schedule.type,
         schedule.eventData,
-        fireTime
+        fireTime,
       );
 
       results.push({ scheduleId: schedule.id, ...result });
@@ -188,7 +197,7 @@ export default fp(async (fastify) => {
     const lockAcquired = await acquireLock();
     if (!lockAcquired) {
       console.log(
-        '[Cron] Lock not acquired, another instance may be handling it'
+        '[Cron] Lock not acquired, another instance may be handling it',
       );
       return;
     }
@@ -199,7 +208,7 @@ export default fp(async (fastify) => {
     try {
       const result = await syncSchedules();
       console.log(
-        `[Cron] Sync complete: ${result.processed} schedules processed`
+        `[Cron] Sync complete: ${result.processed} schedules processed`,
       );
     } catch (error) {
       console.error('[Cron] Sync error:', error);
@@ -210,7 +219,7 @@ export default fp(async (fastify) => {
   });
 
   console.log(
-    `[Cron] Scheduler initialized with ${SYNC_INTERVAL_MINUTES}-minute interval`
+    `[Cron] Scheduler initialized with ${SYNC_INTERVAL_MINUTES}-minute interval`,
   );
 
   fastify.decorate('runCronSync', async () => {

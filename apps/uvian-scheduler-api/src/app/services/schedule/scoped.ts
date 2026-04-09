@@ -12,7 +12,7 @@ import {
 } from './types';
 
 export function createScheduleScopedService(
-  clients: ServiceClients
+  clients: ServiceClients,
 ): ScheduleScopedService {
   async function getScheduleInternal(id: string): Promise<Schedule> {
     const { data, error } = await clients.adminClient
@@ -29,7 +29,7 @@ export function createScheduleScopedService(
   return {
     async createSchedule(
       userId: string,
-      input: CreateScheduleInput
+      input: CreateScheduleInput,
     ): Promise<Schedule> {
       const scheduleId = randomUUID();
       const now = new Date().toISOString();
@@ -78,7 +78,7 @@ export function createScheduleScopedService(
       if (error || !schedule) {
         console.error('Failed to create schedule:', error);
         throw new Error(
-          `Failed to create schedule: ${error?.message || 'Unknown error'}`
+          `Failed to create schedule: ${error?.message || 'Unknown error'}`,
         );
       }
 
@@ -88,7 +88,7 @@ export function createScheduleScopedService(
     async updateSchedule(
       userId: string,
       id: string,
-      input: UpdateScheduleInput
+      input: UpdateScheduleInput,
     ): Promise<Schedule> {
       const existing = await getScheduleInternal(id);
       if (existing.userId !== userId) {
@@ -111,7 +111,7 @@ export function createScheduleScopedService(
         if (existing.type === 'recurring') {
           updates.next_run_at = computeNextRunAtFromCron(
             input.cronExpression,
-            input.start || existing.start || undefined
+            input.start || existing.start || undefined,
           );
         }
       }
@@ -132,7 +132,7 @@ export function createScheduleScopedService(
 
     async listSchedules(
       userId: string,
-      filters?: ListSchedulesFilters
+      filters?: ListSchedulesFilters,
     ): Promise<ListSchedulesResult> {
       let query = clients.adminClient
         .schema('core_scheduler')
@@ -236,7 +236,7 @@ export function createScheduleScopedService(
       if (schedule.type === 'recurring' && schedule.cronExpression) {
         nextRunAt = computeNextRunAtFromCron(
           schedule.cronExpression,
-          new Date().toISOString()
+          new Date().toISOString(),
         );
       }
 
@@ -310,12 +310,32 @@ export function createScheduleScopedService(
       return mapRow(updated);
     },
 
+    async markExecuted(id: string, success: boolean): Promise<void> {
+      const update: Record<string, unknown> = {
+        last_executed_at: new Date().toISOString(),
+      };
+
+      if (success) {
+        update.last_successful_executed_at = new Date().toISOString();
+      }
+
+      const { error } = await clients.adminClient
+        .schema('core_scheduler')
+        .from('schedules')
+        .update(update)
+        .eq('id', id);
+
+      if (error) {
+        throw new Error(`Failed to mark schedule executed: ${error.message}`);
+      }
+    },
+
     computeNextRunAt(schedule: Schedule): string | null {
       if (schedule.type === 'one_time') return null;
       if (!schedule.cronExpression) return null;
       return computeNextRunAtFromCron(
         schedule.cronExpression,
-        schedule.start || undefined
+        schedule.start || undefined,
       );
     },
   };
@@ -323,7 +343,7 @@ export function createScheduleScopedService(
 
 function computeNextRunAtFromCron(
   cronExpression: string,
-  afterIso?: string
+  afterIso?: string,
 ): string {
   const interval = cronParser.parse(cronExpression, {
     currentDate: afterIso ? new Date(afterIso) : new Date(),
@@ -332,12 +352,12 @@ function computeNextRunAtFromCron(
   const next = interval.next();
   if (!next)
     throw new Error(
-      `Could not compute next run time for cron: ${cronExpression}`
+      `Could not compute next run time for cron: ${cronExpression}`,
     );
   const iso = next.toISOString();
   if (!iso)
     throw new Error(
-      `Could not compute next run time for cron: ${cronExpression}`
+      `Could not compute next run time for cron: ${cronExpression}`,
     );
   return iso;
 }
@@ -356,6 +376,8 @@ function mapRow(row: Record<string, unknown>): Schedule {
     retryCount: row.retry_count as number,
     maxRetries: row.max_retries as number,
     lastError: row.last_error as string | null,
+    lastExecutedAt: row.last_executed_at as string | null,
+    lastSuccessfulExecutedAt: row.last_successful_executed_at as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };

@@ -21,6 +21,8 @@ export interface Schedule {
   retryCount: number;
   maxRetries: number;
   lastError: string | null;
+  lastExecutedAt: string | null;
+  lastSuccessfulExecutedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,11 +62,11 @@ export interface ScheduleScopedService {
   updateSchedule(
     userId: string,
     id: string,
-    input: UpdateScheduleInput
+    input: UpdateScheduleInput,
   ): Promise<Schedule>;
   listSchedules(
     userId: string,
-    filters?: ListSchedulesFilters
+    filters?: ListSchedulesFilters,
   ): Promise<ListSchedulesResult>;
   getSchedule(userId: string, id: string): Promise<Schedule>;
   cancelSchedule(userId: string, id: string): Promise<Schedule>;
@@ -72,5 +74,6 @@ export interface ScheduleScopedService {
   resumeSchedule(userId: string, id: string): Promise<Schedule>;
   markCompleted(id: string): Promise<Schedule>;
   markFailed(id: string, error: string): Promise<Schedule>;
+  markExecuted(id: string, success: boolean): Promise<void>;
   computeNextRunAt(schedule: Schedule): string | null;
 }

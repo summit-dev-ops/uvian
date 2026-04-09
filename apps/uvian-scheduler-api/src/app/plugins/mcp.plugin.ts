@@ -23,7 +23,7 @@ const jwtCache = new Map<string, { jwt: string; expiresAt: number }>();
 const JWT_TTL_MS = 50 * 60 * 1000;
 
 async function authenticateWithApiKey(
-  apiKey: string
+  apiKey: string,
 ): Promise<{ userId: string; jwt: string } | null> {
   if (!apiKey.startsWith('sk_agent_')) {
     return null;
@@ -96,19 +96,19 @@ function extractUserIdFromJwt(token: string): string {
 
 async function createSubscriptions(
   scheduleId: string,
-  subscriberIds: string[]
+  subscriberIds: string[],
 ): Promise<void> {
   const clients = { adminClient: adminSupabase, userClient: adminSupabase };
   const subService = subscriptionService.admin(clients);
 
   const existingSubs = await subService.getSubscriptionsByResource(
     'uvian.schedule',
-    scheduleId
+    scheduleId,
   );
 
   const existingUserIds = new Set(existingSubs.map((s) => s.user_id));
   const newSubscriberIds = subscriberIds.filter(
-    (uid) => !existingUserIds.has(uid)
+    (uid) => !existingUserIds.has(uid),
   );
 
   if (newSubscriberIds.length === 0) return;
@@ -119,7 +119,7 @@ async function createSubscriptions(
     await scopedService.activateSubscription(
       userId,
       'uvian.schedule',
-      scheduleId
+      scheduleId,
     );
   }
 }
@@ -127,7 +127,7 @@ async function createSubscriptions(
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   async function createAuthenticatedServer(
     userId: string,
-    userJwt: string
+    userJwt: string,
   ): Promise<McpServer> {
     createUserClient(userJwt);
 
@@ -142,7 +142,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           resources: {},
           prompts: {},
         },
-      }
+      },
     );
 
     const clients = {
@@ -150,6 +150,31 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       userClient: createUserClient(userJwt),
     };
     const svc = scheduleService.scoped(clients);
+
+    server.registerTool(
+      'mark_schedule_executed',
+      {
+        inputSchema: z.object({
+          scheduleId: z.string(),
+          success: z.boolean().optional().default(true),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          await svc.markExecuted(args.scheduleId, args.success ?? true);
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ success: true }) },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
 
     server.registerTool(
       'create_schedule',
@@ -185,7 +210,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               subscriberIds: [userId],
               createdBy: userId,
             },
-            userId
+            userId,
           );
 
           return {
@@ -197,7 +222,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -226,7 +251,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -249,7 +274,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -272,7 +297,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -295,7 +320,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -318,7 +343,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -338,7 +363,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const schedule = await svc.updateSchedule(
             userId,
             scheduleId,
-            updateData
+            updateData,
           );
 
           return {
@@ -350,7 +375,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     console.log('[MCP] Scheduler server created with tools');
@@ -439,7 +464,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
       console.log(
         '[MCP] handleRequest returned, status:',
-        reply.raw.statusCode
+        reply.raw.statusCode,
       );
       console.log('[MCP] ========== POST /v1/mcp END ==========');
     } catch (error) {

@@ -56,7 +56,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Body: CreateScheduleBody }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -68,7 +68,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const clients = {
           adminClient: adminSupabase,
           userClient: createUserClient(
-            request.headers.authorization?.replace('Bearer ', '') || ''
+            request.headers.authorization?.replace('Bearer ', '') || '',
           ),
         };
 
@@ -80,7 +80,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
 
         const now = new Date();
         const windowEnd = new Date(
-          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000
+          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000,
         );
         const nextRun = new Date(schedule.nextRunAt);
 
@@ -91,15 +91,15 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
               userId,
               schedule.type,
               schedule.eventData || {},
-              nextRun
+              nextRun,
             );
             console.log(
-              `[Immediate Fire] Schedule ${schedule.id} queued immediately`
+              `[Immediate Fire] Schedule ${schedule.id} queued immediately`,
             );
           } catch (err) {
             console.error(
               `[Immediate Fire] Failed to fire schedule ${schedule.id}:`,
-              err
+              err,
             );
           }
         }
@@ -114,7 +114,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             subscriberIds: request.body.subscriberIds,
             createdBy: userId,
           },
-          userId
+          userId,
         );
 
         reply.code(201).send(schedule);
@@ -124,7 +124,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to create schedule' });
       }
-    }
+    },
   );
 
   fastify.put<{ Params: ScheduleParams; Body: UpdateScheduleBody }>(
@@ -156,7 +156,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         Params: ScheduleParams;
         Body: UpdateScheduleBody;
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -168,7 +168,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const clients = {
           adminClient: adminSupabase,
           userClient: createUserClient(
-            request.headers.authorization?.replace('Bearer ', '') || ''
+            request.headers.authorization?.replace('Bearer ', '') || '',
           ),
         };
 
@@ -178,7 +178,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
 
         const now = new Date();
         const windowEnd = new Date(
-          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000
+          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000,
         );
         const nextRun = new Date(schedule.nextRunAt);
 
@@ -189,15 +189,15 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
               userId,
               schedule.type,
               schedule.eventData || {},
-              nextRun
+              nextRun,
             );
             console.log(
-              `[Immediate Fire] Schedule ${schedule.id} queued immediately on update`
+              `[Immediate Fire] Schedule ${schedule.id} queued immediately on update`,
             );
           } catch (err) {
             console.error(
               `[Immediate Fire] Failed to fire schedule ${schedule.id}:`,
-              err
+              err,
             );
           }
         }
@@ -209,7 +209,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             scheduleId: schedule.id,
             updatedBy: userId,
           },
-          userId
+          userId,
         );
 
         reply.send(schedule);
@@ -219,7 +219,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to update schedule' });
       }
-    }
+    },
   );
 
   fastify.get<{ Querystring: ListSchedulesQuery }>(
@@ -240,7 +240,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Querystring: ListSchedulesQuery }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -252,7 +252,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const clients = {
           adminClient: adminSupabase,
           userClient: createUserClient(
-            request.headers.authorization?.replace('Bearer ', '') || ''
+            request.headers.authorization?.replace('Bearer ', '') || '',
           ),
         };
 
@@ -268,7 +268,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         console.error('Failed to list schedules:', error);
         reply.code(400).send({ error: 'Failed to list schedules' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: ScheduleParams }>(
@@ -287,7 +287,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: ScheduleParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -299,7 +299,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const clients = {
           adminClient: adminSupabase,
           userClient: createUserClient(
-            request.headers.authorization?.replace('Bearer ', '') || ''
+            request.headers.authorization?.replace('Bearer ', '') || '',
           ),
         };
 
@@ -318,7 +318,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to fetch schedule' });
         }
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: ScheduleParams }>(
@@ -337,7 +337,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: ScheduleParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -349,7 +349,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const clients = {
           adminClient: adminSupabase,
           userClient: createUserClient(
-            request.headers.authorization?.replace('Bearer ', '') || ''
+            request.headers.authorization?.replace('Bearer ', '') || '',
           ),
         };
 
@@ -364,7 +364,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             scheduleId: schedule.id,
             cancelledBy: userId,
           },
-          userId
+          userId,
         );
 
         reply.code(204).send();
@@ -379,7 +379,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             .send({ error: error.message || 'Failed to cancel schedule' });
         }
       }
-    }
+    },
   );
 
   fastify.post<{ Params: ScheduleParams }>(
@@ -398,7 +398,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: ScheduleParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -410,7 +410,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const clients = {
           adminClient: adminSupabase,
           userClient: createUserClient(
-            request.headers.authorization?.replace('Bearer ', '') || ''
+            request.headers.authorization?.replace('Bearer ', '') || '',
           ),
         };
 
@@ -423,7 +423,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to pause schedule' });
       }
-    }
+    },
   );
 
   fastify.post<{ Params: ScheduleParams }>(
@@ -442,7 +442,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: ScheduleParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -454,7 +454,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
         const clients = {
           adminClient: adminSupabase,
           userClient: createUserClient(
-            request.headers.authorization?.replace('Bearer ', '') || ''
+            request.headers.authorization?.replace('Bearer ', '') || '',
           ),
         };
 
@@ -464,7 +464,7 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
 
         const now = new Date();
         const windowEnd = new Date(
-          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000
+          now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000,
         );
         const nextRun = new Date(schedule.nextRunAt);
 
@@ -475,15 +475,15 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
               userId,
               schedule.type,
               schedule.eventData || {},
-              nextRun
+              nextRun,
             );
             console.log(
-              `[Immediate Fire] Schedule ${schedule.id} queued immediately on resume`
+              `[Immediate Fire] Schedule ${schedule.id} queued immediately on resume`,
             );
           } catch (err) {
             console.error(
               `[Immediate Fire] Failed to fire schedule ${schedule.id}:`,
-              err
+              err,
             );
           }
         }
@@ -494,25 +494,74 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to resume schedule' });
       }
-    }
+    },
+  );
+
+  // PATCH /api/schedules/:id/execute - Mark schedule as executed
+  fastify.patch<{ Params: ScheduleParams; Body: { success?: boolean } }>(
+    '/api/schedules/:id/execute',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', default: true },
+          },
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{
+        Params: ScheduleParams;
+        Body: { success?: boolean };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      const { id } = request.params;
+      const { success = true } = request.body || {};
+
+      try {
+        const authHeader = request.headers.authorization;
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: createUserClient(authHeader || ''),
+        };
+        const svc = scheduleService.scoped(clients);
+
+        await svc.markExecuted(id, success);
+
+        return { success: true };
+      } catch (error: any) {
+        return reply
+          .code(400)
+          .send({ error: error.message || 'Failed to mark schedule executed' });
+      }
+    },
   );
 }
 
 async function createSubscriptions(
   scheduleId: string,
-  subscriberIds: string[]
+  subscriberIds: string[],
 ): Promise<void> {
   const clients = { adminClient: adminSupabase, userClient: adminSupabase };
   const subService = subscriptionService.admin(clients);
 
   const existingSubs = await subService.getSubscriptionsByResource(
     'uvian.schedule',
-    scheduleId
+    scheduleId,
   );
 
   const existingUserIds = new Set(existingSubs.map((s) => s.user_id));
   const newSubscriberIds = subscriberIds.filter(
-    (uid) => !existingUserIds.has(uid)
+    (uid) => !existingUserIds.has(uid),
   );
 
   if (newSubscriberIds.length === 0) return;
@@ -523,7 +572,7 @@ async function createSubscriptions(
     await scopedService.activateSubscription(
       userId,
       'uvian.schedule',
-      scheduleId
+      scheduleId,
     );
   }
 }
