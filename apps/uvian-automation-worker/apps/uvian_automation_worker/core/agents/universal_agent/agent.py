@@ -13,7 +13,6 @@ from core.agents.utils.nodes.tool_node import ToolNode
 from langgraph.prebuilt import tools_condition
 from langchain_core.tools import BaseTool
 from clients.mcp import MCPRegistry
-from core.logging import worker_logger
 
 
 def build_agent(
@@ -35,31 +34,27 @@ def build_agent(
     summarize_node = create_summarize_node(llm, agent_name="DataBot")
     tool_node = ToolNode(tools, handle_tool_errors=True, mcp_registry=mcp_registry)
 
-    def check_context_node(state: MessagesState) -> MessagesState:
-        msg_count = len(state.get("messages", []))
-        worker_logger.info(f"[check_context_node] ENTER (messages={msg_count})")
-        return state
-
     agent_builder.add_node("fetch_inbox_node", fetch_inbox_node)
-    agent_builder.add_node("check_context_node", check_context_node)
     agent_builder.add_node("model_node", model_node)
     agent_builder.add_node("tool_node", tool_node)
     agent_builder.add_node("summarize_node", summarize_node)
     agent_builder.add_node("throttle_node", throttle_node)
 
-    # Graph starts at check_context_node - initial messages handled before entering graph
-    agent_builder.add_edge(START, "check_context_node")
+    # Graph starts at throttle_node - check_context handles initial routing
+    agent_builder.add_edge(START, "throttle_node")
 
-    agent_builder.add_edge("summarize_node", "model_node")
-
+    # Check context after throttling - handles routing and termination
     agent_builder.add_conditional_edges(
-        "check_context_node",
+        "throttle_node",
         check_context,
         {
             "summarize_node": "summarize_node",
             "model_node": "model_node",
+            "__end__": END,
         },
     )
+
+    agent_builder.add_edge("summarize_node", "model_node")
 
     agent_builder.add_conditional_edges(
         "model_node",
@@ -70,6 +65,5 @@ def build_agent(
     # After tools run, check for new inbox messages before throttling
     agent_builder.add_edge("tool_node", "fetch_inbox_node")
     agent_builder.add_edge("fetch_inbox_node", "throttle_node")
-    agent_builder.add_edge("throttle_node", "check_context_node")
 
     return agent_builder.compile(checkpointer=checkpointer)
