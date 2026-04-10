@@ -10,6 +10,7 @@ from langgraph.checkpoint.base import (
 )
 from repositories.checkpoints import checkpoint_repository
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from core.logging import worker_logger
 
 
 def decode_supabase_bytea(value: Any) -> bytes:
@@ -42,7 +43,11 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
         try:
             row = await checkpoint_repository.get_checkpoint(thread_id, checkpoint_id)
         except Exception as e:
-            print(f"[checkpointer] get_tuple failed for thread_id={thread_id}: {e}")
+            worker_logger.error(
+                "Checkpointer get_tuple failed",
+                thread_id=thread_id,
+                extra={"checkpoint_id": checkpoint_id, "error": str(e)},
+            )
             return None
         
         if not row:
@@ -106,7 +111,11 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
                 "parent_id": parent_id
             })
         except Exception as e:
-            print(f"[checkpointer] aput failed for thread_id={thread_id}: {e}")
+            worker_logger.error(
+                "Checkpointer aput failed",
+                thread_id=thread_id,
+                extra={"error": str(e)},
+            )
 
         return {
             "configurable": {
@@ -134,7 +143,11 @@ class PostgresAsyncCheckpointer(BaseCheckpointSaver):
                 before_checkpoint_id=before_id 
             )
         except Exception as e:
-            print(f"[checkpointer] alist failed for thread_id={thread_id}: {e}")
+            worker_logger.error(
+                "Checkpointer alist failed",
+                thread_id=thread_id,
+                extra={"error": str(e)},
+            )
             rows = []
 
         for row in rows:

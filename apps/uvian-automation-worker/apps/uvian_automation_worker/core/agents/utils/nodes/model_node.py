@@ -1,6 +1,7 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
 import json
+from core.logging import worker_logger
 
 SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
 
@@ -31,9 +32,25 @@ Rules:
 
 def create_model_node(model, base_tools, mcp_registry=None):
     async def llm_call(state: dict, config: RunnableConfig):
+        thread_id = state.get("thread_id")
+        agent_user_id = state.get("agent_user_id")
+        llm_calls = state.get("llm_calls", 0)
+        
         loaded_skills = state.get("loaded_skills", [])
         available_skills = state.get("available_skills", [])
         loaded_skill_names = [s.get("name") for s in loaded_skills if s.get("name")]
+        
+        worker_logger.info_agent(
+            "LLM call executing",
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            node="model_node",
+            extra={
+                "loaded_skills": loaded_skill_names,
+                "message_count": len(state.get("messages", [])),
+            },
+        )
         
         skills_section = ""
         
@@ -104,9 +121,32 @@ def create_model_node(model, base_tools, mcp_registry=None):
 
         tool_calls = getattr(response, "tool_calls", []) or []
         
+        new_llm_calls = state.get('llm_calls', 0) + 1
+        
+        if tool_calls:
+            tool_names = [tc.get("name") for tc in tool_calls]
+            worker_logger.info_agent(
+                "LLM response with tool calls",
+                thread_id=thread_id,
+                agent_user_id=agent_user_id,
+                llm_calls=new_llm_calls,
+                node="model_node",
+                extra={"tool_calls": tool_names},
+            )
+        else:
+            response_content = response.content[:200] if response.content else ""
+            worker_logger.debug_agent(
+                "LLM response text",
+                thread_id=thread_id,
+                agent_user_id=agent_user_id,
+                llm_calls=new_llm_calls,
+                node="model_node",
+                extra={"response_content": response_content},
+            )
+        
         return {
             "messages": [response],
-            "llm_calls": state.get('llm_calls', 0) + 1
+            "llm_calls": new_llm_calls
         }
     
     return llm_call

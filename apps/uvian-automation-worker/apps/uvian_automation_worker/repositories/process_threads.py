@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from clients.supabase import supabase_client
 from core.utils.naming import to_db_format, from_db_format
+from core.logging import worker_logger
 
 class ProcessThreadRepository:
     """Repository for process thread database operations."""
@@ -32,7 +33,11 @@ class ProcessThreadRepository:
 
             return None
         except Exception as e:
-            print(f"Error creating process thread: {e}", flush=True)
+            worker_logger.error(
+                "Error creating process thread",
+                thread_id=thread_id,
+                extra={"error": str(e)},
+            )
             return None
 
     async def get_thread(self, thread_id: str) -> Optional[Dict[str, Any]]:
@@ -45,7 +50,11 @@ class ProcessThreadRepository:
 
             return None
         except Exception as e:
-            print(f"Error fetching process thread {thread_id}: {e}", flush=True)
+            worker_logger.error(
+                "Error fetching process thread",
+                thread_id=thread_id,
+                extra={"error": str(e)},
+            )
             return None
 
     async def update_thread_status(
@@ -65,7 +74,11 @@ class ProcessThreadRepository:
             result = self.client.schema('core_automation').table('process_threads').update(update_data).eq('id', thread_id).execute()
             return bool(result.data)
         except Exception as e:
-            print(f"Error updating process thread {thread_id}: {e}", flush=True)
+            worker_logger.error(
+                "Error updating process thread",
+                thread_id=thread_id,
+                extra={"status": status, "error": str(e)},
+            )
             return False
 
     async def get_threads_by_agent(self, agent_profile_id: str, limit: int = 50) -> List[Dict[str, Any]]:
@@ -79,7 +92,10 @@ class ProcessThreadRepository:
 
             return threads
         except Exception as e:
-            print(f"Error fetching process threads for {agent_profile_id}: {e}", flush=True)
+            worker_logger.error(
+                "Error fetching process threads",
+                extra={"agent_profile_id": agent_profile_id, "error": str(e)},
+            )
             return []
 
     async def delete_thread(self, thread_id: str) -> bool:
@@ -88,7 +104,11 @@ class ProcessThreadRepository:
             result = self.client.schema('core_automation').table('process_threads').delete().eq('id', thread_id).execute()
             return bool(result.data)
         except Exception as e:
-            print(f"Error deleting process thread {thread_id}: {e}", flush=True)
+            worker_logger.error(
+                "Error deleting process thread",
+                thread_id=thread_id,
+                extra={"error": str(e)},
+            )
             return False
 
 process_thread_repository = ProcessThreadRepository()

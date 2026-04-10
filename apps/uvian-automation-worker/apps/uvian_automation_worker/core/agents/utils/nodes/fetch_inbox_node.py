@@ -10,6 +10,7 @@ from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage
 from repositories.thread_inbox import thread_inbox_repository
 from core.agents.utils.loader import transform_event, filter_skills
+from core.logging import worker_logger
 
 
 async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -21,11 +22,23 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     Uses EventLoader for event transformation. MCP/skill loading is handled
     by the executor at startup - this node focuses on message transformation.
     """
+    thread_id = state.get("thread_id")
+    agent_user_id = state.get("agent_user_id")
+    llm_calls = state.get("llm_calls", 0)
+    
     existing_messages = state.get("messages", [])
     
-    thread_id = state.get("thread_id")
     if not thread_id:
         return {"messages": [], "inbox_messages_added": 0}
+
+    worker_logger.debug_agent(
+        "Fetching inbox messages",
+        thread_id=thread_id,
+        agent_user_id=agent_user_id,
+        llm_calls=llm_calls,
+        node="fetch_inbox_node",
+        extra={"existing_message_count": len(existing_messages)},
+    )
 
     pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
     
@@ -70,6 +83,19 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     if processed_ids:
         await thread_inbox_repository.mark_processed(processed_ids)
+
+    worker_logger.info_agent(
+        "Inbox messages fetched",
+        thread_id=thread_id,
+        agent_user_id=agent_user_id,
+        llm_calls=llm_calls,
+        node="fetch_inbox_node",
+        extra={
+            "messages_added": len(new_messages),
+            "event_types": unique_event_types,
+            "new_skills_loaded": [s.get("name") for s in newly_loaded],
+        },
+    )
 
     return {
         "messages": new_messages,

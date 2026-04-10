@@ -1098,7 +1098,7 @@ class ToolNode(RunnableCallable):
                 status="error",
             )
 
-    async def _execute_tool_async(
+async def _execute_tool_async(
         self,
         request: ToolCallRequest,
         input_type: Literal["list", "dict", "tool_calls"],
@@ -1119,6 +1119,13 @@ class ToolNode(RunnableCallable):
         """
         call = request.tool_call
         tool = request.tool
+        
+        thread_id = request.state.get("thread_id") if request.state else None
+        agent_user_id = request.state.get("agent_user_id") if request.state else None
+        llm_calls = request.state.get("llm_calls", 0) if request.state else 0
+        
+        tool_name = call.get("name", "unknown")
+        tool_args = call.get("args", {})
 
         # Validate tool exists when we actually need to execute it
         if tool is None:
@@ -1127,6 +1134,102 @@ class ToolNode(RunnableCallable):
             # This should never happen if validation works correctly
             msg = f"Tool {call['name']} is not registered with ToolNode"
             raise TypeError(msg)
+
+        # Inject state, store, and runtime right before invocation
+        injected_call = self._inject_tool_args(call, request.runtime, tool)
+        call_args = {**injected_call, "type": "tool_call"}
+
+        worker_logger.info_agent(
+            "Tool executing",
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            node="tool_node",
+            extra={"tool_name": tool_name, "tool_call_id": call.get("id")},
+        )
+
+        try:
+            try:
+                response = await tool.ainvoke(call_args, config)
+            except ValidationError as exc:
+                # Filter out errors for injected arguments
+                injected = self._injected_args.get(call["name"])
+                filtered_errors = _filter_validation_errors(exc, injected)
+                # Use original call["args"] without injected values for error reporting
+                raise ToolInvocationError(
+                    call["name"], exc, call["args"], filtered_errors
+                ) from exc
+
+        # GraphInterrupt is a special exception that will always be raised.
+        # It can be triggered in the following scenarios,
+        # Where GraphInterrupt(GraphBubbleUp) is raised from an `interrupt` invocation
+        # most commonly:
+        # (1) a GraphInterrupt is raised inside a tool
+        # (2) a GraphInterrupt is raised inside a graph node for a graph called as a tool
+        # (3) a GraphInterrupt is raised inside a graph node for a subgraph called as a tool
+        #     called as a tool
+        # (2 and 3 can happen in "supervisor w/ tools" multi-agent architecture)
+        except GraphBubbleUp:
+            raise
+        except Exception as e:
+            # Determine which exception types are handled
+            handled_types: tuple[type[Exception], ...]
+            if isinstance(self._handle_tool_errors, type) and issubclass(
+                self._handle_tool_errors, Exception
+            ):
+                handled_types = (self._handle_tool_errors,)
+            elif isinstance(self._handle_tool_errors, tuple):
+                handled_types = self._handle_tool_errors
+            elif callable(self._handle_tool_errors) and not isinstance(
+                self._handle_tool_errors, type
+            ):
+                handled_types = _infer_handled_types(self._handle_tool_errors)
+            else:
+                # default behavior is catching all exceptions
+                handled_types = (Exception,)
+
+            # Check if this error should be handled
+            if not self._handle_tool_errors or not isinstance(e, handled_types):
+                raise
+
+            # Error is handled - create error ToolMessage
+            content = _handle_tool_error(e, flag=self._handle_tool_errors)
+            worker_logger.error_agent(
+                "Tool execution failed",
+                thread_id=thread_id,
+                agent_user_id=agent_user_id,
+                llm_calls=llm_calls,
+                node="tool_node",
+                extra={"tool_name": tool_name, "error": str(e)},
+            )
+            return ToolMessage(
+                content=content,
+                name=call["name"],
+                tool_call_id=call["id"],
+                status="error",
+            )
+
+        # Process successful response
+        if isinstance(response, Command):
+            # Validate Command before returning to handler
+            return self._validate_tool_command(response, request.tool_call, input_type)
+        if isinstance(response, ToolMessage):
+            response.content = cast("str | list", msg_content_output(response.content))
+            
+            response_preview = str(response.content)[:200] if response.content else ""
+            worker_logger.debug_agent(
+                "Tool executed",
+                thread_id=thread_id,
+                agent_user_id=agent_user_id,
+                llm_calls=llm_calls,
+                node="tool_node",
+                extra={"tool_name": tool_name, "response_preview": response_preview},
+            )
+            
+            return response
+
+        msg = f"Tool {call['name']} returned unexpected type: {type(response)}"
+        raise TypeError(msg)
 
         # Inject state, store, and runtime right before invocation
         injected_call = self._inject_tool_args(call, request.runtime, tool)

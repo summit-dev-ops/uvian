@@ -4,9 +4,10 @@ Standardized logging configuration for the Uvian Worker system.
 This module provides consistent logging across all worker components
 with proper formatting, levels, and structured output.
 """
+import json
 import logging
 import sys
-from typing import Optional
+from typing import Any, Optional
 from datetime import datetime
 
 # Configure the main worker logger
@@ -116,6 +117,149 @@ class WorkerLogger:
         if kwargs:
             full_message += f" - {kwargs}"
         self.logger.warning(full_message)
+
+    def log_structured(
+        self,
+        level: str,
+        message: str,
+        thread_id: Optional[str] = None,
+        agent_user_id: Optional[str] = None,
+        llm_calls: Optional[int] = None,
+        event_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        inbox_messages_added: Optional[int] = None,
+        node: Optional[str] = None,
+        extra: Optional[dict] = None,
+    ) -> None:
+        """Log structured JSON with agent context fields."""
+        log_data = {
+            "message": message,
+        }
+        if thread_id:
+            log_data["thread_id"] = thread_id
+        if agent_user_id:
+            log_data["agent_user_id"] = agent_user_id
+        if llm_calls is not None:
+            log_data["llm_calls"] = llm_calls
+        if event_type:
+            log_data["event_type"] = event_type
+        if conversation_id:
+            log_data["conversation_id"] = conversation_id
+        if inbox_messages_added is not None:
+            log_data["inbox_messages_added"] = inbox_messages_added
+        if node:
+            log_data["node"] = node
+        if extra:
+            log_data.update(extra)
+
+        json_message = json.dumps(log_data)
+
+        log_func = getattr(self.logger, level.lower(), self.logger.info)
+        log_func(json_message)
+
+    def info_agent(
+        self,
+        message: str,
+        thread_id: Optional[str] = None,
+        agent_user_id: Optional[str] = None,
+        llm_calls: Optional[int] = None,
+        event_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        inbox_messages_added: Optional[int] = None,
+        node: Optional[str] = None,
+        extra: Optional[dict] = None,
+    ) -> None:
+        """Log INFO level structured message with agent context."""
+        self.log_structured(
+            "INFO",
+            message,
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            event_type=event_type,
+            conversation_id=conversation_id,
+            inbox_messages_added=inbox_messages_added,
+            node=node,
+            extra=extra,
+        )
+
+    def debug_agent(
+        self,
+        message: str,
+        thread_id: Optional[str] = None,
+        agent_user_id: Optional[str] = None,
+        llm_calls: Optional[int] = None,
+        event_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        inbox_messages_added: Optional[int] = None,
+        node: Optional[str] = None,
+        extra: Optional[dict] = None,
+    ) -> None:
+        """Log DEBUG level structured message with agent context."""
+        self.log_structured(
+            "DEBUG",
+            message,
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            event_type=event_type,
+            conversation_id=conversation_id,
+            inbox_messages_added=inbox_messages_added,
+            node=node,
+            extra=extra,
+        )
+
+    def warning_agent(
+        self,
+        message: str,
+        thread_id: Optional[str] = None,
+        agent_user_id: Optional[str] = None,
+        llm_calls: Optional[int] = None,
+        event_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        inbox_messages_added: Optional[int] = None,
+        node: Optional[str] = None,
+        extra: Optional[dict] = None,
+    ) -> None:
+        """Log WARNING level structured message with agent context."""
+        self.log_structured(
+            "WARNING",
+            message,
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            event_type=event_type,
+            conversation_id=conversation_id,
+            inbox_messages_added=inbox_messages_added,
+            node=node,
+            extra=extra,
+        )
+
+    def error_agent(
+        self,
+        message: str,
+        thread_id: Optional[str] = None,
+        agent_user_id: Optional[str] = None,
+        llm_calls: Optional[int] = None,
+        event_type: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        inbox_messages_added: Optional[int] = None,
+        node: Optional[str] = None,
+        extra: Optional[dict] = None,
+    ) -> None:
+        """Log ERROR level structured message with agent context."""
+        self.log_structured(
+            "ERROR",
+            message,
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            event_type=event_type,
+            conversation_id=conversation_id,
+            inbox_messages_added=inbox_messages_added,
+            node=node,
+            extra=extra,
+        )
 
 # Global logger instance
 worker_logger = WorkerLogger()

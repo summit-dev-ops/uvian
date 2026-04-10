@@ -6,6 +6,7 @@ Checkpoint repository with consistent parameter naming.
 from typing import Optional, Dict, Any, List
 from clients.supabase import supabase_client
 from core.utils.naming import to_db_format, from_db_format
+from core.logging import worker_logger
 
 class CheckpointRepository:
     """Repository for agent checkpoint database operations."""
@@ -45,7 +46,11 @@ class CheckpointRepository:
 
             return None
         except Exception as e:
-            print(f"Error fetching checkpoint for thread {thread_id}: {e}", flush=True)
+            worker_logger.error(
+                "Error fetching checkpoint",
+                thread_id=thread_id,
+                extra={"checkpoint_id": checkpoint_id, "error": str(e)},
+            )
             return None
 
     async def insert_checkpoint(self, checkpoint_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -77,7 +82,11 @@ class CheckpointRepository:
 
             return None
         except Exception as e:
-            print(f"Error inserting checkpoint for thread {checkpoint_data.get('thread_id')}: {e}", flush=True)
+            worker_logger.error(
+                "Error inserting checkpoint",
+                thread_id=checkpoint_data.get('thread_id'),
+                extra={"error": str(e)},
+            )
             return None
 
     async def list_checkpoints(
@@ -114,7 +123,11 @@ class CheckpointRepository:
 
             return checkpoints
         except Exception as e:
-            print(f"Error listing checkpoints for thread {thread_id}: {e}", flush=True)
+            worker_logger.error(
+                "Error listing checkpoints",
+                thread_id=thread_id,
+                extra={"error": str(e)},
+            )
             return []
 
 # Singleton instance
