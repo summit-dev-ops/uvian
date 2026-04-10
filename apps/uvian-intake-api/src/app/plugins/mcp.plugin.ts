@@ -617,10 +617,24 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         inputSchema: DecryptSubmissionInputSchema,
       },
       async (args) => {
+        console.log('[decrypt_submission] Called with:', {
+          secretId: args.secretId,
+          submissionId: args.submissionId,
+        });
+
         try {
           const secret = await secretsService
             .admin(clients)
             .getByIdWithDecryptedValue(args.secretId);
+
+          console.log('[decrypt_submission] Secret lookup:', {
+            found: !!secret,
+            secretId: args.secretId,
+            secretName: secret?.name,
+            hasValue: !!secret?.value,
+            valueLength: secret?.value?.length,
+          });
+
           if (!secret) {
             return {
               content: [{ type: 'text', text: 'Secret not found' }],
@@ -635,6 +649,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             .eq('id', args.submissionId)
             .single();
 
+          console.log('[decrypt_submission] Submission lookup:', {
+            submissionId: args.submissionId,
+            found: !!submission,
+            error: error?.message,
+            payload: submission?.payload,
+          });
+
           if (error || !submission) {
             return {
               content: [{ type: 'text', text: 'Submission not found' }],
@@ -643,15 +664,23 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           }
 
           const privateKey = secret.value;
+          console.log(
+            '[decrypt_submission] Calling decryptHybridSubmission with key length:',
+            privateKey.length,
+          );
+
           const result = decryptHybridSubmission(
             submission.payload as HybridEncryptedSubmission,
             privateKey,
           );
 
+          console.log('[decrypt_submission] Success:', result);
+
           return {
             content: [{ type: 'text', text: JSON.stringify(result.data) }],
           } as ToolResult;
         } catch (error) {
+          console.error('[decrypt_submission] Error:', error);
           return {
             content: [
               {
