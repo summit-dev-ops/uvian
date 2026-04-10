@@ -10,8 +10,7 @@ from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.summarizer_node import create_summarize_node
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
 from core.agents.utils.nodes.throttle_node import throttle_node
-from core.agents.utils.nodes.tool_node import ToolNode
-from langgraph.prebuilt import tools_condition
+from core.agents.utils.nodes.tool_node import ToolNode, tools_condition
 from langchain_core.tools import BaseTool
 from clients.mcp import MCPRegistry
 
