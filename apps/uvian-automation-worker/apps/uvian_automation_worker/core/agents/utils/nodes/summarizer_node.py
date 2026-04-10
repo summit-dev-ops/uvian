@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage
-from core.agents.utils.state import MessagesState, MESSAGES_REPLACE
+from core.agents.utils.state import MessagesState
 
 def create_summarize_node(model, agent_name: str):
     def summarize_node(state: MessagesState):
