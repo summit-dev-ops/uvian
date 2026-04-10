@@ -1,9 +1,10 @@
 from langchain.messages import AnyMessage
 from typing import TypedDict, List, Dict, Any
-from typing_extensions import TypedDict
+from typing_extensions import TypedDict, Annotated
+import operator
 
 class MessagesState(TypedDict):
-    messages: list[AnyMessage]
+    messages: Annotated[list[AnyMessage], operator.add]
     llm_calls: int
     agent_name: str
     transcript: str
