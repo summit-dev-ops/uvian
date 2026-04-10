@@ -160,14 +160,13 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 extra={"tool_calls": tool_names},
             )
         else:
-            response_content = response.content[:200] if response.content else ""
             worker_logger.info_agent(
                 "LLM response text",
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
                 llm_calls=new_llm_calls,
                 node="model_node",
-                extra={"response_content": response_content},
+                extra={"response": response},
             )
         
         return {
