@@ -58,7 +58,7 @@ export function decryptRSA(ciphertext: string, privateKey: string): string {
       padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
       oaepHash: 'sha256',
     },
-    buffer
+    buffer,
   );
   return decrypted.toString('utf8');
 }
@@ -75,34 +75,47 @@ export interface DecryptedSubmission {
 
 export function decryptHybridSubmission(
   submission: HybridEncryptedSubmission,
-  privateKey: string
+  privateKey: string,
 ): DecryptedSubmission {
-  const encryptedPayload = Buffer.from(submission.encryptedPayload, 'base64');
-  const encryptedKey = Buffer.from(submission.encryptedKey, 'base64');
-  const iv = Buffer.from(submission.iv, 'base64');
+  try {
+    const encryptedPayload = Buffer.from(submission.encryptedPayload, 'base64');
+    const encryptedKey = Buffer.from(submission.encryptedKey, 'base64');
+    const iv = Buffer.from(submission.iv, 'base64');
 
-  const decryptedAesKey = crypto.privateDecrypt(
-    {
-      key: privateKey,
-      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-      oaepHash: 'sha256',
-    },
-    encryptedKey
-  );
+    const decryptedAesKey = crypto.privateDecrypt(
+      {
+        key: privateKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: 'sha256',
+      },
+      encryptedKey,
+    );
 
-  const authTag = encryptedPayload.subarray(encryptedPayload.length - 16);
-  const ciphertext = encryptedPayload.subarray(0, encryptedPayload.length - 16);
+    const authTag = encryptedPayload.subarray(encryptedPayload.length - 16);
+    const ciphertext = encryptedPayload.subarray(
+      0,
+      encryptedPayload.length - 16,
+    );
 
-  const decipher = crypto.createDecipheriv('aes-256-gcm', decryptedAesKey, iv);
-  decipher.setAuthTag(authTag);
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      decryptedAesKey,
+      iv,
+    );
+    decipher.setAuthTag(authTag);
 
-  const chunks: Buffer[] = [];
-  const decrypted = decipher.update(ciphertext);
-  if (decrypted) chunks.push(decrypted);
-  const final = decipher.final('utf8');
-  if (final) chunks.push(Buffer.from(final));
+    const chunks: Buffer[] = [];
+    const decrypted = decipher.update(ciphertext);
+    if (decrypted) chunks.push(decrypted);
+    const final = decipher.final('utf8');
+    if (final) chunks.push(Buffer.from(final));
 
-  const decryptedJsonString = Buffer.concat(chunks).toString('utf8');
+    const decryptedJsonString = Buffer.concat(chunks).toString('utf8');
 
-  return { data: JSON.parse(decryptedJsonString) };
+    return { data: JSON.parse(decryptedJsonString) };
+  } catch (error) {
+    throw new Error(
+      `Decryption failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }

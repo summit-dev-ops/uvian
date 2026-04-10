@@ -26,7 +26,7 @@ const jwtCache = new Map<
 const JWT_TTL_MS = 50 * 60 * 1000;
 
 async function authenticateWithApiKey(
-  apiKey: string
+  apiKey: string,
 ): Promise<{ userId: string; accountId: string; jwt: string } | null> {
   if (!apiKey.startsWith('sk_agent_')) {
     return null;
@@ -118,12 +118,12 @@ const CreateIntakeInputSchema = z.object({
           z.object({
             value: z.string(),
             label: z.string(),
-          })
+          }),
         )
         .optional(),
       placeholder: z.string().optional(),
       secret: z.boolean().optional(),
-    })
+    }),
   ),
   metadata: z.record(z.string(), z.unknown()).optional(),
   expiresInSeconds: z.number().optional(),
@@ -186,7 +186,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
     const server = new McpServer(
       { name: 'uvian-intake', version: '1.0.0' },
-      { capabilities: { tools: {} } }
+      { capabilities: { tools: {} } },
     );
 
     server.registerTool(
@@ -219,11 +219,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -252,11 +259,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -279,11 +293,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -306,11 +327,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -347,11 +375,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -375,18 +410,25 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
                     payload: s.payload,
                     submittedAt: s.submitted_at,
                     submittedBy: s.submitted_by,
-                  }))
+                  })),
                 ),
               },
             ],
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -425,11 +467,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -453,11 +502,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -473,11 +529,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -495,11 +558,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -527,11 +597,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -568,7 +645,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const privateKey = secret.value;
           const result = decryptHybridSubmission(
             submission.payload as HybridEncryptedSubmission,
-            privateKey
+            privateKey,
           );
 
           return {
@@ -576,11 +653,21 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           } as ToolResult;
         } catch (error) {
           return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : 'Failed to decrypt submission',
+                }),
+              },
+            ],
             isError: true,
           } as ToolResult;
         }
-      }
+      },
     );
 
     return server;
