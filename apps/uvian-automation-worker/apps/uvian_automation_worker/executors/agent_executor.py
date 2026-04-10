@@ -186,6 +186,31 @@ class AgentExecutor(BaseExecutor):
             if mcp_registry:
                 config["configurable"]["mcp_registry"] = mcp_registry
             
+            available_skill_names = [s.get("name") for s in all_skills if s.get("name")]
+            matched_skill_names = [s.get("name") for s in matched_skills if s.get("name")]
+            available_mcp_names = [m.get("name") for m in available_mcps] if available_mcps else []
+            matched_mcp_names_list = [m.get("name") for m in loaded_mcps] if loaded_mcps else []
+            mcp_tool_names = []
+            for m in loaded_mcps:
+                for t in m.get("tools", []):
+                    mcp_tool_names.append(t.get("name"))
+            
+            worker_logger.info_agent(
+                "Agent initialized",
+                thread_id=thread_id,
+                agent_user_id=agent_user_id,
+                llm_calls=0,
+                event_type=event_type,
+                extra={
+                    "event_message_length": len(message_content) if message_content else 0,
+                    "available_skills": available_skill_names,
+                    "matched_skills": matched_skill_names,
+                    "available_mcps": available_mcp_names,
+                    "loaded_mcps": matched_mcp_names_list,
+                    "mcp_tools": mcp_tool_names,
+                },
+            )
+            
             full_response: List[Any] = []
             try:
                 agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)

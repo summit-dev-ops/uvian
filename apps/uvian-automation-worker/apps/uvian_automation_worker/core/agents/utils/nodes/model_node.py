@@ -39,6 +39,19 @@ def create_model_node(model, base_tools, mcp_registry=None):
         loaded_skills = state.get("loaded_skills", [])
         available_skills = state.get("available_skills", [])
         loaded_skill_names = [s.get("name") for s in loaded_skills if s.get("name")]
+        available_skill_names = [s.get("name") for s in available_skills if s.get("name")]
+        
+        available_mcps = state.get("available_mcps", [])
+        loaded_mcps = state.get("loaded_mcps", [])
+        loaded_mcp_names = [m.get("name") for m in loaded_mcps if m.get("name")]
+        available_mcp_names = [m.get("name") for m in available_mcps if m.get("name")]
+        
+        loaded_mcp_tools = []
+        for mcp in loaded_mcps:
+            loaded_mcp_tools.extend(mcp.get("tools", []))
+        
+        active_tools = list(base_tools) + list(loaded_mcp_tools)
+        bound_tool_names = [t.name for t in active_tools] if active_tools else []
         
         worker_logger.info_agent(
             "LLM call executing",
@@ -47,7 +60,11 @@ def create_model_node(model, base_tools, mcp_registry=None):
             llm_calls=llm_calls,
             node="model_node",
             extra={
+                "available_skills": available_skill_names,
                 "loaded_skills": loaded_skill_names,
+                "available_mcps": available_mcp_names,
+                "loaded_mcps": loaded_mcp_names,
+                "bound_tools": bound_tool_names,
                 "message_count": len(state.get("messages", [])),
             },
         )
@@ -112,6 +129,15 @@ def create_model_node(model, base_tools, mcp_registry=None):
             loaded_mcp_tools.extend(mcp.get("tools", []))
         
         active_tools = list(base_tools) + list(loaded_mcp_tools)
+        
+        worker_logger.debug_agent(
+            "LLM system prompt",
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            node="model_node",
+            extra={"system_prompt_length": len(formatted_system_prompt)},
+        )
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
         
