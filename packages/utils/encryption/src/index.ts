@@ -25,9 +25,20 @@ export function decrypt(encrypted: string, secret: string): string {
   return decrypted;
 }
 
-export function decryptJson<T = unknown>(encrypted: string, secret: string): T {
+export function decryptValue<T = unknown>(
+  encrypted: string,
+  secret: string,
+): T {
   const plaintext = decrypt(encrypted, secret);
-  return JSON.parse(plaintext) as T;
+  try {
+    return JSON.parse(plaintext) as T;
+  } catch {
+    return plaintext as unknown as T;
+  }
+}
+
+export function decryptJson<T = unknown>(encrypted: string, secret: string): T {
+  return decryptValue<T>(encrypted, secret);
 }
 
 export interface RSAKeyPair {
