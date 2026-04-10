@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any, List
 from clients.supabase import supabase_client
-from core.logging import worker_logger
+from core.logging import log
 
 class DatabaseError(Exception):
     """Custom exception for database operations."""
@@ -22,14 +22,14 @@ class JobRepository:
             result = supabase_client.client.schema("core_automation").table('jobs').select('*').eq('id', job_id).execute()
             data = result.data
             if data:
-                worker_logger.debug_job(job_id, "Job found in database")
+                log.debug("job_found", job_id=job_id)
                 return data[0]
             else:
-                worker_logger.debug_job(job_id, "Job not found in database")
+                log.debug("job_not_found", job_id=job_id)
                 return None
 
         except Exception as e:
-            worker_logger.error_job(job_id, f"Database connection/query error", exception=e)
+            log.error("db_connection_error", job_id=job_id, error=str(e))
             raise DatabaseError(f"Failed to fetch job {job_id}: {e}")
     
     def update_job(self, job_id: str, updates: Dict[str, Any]) -> bool:
@@ -37,13 +37,13 @@ class JobRepository:
         try:
             result = supabase_client.client.schema("core_automation").table('jobs').update(updates).eq('id', job_id).execute()
             if result.data:
-                worker_logger.debug_job(job_id, f"Updated job in database: {list(updates.keys())}")
+                log.debug("job_updated", job_id=job_id, updated_fields=list(updates.keys()))
                 return True
             else:
-                worker_logger.warning_job(job_id, "Job update returned no data")
+                log.warning("job_update_no_data", job_id=job_id)
                 return False
         except Exception as e:
-            worker_logger.error_job(job_id, f"Error updating job in database", exception=e)
+            log.error("update_job_error", job_id=job_id, error=str(e))
             return False
 
     async def update_job_with_retry(self, job_id: str, updates: Dict[str, Any], max_retries: int = 3) -> bool:
@@ -55,9 +55,9 @@ class JobRepository:
                 return self.update_job(job_id, updates)
             except Exception as e:
                 if attempt == max_retries - 1:
-                    worker_logger.error_job(job_id, f"Final retry failed for job update", exception=e)
+                    log.error("retry_final_failed", job_id=job_id, error=str(e))
                     return False
-                worker_logger.warning_job(job_id, f"Update attempt {attempt + 1} failed, retrying...", exception=e)
+                log.warning("update_retry_failed", job_id=job_id, attempt=attempt + 1, error=str(e))
                 await asyncio.sleep(2 ** attempt)
         return False
     
@@ -66,10 +66,10 @@ class JobRepository:
         try:
             result = supabase_client.client.schema("core_automation").table('jobs').insert(job_data).execute()
             data = result.data
-            worker_logger.info_job(job_data.get('id', 'new'), f"Created new job in database")
+            log.info("created_job", job_id=job_data.get('id', 'new'))
             return data[0] if data else None
         except Exception as e:
-            worker_logger.error_job("create_job", f"Error creating job in database", exception=e)
+            log.error("create_job_error", job_id="create_job", error=str(e))
             return None
     
     def get_jobs_by_status(self, status: str) -> List[Dict[str, Any]]:
@@ -78,7 +78,7 @@ class JobRepository:
             result = supabase_client.client.schema("core_automation").table('jobs').select('*').eq('status', status).execute()
             return result.data or []
         except Exception as e:
-            worker_logger.error_job("get_jobs_by_status", f"Error fetching jobs with status {status}", exception=e)
+            log.error("get_jobs_by_status_error", job_id="get_jobs_by_status", status=status, error=str(e))
             return []
 
 job_repository = JobRepository()

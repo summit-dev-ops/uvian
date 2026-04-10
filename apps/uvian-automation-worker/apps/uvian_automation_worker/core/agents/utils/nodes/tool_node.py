@@ -88,7 +88,7 @@ from langgraph.store.base import BaseStore  # noqa: TC002
 from langgraph.types import Command, Send, StreamWriter
 from pydantic import BaseModel, ValidationError
 from typing_extensions import TypeVar, Unpack
-from core.logging import worker_logger
+from core.logging import log
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -803,7 +803,7 @@ class ToolNode(RunnableCallable):
                     if tool.name == tool_name:
                         return tool
         except Exception as e:
-            worker_logger.error(f"[ToolNode] Failed to resolve tool '{tool_name}' from MCP registry: {e}")
+            log.error("resolve_tool_error", tool_name=tool_name, error=str(e))
         return None
 
     def _resolve_tool_from_mcp_registry_sync(self, tool_name: str) -> BaseTool | None:
@@ -824,7 +824,7 @@ class ToolNode(RunnableCallable):
                     if tool.name == tool_name:
                         return tool
         except Exception as e:
-            worker_logger.error(f"[ToolNode] Failed to resolve tool '{tool_name}' from MCP registry (sync): {e}")
+            log.error("resolve_tool_sync_error", tool_name=tool_name, error=str(e))
         return None
 
     @property
@@ -1019,7 +1019,7 @@ class ToolNode(RunnableCallable):
 
             # Error is handled - create error ToolMessage
             content = _handle_tool_error(e, flag=self._handle_tool_errors)
-            worker_logger.warning(f"[tool_node] {call['name']} args={call['args']} → ERROR: {content}")
+            log.warning("tool_error", tool_name=call['name'], args=call['args'], error=content)
             return ToolMessage(
                 content=content,
                 name=call["name"],
@@ -1178,7 +1178,7 @@ class ToolNode(RunnableCallable):
 
             # Error is handled - create error ToolMessage
             content = _handle_tool_error(e, flag=self._handle_tool_errors)
-            worker_logger.warning(f"[tool_node] {call['name']} args={call['args']} → ERROR: {content}")
+            log.warning("tool_error", tool_name=call['name'], args=call['args'], error=content)
             return ToolMessage(
                 content=content,
                 name=call["name"],
@@ -1317,7 +1317,7 @@ class ToolNode(RunnableCallable):
                 requested_tool=requested_tool,
                 available_tools=", ".join(all_tool_names),
             )
-            worker_logger.warning(f"[tool_node] {requested_tool} args={call['args']} → ERROR: {content}")
+            log.warning("invalid_tool_error", tool_name=requested_tool, args=call['args'], error=content)
             return ToolMessage(
                 content, name=requested_tool, tool_call_id=call["id"], status="error"
             )

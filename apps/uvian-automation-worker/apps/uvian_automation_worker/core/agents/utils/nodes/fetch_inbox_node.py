@@ -10,7 +10,7 @@ from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage
 from repositories.thread_inbox import thread_inbox_repository
 from core.agents.utils.loader import transform_event, filter_skills
-from core.logging import worker_logger
+from core.logging import log
 
 
 async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -31,8 +31,8 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     if not thread_id:
         return {"messages": [], "inbox_messages_added": 0}
 
-    worker_logger.debug_agent(
-        "Fetching inbox messages",
+    log.debug(
+        "fetching_inbox_messages",
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,
@@ -84,8 +84,8 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     if processed_ids:
         await thread_inbox_repository.mark_processed(processed_ids)
 
-    worker_logger.info_agent(
-        "Inbox messages fetched",
+    log.info(
+        "inbox_messages_fetched",
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,

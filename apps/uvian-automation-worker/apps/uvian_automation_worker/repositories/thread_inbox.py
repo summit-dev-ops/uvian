@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from clients.supabase import supabase_client
-from core.logging import worker_logger
+from core.logging import log
 
 
 class ThreadInboxRepository:
@@ -20,9 +20,7 @@ class ThreadInboxRepository:
             )
             return result.data or []
         except Exception as e:
-            worker_logger.error(
-                f"Failed to fetch pending messages for thread {thread_id}: {e}"
-            )
+            log.error("fetch_pending_messages_error", thread_id=thread_id, error=str(e))
             return []
 
     async def mark_processed(self, message_ids: List[str]) -> bool:
@@ -37,10 +35,10 @@ class ThreadInboxRepository:
                 .in_("id", message_ids)
                 .execute()
             )
-            worker_logger.info(f"Marked {len(message_ids)} messages as processed")
+            log.info("messages_marked_processed", count=len(message_ids))
             return True
         except Exception as e:
-            worker_logger.error(f"Failed to mark messages as processed: {e}")
+            log.error("mark_messages_processed_error", error=str(e))
             return False
 
 

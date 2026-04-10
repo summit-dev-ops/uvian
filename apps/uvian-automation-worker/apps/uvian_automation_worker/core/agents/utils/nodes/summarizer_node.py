@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage
 from core.agents.utils.state import MessagesState
-from core.logging import worker_logger
+from core.logging import log
 
 def create_summarize_node(model, agent_name: str):
     def summarize_node(state: MessagesState):
@@ -21,8 +21,8 @@ def create_summarize_node(model, agent_name: str):
         if not old:
             return {"messages": messages}
         
-        worker_logger.info_agent(
-            "Summarizing conversation",
+        log.info(
+            "summarizing_conversation",
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
@@ -52,8 +52,8 @@ Keep under 150 words."""),
         
         new_messages = recent
         
-        worker_logger.debug_agent(
-            "Conversation summarized",
+        log.debug(
+            "conversation_summarized",
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,

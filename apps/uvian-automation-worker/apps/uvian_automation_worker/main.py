@@ -4,22 +4,9 @@ from repositories.jobs import job_repository, DatabaseError
 from core.events import events
 from bullmq import Worker
 from core.dependency_injection import get_executor_factory, setup_default_executors
-from core.logging import worker_logger
+from core.logging import log
 from executors.base import JobResult
 from core.agents.event_transformers import EventTransformerRegistry
-
-# Import all transformers to register them with the registry
-import core.agents.event_transformers.message_transformer
-import core.agents.event_transformers.ticket_transformer
-import core.agents.event_transformers.content_transformer
-import core.agents.event_transformers.space_transformer
-import core.agents.event_transformers.job_transformer
-import core.agents.event_transformers.discord_transformer
-import core.agents.event_transformers.schedule_transformer
-
-from core.logging import setup_worker_logging, LOG_LEVEL
-
-setup_worker_logging(level=LOG_LEVEL)
 
 # Event type prefixes that should be handled as agent events
 EVENT_PREFIXES = [
@@ -56,7 +43,7 @@ def transform_event_to_agent_message(job_record: dict) -> dict:
     input_data = job_record.get("input", {})
     event_type = input_data.get("eventType", job_type)
     
-    worker_logger.info_job(job_record.get("id"), f"Preparing event job: {event_type}")
+    log.info("preparing_event_job", job_id=job_record.get("id"), event_type=event_type)
     
     # Just ensure type is 'agent' - the executor will derive the message from EventTransformerRegistry
     job_record["type"] = "agent"
@@ -68,7 +55,7 @@ def transform_event_to_agent_message(job_record: dict) -> dict:
 factory = get_executor_factory()
 setup_default_executors()
 
-worker_logger.info(f"Registered event transformers: {EventTransformerRegistry.list_registered()}")
+log.info("registered_event_transformers", transformers=EventTransformerRegistry.list_registered())
 
 async def process_job(job, token):
     """
@@ -81,40 +68,40 @@ async def process_job(job, token):
     """
     job_id: str = job.data.get("jobId")
     if not job_id:
-        worker_logger.warning_job("Worker", "No jobId in payload. Using BullMQ job.id as fallback if mapped.")
+        log.warning("no_jobid_in_payload", job_id="Worker")
         job_id = str(job.data.get("id", job.id))
 
-    worker_logger.info_job(job_id, "Worker picked up job. Fetching from DB...")
+    log.info("job_picked_up", job_id=job_id)
     
     # 1. Fetch Job State
     try:
         job_record = job_repository.get_job(job_id)
     except DatabaseError as e:
-        worker_logger.error_job(job_id, "Database connection failed", exception=e)
+        log.error("database_connection_failed", job_id=job_id, error=str(e))
         return {"error": "Database unavailable"}
 
     if not job_record:
-        worker_logger.error_job(job_id, "Job not found in DB. Aborting.")
+        log.error("job_not_found", job_id=job_id)
         return {"error": "Job not found"}
 
-    worker_logger.info_job(job_id, "Job found in DB. Updating status to processing...")
+    log.info("job_found_updating_status", job_id=job_id)
     
     # 2. Update Status -> Processing
     job_repository.update_job(job_id, {"status": "processing"})
 
     job_type: str = job_record.get("type", "unknown")
-    worker_logger.info_job(job_id, f"Job type: {job_type}")
+    log.info("job_type", job_id=job_id, job_type=job_type)
     
     # 2.5. Transform event jobs to agent format
     if is_event_job(job_type):
-        worker_logger.info_job(job_id, f"Event job detected: {job_type}. Transforming to agent message...")
+        log.info("event_job_detected", job_id=job_id, job_type=job_type)
         job_record = transform_event_to_agent_message(job_record)
         job_type = "agent"
-        worker_logger.info_job(job_id, f"Transformed to job type: {job_type}")
+        log.info("transformed_job_type", job_id=job_id, job_type=job_type)
     
     # 2.6. Handle thread-wakeup jobs
     if job_type == "thread-wakeup":
-        worker_logger.info_job(job_id, "Thread-wakeup job detected. Routing to agent executor...")
+        log.info("thread_wakeup_detected", job_id=job_id)
         job_type = "agent"
     
     # 3. Resolve executor using dependency injection
@@ -122,11 +109,11 @@ async def process_job(job, token):
         executor = factory.get_executor(job_type)
     except ValueError as e:
         error_msg = f"No executor found for job type: {job_type}"
-        worker_logger.error_job(job_id, error_msg, exception=e)
+        log.error(error_msg, job_id=job_id, error=str(e))
         job_repository.update_job(job_id, {"status": "failed", "output": {"error": error_msg}})
 
         # Return gracefully instead of crashing the worker
-        worker_logger.info_job(job_id, "Worker continuing with next job...")
+        log.info("continuing_after_executor_error", job_id=job_id)
         return {"status": "failed", "error": error_msg, "job_type": job_type}
 
     # 4. Execute job through typed interface
@@ -135,21 +122,21 @@ async def process_job(job, token):
         
         # 5. Update Status -> Completed
         job_repository.update_job(job_id, {"status": "completed", "output": result})
-        worker_logger.info_job(job_id, "Job completed successfully.")
+        log.info("job_completed", job_id=job_id)
         return result
 
     except Exception as e:
-        worker_logger.error_job(job_id, "Job execution failed", exception=e)
+        log.error("job_execution_failed", job_id=job_id, error=str(e))
 
         # Update job status to failed
         try:
             job_repository.update_job(job_id, {"status": "failed", "output": {"error": str(e)}})
-            worker_logger.info_job(job_id, "Job status updated to failed")
+            log.info("job_status_failed", job_id=job_id)
         except Exception as db_error:
-            worker_logger.error_job(job_id, "Failed to update job status in database", exception=db_error)
+            log.error("failed_update_job_status", job_id=job_id, error=str(db_error))
 
         # Return gracefully instead of crashing
-        worker_logger.info_job(job_id, "Worker continuing with next job...")
+        log.info("continuing_after_failure", job_id=job_id)
         return {"status": "failed", "error": str(e)}
 
 async def main():

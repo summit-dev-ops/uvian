@@ -1,7 +1,7 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
 import json
-from core.logging import worker_logger
+from core.logging import log
 
 SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
 
@@ -53,8 +53,8 @@ def create_model_node(model, base_tools, mcp_registry=None):
         active_tools = list(base_tools) + list(loaded_mcp_tools)
         bound_tool_names = [t.name for t in active_tools] if active_tools else []
         
-        worker_logger.info_agent(
-            "LLM call executing",
+        log.info(
+            "llm_call_executing",
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
@@ -130,8 +130,8 @@ def create_model_node(model, base_tools, mcp_registry=None):
         
         active_tools = list(base_tools) + list(loaded_mcp_tools)
         
-        worker_logger.debug_agent(
-            "LLM system prompt",
+        log.debug(
+            "llm_system_prompt",
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
@@ -151,8 +151,8 @@ def create_model_node(model, base_tools, mcp_registry=None):
         
         if tool_calls:
             tool_names = [tc.get("name") for tc in tool_calls]
-            worker_logger.info_agent(
-                "LLM response with tool calls",
+            log.info(
+                "llm_response_with_tool_calls",
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
                 llm_calls=new_llm_calls,
@@ -160,8 +160,8 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 extra={"tool_calls": tool_names},
             )
         else:
-            worker_logger.info_agent(
-                "LLM response text",
+            log.info(
+                "llm_response_text",
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
                 llm_calls=new_llm_calls,

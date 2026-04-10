@@ -17,7 +17,7 @@ from core.agents.utils.loader import prepare_for_inbox_events
 from clients.mcp import PersistentMCPClient, MCPRegistry
 from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills
-from core.logging import worker_logger
+from core.logging import log
 import uuid
 
 
@@ -171,7 +171,7 @@ class AgentExecutor(BaseExecutor):
                 ):
                     full_response.append(chunk)
 
-                worker_logger.info_agent("Full Response",thread_id=thread_id,extra=full_response)
+                log.info("agent_full_response", thread_id=thread_id, extra=full_response)
 
                 return {
                     "status": "completed",

@@ -6,7 +6,7 @@ circular imports and improve testability across the worker system.
 """
 from typing import Dict, Type, Optional, Any, Callable, List, Union
 import threading
-from .logging import worker_logger
+from .logging import log
 
 
 class ServiceDescriptor:
@@ -224,22 +224,22 @@ def setup_default_executors() -> None:
     
     # Register default executors (lazy imported to avoid circular imports)
     try:
-        worker_logger.info("Successfully registered chat executor")
+        log.info("chat_executor_registered")
         
         # Try to register agent executor, but don't fail if it's broken
         try:
             from executors.agent_executor import AgentExecutor
             factory.register_executor("agent", AgentExecutor)
-            worker_logger.info("Successfully registered agent executor")
+            log.info("agent_executor_registered")
         except Exception as agent_error:
-            worker_logger.warning(f"Agent executor registration failed (non-critical): {agent_error}")
+            log.warning("agent_executor_registration_failed", error=str(agent_error))
             # Continue without agent executor for now
             
     except ImportError as e:
-        worker_logger.error(f"Failed to import core executors: {e}")
+        log.error("import_core_executors_failed", error=str(e))
         raise ImportError(f"Required executor modules not found: {e}")
     except Exception as e:
-        worker_logger.error(f"Unexpected error during executor registration: {e}")
+        log.error("executor_registration_error", error=str(e))
         raise
 
 

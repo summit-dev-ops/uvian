@@ -6,7 +6,7 @@ memory from core_automation.agent_shared_memory table into agent state.
 import json
 from typing import Dict, Any
 from repositories.agent_memory import agent_memory_repository
-from core.logging import worker_logger
+from core.logging import log
 
 
 async def fetch_agent_memory_node(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -25,8 +25,8 @@ async def fetch_agent_memory_node(state: Dict[str, Any]) -> Dict[str, Any]:
     agent_user_id = state.get("agent_user_id")
     llm_calls = state.get("llm_calls", 0)
     
-    worker_logger.info_agent(
-        "Fetching agent memory",
+    log.info(
+        "fetching_agent_memory",
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,
@@ -45,8 +45,8 @@ async def fetch_agent_memory_node(state: Dict[str, Any]) -> Dict[str, Any]:
     else:
         memory_keys = []
     
-    worker_logger.debug_agent(
-        "Agent memory fetched",
+    log.debug(
+        "agent_memory_fetched",
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,

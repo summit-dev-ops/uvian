@@ -2,7 +2,7 @@ import os
 from typing import Optional, Dict, Any
 
 from supabase import create_client
-from core.logging import worker_logger
+from core.logging import log
 
 
 class SupabaseClient:
@@ -16,7 +16,7 @@ class SupabaseClient:
             raise ValueError("SUPABASE_URL and SUPABASE_SECRET_KEY must be set")
             
         self.client = create_client(supabase_url, supabase_key)
-        worker_logger.info("Initialized official Supabase client")
+        log.info("supabase_client_initialized")
     
     def health_check(self) -> bool:
         """Verify the connection to Supabase."""
@@ -24,7 +24,7 @@ class SupabaseClient:
             result = self.client.schema('core_automation').table('jobs').select('id').limit(1).execute()
             return True
         except Exception as e:
-            worker_logger.error("Supabase health check failed", extra={"error": str(e)})
+            log.error("supabase_health_check_failed", error=str(e))
             return False
 
 supabase_client = SupabaseClient()

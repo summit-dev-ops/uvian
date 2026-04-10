@@ -8,7 +8,7 @@ import time
 import jwt as pyjwt
 import asyncio
 from contextlib import AsyncExitStack
-from core.logging import worker_logger
+from core.logging import log
 
 
 def _build_headers(auth_method: str, auth_secret: str | None, jwt_secret: str | None = None) -> dict:
@@ -94,9 +94,9 @@ class PersistentMCPClient:
             try:
                 await asyncio.wait_for(self.connect(mcp_id), timeout=15)
             except asyncio.TimeoutError:
-                worker_logger.warning(f"[mcp] Connection timeout for '{mcp_id}'")
+                log.warning("mcp_connection_timeout", mcp_id=mcp_id)
             except Exception as e:
-                worker_logger.warning(f"[mcp] Failed to connect to '{mcp_id}': {e}")
+                log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e))
 
     async def load_tools(self, mcp_id: str) -> List[BaseTool]:
         """Load tools from a specific server. Will lazily connect if not already connected."""
@@ -143,9 +143,9 @@ class PersistentMCPClient:
             try:
                 await asyncio.wait_for(self.get_tool_metadata(mcp_id), timeout=10)
             except asyncio.TimeoutError:
-                worker_logger.warning(f"[mcp] Metadata fetch timeout for '{mcp_id}'")
+                log.warning("mcp_metadata_timeout", mcp_id=mcp_id)
             except Exception as e:
-                worker_logger.warning(f"[mcp] Failed to fetch metadata for '{mcp_id}': {e}")
+                log.warning("mcp_fetch_metadata_failed", mcp_id=mcp_id, error=str(e))
 
     def get_rich_catalog(self) -> List[Dict[str, Any]]:
         """Get catalog of all servers with tool info and usage guidance."""

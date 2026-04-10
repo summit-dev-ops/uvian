@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional
 from clients.supabase import supabase_client
-from core.logging import worker_logger
+from core.logging import log
 
 
 class AgentMemoryRepository:
@@ -29,9 +29,7 @@ class AgentMemoryRepository:
             
             return memory_dict
         except Exception as e:
-            worker_logger.error(
-                f"Failed to fetch agent memory for agent {agent_id}: {e}"
-            )
+            log.error("fetch_agent_memory_error", agent_id=agent_id, error=str(e))
             return {}
 
     async def get_memory_by_key(self, agent_id: str, key: str) -> Optional[Dict[str, Any]]:
@@ -52,9 +50,7 @@ class AgentMemoryRepository:
                 return result.data[0].get("value")
             return None
         except Exception as e:
-            worker_logger.error(
-                f"Failed to fetch agent memory for agent {agent_id}, key {key}: {e}"
-            )
+            log.error("fetch_memory_by_key_error", agent_id=agent_id, key=key, error=str(e))
             return None
 
 
