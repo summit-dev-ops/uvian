@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from core.config import REDIS_HOST, REDIS_FAMILY, REDIS_PORT, REDIS_PASSWORD, QUEUE_NAME, WORKER_CONCURRENCY
 from repositories.jobs import job_repository, DatabaseError
 from core.events import events
@@ -18,12 +17,9 @@ import core.agents.event_transformers.job_transformer
 import core.agents.event_transformers.discord_transformer
 import core.agents.event_transformers.schedule_transformer
 
-# Configure standardized logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from core.logging import setup_worker_logging, LOG_LEVEL
+
+setup_worker_logging(level=LOG_LEVEL)
 
 # Event type prefixes that should be handled as agent events
 EVENT_PREFIXES = [

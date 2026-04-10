@@ -6,12 +6,18 @@ with proper formatting, levels, and structured output.
 """
 import json
 import logging
+import os
 import sys
 from typing import Any, Optional
 from datetime import datetime
 
-# Configure the main worker logger
-def setup_worker_logging(level: str = "INFO", format_string: Optional[str] = None) -> logging.Logger:
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+
+def setup_worker_logging(
+    level: str = LOG_LEVEL,
+    format_string: Optional[str] = None
+) -> logging.Logger:
     """
     Set up standardized logging for the worker system.
     
@@ -28,17 +34,15 @@ def setup_worker_logging(level: str = "INFO", format_string: Optional[str] = Non
             '[%(filename)s:%(lineno)d] - %(message)s'
         )
     
-    # Configure root logger
-    logging.basicConfig(
-        level=getattr(logging, level.upper()),
-        format=format_string,
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.StreamHandler(sys.stderr)
-        ]
-    )
+    root_logger = logging.getLogger()
+    root_logger.setLevel(getattr(logging, level.upper()))
     
-    # Create worker-specific logger
+    if not root_logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(getattr(logging, level.upper()))
+        handler.setFormatter(logging.Formatter(format_string))
+        root_logger.addHandler(handler)
+    
     worker_logger = logging.getLogger('uvian.automation_worker')
     worker_logger.setLevel(getattr(logging, level.upper()))
     
