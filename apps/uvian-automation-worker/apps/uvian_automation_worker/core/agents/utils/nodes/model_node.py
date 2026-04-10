@@ -143,6 +143,21 @@ def create_model_node(model, base_tools, mcp_registry=None):
         
         messages = [SystemMessage(content=formatted_system_prompt)] + state["messages"]
         
+        log.info(
+            "llm_invoking",
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+            llm_calls=llm_calls,
+            node="model_node",
+            extra={
+                "total_messages": len(messages),
+                "system_prompt_length": len(formatted_system_prompt),
+                "state_messages_count": len(state.get("messages", [])),
+                "last_message_type": messages[-1].type if messages else "none",
+                "last_message_content": str(messages[-1].content)[:200] if messages else "none",
+            },
+        )
+        
         response = model_with_tools.invoke(messages)
 
         tool_calls = getattr(response, "tool_calls", []) or []
@@ -151,22 +166,40 @@ def create_model_node(model, base_tools, mcp_registry=None):
         
         if tool_calls:
             tool_names = [tc.get("name") for tc in tool_calls]
+            tool_args = {tc.get("name"): str(tc.get("args", {}))[:200] for tc in tool_calls}
             log.info(
                 "llm_response_with_tool_calls",
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
                 llm_calls=new_llm_calls,
                 node="model_node",
-                extra={"tool_calls": tool_names},
+                extra={"tool_calls": tool_names, "tool_args": tool_args},
             )
         else:
+            # Log warning for empty response to help debug
+            log.warning(
+                "llm_empty_response",
+                thread_id=thread_id,
+                agent_user_id=agent_user_id,
+                llm_calls=new_llm_calls,
+                node="model_node",
+                extra={
+                    "response_content": str(response.content)[:500] if hasattr(response, 'content') else str(response)[:500],
+                    "response_type": type(response).__name__,
+                },
+            )
             log.info(
                 "llm_response_text",
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
                 llm_calls=new_llm_calls,
                 node="model_node",
-                extra={"response": response},
+                extra={
+                    "response_content": str(response.content)[:500] if hasattr(response, 'content') else str(response)[:500],
+                    "response_type": type(response).__name__,
+                    "has_tool_calls": bool(getattr(response, 'tool_calls', None)),
+                    "tool_calls_count": len(getattr(response, 'tool_calls', []) or []),
+                },
             )
         
         return {
