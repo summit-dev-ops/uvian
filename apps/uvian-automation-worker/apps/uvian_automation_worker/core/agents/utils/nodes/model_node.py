@@ -1,5 +1,6 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
+import json
 
 SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
 
@@ -70,10 +71,20 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 loaded_mcp_list.append(f"### {m.get('name', 'unknown')}\n{m.get('description', '')}\nAvailable tools: {tool_names}")
             mcps_section += "\n\n## Loaded MCP Servers\n\n" + "\n\n".join(loaded_mcp_list)
         
+        # Format agent memory into system prompt
+        agent_memory = state.get("agent_memory", {})
+        memory_section = ""
+        if agent_memory:
+            memory_lines = ["## Agent Memory"]
+            for key, value in agent_memory.items():
+                memory_lines.append(f"### {key}")
+                memory_lines.append(json.dumps(value, indent=2))
+            memory_section = "\n\n" + "\n".join(memory_lines)
+        
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
             custom_instructions= state.get("custom_instructions", "")
-        ) + mcps_section + skills_section
+        ) + mcps_section + skills_section + memory_section
         
         conversation_summary = state.get("conversation_summary", "")
         if conversation_summary:

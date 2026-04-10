@@ -15,30 +15,18 @@ export function encrypt(plaintext: string, secret: string): string {
   return `${iv.toString('hex')}:${encrypted}`;
 }
 
-export function decrypt(encrypted: string, secret: string): string {
+export function decrypt<T = string>(encrypted: string, secret: string): T {
   const key = getKey(secret);
   const [ivHex, encHex] = encrypted.split(':');
   const iv = Buffer.from(ivHex, 'hex');
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   let decrypted = decipher.update(encHex, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
-  return decrypted;
-}
-
-export function decryptValue<T = unknown>(
-  encrypted: string,
-  secret: string,
-): T {
-  const plaintext = decrypt(encrypted, secret);
   try {
-    return JSON.parse(plaintext) as T;
+    return JSON.parse(decrypted) as T;
   } catch {
-    return plaintext as unknown as T;
+    return decrypted as unknown as T;
   }
-}
-
-export function decryptJson<T = unknown>(encrypted: string, secret: string): T {
-  return decryptValue<T>(encrypted, secret);
 }
 
 export interface RSAKeyPair {
@@ -88,25 +76,10 @@ export function decryptHybridSubmission(
   submission: HybridEncryptedSubmission,
   privateKey: string,
 ): DecryptedSubmission {
-  console.log('[decrypt] Starting decryption', {
-    hasKey: !!privateKey,
-    keyLength: privateKey?.length,
-    payloadKeys: Object.keys(submission),
-    encryptedPayloadLength: submission.encryptedPayload?.length,
-    encryptedKeyLength: submission.encryptedKey?.length,
-    ivLength: submission.iv?.length,
-  });
-
   try {
     const encryptedPayload = Buffer.from(submission.encryptedPayload, 'base64');
     const encryptedKey = Buffer.from(submission.encryptedKey, 'base64');
     const iv = Buffer.from(submission.iv, 'base64');
-
-    console.log('[decrypt] Buffers created', {
-      payloadLen: encryptedPayload.length,
-      keyLen: encryptedKey.length,
-      ivLen: iv.length,
-    });
 
     const decryptedAesKey = crypto.privateDecrypt(
       {
@@ -115,11 +88,6 @@ export function decryptHybridSubmission(
         oaepHash: 'sha256',
       },
       encryptedKey,
-    );
-
-    console.log(
-      '[decrypt] RSA decrypted, AES key length:',
-      decryptedAesKey.length,
     );
 
     const authTag = encryptedPayload.subarray(encryptedPayload.length - 16);
@@ -143,14 +111,9 @@ export function decryptHybridSubmission(
 
     const decryptedJsonString = Buffer.concat(chunks).toString('utf8');
 
-    console.log('[decrypt] AES decrypted, raw string:', decryptedJsonString);
-    console.log('[decrypt] Raw string length:', decryptedJsonString.length);
-
     const data = JSON.parse(decryptedJsonString);
-    console.log('[decrypt] Success, parsed data:', data);
     return { data };
   } catch (error) {
-    console.error('[decrypt] FAILED:', error);
     throw new Error(
       `Decryption failed: ${error instanceof Error ? error.message : String(error)}`,
     );

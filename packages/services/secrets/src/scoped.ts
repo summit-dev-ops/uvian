@@ -1,4 +1,4 @@
-import { encrypt, decryptJson } from '@org/utils-encryption';
+import { encrypt, decrypt } from '@org/utils-encryption';
 import {
   ServiceClients,
   SecretsScopedService,
@@ -9,12 +9,12 @@ import {
 
 export function createSecretsScopedService(
   clients: ServiceClients,
-  encryptionSecret: string
+  encryptionSecret: string,
 ): SecretsScopedService {
   return {
     async create(
       accountId: string,
-      payload: CreateSecretPayload
+      payload: CreateSecretPayload,
     ): Promise<SecretRecord> {
       const encryptedValue = encrypt(payload.value, encryptionSecret);
 
@@ -50,7 +50,7 @@ export function createSecretsScopedService(
 
     async get(
       accountId: string,
-      secretId: string
+      secretId: string,
     ): Promise<SecretRecord | null> {
       const { data, error } = await clients.userClient
         .schema('public')
@@ -66,7 +66,7 @@ export function createSecretsScopedService(
 
     async getByName(
       accountId: string,
-      name: string
+      name: string,
     ): Promise<SecretRecord | null> {
       const { data, error } = await clients.userClient
         .schema('public')
@@ -82,7 +82,7 @@ export function createSecretsScopedService(
 
     async getByIdWithDecryptedValue(
       accountId: string,
-      secretId: string
+      secretId: string,
     ): Promise<{
       id: string;
       name: string;
@@ -99,9 +99,9 @@ export function createSecretsScopedService(
 
       if (error || !data) return null;
 
-      const decryptedValue = decryptJson<string>(
+      const decryptedValue = decrypt<string>(
         data.encrypted_value,
-        encryptionSecret
+        encryptionSecret,
       );
       return {
         id: data.id,
@@ -114,7 +114,7 @@ export function createSecretsScopedService(
     async update(
       accountId: string,
       secretId: string,
-      payload: UpdateSecretPayload
+      payload: UpdateSecretPayload,
     ): Promise<SecretRecord> {
       const existing = await clients.adminClient
         .schema('public')
@@ -154,7 +154,7 @@ export function createSecretsScopedService(
 
     async delete(
       accountId: string,
-      secretId: string
+      secretId: string,
     ): Promise<{ success: boolean }> {
       const existing = await clients.adminClient
         .schema('public')

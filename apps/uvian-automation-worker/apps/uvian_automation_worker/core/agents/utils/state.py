@@ -35,6 +35,7 @@ class MessagesState(TypedDict):
     thread_id: str
     inbox_messages_added: int
     conversation_summary: str
+    agent_memory: Dict[str, Any]  # Synced from remote at startup + after tools
 
 
 class Skill(TypedDict):

@@ -1,9 +1,9 @@
-import { decryptJson } from '@org/utils-encryption';
+import { decrypt } from '@org/utils-encryption';
 import { ServiceClients, SecretsAdminService, SecretRecord } from './types';
 
 export function createSecretsAdminService(
   clients: ServiceClients,
-  encryptionSecret: string
+  encryptionSecret: string,
 ): SecretsAdminService {
   return {
     async getById(secretId: string): Promise<SecretRecord | null> {
@@ -52,9 +52,9 @@ export function createSecretsAdminService(
 
       if (error || !data) return null;
 
-      const decryptedValue = decryptJson<string>(
+      const decryptedValue = decrypt<string>(
         data.encrypted_value,
-        encryptionSecret
+        encryptionSecret,
       );
       return {
         id: data.id,
