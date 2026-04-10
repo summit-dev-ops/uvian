@@ -374,7 +374,7 @@ class AgentExecutor(BaseExecutor):
                     stream_mode="messages",
                 ):
                     full_response.append(chunk)
-
+                worker_logger.info_job(job_id,"Full Response", full_response)
                 return {
                     "status": "completed",
                     "result": {
