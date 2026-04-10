@@ -161,7 +161,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
             )
         else:
             response_content = response.content[:200] if response.content else ""
-            worker_logger.debug_agent(
+            worker_logger.info_agent(
                 "LLM response text",
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
