@@ -1,23 +1,9 @@
 from langchain.messages import AnyMessage
 from typing import TypedDict, List, Dict, Any
-from typing_extensions import TypedDict, Annotated
-from langchain_core.tools import BaseTool
-
-MESSAGES_REPLACE = "__REPLACE_MESSAGES__"
-
-def messages_reducer(
-    existing: list[AnyMessage],
-    updates: list[AnyMessage]
-) -> list[AnyMessage]:
-    if not updates:
-        return existing
-    first_content = updates[0].content if hasattr(updates[0], 'content') else str(updates[0])
-    if first_content == MESSAGES_REPLACE:
-        return updates[1:] if len(updates) > 1 else []
-    return existing + updates
+from typing_extensions import TypedDict
 
 class MessagesState(TypedDict):
-    messages: Annotated[list[AnyMessage], messages_reducer]
+    messages: list[AnyMessage]
     llm_calls: int
     agent_name: str
     transcript: str

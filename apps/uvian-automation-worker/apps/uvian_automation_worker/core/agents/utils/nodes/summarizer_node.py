@@ -39,7 +39,6 @@ Keep under 150 words."""),
         new_messages = recent
         
         return {
-            "messages": [SystemMessage(content=MESSAGES_REPLACE)] + new_messages,
             "conversation_summary": summary_response.content
         }
     
