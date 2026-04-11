@@ -164,12 +164,12 @@ class AgentExecutor(BaseExecutor):
             full_response: List[Any] = []
             try:
                 agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
-                async for chunk, _m in agent.astream(
+                async for part in agent.astream(
                     agent_input,
                     config=config,
-                    stream_mode="messages",
+                    stream_mode=["values","messages"],
                 ):
-                    full_response.append(chunk)
+                    full_response.append(part)
 
                 log.info("agent_full_response", thread_id=thread_id, extra=full_response)
 
