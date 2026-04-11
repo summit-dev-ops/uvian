@@ -45,7 +45,7 @@ def build_agent(
     agent_builder.add_edge(START, "fetch_agent_memory_node")
     agent_builder.add_edge("fetch_agent_memory_node", "throttle_node")
 
-    # Check context after throttling - handles routing (summarize vs model)
+    # Check context after throttling - handles routing (compaction vs model)
     agent_builder.add_conditional_edges(
         "throttle_node",
         check_context,
@@ -53,6 +53,7 @@ def build_agent(
             "compaction_node": "compaction_node",
             "model_node": "model_node",
         },
+    )
 
     agent_builder.add_edge("compaction_node", "model_node")
 
