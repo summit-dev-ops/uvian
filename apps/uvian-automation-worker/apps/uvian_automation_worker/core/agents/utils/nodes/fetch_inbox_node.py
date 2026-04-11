@@ -25,17 +25,19 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     thread_id = state.get("thread_id")
     agent_user_id = state.get("agent_user_id")
     llm_calls = state.get("llm_calls", 0)
+    execution_id = state.get("execution_id", "unknown")
     
     existing_messages = state.get("messages", [])
     
     if not thread_id:
-        return {"messages": [], "inbox_messages_added": 0}
+        return {}
 
     log.debug(
         "fetching_inbox_messages",
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,
+        execution_id=execution_id,
         node="fetch_inbox_node",
         extra={"existing_message_count": len(existing_messages)},
     )
@@ -43,7 +45,7 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
     
     if not pending_messages:
-        return {"messages": [], "inbox_messages_added": 0}
+        return {}
 
     available_skills = state.get("available_skills", [])
     loaded_skills = state.get("loaded_skills", [])
@@ -89,6 +91,7 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,
+        execution_id=execution_id,
         node="fetch_inbox_node",
         extra={
             "messages_added": len(new_messages),

@@ -42,6 +42,15 @@ class AgentExecutor(BaseExecutor):
         if not thread_id or not agent_user_id:
             raise ValueError("threadId and agentId are required for thread-wakeup jobs")
         
+        execution_id = str(uuid.uuid4())
+        log.info(
+            "agent_execution_start",
+            execution_id=execution_id,
+            job_id=job_id,
+            thread_id=thread_id,
+            agent_user_id=agent_user_id,
+        )
+        
         secrets = await get_agent_secrets(agent_user_id)
         
         llm_config = {}
@@ -165,6 +174,7 @@ class AgentExecutor(BaseExecutor):
                 "thread_id": thread_id,
                 "message_id": str(uuid.uuid4()),
                 "event_metadata": {},
+                "execution_id": execution_id,
             }
             
             config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}

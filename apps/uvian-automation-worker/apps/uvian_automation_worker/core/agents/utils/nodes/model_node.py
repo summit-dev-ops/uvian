@@ -28,6 +28,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
         thread_id = state.get("thread_id")
         agent_user_id = state.get("agent_user_id")
         llm_calls = state.get("llm_calls", 0)
+        execution_id = state.get("execution_id", "unknown")
         
         loaded_skills = state.get("loaded_skills", [])
         available_skills = state.get("available_skills", [])
@@ -51,6 +52,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
+            execution_id=execution_id,
             node="model_node",
             extra={
                 "available_skills": available_skill_names,
@@ -135,6 +137,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
+            execution_id=execution_id,
             node="model_node",
             extra={"system_prompt_length": len(formatted_system_prompt)},
         )
@@ -148,6 +151,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
+            execution_id=execution_id,
             node="model_node",
             extra={
                 "total_messages": len(messages),
@@ -176,6 +180,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
                 llm_calls=new_llm_calls,
+                execution_id=execution_id,
                 node="model_node",
                 extra={"tool_calls": tool_names, "tool_args": tool_args},
             )
@@ -185,6 +190,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 thread_id=thread_id,
                 agent_user_id=agent_user_id,
                 llm_calls=new_llm_calls,
+                execution_id=execution_id,
                 node="model_node",
                 extra={
                     "response_content": response_content[:500] if response_content else "(empty)",

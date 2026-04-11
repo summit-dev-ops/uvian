@@ -86,11 +86,16 @@ async def process_job(job, token):
 
     log.info("job_found_updating_status", job_id=job_id)
     
-    # 2. Update Status -> Processing
-    job_repository.update_job(job_id, {"status": "processing"})
-
     job_type: str = job_record.get("type", "unknown")
-    log.info("job_type", job_id=job_id, job_type=job_type)
+    input_data = job_record.get("input", {})
+    thread_id = input_data.get("threadId") if input_data else None
+    
+    log.info(
+        "job_starting",
+        job_id=job_id,
+        job_type=job_type,
+        thread_id=thread_id,
+    )
     
     # 2.5. Transform event jobs to agent format
     if is_event_job(job_type):

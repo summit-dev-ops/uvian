@@ -413,7 +413,7 @@ Graph-based workflow with nodes: `check_context_node` → `model_node` ↔ `tool
 
 ### Tools
 
-**Built-in:** `search_skills`, `load_skill`, `end_task`
+**Built-in:** `search_skills`, `load_skill`
 
 **MCP tools:** Dynamically loaded from agent's linked MCP servers via `langchain_mcp_adapters`. Auth headers constructed per MCP config (bearer, api_key, jwt with 1h expiry).
 

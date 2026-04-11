@@ -24,12 +24,14 @@ async def fetch_agent_memory_node(state: Dict[str, Any]) -> Dict[str, Any]:
     thread_id = state.get("thread_id")
     agent_user_id = state.get("agent_user_id")
     llm_calls = state.get("llm_calls", 0)
+    execution_id = state.get("execution_id", "unknown")
     
     log.info(
         "fetching_agent_memory",
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,
+        execution_id=execution_id,
         node="fetch_agent_memory_node",
     )
     
@@ -50,6 +52,7 @@ async def fetch_agent_memory_node(state: Dict[str, Any]) -> Dict[str, Any]:
         thread_id=thread_id,
         agent_user_id=agent_user_id,
         llm_calls=llm_calls,
+        execution_id=execution_id,
         node="fetch_agent_memory_node",
         extra={"memory_keys": memory_keys, "memory_count": len(memory_keys)},
     )
