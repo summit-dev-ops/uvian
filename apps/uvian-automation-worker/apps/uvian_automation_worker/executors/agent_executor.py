@@ -144,9 +144,16 @@ class AgentExecutor(BaseExecutor):
             ]
             
             available_mcps = [
-                {"name": m.get("name"), "description": m.get("description", ""), 
-                 "tool_names": [t.get("name") for t in m.get("tools", [])]}
-                for m in available_mcps_catalog
+                {
+                    "name": cfg.get("name", ""),
+                    "description": cfg.get("usage_guidance", ""),
+                    "tool_names": [
+                        t.get("name") for m in available_mcps_catalog
+                        if m.get("name") == cfg.get("name")
+                        for t in m.get("tools", [])
+                    ] if any(m.get("name") == cfg.get("name") for m in available_mcps_catalog) else []
+                }
+                for cfg in all_mcp_configs if cfg.get("name")
             ]
             
             loaded_mcps = []
