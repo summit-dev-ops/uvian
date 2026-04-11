@@ -151,7 +151,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
             llm_calls=llm_calls,
             execution_id=execution_id,
             node="model_node",
-            extra={"system_prompt_length": len(formatted_system_prompt)},
+            extra={"formatted_system_prompt": formatted_system_prompt},
         )
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
