@@ -560,6 +560,9 @@ export function createAgentConfigScopedService(
           url: String(r.mcp_url),
           auth_method: authMethod,
           _auth_secret: authSecret,
+          usage_guidance: (r.mcp_usage_guidance as string) || undefined,
+          auto_load_events: (r.mcp_auto_load_events as string[]) || undefined,
+          is_default: (r.is_default as boolean) || false,
         };
       });
 
