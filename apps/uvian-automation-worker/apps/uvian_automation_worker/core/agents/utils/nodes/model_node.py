@@ -3,11 +3,10 @@ from langchain_core.runnables import RunnableConfig
 import json
 from core.logging import log
 
-SYSTEM_PROMPT = """You are an autonomous agent called {agent_name} with access to tools.
+SYSTEM_PROMPT = """You are an autonomous headless agent with access to internal tools and external mcps. 
+You will not be communicating with the clients directly. You will be provided events and it is your responsibility to plan, and act based on the events you receive.
 
-It is crucial you remember that you are operating in a headless mode. The users will not see your raw text response. This means that you must use the appropriate tools to communicate. Consider non tool call turns to be invisible to the user and use it to summarise your work.
-
-You manage ongoing threads. New messages may arrive while you work. After using tools, check for new messages before formulating your final response.
+It is crucial you remember that you are operating in a headless mode. The users will not see your raw text response. This means that you must use the appropriate tools to communicate. Consider non tool call turns to be invisible to the user and use it ONLY to summarise your work.
 
 You will receive an event notification. Follow this workflow:
 1. **Consider the event** - Ask yourself what this event means, what is its source, and nature.
@@ -15,13 +14,7 @@ You will receive an event notification. Follow this workflow:
 3. **Take action** - Respond to the event appropriately based on what you learned. To do this use the relevant tools such sending messages, making posts, creating spaces, etc.
 4. **Stop** - Once you've handled the event, stop calling tools. Do not continue gathering information or exploring. Simply summarise what you have done.
 
-When you receive a Discord message event, respond directly using discord_send_channel with the channel ID and user ID from the event. Do not just list available tools — actually send a reply to the user.
-
-When you receive a message on another platform, use the appropriate send_message tool for that platform.
-
 You have the ability to dynamically adjust the selection of tools you can access. Use this as needed, don't load everything at once.
-
-Use get_agent_memory and set_agent_memory to coordinate with other instances of yourself when modifying external records to prevent conflicts.
 
 Rules:
 - Only call tools that are directly relevant to the event
@@ -164,6 +157,8 @@ def create_model_node(model, base_tools, mcp_registry=None):
         
         new_llm_calls = state.get('llm_calls', 0) + 1
         
+        response_content = getattr(response, 'content', '') or ''
+        
         if tool_calls:
             tool_names = [tc.get("name") for tc in tool_calls]
             tool_args = {tc.get("name"): str(tc.get("args", {}))[:200] for tc in tool_calls}
@@ -176,18 +171,6 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 extra={"tool_calls": tool_names, "tool_args": tool_args},
             )
         else:
-            # Log warning for empty response to help debug
-            log.warning(
-                "llm_empty_response",
-                thread_id=thread_id,
-                agent_user_id=agent_user_id,
-                llm_calls=new_llm_calls,
-                node="model_node",
-                extra={
-                    "response_content": str(response.content)[:500] if hasattr(response, 'content') else str(response)[:500],
-                    "response_type": type(response).__name__,
-                },
-            )
             log.info(
                 "llm_response_text",
                 thread_id=thread_id,
@@ -195,10 +178,8 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 llm_calls=new_llm_calls,
                 node="model_node",
                 extra={
-                    "response_content": str(response.content)[:500] if hasattr(response, 'content') else str(response)[:500],
+                    "response_content": response_content[:500] if response_content else "(empty)",
                     "response_type": type(response).__name__,
-                    "has_tool_calls": bool(getattr(response, 'tool_calls', None)),
-                    "tool_calls_count": len(getattr(response, 'tool_calls', []) or []),
                 },
             )
         

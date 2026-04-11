@@ -73,8 +73,17 @@ class AgentExecutor(BaseExecutor):
         event_types = list(set(msg["event_type"] for msg in pending_messages)) if pending_messages else []
         
         relevant_mcp_configs = []
-        for event_type in event_types:
-            relevant_mcp_configs.extend(get_mcps_for_event(event_type, all_mcp_configs))
+        
+        if event_types:
+            # Load MCPs matching event types or marked as default
+            for event_type in event_types:
+                matched = get_mcps_for_event(event_type, all_mcp_configs)
+                relevant_mcp_configs.extend(matched)
+        else:
+            # No specific events - still load default MCPs
+            for cfg in all_mcp_configs:
+                if cfg.get("is_default"):
+                    relevant_mcp_configs.append(cfg)
         
         from collections import defaultdict
         seen = {}
@@ -97,6 +106,7 @@ class AgentExecutor(BaseExecutor):
                             auth_secret=cfg.get("_auth_secret"),
                             jwt_secret=cfg.get("_jwt_secret"),
                             name=cfg.get("name"),
+                            usage_guidance=cfg.get("usage_guidance"),
                         )
                 
                 await persistent_client.connect_all()

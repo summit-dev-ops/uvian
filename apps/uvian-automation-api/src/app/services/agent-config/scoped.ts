@@ -20,11 +20,11 @@ import {
 const ENCRYPTION_SECRET = process.env.SECRET_INTERNAL_API_KEY!;
 
 export function createAgentConfigScopedService(
-  clients: ServiceClients
+  clients: ServiceClients,
 ): AgentConfigScopedService {
   async function getAgentByIdInternal(
     client: SupabaseClient,
-    agentId: string
+    agentId: string,
   ): Promise<{ id: string; account_id: string }> {
     const { data, error } = await client
       .schema('core_automation')
@@ -39,7 +39,7 @@ export function createAgentConfigScopedService(
 
   return {
     async create(
-      payload: CreateAgentConfigPayload
+      payload: CreateAgentConfigPayload,
     ): Promise<AgentConfigRecord> {
       const { data, error } = await clients.adminClient
         .schema('core_automation')
@@ -85,7 +85,7 @@ export function createAgentConfigScopedService(
 
     async update(
       agentId: string,
-      payload: UpdateAgentConfigPayload
+      payload: UpdateAgentConfigPayload,
     ): Promise<AgentConfigRecord> {
       const updateData: Record<string, unknown> = {};
 
@@ -130,12 +130,12 @@ export function createAgentConfigScopedService(
           try {
             apiKey = decrypt(
               r.secret_encrypted_value as string,
-              ENCRYPTION_SECRET
+              ENCRYPTION_SECRET,
             );
           } catch (err) {
             console.warn(
               `Failed to decrypt LLM secret for llm_id=${r.llm_id}:`,
-              err
+              err,
             );
           }
         }
@@ -188,7 +188,7 @@ export function createAgentConfigScopedService(
 
     async unlinkLlm(
       agentId: string,
-      llmId: string
+      llmId: string,
     ): Promise<{ success: boolean }> {
       const { error } = await clients.adminClient
         .schema('core_automation')
@@ -204,7 +204,7 @@ export function createAgentConfigScopedService(
     async updateLlmLink(
       agentId: string,
       llmId: string,
-      payload: UpdateLlmLinkPayload
+      payload: UpdateLlmLinkPayload,
     ): Promise<unknown> {
       if (payload.isDefault === undefined && !payload.secretValue) {
         throw new Error('No update payload provided');
@@ -262,12 +262,12 @@ export function createAgentConfigScopedService(
           try {
             const raw = decrypt(
               r.secret_encrypted_value as string,
-              ENCRYPTION_SECRET
+              ENCRYPTION_SECRET,
             );
             try {
               const authConfig = JSON.parse(raw);
               authSecret = String(
-                (authConfig as Record<string, unknown>)[authMethod] ?? null
+                (authConfig as Record<string, unknown>)[authMethod] ?? null,
               );
             } catch {
               authSecret = raw;
@@ -275,7 +275,7 @@ export function createAgentConfigScopedService(
           } catch (err) {
             console.warn(
               `Failed to decrypt MCP secret for mcp_id=${r.mcp_id}:`,
-              err
+              err,
             );
           }
         }
@@ -286,6 +286,9 @@ export function createAgentConfigScopedService(
           url: String(r.mcp_url),
           auth_method: authMethod,
           _auth_secret: authSecret,
+          usage_guidance: (r.mcp_usage_guidance as string) || undefined,
+          auto_load_events: (r.mcp_auto_load_events as string[]) || undefined,
+          is_default: (r.is_default as boolean) || false,
         };
       });
     },
@@ -323,7 +326,7 @@ export function createAgentConfigScopedService(
 
     async unlinkMcp(
       agentId: string,
-      mcpId: string
+      mcpId: string,
     ): Promise<{ success: boolean }> {
       const { error } = await clients.adminClient
         .schema('core_automation')
@@ -339,7 +342,7 @@ export function createAgentConfigScopedService(
     async updateMcpLink(
       agentId: string,
       mcpId: string,
-      payload: UpdateMcpLinkPayload
+      payload: UpdateMcpLinkPayload,
     ): Promise<unknown> {
       if (payload.isDefault === undefined && !payload.secretValue) {
         throw new Error('No update payload provided');
@@ -414,7 +417,7 @@ export function createAgentConfigScopedService(
 
     async linkSkill(
       agentId: string,
-      payload: LinkSkillPayload
+      payload: LinkSkillPayload,
     ): Promise<unknown> {
       const agent = await getAgentByIdInternal(clients.adminClient, agentId);
 
@@ -454,7 +457,7 @@ export function createAgentConfigScopedService(
 
     async unlinkSkill(
       agentId: string,
-      skillId: string
+      skillId: string,
     ): Promise<{ success: boolean }> {
       const { error } = await clients.adminClient
         .schema('core_automation')
@@ -510,7 +513,7 @@ export function createAgentConfigScopedService(
           } catch (err) {
             console.warn(
               `Failed to decrypt LLM secret for llm_id=${r.llm_id}:`,
-              err
+              err,
             );
           }
         }
@@ -538,7 +541,7 @@ export function createAgentConfigScopedService(
             try {
               const authConfig = JSON.parse(raw);
               authSecret = String(
-                (authConfig as Record<string, unknown>)[authMethod] ?? ''
+                (authConfig as Record<string, unknown>)[authMethod] ?? '',
               );
             } catch {
               authSecret = raw;
@@ -546,7 +549,7 @@ export function createAgentConfigScopedService(
           } catch (err) {
             console.warn(
               `Failed to decrypt MCP secret for mcp_id=${r.mcp_id}:`,
-              err
+              err,
             );
           }
         }

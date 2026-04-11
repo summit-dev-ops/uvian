@@ -50,6 +50,7 @@ class PersistentMCPClient:
         self._sessions: Dict[str, ClientSession] = {}
         self._tool_cache: Dict[str, List[BaseTool]] = {}
         self._metadata_cache: Dict[str, List[Dict[str, Any]]] = {}
+        self._usage_guidance: Dict[str, str] = {}
         self.exit_stack = AsyncExitStack()
 
     async def __aenter__(self):
@@ -58,12 +59,14 @@ class PersistentMCPClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    def add_server(self, mcp_id: str, url: str, auth_method: str, auth_secret: str | None, jwt_secret: str | None = None, name: str | None = None):
+    def add_server(self, mcp_id: str, url: str, auth_method: str, auth_secret: str | None, jwt_secret: str | None = None, name: str | None = None, usage_guidance: str | None = None):
         """Register an MCP server configuration. Does NOT connect yet."""
         self._connections[mcp_id] = _build_connection_config(url, auth_method, auth_secret, jwt_secret)
         self._names[mcp_id] = name or mcp_id
         if name:
             self._name_to_id[name] = mcp_id
+        if usage_guidance:
+            self._usage_guidance[mcp_id] = usage_guidance
 
     async def connect(self, mcp_id: str) -> ClientSession:
         """Dynamically open a persistent connection to a single registered server.
@@ -149,7 +152,6 @@ class PersistentMCPClient:
 
     def get_rich_catalog(self) -> List[Dict[str, Any]]:
         """Get catalog of all servers with tool info and usage guidance."""
-        from core.agents.utils.mcp_catalog import get_usage_guidance
         result = []
         for mcp_id in self._connections:
             metadata = self._metadata_cache.get(mcp_id, [])
@@ -157,7 +159,7 @@ class PersistentMCPClient:
                 f"{t['name']}: {t['description']}" if t.get('description') else t['name']
                 for t in metadata
             ]
-            usage = get_usage_guidance(self._names.get(mcp_id, mcp_id))
+            usage = self._usage_guidance.get(mcp_id, "")
             result.append({
                 "id": mcp_id,
                 "name": self._names.get(mcp_id, mcp_id),

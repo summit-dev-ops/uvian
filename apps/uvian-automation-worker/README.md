@@ -75,7 +75,6 @@ apps/uvian-automation-worker/
             ├── tokens.py                # Token counting + context routing
             ├── skill_mapping.py         # Event-to-skill filtering
             ├── mcp_mapping.py           # Event-to-MCP filtering
-            ├── mcp_catalog.py           # MCP usage guidance
             ├── models/
             │   └── base_models.py       # ChatOpenAI via HF Router
             ├── nodes/

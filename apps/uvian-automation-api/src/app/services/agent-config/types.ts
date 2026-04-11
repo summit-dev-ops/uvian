@@ -76,6 +76,9 @@ export interface LinkedMcp {
   url: string;
   auth_method: string;
   _auth_secret?: string | null;
+  usage_guidance?: string;
+  auto_load_events?: string[];
+  is_default?: boolean;
 }
 
 export interface LinkedSkill {
@@ -99,7 +102,7 @@ export interface AgentConfigScopedService {
   getByUserId(ownerUserId: string): Promise<AgentConfigRecord | null>;
   update(
     agentId: string,
-    payload: UpdateAgentConfigPayload
+    payload: UpdateAgentConfigPayload,
   ): Promise<AgentConfigRecord>;
   getLlms(agentId: string): Promise<LinkedLlm[]>;
   linkLlm(agentId: string, payload: LinkLlmPayload): Promise<unknown>;
@@ -107,7 +110,7 @@ export interface AgentConfigScopedService {
   updateLlmLink(
     agentId: string,
     llmId: string,
-    payload: UpdateLlmLinkPayload
+    payload: UpdateLlmLinkPayload,
   ): Promise<unknown>;
   getMcps(agentId: string): Promise<LinkedMcp[]>;
   linkMcp(agentId: string, payload: LinkMcpPayload): Promise<unknown>;
@@ -115,7 +118,7 @@ export interface AgentConfigScopedService {
   updateMcpLink(
     agentId: string,
     mcpId: string,
-    payload: UpdateMcpLinkPayload
+    payload: UpdateMcpLinkPayload,
   ): Promise<unknown>;
   getSkills(agentId: string): Promise<LinkedSkill[]>;
   linkSkill(agentId: string, payload: LinkSkillPayload): Promise<unknown>;
