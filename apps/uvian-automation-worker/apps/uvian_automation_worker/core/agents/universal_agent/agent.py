@@ -7,7 +7,7 @@ from core.agents.utils.nodes.model_node import create_model_node
 from core.agents.utils.nodes.fetch_inbox_node import fetch_inbox_node
 from core.agents.utils.nodes.fetch_agent_memory_node import fetch_agent_memory_node
 from core.agents.utils.tokens import check_context
-from core.agents.utils.nodes.summarizer_node import create_summarize_node
+from core.agents.utils.nodes.compaction_node import create_compaction_node
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
 from core.agents.utils.nodes.throttle_node import throttle_node
 from core.agents.utils.nodes.tool_node import ToolNode, tools_condition
@@ -31,14 +31,14 @@ def build_agent(
     agent_builder = StateGraph(MessagesState)
 
     model_node = create_model_node(llm, tools, mcp_registry=mcp_registry)
-    summarize_node = create_summarize_node(llm, agent_name="DataBot")
+    compaction_node = create_compaction_node(llm, agent_name="DataBot")
     tool_node = ToolNode(tools, handle_tool_errors=True, mcp_registry=mcp_registry)
 
     agent_builder.add_node("fetch_inbox_node", fetch_inbox_node)
     agent_builder.add_node("fetch_agent_memory_node", fetch_agent_memory_node)
     agent_builder.add_node("model_node", model_node)
     agent_builder.add_node("tool_node", tool_node)
-    agent_builder.add_node("summarize_node", summarize_node)
+    agent_builder.add_node("compaction_node", compaction_node)
     agent_builder.add_node("throttle_node", throttle_node)
 
     # Graph starts at fetch_agent_memory_node to load memory at startup
@@ -50,12 +50,11 @@ def build_agent(
         "throttle_node",
         check_context,
         {
-            "summarize_node": "summarize_node",
+            "compaction_node": "compaction_node",
             "model_node": "model_node",
         },
-    )
 
-    agent_builder.add_edge("summarize_node", "model_node")
+    agent_builder.add_edge("compaction_node", "model_node")
 
     agent_builder.add_conditional_edges(
         "model_node",

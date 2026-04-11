@@ -16,5 +16,5 @@ def check_context(state: MessagesState) -> str:
     current_tokens = count_tokens(state["messages"], system_prompt)
     
     if current_tokens > TRIGGER_THRESHOLD:
-        return "summarize_node"
+        return "compaction_node"
     return "model_node"

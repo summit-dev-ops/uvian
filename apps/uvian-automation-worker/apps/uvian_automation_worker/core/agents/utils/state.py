@@ -3,6 +3,7 @@ from typing import TypedDict, List, Dict, Any
 from typing_extensions import TypedDict, Annotated
 import operator
 
+
 class MessagesState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
     llm_calls: int
@@ -21,8 +22,8 @@ class MessagesState(TypedDict):
     event_metadata: Dict[str, Any]
     thread_id: str
     inbox_messages_added: int
-    conversation_summary: str
-    agent_memory: Dict[str, Any]  # Synced from remote at startup + after tools
+    agent_memory: Dict[str, Any]
+    compaction_state: Dict[str, Any]
 
 
 class Skill(TypedDict):

@@ -1,39 +1,41 @@
+import time
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage
 from core.agents.utils.state import MessagesState
 from core.logging import log
 
-def create_summarize_node(model, agent_name: str):
-    def summarize_node(state: MessagesState):
+
+def create_compaction_node(model, agent_name: str):
+    def compaction_node(state: MessagesState):
         messages = state["messages"]
-        
+
         thread_id = state.get("thread_id")
         agent_user_id = state.get("agent_user_id")
         llm_calls = state.get("llm_calls", 0)
-        
+
         RECENT_TO_KEEP = 6
-        
+
         other_msgs = [m for m in messages if not isinstance(m, SystemMessage)]
-        
+
         recent = other_msgs[-RECENT_TO_KEEP:] if len(other_msgs) > RECENT_TO_KEEP else other_msgs
         old = other_msgs[:-RECENT_TO_KEEP] if len(other_msgs) > RECENT_TO_KEEP else []
-        
+
         if not old:
-            return {"messages": messages}
-        
+            return {}
+
         log.info(
-            "summarizing_conversation",
+            "compacting_conversation",
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
-            node="summarizer_node",
-            extra={"messages_to_summarize": len(old)},
+            node="compaction_node",
+            extra={"messages_to_compact": len(old)},
         )
-        
+
         old_text = "\n".join([f"{m.type.upper()}: {m.content}" for m in old])
         summary_prompt = ChatPromptTemplate.from_messages([
             ("system", f"""You are {agent_name}. Summarize this conversation history CONCISELY.
-            
+
 Focus on:
 - Topics discussed (not verbatim data)
 - User requests and your responses
@@ -45,24 +47,41 @@ Output format:
 Keep under 150 words."""),
             ("human", "Conversation history to summarize:\n{old_text}"),
         ])
-        
+
         summary_response = model.invoke(
             summary_prompt.format_messages(old_text=old_text)
         )
-        
-        new_messages = recent
-        
+
+        now = int(time.time())
+        new_compaction = {
+            "summary": summary_response.content,
+            "message_offset": len(messages) - len(recent),
+            "compacted_at": now,
+        }
+
+        existing_compaction = state.get("compaction_state")
+        history = existing_compaction.get("history", []) if existing_compaction else []
+        history.append({
+            "summary": summary_response.content,
+            "compacted_at": now,
+        })
+
         log.debug(
-            "conversation_summarized",
+            "conversation_compacted",
             thread_id=thread_id,
             agent_user_id=agent_user_id,
             llm_calls=llm_calls,
-            node="summarizer_node",
-            extra={"summary": summary_response.content},
+            node="compaction_node",
+            extra={"summary": summary_response.content, "history_count": len(history)},
         )
-        
+
         return {
-            "conversation_summary": summary_response.content
+            "compaction_state": {
+                "summary": summary_response.content,
+                "message_offset": len(messages),
+                "compacted_at": now,
+                "history": history,
+            }
         }
-    
-    return summarize_node
+
+    return compaction_node

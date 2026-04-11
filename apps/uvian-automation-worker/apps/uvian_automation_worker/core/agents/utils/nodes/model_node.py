@@ -107,22 +107,29 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 memory_lines.append(f"### {key}")
                 memory_lines.append(json.dumps(value, indent=2))
             memory_section = "\n\n" + "\n".join(memory_lines)
-        
+
+        # Check for compaction state - prepend summary to system prompt, slice messages
+        compaction_state = state.get("compaction_state", {})
+        summary = compaction_state.get("summary", "")
+        message_offset = compaction_state.get("message_offset", 0)
+
+        if summary and message_offset > 0:
+            memory_section = "\n\n## Previous Conversation\n" + summary + memory_section
+            visible_messages = state["messages"][message_offset:]
+        else:
+            visible_messages = state["messages"]
+
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
-            custom_instructions= state.get("custom_instructions", "")
+            custom_instructions=state.get("custom_instructions", "")
         ) + mcps_section + skills_section + memory_section
-        
-        conversation_summary = state.get("conversation_summary", "")
-        if conversation_summary:
-            formatted_system_prompt = f"Previous Conversation Summary:\n{conversation_summary}\n\n" + formatted_system_prompt
-        
+
         loaded_mcp_tools = []
         for mcp in loaded_mcps:
             loaded_mcp_tools.extend(mcp.get("tools", []))
-        
+
         active_tools = list(base_tools) + list(loaded_mcp_tools)
-        
+
         log.debug(
             "llm_system_prompt",
             thread_id=thread_id,
@@ -134,7 +141,7 @@ def create_model_node(model, base_tools, mcp_registry=None):
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
         
-        messages = [SystemMessage(content=formatted_system_prompt)] + state["messages"]
+        messages = [SystemMessage(content=formatted_system_prompt)] + visible_messages
         
         log.info(
             "llm_invoking",
@@ -146,6 +153,8 @@ def create_model_node(model, base_tools, mcp_registry=None):
                 "total_messages": len(messages),
                 "system_prompt_length": len(formatted_system_prompt),
                 "state_messages_count": len(state.get("messages", [])),
+                "visible_messages_count": len(visible_messages),
+                "compaction_offset": message_offset if compaction_state else 0,
                 "last_message_type": messages[-1].type if messages else "none",
                 "last_message_content": str(messages[-1].content)[:200] if messages else "none",
             },
