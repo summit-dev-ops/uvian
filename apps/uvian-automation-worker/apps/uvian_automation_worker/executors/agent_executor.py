@@ -10,7 +10,6 @@ Uses the EventLoader composable module for unified event processing:
 Used by both initial event processing and thread-wakeup (inbox) processing.
 """
 from typing import List, Any
-from datetime import datetime, timezone
 from executors.base import BaseExecutor, JobData, JobResult
 from core.agents.universal_agent.agent import build_agent
 from core.agents.utils.loader import prepare_for_inbox_events
@@ -19,6 +18,7 @@ from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills
 from core.logging import log
 import uuid
+import json
 
 
 class AgentExecutor(BaseExecutor):
@@ -191,7 +191,25 @@ class AgentExecutor(BaseExecutor):
                 ):
                     full_response.append(part)
 
-                log.info("agent_full_response", thread_id=thread_id, extra=full_response)
+                # Log the final state with messages
+                if full_response and "messages" in full_response[-1]:
+                    final_messages = full_response[-1]["messages"]
+                    log.info(
+                        "agent_execution_final_messages",
+                        execution_id=execution_id,
+                        thread_id=thread_id,
+                        agent_user_id=agent_user_id,
+                        final_messages=json.dumps(final_messages, indent=2), # Pretty print the messages
+                    )
+                else:
+                    log.warning(
+                        "agent_execution_final_messages_not_found",
+                        execution_id=execution_id,
+                        thread_id=thread_id,
+                        agent_user_id=agent_user_id,
+                        message="No final messages found in the streamed response.",
+                    )
+
 
                 return {
                     "status": "completed",
