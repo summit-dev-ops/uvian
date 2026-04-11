@@ -8,8 +8,7 @@ def get_mcps_for_event(event_type: str, all_mcp_configs: List[Dict[str, Any]]) -
     1. Have matching auto_load_events for the event type
     2. Are marked as is_default=True (always loaded)
     
-    If no configs have auto_load_events or is_default set, falls back to returning
-    all MCP configs (backwards compatibility).
+    If no configs have auto_load_events or is_default set, returns empty list.
     """
     has_any_loading_config = any(
         cfg.get("auto_load_events") or cfg.get("is_default")
@@ -17,7 +16,7 @@ def get_mcps_for_event(event_type: str, all_mcp_configs: List[Dict[str, Any]]) -
     )
     
     if not has_any_loading_config:
-        return all_mcp_configs
+        return []
     
     matched = []
     seen_ids = set()
