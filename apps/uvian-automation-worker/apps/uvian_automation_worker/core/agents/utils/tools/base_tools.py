@@ -246,7 +246,10 @@ async def load_mcp(
     
     return Command(
         update={
-            "loaded_mcps": loaded_mcps + [new_mcp_entry]
+            "loaded_mcps": loaded_mcps + [new_mcp_entry],
+            "messages": [ToolMessage(response_text,
+                tool_call_id=runtime.tool_call_id,
+            )]
         }
     )
 
