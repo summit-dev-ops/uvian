@@ -105,8 +105,8 @@ class AgentExecutor(BaseExecutor):
         relevant_mcp_configs = unique_mcp_configs
         
         async with PersistentMCPClient() as persistent_client:
-            if relevant_mcp_configs:
-                for cfg in relevant_mcp_configs:
+            if all_mcp_configs:
+                for cfg in all_mcp_configs:
                     if cfg.get("url"):
                         persistent_client.add_server(
                             mcp_id=cfg["id"],
@@ -120,7 +120,7 @@ class AgentExecutor(BaseExecutor):
                 
                 await persistent_client.connect_all()
                 await persistent_client.fetch_all_metadata()
-            available_mcps_catalog = persistent_client.get_rich_catalog() if relevant_mcp_configs else []
+            available_mcps_catalog = persistent_client.get_rich_catalog() if all_mcp_configs else []
             mcp_registry = MCPRegistry(client=persistent_client)
             
             human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids = await prepare_for_inbox_events(
