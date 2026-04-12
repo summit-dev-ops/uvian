@@ -42,8 +42,7 @@ def build_agent(
     agent_builder.add_node("throttle_node", throttle_node)
 
     # Graph starts at fetch_agent_memory_node to load memory at startup
-    agent_builder.add_edge(START, "fetch_agent_memory_node")
-    agent_builder.add_edge("fetch_agent_memory_node", "throttle_node")
+    agent_builder.add_edge(START, "model_node")
 
     # Check context after throttling - handles routing (compaction vs model)
     agent_builder.add_conditional_edges(

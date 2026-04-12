@@ -84,8 +84,6 @@ apps/uvian-automation-worker/
             │   └── summarizer_node.py   # Context summarization
             ├── tools/
             │   ├── base_tools.py        # search_skills, load_skill, list_mcps, load_mcp
-            ├── edges/
-            │   └── should_continue.py   # Routing: tools vs END
             └── memory/
                 └── base_memory.py       # PostgresAsyncCheckpointer
 ```

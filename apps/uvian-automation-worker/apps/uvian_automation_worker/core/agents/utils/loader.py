@@ -77,37 +77,6 @@ def filter_mcps(event_types: List[str], mcp_configs: List[Dict[str, Any]]) -> Li
     
     return matched_configs
 
-
-def prepare_skill_messages(skills: List[Dict[str, Any]]) -> List[ToolMessage]:
-    """Create ToolMessages for skill contents.
-    
-    Args:
-        skills: List of skills to create messages for
-        
-    Returns:
-        List of ToolMessages containing skill contents
-    """
-    messages = []
-    
-    for skill in skills:
-        skill_name = skill.get("name", "unknown")
-        content = skill.get("content", {})
-        
-        if isinstance(content, dict):
-            formatted_content = flatten_skill_content(content)
-        elif isinstance(content, str):
-            formatted_content = content
-        else:
-            formatted_content = str(content)
-        
-        messages.append(ToolMessage(
-            content=f"Loaded skill: {skill_name}\n\n{formatted_content}",
-            tool_call_id=f"preload-skill-{skill_name}",
-        ))
-    
-    return messages
-
-
 async def load_mcps(
     mcp_configs: List[Dict[str, Any]],
     persistent_client

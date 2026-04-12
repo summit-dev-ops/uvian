@@ -36,7 +36,7 @@ Rules:
 """
 
 def create_model_node(model, base_tools):
-    async def llm_call(state: dict):
+    async def model_node(state: dict):
         thread_id = state.get("thread_id")
         agent_user_id = state.get("agent_user_id")
         llm_calls = state.get("llm_calls", 0)
@@ -205,4 +205,4 @@ def create_model_node(model, base_tools):
             "llm_calls": new_llm_calls
         }
     
-    return llm_call
+    return model_node
