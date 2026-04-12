@@ -5,7 +5,7 @@ from core.agents.utils.state import MessagesState
 from core.logging import log
 
 
-def create_compaction_node(model, agent_name: str):
+def create_compaction_node(model):
     def compaction_node(state: MessagesState):
         messages = state["messages"]
 
@@ -34,7 +34,7 @@ def create_compaction_node(model, agent_name: str):
 
         old_text = "\n".join([f"{m.type.upper()}: {m.content}" for m in old])
         summary_prompt = ChatPromptTemplate.from_messages([
-            ("system", f"""You are {agent_name}. Summarize this conversation history CONCISELY.
+            ("system", f"""Summarize this conversation history CONCISELY.
 
 Focus on:
 - Topics discussed (not verbatim data)

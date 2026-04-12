@@ -199,14 +199,8 @@ class AgentExecutor(BaseExecutor):
                 ):
                     full_response.append(part)
                     final_response = part
-
-                log.info(
-                        "agent_execution_final_messages",
-                        execution_id=execution_id,
-                        thread_id=thread_id,
-                        agent_user_id=agent_user_id,
-                        final_messages=json.dumps(final_response, indent=2), # Pretty print the messages
-                    )
+                    
+                print(final_response)
 
                 return {
                     "status": "completed",
