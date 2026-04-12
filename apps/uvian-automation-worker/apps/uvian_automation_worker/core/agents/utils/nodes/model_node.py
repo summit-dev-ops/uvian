@@ -57,6 +57,7 @@ def create_model_node(model, base_tools):
             loaded_mcp_tools.extend(mcp.get("tools", []))
         
         active_tools = list(base_tools) + list(loaded_mcp_tools)
+        print(active_tools)
         bound_tool_names = [t.name for t in active_tools] if active_tools else []
         
         log.info(

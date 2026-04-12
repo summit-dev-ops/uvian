@@ -1,6 +1,7 @@
 from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
 from langchain_core.messages import ToolMessage
+from clients.mcp import MCPRegistry
 
 
 def flatten_skill_content(content: dict, prefix: str = "") -> str:
@@ -224,7 +225,6 @@ async def load_mcp(
             }
         )
     
-    from clients.mcp import MCPRegistry
     tools = []
     if isinstance(registry, MCPRegistry):
         mcp_id = mcp_info.get("id")
