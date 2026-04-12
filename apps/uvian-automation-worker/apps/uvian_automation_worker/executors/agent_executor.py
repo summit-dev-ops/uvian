@@ -207,26 +207,6 @@ class AgentExecutor(BaseExecutor):
                         agent_user_id=agent_user_id,
                         final_messages=json.dumps(final_response, indent=2), # Pretty print the messages
                     )
-                
-                # Log the final state with messages
-                if full_response and "messages" in full_response[-1]:
-                    final_messages = full_response[-1]["messages"]
-                    log.info(
-                        "agent_execution_final_messages",
-                        execution_id=execution_id,
-                        thread_id=thread_id,
-                        agent_user_id=agent_user_id,
-                        final_messages=json.dumps(final_messages, indent=2), # Pretty print the messages
-                    )
-                else:
-                    log.warning(
-                        "agent_execution_final_messages_not_found",
-                        execution_id=execution_id,
-                        thread_id=thread_id,
-                        agent_user_id=agent_user_id,
-                        message="No final messages found in the streamed response.",
-                    )
-
 
                 return {
                     "status": "completed",

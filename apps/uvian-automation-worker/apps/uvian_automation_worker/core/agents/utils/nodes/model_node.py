@@ -35,8 +35,8 @@ Rules:
 - When the event is handled, simply summarise what you did with text.
 """
 
-def create_model_node(model, base_tools, mcp_registry=None):
-    async def llm_call(state: dict, config: RunnableConfig):
+def create_model_node(model, base_tools):
+    async def llm_call(state: dict):
         thread_id = state.get("thread_id")
         agent_user_id = state.get("agent_user_id")
         llm_calls = state.get("llm_calls", 0)
@@ -143,16 +143,6 @@ def create_model_node(model, base_tools, mcp_registry=None):
             loaded_mcp_tools.extend(mcp.get("tools", []))
 
         active_tools = list(base_tools) + list(loaded_mcp_tools)
-
-        log.debug(
-            "llm_system_prompt",
-            thread_id=thread_id,
-            agent_user_id=agent_user_id,
-            llm_calls=llm_calls,
-            execution_id=execution_id,
-            node="model_node",
-            extra={"formatted_system_prompt": formatted_system_prompt},
-        )
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
         
