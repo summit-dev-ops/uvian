@@ -145,6 +145,7 @@ class AgentExecutor(BaseExecutor):
             
             available_mcps = [
                 {
+                    "id": cfg.get("id"),
                     "name": cfg.get("name", ""),
                     "description": cfg.get("usage_guidance", ""),
                     "tool_names": [
