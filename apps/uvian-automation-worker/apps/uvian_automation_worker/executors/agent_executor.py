@@ -189,6 +189,7 @@ class AgentExecutor(BaseExecutor):
                 config["configurable"]["mcp_registry"] = mcp_registry
             
             full_response: List[Any] = []
+            final_response = {}
             try:
                 agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
                 async for part in agent.astream(
@@ -197,7 +198,16 @@ class AgentExecutor(BaseExecutor):
                     stream_mode=["values","messages"],
                 ):
                     full_response.append(part)
+                    final_response = part
 
+                log.info(
+                        "agent_execution_final_messages",
+                        execution_id=execution_id,
+                        thread_id=thread_id,
+                        agent_user_id=agent_user_id,
+                        final_messages=json.dumps(final_response, indent=2), # Pretty print the messages
+                    )
+                
                 # Log the final state with messages
                 if full_response and "messages" in full_response[-1]:
                     final_messages = full_response[-1]["messages"]
