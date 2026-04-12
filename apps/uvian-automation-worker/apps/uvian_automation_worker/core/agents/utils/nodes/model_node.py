@@ -81,7 +81,7 @@ def create_model_node(model, base_tools):
         unloaded_skills = [s for s in available_skills if s.get("name") not in loaded_skill_names]
         if unloaded_skills:
             skills_list = [f"- **{s['name']}**: {s.get('description', '')}" for s in unloaded_skills]
-            skills_section += "\n\n## Available Skills\n\n" + "\n".join(skills_list)
+            skills_section += "\n\n## Skills you can load\n\n" + "\n".join(skills_list)
         
         if loaded_skills:
             loaded_list = [f"### {s['name']}\n{s.get('content', '')}" for s in loaded_skills if s.get("name")]
@@ -102,7 +102,7 @@ def create_model_node(model, base_tools):
                 if len(tool_names) > 5:
                     tool_str += f" (+{len(tool_names) - 5} more)"
                 mcps_list.append(f"- **{m.get('name', 'unknown')}**: {m.get('description', '')} (tools: {tool_str})")
-            mcps_section += "\n\n## Available MCP Servers\n\n" + "\n".join(mcps_list)
+            mcps_section += "\n\n## MCP Servers you can load\n\n" + "\n".join(mcps_list)
         
         if loaded_mcps:
             loaded_mcp_list = []
