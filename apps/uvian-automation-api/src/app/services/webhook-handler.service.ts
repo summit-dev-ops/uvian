@@ -22,10 +22,10 @@ export class WebhookHandlerService {
 
   async handleEvent(
     envelope: WebhookEnvelope,
-    agentId?: string
+    agentId?: string,
   ): Promise<WebhookResponse> {
     console.log(
-      `[webhook] Incoming event: type=${envelope.type}, id=${envelope.id}, source=${envelope.source}, agentId=${agentId}`
+      `[webhook] Incoming event: type=${envelope.type}, id=${envelope.id}, source=${envelope.source}, agentId=${agentId}`,
     );
 
     const alreadyProcessed = await this.isEventProcessed(envelope.id);
@@ -55,16 +55,35 @@ export class WebhookHandlerService {
       const threadId = generateThreadId(
         agentId,
         envelope.type,
-        envelope.data as Record<string, unknown>
+        envelope.data as Record<string, unknown>,
       );
       console.log(
-        `[webhook] Generated threadId: ${threadId} for event ${envelope.id}`
+        `[webhook] Generated threadId: ${threadId} for event ${envelope.id}`,
       );
 
       await threadInboxService.insertEvent(threadId, agentId, envelope);
       console.log(
-        `[webhook] Inserted into thread_inbox for threadId=${threadId}`
+        `[webhook] Inserted into thread_inbox for threadId=${threadId}`,
       );
+
+      const { data: existingJob } = await adminSupabase
+        .schema('core_automation')
+        .from('jobs')
+        .select('id')
+        .eq('input->>threadId', threadId)
+        .in('status', ['queued', 'pending', 'processing'])
+        .maybeSingle();
+
+      if (existingJob) {
+        console.log(
+          `[webhook] Active job exists for threadId=${threadId}, skipping job creation`,
+        );
+        return {
+          accepted: true,
+          event_id: envelope.id,
+          message: 'Event queued to existing job',
+        };
+      }
 
       const jobId = randomUUID();
       const { error: jobError } = await adminSupabase
@@ -99,7 +118,7 @@ export class WebhookHandlerService {
     } catch (error) {
       console.error(
         `[webhook] Error processing event ${envelope.type}:`,
-        error
+        error,
       );
       return {
         accepted: true,

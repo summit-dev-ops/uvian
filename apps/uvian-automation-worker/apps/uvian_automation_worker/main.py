@@ -108,6 +108,7 @@ async def process_job(job, token):
     if job_type == "thread-wakeup":
         log.info("thread_wakeup_detected", job_id=job_id)
         job_type = "agent"
+        job_repository.update_job(job_id, {"status": "processing"})
     
     # 3. Resolve executor using dependency injection
     try:
