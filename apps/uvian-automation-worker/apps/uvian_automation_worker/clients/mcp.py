@@ -59,6 +59,48 @@ class PersistentMCPClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
+    def register_all(self, mcp_configs: list):
+        """Register all MCP server configurations without connecting.
+
+        Allows all MCPs to be known to the client for dynamic loading later,
+        while only connecting the subset needed for the current run.
+
+        Args:
+            mcp_configs: List of MCP configuration dicts with keys like:
+                id, url, auth_method, _auth_secret, _jwt_secret, name, usage_guidance
+        """
+        for cfg in mcp_configs:
+            if not cfg.get("url"):
+                continue
+            self.add_server(
+                mcp_id=cfg.get("id", ""),
+                url=cfg["url"],
+                auth_method=cfg.get("auth_method", "bearer"),
+                auth_secret=cfg.get("_auth_secret"),
+                jwt_secret=cfg.get("_jwt_secret"),
+                name=cfg.get("name"),
+                usage_guidance=cfg.get("usage_guidance"),
+            )
+
+    async def connect_and_load(self, mcp_ids_or_names: list[str]):
+        """Connect to specific MCP servers and fetch their metadata.
+
+        Accepts MCP IDs or friendly names. Only connects the requested subset,
+        enabling lazy loading of MCPs not needed at initialization.
+
+        Args:
+            mcp_ids_or_names: List of MCP IDs or friendly names to connect
+        """
+        for mcp_id_or_name in mcp_ids_or_names:
+            try:
+                await asyncio.wait_for(self.connect(mcp_id_or_name), timeout=15)
+            except asyncio.TimeoutError:
+                log.warning("mcp_connection_timeout", mcp_id=mcp_id_or_name)
+            except Exception as e:
+                log.warning("mcp_connect_failed", mcp_id=mcp_id_or_name, error=str(e))
+
+        await self.fetch_all_metadata()
+
     def add_server(self, mcp_id: str, url: str, auth_method: str, auth_secret: str | None, jwt_secret: str | None = None, name: str | None = None, usage_guidance: str | None = None):
         """Register an MCP server configuration. Does NOT connect yet."""
         self._connections[mcp_id] = _build_connection_config(url, auth_method, auth_secret, jwt_secret)
