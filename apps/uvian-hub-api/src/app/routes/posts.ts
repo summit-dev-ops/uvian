@@ -163,21 +163,15 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        const result = await createPost(getClients(request), {
-          id,
-          spaceId,
-          userId,
-          contents,
-        });
-
-        fastify.services.eventEmitter.emitPostCreated(
+        const result = await createPost(
+          getClients(request),
           {
-            postId: result.post.id,
-            content: JSON.stringify(contents),
-            authorId: userId,
+            id,
             spaceId,
+            userId,
+            contents,
           },
-          userId,
+          { eventEmitter: fastify.services.eventEmitter },
         );
 
         reply.code(201).send(result.post);
