@@ -30,7 +30,7 @@ export function createPostScopedService(
       const items = hasMore ? data.slice(0, -1) : data;
 
       const postIds = (items || []).map((item) => item.id);
-      let contentsMap: Record<string, PostContent[]> = {};
+      const contentsMap: Record<string, PostContent[]> = {};
 
       if (postIds.length > 0) {
         const { data: contents } = await clients.userClient
