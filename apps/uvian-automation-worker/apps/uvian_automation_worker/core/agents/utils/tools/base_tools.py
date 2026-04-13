@@ -2,6 +2,7 @@ from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
 from langchain_core.messages import ToolMessage
 from clients.mcp import MCPRegistry
+from core.agents.utils.tools.base_tools import flatten_skill_content
 
 
 def flatten_skill_content(content: dict, prefix: str = "") -> str:
@@ -92,9 +93,7 @@ def load_skill(
             )]
         })
     
-    from core.agents.utils.tools.base_tools import flatten_skill_content
     
-    from core.agents.utils.tools.base_tools import flatten_skill_content
     content = skill_info.get("content", "")
     if isinstance(content, dict):
         formatted_content = flatten_skill_content(content)

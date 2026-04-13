@@ -14,7 +14,6 @@ from langchain_core.tools import BaseTool
 from core.agents.event_transformers import EventTransformerRegistry, EventMessage
 from core.agents.utils.skill_mapping import get_skills_for_event
 from core.agents.utils.mcp_mapping import get_mcps_for_event
-from core.agents.utils.tools.base_tools import flatten_skill_content
 
 
 def transform_event(event_type: str, event_data: Dict[str, Any]) -> Optional[HumanMessage]:
