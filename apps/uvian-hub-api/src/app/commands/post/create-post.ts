@@ -17,7 +17,7 @@ export async function createPost(
 ): Promise<CreatePostCommandOutput> {
   const post = await postService
     .scoped(clients)
-    .createPost({ spaceId: input.spaceId, userId: input.userId });
+    .createPost({ id: input.id, spaceId: input.spaceId, userId: input.userId });
 
   const contents = input.contents || [];
   for (let i = 0; i < contents.length; i++) {

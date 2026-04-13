@@ -10,6 +10,7 @@ export interface PostContentInput {
 }
 
 export interface CreatePostCommandInput {
+  id?: string;
   spaceId: string;
   userId: string;
   contents?: PostContentInput[];

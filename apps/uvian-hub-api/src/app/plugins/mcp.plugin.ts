@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createUserClient, adminSupabase } from '../clients/supabase.client';
+import { createPost } from '../commands/post';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { Services } from './services';
@@ -24,7 +25,7 @@ const jwtCache = new Map<string, { jwt: string; expiresAt: number }>();
 const JWT_TTL_MS = 50 * 60 * 1000;
 
 async function authenticateWithApiKey(
-  apiKey: string
+  apiKey: string,
 ): Promise<{ userId: string; jwt: string } | null> {
   if (!apiKey.startsWith('sk_agent_')) {
     return null;
@@ -98,7 +99,7 @@ function extractUserIdFromJwt(token: string): string {
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   async function createAuthenticatedServer(
     userId: string,
-    userJwt: string
+    userJwt: string,
   ): Promise<McpServer> {
     const userClient = createUserClient(userJwt);
     const clients = { adminClient: adminSupabase, userClient };
@@ -114,7 +115,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           resources: {},
           prompts: {},
         },
-      }
+      },
     );
 
     server.registerTool(
@@ -136,7 +137,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // READ TOOLS - Conversations
@@ -159,7 +160,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -183,7 +184,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -209,7 +210,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // READ TOOLS - Posts
@@ -239,7 +240,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -263,7 +264,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // WRITE TOOLS - Conversations
@@ -293,7 +294,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -323,7 +324,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // WRITE TOOLS - Spaces
@@ -355,7 +356,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -379,7 +380,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -399,7 +400,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -419,7 +420,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -454,7 +455,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -474,7 +475,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -505,7 +506,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -532,7 +533,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -552,7 +553,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -576,7 +577,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -602,7 +603,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -625,7 +626,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -651,7 +652,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -675,7 +676,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -701,7 +702,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -724,7 +725,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -750,7 +751,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -791,7 +792,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -811,7 +812,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -834,7 +835,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -854,7 +855,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               userId,
               args.conversationId,
               args.messageId,
-              args.content
+              args.content,
             );
           return { content: [{ type: 'text', text: JSON.stringify(message) }] };
         } catch (error) {
@@ -863,7 +864,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -887,7 +888,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -907,7 +908,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -936,7 +937,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -968,7 +969,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -988,7 +989,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -1012,7 +1013,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -1023,6 +1024,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'create_post',
       {
         inputSchema: z.object({
+          id: z.string().optional(),
           spaceId: z.string(),
           contents: z
             .array(
@@ -1037,59 +1039,27 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
                 noteId: z.string().optional(),
                 assetId: z.string().optional(),
                 url: z.string().optional(),
-              })
+              }),
             )
             .optional(),
         }),
       },
       async (args): Promise<ToolResult> => {
         try {
-          // Bypassed getUser() - using injected userId directly
-          const post = await fastify.services.post.scoped(clients).createPost({
-            spaceId: args.spaceId,
-            userId: userId,
-          });
-
-          // Process contents
-          const contents = args.contents || [];
-          for (let i = 0; i < contents.length; i++) {
-            const item = contents[i];
-            let noteId = item.noteId;
-
-            if (item.type === 'note' && item.note?.title) {
-              const createdNote = await fastify.services.note
-                .scoped(clients)
-                .createNote(
-                  userId, // Injected userId
-                  {
-                    id: item.noteId, // Optional ID passing
-                    spaceId: args.spaceId,
-                    title: item.note.title,
-                    body: item.note.body,
-                  }
-                );
-              noteId = createdNote.id;
-            }
-
-            await adminSupabase
-              .schema('core_hub')
-              .from('post_contents')
-              .insert({
-                post_id: post.id,
-                content_type: item.type,
-                note_id: noteId,
-                asset_id: item.assetId,
-                url: item.url,
-                position: i,
-              });
-          }
-
-          // Return full post
-          const fullPost = await fastify.services.post
-            .scoped(clients)
-            .getPost(post.id);
+          const result = await createPost(
+            clients,
+            {
+              id: args.id,
+              spaceId: args.spaceId,
+              userId: userId,
+              contents: args.contents,
+            },
+            {
+              eventEmitter: fastify.services.eventEmitter,
+            },
+          );
           return {
-            content: [{ type: 'text', text: JSON.stringify(fullPost) }],
+            content: [{ type: 'text', text: JSON.stringify(result.post) }],
           };
         } catch (error) {
           return {
@@ -1097,7 +1067,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     // ==========================================
@@ -1126,7 +1096,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
     async function validateResourceExists(
       resourceType: ResourceType,
-      resourceId: string
+      resourceId: string,
     ): Promise<{ exists: boolean; spaceId?: string; error?: string }> {
       const tableMap: Record<
         ResourceType,
@@ -1192,7 +1162,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         console.log(
           '[generate_share_link] Resource not found:',
           resourceType,
-          resourceId
+          resourceId,
         );
         return { exists: false };
       }
@@ -1231,7 +1201,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
           const validation = await validateResourceExists(
             resourceType,
-            resourceId
+            resourceId,
           );
 
           console.log('[generate_share_link] Validation result:', validation);
@@ -1289,8 +1259,8 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               view === 'default'
                 ? `/spaces/${resourceId}`
                 : view === 'edit'
-                ? `/spaces/${resourceId}/edit`
-                : `/spaces/${resourceId}/members`;
+                  ? `/spaces/${resourceId}/edit`
+                  : `/spaces/${resourceId}/members`;
           } else if (resourceType === 'conversation') {
             fullPath =
               view === 'members'
@@ -1325,7 +1295,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     console.log('[MCP] Server created with tools');
@@ -1417,7 +1387,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
       console.log(
         '[MCP] handleRequest returned, status:',
-        reply.raw.statusCode
+        reply.raw.statusCode,
       );
       console.log('[MCP] ========== POST /v1/mcp END ==========');
     } catch (error) {
