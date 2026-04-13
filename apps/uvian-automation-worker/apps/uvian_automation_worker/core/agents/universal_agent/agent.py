@@ -20,7 +20,7 @@ def build_agent(
     llm_config: Optional[Dict[str, Any]] = None,
     mcp_registry: Optional[MCPRegistry] = None,
 ) -> Any:
-    base_tools = base_tools.copy()
+    default_tools = base_tools.copy()
 
     llm_cfg = llm_config or {}
     llm = create_openai_model(llm_cfg)
@@ -28,9 +28,9 @@ def build_agent(
     checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
 
-    model_node = create_model_node(llm, base_tools, mcp_registry=mcp_registry)
+    model_node = create_model_node(llm, default_tools, mcp_registry=mcp_registry)
     compaction_node = create_compaction_node(llm)
-    tool_node = ToolNode(base_tools, handle_tool_errors=True, mcp_registry=mcp_registry)
+    tool_node = ToolNode(default_tools, handle_tool_errors=True, mcp_registry=mcp_registry)
 
     agent_builder.add_node("fetch_inbox_node", fetch_inbox_node)
     agent_builder.add_node("fetch_agent_memory_node", fetch_agent_memory_node)
