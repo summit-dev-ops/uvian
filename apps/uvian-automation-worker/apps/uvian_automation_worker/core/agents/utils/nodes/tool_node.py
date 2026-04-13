@@ -39,6 +39,7 @@ Typical Usage:
 
 from __future__ import annotations
 
+from clients.mcp import MCPRegistry
 import asyncio
 import inspect
 import json
@@ -791,7 +792,6 @@ class ToolNode(RunnableCallable):
         if tool_name in self._mcp_tool_cache:
             return self._mcp_tool_cache[tool_name]
         try:
-            from clients.mcp import MCPRegistry
             if not isinstance(self._mcp_registry, MCPRegistry):
                 return None
             if not self._mcp_registry._client:
@@ -812,7 +812,6 @@ class ToolNode(RunnableCallable):
         if tool_name in self._mcp_tool_cache:
             return self._mcp_tool_cache[tool_name]
         try:
-            from clients.mcp import MCPRegistry
             if not isinstance(self._mcp_registry, MCPRegistry):
                 return None
             if not self._mcp_registry._client:
