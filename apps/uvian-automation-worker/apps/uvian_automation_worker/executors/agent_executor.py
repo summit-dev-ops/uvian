@@ -71,7 +71,6 @@ class AgentExecutor(BaseExecutor):
         all_mcp_configs = secrets.get("mcps", [])
         all_skills = await get_agent_skills(agent_user_id)
         
-        mcp_tools = []
         mcp_registry = None
         available_mcps = []
         
@@ -118,7 +117,7 @@ class AgentExecutor(BaseExecutor):
             available_mcps_catalog = persistent_client.get_rich_catalog() if all_mcp_configs else []
             mcp_registry = MCPRegistry(client=persistent_client)
             
-            human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids = await prepare_for_inbox_events(
+            human_messages, matched_skills, matched_mcp_names, processed_ids = await prepare_for_inbox_events(
                 pending_messages=pending_messages,
                 skills=all_skills,
                 mcp_configs=relevant_mcp_configs,
@@ -187,7 +186,7 @@ class AgentExecutor(BaseExecutor):
             full_response: List[Any] = []
             final_response = {}
             try:
-                agent = build_agent(mcp_tools, llm_config, mcp_registry)
+                agent = build_agent(llm_config, mcp_registry)
                 async for part in agent.astream(
                     agent_input,
                     config=config,

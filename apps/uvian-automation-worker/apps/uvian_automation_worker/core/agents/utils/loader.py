@@ -143,7 +143,7 @@ async def prepare_for_inbox_events(
     matched_skills = filter_skills(unique_event_types, skills)
     
     matched_mcp_configs = filter_mcps(unique_event_types, mcp_configs)
-    _, mcp_tools = await load_mcps(matched_mcp_configs, persistent_client)
+    _, _ = await load_mcps(matched_mcp_configs, persistent_client)
     matched_mcp_names = [c.get("name", c.get("id", "")) for c in matched_mcp_configs]
     
     human_messages = []
@@ -158,4 +158,4 @@ async def prepare_for_inbox_events(
         human_messages.append(event_message)
         processed_ids.append(message_id)
     
-    return human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids
+    return human_messages, matched_skills, matched_mcp_names, processed_ids

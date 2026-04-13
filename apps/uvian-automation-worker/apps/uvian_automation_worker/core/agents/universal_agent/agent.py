@@ -16,7 +16,6 @@ from clients.mcp import MCPRegistry
 
 
 def build_agent(
-    mcp_tools: Optional[List[BaseTool]] = None,
     llm_config: Optional[Dict[str, Any]] = None,
     mcp_registry: Optional[MCPRegistry] = None,
 ) -> Any:
