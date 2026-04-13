@@ -35,7 +35,7 @@ Rules:
 - When the event is handled, simply summarise what you did with text.
 """
 
-def create_model_node(model, base_tools):
+def create_model_node(model, base_tools, mcp_registry):
     async def model_node(state: dict):
         thread_id = state.get("thread_id")
         agent_user_id = state.get("agent_user_id")
@@ -51,12 +51,8 @@ def create_model_node(model, base_tools):
         loaded_mcps = state.get("loaded_mcps", [])
         loaded_mcp_names = [m.get("name") for m in loaded_mcps if m.get("name")]
         available_mcp_names = [m.get("name") for m in available_mcps if m.get("name")]
-        
-        loaded_mcp_tools = []
-        for mcp in loaded_mcps:
-            loaded_mcp_tools.extend(mcp.get("tools", []))
-        
-        active_tools = list(base_tools) + list(loaded_mcp_tools)
+
+        active_tools = list(base_tools) + await mcp_registry.get_all_tools()
         bound_tool_names = [t.name for t in active_tools] if active_tools else []
         
         log.info(

@@ -169,6 +169,58 @@ class PersistentMCPClient:
             })
         return result
 
+    async def get_all_tools(self) -> Dict[str, List[BaseTool]]:
+        """Load and return tools from all connected MCPs.
+        
+        Returns a dict mapping mcp_id to list of tools for each server."""
+        result = {}
+        for mcp_id in self._connections:
+            try:
+                tools = await self.load_tools(mcp_id)
+                result[mcp_id] = tools
+            except Exception as e:
+                log.warning("mcp_load_tools_failed", mcp_id=mcp_id, error=str(e))
+                result[mcp_id] = []
+        return result
+
+    async def get_all_metadata(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Fetch and return metadata from all MCPs.
+        
+        Returns a dict mapping mcp_id to list of tool metadata for each server."""
+        result = {}
+        for mcp_id in self._connections:
+            try:
+                metadata = await self.get_tool_metadata(mcp_id)
+                result[mcp_id] = metadata
+            except Exception as e:
+                log.warning("mcp_get_metadata_failed", mcp_id=mcp_id, error=str(e))
+                result[mcp_id] = []
+        return result
+
+    async def get_tools_by_name(self, mcp_name: str) -> List[BaseTool]:
+        """Load tools from an MCP server by its friendly name.
+        
+        Convenience method that resolves a friendly name to mcp_id."""
+        if mcp_name in self._name_to_id:
+            mcp_id = self._name_to_id[mcp_name]
+        elif mcp_name in self._connections:
+            mcp_id = mcp_name
+        else:
+            raise ValueError(f"MCP server '{mcp_name}' is not registered.")
+        return await self.load_tools(mcp_id)
+
+    async def get_metadata_by_name(self, mcp_name: str) -> List[Dict[str, Any]]:
+        """Fetch metadata from an MCP server by its friendly name.
+        
+        Convenience method that resolves a friendly name to mcp_id."""
+        if mcp_name in self._name_to_id:
+            mcp_id = self._name_to_id[mcp_name]
+        elif mcp_name in self._connections:
+            mcp_id = mcp_name
+        else:
+            raise ValueError(f"MCP server '{mcp_name}' is not registered.")
+        return await self.get_tool_metadata(mcp_id)
+
     async def close(self):
         """Safely close all persistent sessions and anyio background tasks."""
         await self.exit_stack.aclose()
@@ -188,6 +240,11 @@ class MCPRegistry:
             return []
         return await self._client.load_tools(mcp_id)
 
+    async def get_all_tools(self) -> Dict[str, List[BaseTool]]:
+        if not self._client:
+            return {}
+        return await self._client.get_all_tools()
+    
     async def close(self):
         if self._client:
             await self._client.close()

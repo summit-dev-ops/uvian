@@ -30,7 +30,7 @@ def build_agent(
     checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
 
-    model_node = create_model_node(llm, tools)
+    model_node = create_model_node(llm, tools, mcp_registry=mcp_registry)
     compaction_node = create_compaction_node(llm)
     tool_node = ToolNode(tools, handle_tool_errors=True, mcp_registry=mcp_registry)
 

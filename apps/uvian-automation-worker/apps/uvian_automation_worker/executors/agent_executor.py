@@ -121,7 +121,7 @@ class AgentExecutor(BaseExecutor):
             human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids = await prepare_for_inbox_events(
                 pending_messages=pending_messages,
                 skills=all_skills,
-                mcp_configs=all_mcp_configs,
+                mcp_configs=relevant_mcp_configs,
                 persistent_client=persistent_client,
             )
             
@@ -187,7 +187,7 @@ class AgentExecutor(BaseExecutor):
             full_response: List[Any] = []
             final_response = {}
             try:
-                agent = build_agent(mcp_tools, llm_config, mcp_registry=mcp_registry)
+                agent = build_agent(mcp_tools, llm_config, mcp_registry)
                 async for part in agent.astream(
                     agent_input,
                     config=config,

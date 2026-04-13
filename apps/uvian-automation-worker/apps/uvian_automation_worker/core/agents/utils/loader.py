@@ -115,41 +115,6 @@ async def load_mcps(
     return info_messages, loaded_tools
 
 
-async def prepare_for_events(
-    event_type: str,
-    event_data: Dict[str, Any],
-    skills: List[Dict[str, Any]],
-    mcp_configs: List[Dict[str, Any]],
-    persistent_client
-) -> Tuple[HumanMessage, List[BaseTool], List[Dict[str, Any]], List[str]]:
-    """Composed function: transform event and load related MCPs/skills.
-    
-    This is the main entry point that combines:
-    1. Event -> HumanMessage transformation
-    2. Skills filtering (returns full skill objects)
-    3. MCPs filtering and tool loading
-    
-    Args:
-        event_type: The type of event
-        event_data: The event payload
-        skills: All available skills
-        mcp_configs: All available MCP configurations
-        persistent_client: PersistentMCPClient for MCP connections
-        
-    Returns:
-        Tuple of (human_message, mcp_tools, matched_skills, matched_mcp_names)
-    """
-    event_message = transform_event(event_type, event_data)
-    
-    matched_skills = filter_skills([event_type], skills)
-    
-    matched_mcp_configs = filter_mcps([event_type], mcp_configs)
-    _, mcp_tools = await load_mcps(matched_mcp_configs, persistent_client)
-    matched_mcp_names = [c.get("name", c.get("id", "")) for c in matched_mcp_configs]
-    
-    return event_message, mcp_tools, matched_skills, matched_mcp_names
-
-
 async def prepare_for_inbox_events(
     pending_messages: List[Dict[str, Any]],
     skills: List[Dict[str, Any]],
