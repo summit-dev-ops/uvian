@@ -16,10 +16,10 @@ from core.agents.utils.loader import prepare_for_inbox_events
 from clients.mcp import PersistentMCPClient, MCPRegistry
 from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills
+from repositories.thread_inbox import thread_inbox_repository
+from core.agents.utils.mcp_mapping import get_mcps_for_event
 from core.logging import log
 import uuid
-import json
-
 
 class AgentExecutor(BaseExecutor):
     
@@ -75,26 +75,21 @@ class AgentExecutor(BaseExecutor):
         mcp_registry = None
         available_mcps = []
         
-        from repositories.thread_inbox import thread_inbox_repository
         pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
         
-        from core.agents.utils.mcp_mapping import get_mcps_for_event
         event_types = list(set(msg["event_type"] for msg in pending_messages)) if pending_messages else []
         
         relevant_mcp_configs = []
         
         if event_types:
-            # Load MCPs matching event types or marked as default
             for event_type in event_types:
                 matched = get_mcps_for_event(event_type, all_mcp_configs)
                 relevant_mcp_configs.extend(matched)
         else:
-            # No specific events - still load default MCPs
             for cfg in all_mcp_configs:
                 if cfg.get("is_default"):
                     relevant_mcp_configs.append(cfg)
         
-        from collections import defaultdict
         seen = {}
         unique_mcp_configs = []
         for cfg in relevant_mcp_configs:
@@ -126,7 +121,7 @@ class AgentExecutor(BaseExecutor):
             human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids = await prepare_for_inbox_events(
                 pending_messages=pending_messages,
                 skills=all_skills,
-                mcp_configs=relevant_mcp_configs,
+                mcp_configs=all_mcp_configs,
                 persistent_client=persistent_client,
             )
             

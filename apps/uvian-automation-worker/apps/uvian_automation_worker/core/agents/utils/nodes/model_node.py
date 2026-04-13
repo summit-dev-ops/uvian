@@ -57,7 +57,6 @@ def create_model_node(model, base_tools):
             loaded_mcp_tools.extend(mcp.get("tools", []))
         
         active_tools = list(base_tools) + list(loaded_mcp_tools)
-        print(active_tools)
         bound_tool_names = [t.name for t in active_tools] if active_tools else []
         
         log.info(
@@ -88,9 +87,6 @@ def create_model_node(model, base_tools):
             loaded_list = [f"### {s['name']}\n{s.get('content', '')}" for s in loaded_skills if s.get("name")]
             skills_section += "\n\n## Loaded Skills\n\n" + "\n\n".join(loaded_list)
         
-        available_mcps = state.get("available_mcps", [])
-        loaded_mcps = state.get("loaded_mcps", [])
-        loaded_mcp_names = [m.get("name") for m in loaded_mcps if m.get("name")]
         
         mcps_section = ""
         
@@ -138,12 +134,6 @@ def create_model_node(model, base_tools):
             agent_name=state.get("agent_name", "AI Assistant"),
             custom_instructions=state.get("custom_instructions", "")
         ) + mcps_section + skills_section + memory_section
-
-        loaded_mcp_tools = []
-        for mcp in loaded_mcps:
-            loaded_mcp_tools.extend(mcp.get("tools", []))
-
-        active_tools = list(base_tools) + list(loaded_mcp_tools)
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
         
