@@ -23,7 +23,6 @@ export interface ListJobsFilters {
 export interface JobRecord {
   id: string;
   type: string;
-  inputType: string;
   status: string;
   input: Record<string, unknown>;
   output: Record<string, unknown> | null;
@@ -32,8 +31,6 @@ export interface JobRecord {
   updatedAt: string;
   startedAt: string | null;
   completedAt: string | null;
-  threadId: string | null;
-  agentId: string | null;
 }
 
 export interface ListJobsResult {
@@ -47,7 +44,7 @@ export interface ListJobsResult {
 export interface JobScopedService {
   createEventJob(payload: CreateEventJobPayload): Promise<string>;
   createJob(
-    payload: CreateJobPayload
+    payload: CreateJobPayload,
   ): Promise<{ jobId: string; status: string }>;
   listJobs(filters?: ListJobsFilters): Promise<ListJobsResult>;
   getJobsForUser(filters?: ListJobsFilters): Promise<ListJobsResult>;

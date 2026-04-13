@@ -92,13 +92,11 @@ export class WebhookHandlerService {
         .insert({
           id: jobId,
           type: 'thread-wakeup',
-          input_type: 'event',
           input: {
             inputType: 'thread-wakeup',
             threadId,
             agentId,
           },
-          agent_id: agentId || null,
         });
 
       if (jobError) {

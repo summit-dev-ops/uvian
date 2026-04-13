@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 from core.config import REDIS_HOST, REDIS_FAMILY, REDIS_PORT, REDIS_PASSWORD, QUEUE_NAME, WORKER_CONCURRENCY
 from repositories.jobs import job_repository, DatabaseError
 from core.events import events
@@ -108,7 +109,10 @@ async def process_job(job, token):
     if job_type == "thread-wakeup":
         log.info("thread_wakeup_detected", job_id=job_id)
         job_type = "agent"
-        job_repository.update_job(job_id, {"status": "processing"})
+        job_repository.update_job(job_id, {
+            "status": "processing",
+            "started_at": datetime.now(timezone.utc).isoformat()
+        })
     
     # 3. Resolve executor using dependency injection
     try:
@@ -116,7 +120,12 @@ async def process_job(job, token):
     except ValueError as e:
         error_msg = f"No executor found for job type: {job_type}"
         log.error(error_msg, job_id=job_id, error=str(e))
-        job_repository.update_job(job_id, {"status": "failed", "output": {"error": error_msg}})
+        job_repository.update_job(job_id, {
+            "status": "failed",
+            "error_message": error_msg,
+            "output": {"error": str(e)},
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        })
 
         # Return gracefully instead of crashing the worker
         log.info("continuing_after_executor_error", job_id=job_id)
@@ -127,7 +136,11 @@ async def process_job(job, token):
         result: JobResult = await executor.execute(job_record)
         
         # 5. Update Status -> Completed
-        job_repository.update_job(job_id, {"status": "completed", "output": result})
+        job_repository.update_job(job_id, {
+            "status": "completed",
+            "output": result,
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        })
         log.info("job_completed", job_id=job_id)
         return result
 
@@ -136,7 +149,12 @@ async def process_job(job, token):
 
         # Update job status to failed
         try:
-            job_repository.update_job(job_id, {"status": "failed", "output": {"error": str(e)}})
+            job_repository.update_job(job_id, {
+                "status": "failed",
+                "error_message": str(e),
+                "output": {"error": str(e)},
+                "completed_at": datetime.now(timezone.utc).isoformat()
+            })
             log.info("job_status_failed", job_id=job_id)
         except Exception as db_error:
             log.error("failed_update_job_status", job_id=job_id, error=str(db_error))

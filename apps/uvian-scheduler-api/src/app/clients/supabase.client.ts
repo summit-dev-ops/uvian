@@ -60,9 +60,6 @@ export type Database = {
           input: unknown;
           output: unknown;
           error_message: string | null;
-          thread_id: string | null;
-          agent_id: string | null;
-          input_type: string;
           created_at: string;
           updated_at: string;
           started_at: string | null;
@@ -74,9 +71,6 @@ export type Database = {
           status?: string;
           input?: unknown;
           output?: unknown;
-          agent_id?: string | null;
-          input_type?: string;
-          thread_id?: string | null;
         };
       };
       scheduled_tasks: {

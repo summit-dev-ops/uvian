@@ -52,7 +52,6 @@ export type JobInput =
 export interface Job {
   id: string;
   type: 'chat' | 'task' | 'agent';
-  inputType: JobInputType;
   status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
   input: JobInput;
   output: Record<string, any> | null;
@@ -61,8 +60,6 @@ export interface Job {
   updatedAt: string;
   startedAt: string | null;
   completedAt: string | null;
-  threadId?: string;
-  agentId?: string | null;
 }
 
 export interface JobFilters {

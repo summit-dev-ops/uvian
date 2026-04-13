@@ -71,9 +71,6 @@ export type Database = {
           input: any;
           output: any;
           error_message: string | null;
-          thread_id: string | null;
-          agent_id: string | null;
-          input_type: string;
           created_at: string;
           updated_at: string;
           started_at: string | null;
@@ -85,9 +82,6 @@ export type Database = {
           status?: string;
           input?: any;
           output?: any;
-          agent_id?: string | null;
-          input_type?: string;
-          thread_id?: string | null;
         };
       };
       tickets: {

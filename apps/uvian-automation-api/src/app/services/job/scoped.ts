@@ -11,7 +11,7 @@ import {
 import { queueService } from '../factory';
 
 export function createJobScopedService(
-  clients: ServiceClients
+  clients: ServiceClients,
 ): JobScopedService {
   async function getJobInternal(jobId: string): Promise<JobRecord> {
     const { data, error } = await clients.userClient
@@ -29,21 +29,16 @@ export function createJobScopedService(
     async createEventJob(payload: CreateEventJobPayload): Promise<string> {
       const jobId = randomUUID();
 
-      const input = payload.input as Record<string, unknown>;
-      const agentId = input.agentId as string | undefined;
-
       const { data: job, error } = await clients.adminClient
         .schema('core_automation')
         .from('jobs')
         .insert({
           id: jobId,
           type: payload.type,
-          input_type: 'event',
           input: {
             inputType: 'event',
             ...payload.input,
           },
-          agent_id: agentId || null,
         })
         .select()
         .single();
@@ -51,7 +46,7 @@ export function createJobScopedService(
       if (error || !job) {
         console.error('Failed to create job in DB:', error);
         throw new Error(
-          `Failed to create job: ${error?.message || 'Unknown error'}`
+          `Failed to create job: ${error?.message || 'Unknown error'}`,
         );
       }
 
@@ -61,7 +56,7 @@ export function createJobScopedService(
     },
 
     async createJob(
-      payload: CreateJobPayload
+      payload: CreateJobPayload,
     ): Promise<{ jobId: string; status: string }> {
       const jobId = randomUUID();
 
@@ -71,7 +66,6 @@ export function createJobScopedService(
         .insert({
           id: jobId,
           type: payload.type,
-          input_type: 'manual',
           input: payload.input,
         });
 
@@ -106,7 +100,7 @@ export function createJobScopedService(
     },
 
     async getJobsForUser(
-      filters: ListJobsFilters = {}
+      filters: ListJobsFilters = {},
     ): Promise<ListJobsResult> {
       return this.listJobs(filters);
     },
@@ -174,7 +168,6 @@ function mapRow(row: unknown): JobRecord {
   return {
     id: r.id as string,
     type: r.type as string,
-    inputType: r.input_type as string,
     status: r.status as string,
     input: r.input as Record<string, unknown>,
     output: r.output as Record<string, unknown> | null,
@@ -183,7 +176,5 @@ function mapRow(row: unknown): JobRecord {
     updatedAt: r.updated_at as string,
     startedAt: r.started_at as string | null,
     completedAt: r.completed_at as string | null,
-    threadId: r.thread_id as string | null,
-    agentId: r.agent_id as string | null,
   };
 }
