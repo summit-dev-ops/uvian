@@ -1,5 +1,12 @@
 export { createPost, deletePost } from './post';
-export { createSpace, updateSpace, deleteSpace } from './space';
+export {
+  createSpace,
+  updateSpace,
+  deleteSpace,
+  inviteSpaceMember,
+  removeSpaceMember,
+  updateSpaceMemberRole,
+} from './space';
 export {
   createConversation,
   deleteConversation,
@@ -7,43 +14,9 @@ export {
   deleteMessage,
   updateMessage,
 } from './chat';
-export { createNote, updateNote, deleteNote } from './note';
-
-export type {
-  CreatePostCommandInput,
-  CreatePostCommandOutput,
-  DeletePostCommandInput,
-  DeletePostCommandOutput,
-  CommandContext,
-} from './post';
-
-export type {
-  CreateSpaceCommandInput,
-  CreateSpaceCommandOutput,
-  UpdateSpaceCommandInput,
-  UpdateSpaceCommandOutput,
-  DeleteSpaceCommandInput,
-  DeleteSpaceCommandOutput,
-} from './space';
-
-export type {
-  CreateConversationCommandInput,
-  CreateConversationCommandOutput,
-  DeleteConversationCommandInput,
-  DeleteConversationCommandOutput,
-  CreateMessageCommandInput,
-  CreateMessageCommandOutput,
-  DeleteMessageCommandInput,
-  DeleteMessageCommandOutput,
-  UpdateMessageCommandInput,
-  UpdateMessageCommandOutput,
+export {
+  inviteConversationMember,
+  removeConversationMember,
+  updateConversationMemberRole,
 } from './chat';
-
-export type {
-  CreateNoteCommandInput,
-  CreateNoteCommandOutput,
-  UpdateNoteCommandInput,
-  UpdateNoteCommandOutput,
-  DeleteNoteCommandInput,
-  DeleteNoteCommandOutput,
-} from './note';
+export { createNote, updateNote, deleteNote } from './note';

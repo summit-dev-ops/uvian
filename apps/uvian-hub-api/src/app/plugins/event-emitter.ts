@@ -20,6 +20,7 @@ import {
   ConversationDeletedData,
   ConversationMemberJoinedData,
   ConversationMemberLeftData,
+  ConversationMemberRoleChangedData,
   SpaceCreatedData,
   SpaceUpdatedData,
   SpaceDeletedData,
@@ -59,7 +60,7 @@ export class HubEventEmitter extends BaseEventEmitter {
 
   emitConversationCreated(
     data: ConversationCreatedData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = data.spaceId
       ? buildSourcePath('spaces', data.spaceId)
@@ -69,7 +70,7 @@ export class HubEventEmitter extends BaseEventEmitter {
 
   emitConversationUpdated(
     data: ConversationUpdatedData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = buildSourcePath('conversations', data.conversationId);
     this.emit(MessagingEvents.CONVERSATION_UPDATED, source, data, actorId);
@@ -77,7 +78,7 @@ export class HubEventEmitter extends BaseEventEmitter {
 
   emitConversationDeleted(
     data: ConversationDeletedData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = '/conversations';
     this.emit(MessagingEvents.CONVERSATION_DELETED, source, data, actorId);
@@ -85,23 +86,36 @@ export class HubEventEmitter extends BaseEventEmitter {
 
   emitConversationMemberJoined(
     data: ConversationMemberJoinedData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = buildSourcePath('conversations', data.conversationId);
     this.emit(
       MessagingEvents.CONVERSATION_MEMBER_JOINED,
       source,
       data,
-      actorId
+      actorId,
     );
   }
 
   emitConversationMemberLeft(
     data: ConversationMemberLeftData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = buildSourcePath('conversations', data.conversationId);
     this.emit(MessagingEvents.CONVERSATION_MEMBER_LEFT, source, data, actorId);
+  }
+
+  emitConversationMemberRoleChanged(
+    data: ConversationMemberRoleChangedData,
+    actorId: string,
+  ): void {
+    const source = buildSourcePath('conversations', data.conversationId);
+    this.emit(
+      MessagingEvents.CONVERSATION_MEMBER_ROLE_CHANGED,
+      source,
+      data,
+      actorId,
+    );
   }
 
   emitSpaceCreated(data: SpaceCreatedData, actorId: string): void {
@@ -131,7 +145,7 @@ export class HubEventEmitter extends BaseEventEmitter {
 
   emitSpaceMemberRoleChanged(
     data: SpaceMemberRoleChangedData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = buildSourcePath('spaces', data.spaceId);
     this.emit(SpaceEvents.SPACE_MEMBER_ROLE_CHANGED, source, data, actorId);
@@ -168,8 +182,8 @@ export class HubEventEmitter extends BaseEventEmitter {
     const source = data.spaceId
       ? buildSourcePath('spaces', data.spaceId)
       : data.conversationId
-      ? buildSourcePath('conversations', data.conversationId)
-      : '/assets';
+        ? buildSourcePath('conversations', data.conversationId)
+        : '/assets';
     this.emit(ContentEvents.ASSET_UPLOADED, source, data, actorId);
   }
 
@@ -200,7 +214,7 @@ export class HubEventEmitter extends BaseEventEmitter {
 
   emitAccountMemberRemoved(
     data: AccountMemberRemovedData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = buildSourcePath('accounts', data.accountId);
     this.emit(AccountEvents.ACCOUNT_MEMBER_REMOVED, source, data, actorId);
@@ -208,7 +222,7 @@ export class HubEventEmitter extends BaseEventEmitter {
 
   emitAccountMemberRoleChanged(
     data: AccountMemberRoleChangedData,
-    actorId: string
+    actorId: string,
   ): void {
     const source = buildSourcePath('accounts', data.accountId);
     this.emit(AccountEvents.ACCOUNT_MEMBER_ROLE_CHANGED, source, data, actorId);

@@ -11,6 +11,7 @@ export const MessagingEvents = {
   CONVERSATION_DELETED: `${prefix}.conversation.conversation_deleted`,
   CONVERSATION_MEMBER_JOINED: `${prefix}.conversation.member_joined`,
   CONVERSATION_MEMBER_LEFT: `${prefix}.conversation.member_left`,
+  CONVERSATION_MEMBER_ROLE_CHANGED: `${prefix}.conversation.member_role_changed`,
 } as const;
 
 export type MessagingEventType =
@@ -67,6 +68,14 @@ export interface ConversationMemberLeftData {
   conversationId: string;
   userId: string;
   removedBy?: string;
+}
+
+export interface ConversationMemberRoleChangedData {
+  conversationId: string;
+  userId: string;
+  oldRole: string;
+  newRole: string;
+  changedBy: string;
 }
 
 export type MessagingEventData =

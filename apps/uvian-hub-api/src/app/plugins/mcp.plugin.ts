@@ -2,9 +2,25 @@ import { FastifyPluginAsync } from 'fastify';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createUserClient, adminSupabase } from '../clients/supabase.client';
-import { createPost } from '../commands/post';
-import { createSpace, updateSpace, deleteSpace } from '../commands/space';
-import { createConversation, createMessage } from '../commands/chat';
+import { createPost, deletePost } from '../commands/post';
+import {
+  createSpace,
+  updateSpace,
+  deleteSpace,
+  inviteSpaceMember,
+  removeSpaceMember,
+  updateSpaceMemberRole,
+} from '../commands/space';
+import {
+  createConversation,
+  deleteConversation,
+  createMessage,
+  deleteMessage,
+  updateMessage,
+  inviteConversationMember,
+  updateConversationMemberRole,
+} from '../commands/chat';
+import { updateNote, deleteNote } from '../commands/note';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { Services } from './services';
@@ -148,7 +164,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       {
         inputSchema: z.object({ spaceId: z.string().optional() }),
       },
-      async (args): Promise<ToolResult> => {
+      async (): Promise<ToolResult> => {
         try {
           const results = await fastify.services.chat
             .scoped(clients)
@@ -270,35 +286,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     );
 
     // WRITE TOOLS - Conversations
-    server.registerTool(
-      'create_conversation',
-      {
-        inputSchema: z.object({
-          title: z.string(),
-          spaceId: z.string().optional(),
-        }),
-      },
-      async (args): Promise<ToolResult> => {
-        try {
-          // Bypassed getUser() - using injected userId directly
-          const result = await fastify.services.chat
-            .scoped(clients)
-            .createConversation(userId, {
-              title: args.title,
-              spaceId: args.spaceId,
-            });
-          return {
-            content: [{ type: 'text', text: JSON.stringify(result) }],
-          };
-        } catch (error) {
-          return {
-            content: [{ type: 'text', text: `Error: ${error}` }],
-            isError: true,
-          };
-        }
-      },
-    );
-
     server.registerTool(
       'send_message',
       {
@@ -541,13 +528,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const note = await fastify.services.note
-            .scoped(clients)
-            .updateNote(userId, args.noteId, {
+          const result = await updateNote(
+            clients,
+            {
+              userId,
+              noteId: args.noteId,
               title: args.title,
               body: args.body,
-            });
-          return { content: [{ type: 'text', text: JSON.stringify(note) }] };
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result.note) }],
+          };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
@@ -564,9 +557,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ noteId }): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.note
-            .scoped(clients)
-            .deleteNote(userId, noteId);
+          const result = await deleteNote(
+            clients,
+            { userId, noteId },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -612,12 +607,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.spaces
-            .scoped(clients)
-            .inviteMember(userId, args.spaceId, args.targetUserId, {
-              name: args.role || 'member',
-            });
-          return { content: [{ type: 'text', text: JSON.stringify(member) }] };
+          const result = await inviteSpaceMember(
+            clients,
+            {
+              userId,
+              spaceId: args.spaceId,
+              targetUserId: args.targetUserId,
+              role: args.role ? { name: args.role } : undefined,
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result.member) }],
+          };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
@@ -637,9 +639,15 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.spaces
-            .scoped(clients)
-            .removeMember(userId, args.spaceId, args.targetUserId);
+          const result = await removeSpaceMember(
+            clients,
+            {
+              userId,
+              spaceId: args.spaceId,
+              targetUserId: args.targetUserId,
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -661,12 +669,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.spaces
-            .scoped(clients)
-            .updateMemberRole(userId, args.spaceId, args.targetUserId, {
-              name: args.role,
-            });
-          return { content: [{ type: 'text', text: JSON.stringify(member) }] };
+          const result = await updateSpaceMemberRole(
+            clients,
+            {
+              userId,
+              spaceId: args.spaceId,
+              targetUserId: args.targetUserId,
+              role: { name: args.role },
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result.member) }],
+          };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
@@ -711,12 +726,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.chat
-            .scoped(clients)
-            .inviteMember(userId, args.conversationId, args.targetUserId, {
-              name: args.role || 'member',
-            });
-          return { content: [{ type: 'text', text: JSON.stringify(member) }] };
+          const result = await inviteConversationMember(
+            clients,
+            {
+              userId,
+              conversationId: args.conversationId,
+              targetUserId: args.targetUserId,
+              role: args.role ? { name: args.role } : undefined,
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result.member) }],
+          };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
@@ -770,12 +792,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const member = await fastify.services.chat
-            .scoped(clients)
-            .updateMemberRole(userId, args.conversationId, args.targetUserId, {
-              name: args.role,
-            });
-          return { content: [{ type: 'text', text: JSON.stringify(member) }] };
+          const result = await updateConversationMemberRole(
+            clients,
+            {
+              userId,
+              conversationId: args.conversationId,
+              targetUserId: args.targetUserId,
+              role: { name: args.role },
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result.member) }],
+          };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
@@ -833,9 +862,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ conversationId }): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.chat
-            .scoped(clients)
-            .deleteConversation(userId, conversationId);
+          const result = await deleteConversation(
+            clients,
+            { userId, conversationId },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -856,9 +887,15 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.chat
-            .scoped(clients)
-            .deleteMessage(userId, args.conversationId, args.messageId);
+          const result = await deleteMessage(
+            clients,
+            {
+              userId,
+              conversationId: args.conversationId,
+              messageId: args.messageId,
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
@@ -880,15 +917,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const message = await fastify.services.chat
-            .scoped(clients)
-            .updateMessage(
+          const result = await updateMessage(
+            clients,
+            {
               userId,
-              args.conversationId,
-              args.messageId,
-              args.content,
-            );
-          return { content: [{ type: 'text', text: JSON.stringify(message) }] };
+              conversationId: args.conversationId,
+              messageId: args.messageId,
+              content: args.content,
+            },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result.message) }],
+          };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
@@ -1034,9 +1075,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async ({ postId }): Promise<ToolResult> => {
         try {
-          const result = await fastify.services.post
-            .scoped(clients)
-            .deletePost(postId, userId);
+          const result = await deletePost(
+            clients,
+            { userId, postId },
+            { eventEmitter: fastify.services.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
           return {
