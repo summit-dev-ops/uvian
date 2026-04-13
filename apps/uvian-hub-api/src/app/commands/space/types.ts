@@ -39,6 +39,38 @@ export interface DeleteSpaceCommandOutput {
   success: boolean;
 }
 
+export interface InviteSpaceMemberCommandInput {
+  userId: string;
+  spaceId: string;
+  targetUserId: string;
+  role?: { name: string };
+}
+
+export interface InviteSpaceMemberCommandOutput {
+  member: { spaceId: string; userId: string; role: { name: string } };
+}
+
+export interface RemoveSpaceMemberCommandInput {
+  userId: string;
+  spaceId: string;
+  targetUserId: string;
+}
+
+export interface RemoveSpaceMemberCommandOutput {
+  success: boolean;
+}
+
+export interface UpdateSpaceMemberRoleCommandInput {
+  userId: string;
+  spaceId: string;
+  targetUserId: string;
+  role: { name: string };
+}
+
+export interface UpdateSpaceMemberRoleCommandOutput {
+  member: { spaceId: string; userId: string; role: { name: string } };
+}
+
 export interface CommandContext {
   eventEmitter?: HubEventEmitter;
 }

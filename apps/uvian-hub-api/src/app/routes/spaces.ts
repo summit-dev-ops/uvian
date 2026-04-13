@@ -1,5 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { createSpace, updateSpace, deleteSpace } from '../commands/space';
+import {
+  createSpace,
+  updateSpace,
+  deleteSpace,
+  inviteSpaceMember,
+  removeSpaceMember,
+  updateSpaceMemberRole,
+} from '../commands/space';
 import { createSpacesService } from '../services/spaces';
 import { adminSupabase } from '../clients/supabase.client';
 
@@ -309,24 +316,17 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         }
         const { spaceId } = request.params;
         const { userId: targetUserId, role } = request.body || {};
-        const membership = await spacesService
-          .scoped(getClients(request))
-          .inviteMember(
+        const result = await inviteSpaceMember(
+          getClients(request),
+          {
             userId,
             spaceId,
             targetUserId,
-            role || { name: 'member' },
-          );
-        fastify.services.eventEmitter.emitSpaceMemberJoined(
-          {
-            spaceId,
-            userId: targetUserId,
-            role: (role?.name as 'member' | 'moderator' | 'admin') || 'member',
-            invitedBy: userId,
+            role: role || { name: 'member' },
           },
-          userId,
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        reply.code(201).send(membership);
+        reply.code(201).send(result.member);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
           reply
@@ -366,12 +366,14 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
           return;
         }
         const { spaceId, userId: targetUserId } = request.params;
-        await spacesService
-          .scoped(getClients(request))
-          .removeMember(userId, spaceId, targetUserId);
-        fastify.services.eventEmitter.emitSpaceMemberLeft(
-          { spaceId, userId: targetUserId, removedBy: userId },
-          userId,
+        await removeSpaceMember(
+          getClients(request),
+          {
+            userId,
+            spaceId,
+            targetUserId,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -427,21 +429,17 @@ export default async function spacesRoutes(fastify: FastifyInstance) {
         }
         const { spaceId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
-        const membership = await spacesService
-          .scoped(getClients(request))
-          .updateMemberRole(userId, spaceId, targetUserId, role);
-        fastify.services.eventEmitter.emitSpaceMemberRoleChanged(
+        const result = await updateSpaceMemberRole(
+          getClients(request),
           {
+            userId,
             spaceId,
-            userId: targetUserId,
-            oldRole: 'member',
-            newRole:
-              (role?.name as 'member' | 'moderator' | 'admin') || 'member',
-            changedBy: userId,
+            targetUserId,
+            role,
           },
-          userId,
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        reply.send(membership);
+        reply.send(result.member);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
           reply
