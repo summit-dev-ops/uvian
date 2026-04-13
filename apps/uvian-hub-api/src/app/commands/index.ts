@@ -20,3 +20,9 @@ export {
   updateConversationMemberRole,
 } from './chat';
 export { createNote, updateNote, deleteNote } from './note';
+export {
+  createAccount,
+  updateAccount,
+  updateAccountMember,
+  removeAccountMember,
+} from './account';

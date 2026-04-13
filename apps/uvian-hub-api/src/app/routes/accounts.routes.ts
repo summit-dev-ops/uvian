@@ -2,6 +2,12 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { accountService } from '../services/factory';
 import { adminSupabase } from '../clients/supabase.client';
 import {
+  createAccount,
+  updateAccount,
+  updateAccountMember,
+  removeAccountMember,
+} from '../commands/account';
+import {
   CreateAccountRequest,
   UpdateAccountRequest,
   GetAccountRequest,
@@ -42,7 +48,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to fetch accounts' });
       }
-    }
+    },
   );
 
   fastify.post<CreateAccountRequest>(
@@ -62,7 +68,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<CreateAccountRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -73,27 +79,18 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
 
         const { name, settings } = request.body || {};
         const clients = getClients(request);
-        const account = await accountService
-          .scoped(clients)
-          .createAccount(userId, {
-            name,
-            settings,
-          });
-        fastify.services.eventEmitter.emitAccountCreated(
-          {
-            accountId: account.id,
-            name: account.name || '',
-            createdBy: userId,
-          },
-          userId
+        const result = await createAccount(
+          clients,
+          { userId, name, settings },
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        reply.code(201).send(account);
+        reply.code(201).send(result.account);
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to create account' });
       }
-    }
+    },
   );
 
   fastify.get<GetAccountRequest>(
@@ -137,7 +134,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
             .send({ error: error.message || 'Failed to fetch account' });
         }
       }
-    }
+    },
   );
 
   fastify.patch<UpdateAccountRequest>(
@@ -165,7 +162,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<UpdateAccountRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -177,17 +174,12 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         const { accountId } = request.params;
         const { name, settings } = request.body || {};
         const clients = getClients(request);
-        const account = await accountService
-          .scoped(clients)
-          .updateAccount(accountId, userId, {
-            name,
-            settings,
-          });
-        fastify.services.eventEmitter.emitAccountUpdated(
-          { accountId, updatedBy: userId, name },
-          userId
+        const result = await updateAccount(
+          clients,
+          { userId, accountId, name, settings },
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        reply.send(account);
+        reply.send(result.account);
       } catch (error: any) {
         if (error.message.includes('access denied')) {
           reply.code(403).send({ error: error.message });
@@ -197,7 +189,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
             .send({ error: error.message || 'Failed to update account' });
         }
       }
-    }
+    },
   );
 
   fastify.get<GetAccountMembersRequest>(
@@ -217,7 +209,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<GetAccountMembersRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -241,7 +233,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           });
         }
       }
-    }
+    },
   );
 
   fastify.post<CreateAccountMemberRequest>(
@@ -270,7 +262,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<CreateAccountMemberRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -289,7 +281,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
             accountId,
             userId,
             newMemberUserId,
-            role || { name: 'member', permissions: [] }
+            role || { name: 'member', permissions: [] },
           );
         fastify.services.eventEmitter.emitAccountMemberAdded(
           {
@@ -298,7 +290,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
             role: (role?.name as 'member' | 'admin') || 'member',
             addedBy: userId,
           },
-          userId
+          userId,
         );
         reply.code(201).send(member);
       } catch (error: any) {
@@ -310,7 +302,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
             .send({ error: error.message || 'Failed to add account member' });
         }
       }
-    }
+    },
   );
 
   fastify.patch<UpdateAccountMemberRequest>(
@@ -339,7 +331,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<UpdateAccountMemberRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -352,20 +344,12 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
         const { role } = request.body || {};
 
         const clients = getClients(request);
-        const member = await accountService
-          .scoped(clients)
-          .updateAccountMember(accountId, userId, targetUserId, role);
-        fastify.services.eventEmitter.emitAccountMemberRoleChanged(
-          {
-            accountId,
-            userId: targetUserId,
-            oldRole: 'member',
-            newRole: (role?.name as 'member' | 'admin') || 'member',
-            changedBy: userId,
-          },
-          userId
+        const result = await updateAccountMember(
+          clients,
+          { userId, accountId, targetUserId, role },
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        reply.send(member);
+        reply.send(result.member);
       } catch (error: any) {
         if (error.message.includes('access denied')) {
           reply.code(403).send({ error: error.message });
@@ -375,7 +359,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           });
         }
       }
-    }
+    },
   );
 
   fastify.delete<DeleteAccountMemberRequest>(
@@ -396,7 +380,7 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<DeleteAccountMemberRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -407,12 +391,10 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
 
         const { accountId, userId: targetUserId } = request.params;
         const clients = getClients(request);
-        await accountService
-          .scoped(clients)
-          .removeAccountMember(accountId, userId, targetUserId);
-        fastify.services.eventEmitter.emitAccountMemberRemoved(
-          { accountId, userId: targetUserId, removedBy: userId },
-          userId
+        await removeAccountMember(
+          clients,
+          { userId, accountId, targetUserId },
+          { eventEmitter: fastify.services.eventEmitter },
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -424,6 +406,6 @@ export default async function accountsRoutes(fastify: FastifyInstance) {
           });
         }
       }
-    }
+    },
   );
 }
