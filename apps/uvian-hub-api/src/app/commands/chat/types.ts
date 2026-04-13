@@ -56,6 +56,44 @@ export interface UpdateMessageCommandOutput {
   message: Message;
 }
 
+export interface ConversationMembership {
+  userId: string;
+  conversationId: string;
+  role: { name: string };
+}
+
+export interface InviteConversationMemberCommandInput {
+  userId: string;
+  conversationId: string;
+  targetUserId: string;
+  role?: { name: string };
+}
+
+export interface InviteConversationMemberCommandOutput {
+  member: ConversationMembership;
+}
+
+export interface RemoveConversationMemberCommandInput {
+  userId: string;
+  conversationId: string;
+  targetUserId: string;
+}
+
+export interface RemoveConversationMemberCommandOutput {
+  success: boolean;
+}
+
+export interface UpdateConversationMemberRoleCommandInput {
+  userId: string;
+  conversationId: string;
+  targetUserId: string;
+  role: { name: string };
+}
+
+export interface UpdateConversationMemberRoleCommandOutput {
+  member: ConversationMembership;
+}
+
 export interface CommandContext {
   eventEmitter?: HubEventEmitter;
   io?: SocketIOServer;

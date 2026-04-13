@@ -5,6 +5,9 @@ import {
   createMessage,
   deleteMessage,
   updateMessage,
+  inviteConversationMember,
+  removeConversationMember,
+  updateConversationMemberRole,
 } from '../commands/chat';
 import { createChatService } from '../services/chat';
 import { adminSupabase } from '../clients/supabase.client';
@@ -207,19 +210,17 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId } = request.params;
         const { userId: targetUserId, role } = request.body || {};
-        const membership = await chatService
-          .scoped(getClients(request))
-          .inviteMember(
+        const result = await inviteConversationMember(
+          getClients(request),
+          {
             userId,
             conversationId,
             targetUserId,
-            role || { name: 'member' },
-          );
-        fastify.services.eventEmitter.emitConversationMemberJoined(
-          { conversationId, userId: targetUserId, invitedBy: userId },
-          userId,
+            role: role || { name: 'member' },
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        reply.code(201).send(membership);
+        reply.code(201).send(result.member);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
           reply
@@ -261,12 +262,14 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId, userId: targetUserId } = request.params;
-        await chatService
-          .scoped(getClients(request))
-          .removeMember(userId, conversationId, targetUserId);
-        fastify.services.eventEmitter.emitConversationMemberLeft(
-          { conversationId, userId: targetUserId, removedBy: userId },
-          userId,
+        await removeConversationMember(
+          getClients(request),
+          {
+            userId,
+            conversationId,
+            targetUserId,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -324,10 +327,13 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
-        const membership = await chatService
-          .scoped(getClients(request))
-          .updateMemberRole(userId, conversationId, targetUserId, role);
-        reply.send(membership);
+        const result = await updateConversationMemberRole(getClients(request), {
+          userId,
+          conversationId,
+          targetUserId,
+          role,
+        });
+        reply.send(result.member);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
           reply

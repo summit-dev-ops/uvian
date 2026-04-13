@@ -3,6 +3,9 @@ export { deleteConversation } from './delete-conversation';
 export { createMessage } from './create-message';
 export { deleteMessage } from './delete-message';
 export { updateMessage } from './update-message';
+export { inviteConversationMember } from './invite-member';
+export { removeConversationMember } from './remove-member';
+export { updateConversationMemberRole } from './update-member-role';
 export type {
   CreateConversationCommandInput,
   CreateConversationCommandOutput,
@@ -14,5 +17,11 @@ export type {
   DeleteMessageCommandOutput,
   UpdateMessageCommandInput,
   UpdateMessageCommandOutput,
+  InviteConversationMemberCommandInput,
+  InviteConversationMemberCommandOutput,
+  RemoveConversationMemberCommandInput,
+  RemoveConversationMemberCommandOutput,
+  UpdateConversationMemberRoleCommandInput,
+  UpdateConversationMemberRoleCommandOutput,
   CommandContext,
 } from './types';
