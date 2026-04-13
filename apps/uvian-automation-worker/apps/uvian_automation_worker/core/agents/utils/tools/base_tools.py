@@ -226,13 +226,18 @@ async def load_mcp(
     tools = []
     if isinstance(registry, MCPRegistry):
         mcp_id = mcp_info.get("id")
-        tools = await registry.get_tools_for_mcp(mcp_id)
-        tool_names = [t.name for t in tools]
+        raw_tools = await registry.get_tools_for_mcp(mcp_id)
+        tool_names = [t.name for t in raw_tools]
         tool_list = ", ".join(tool_names)
         response_text = (
-            f"SUCCESS: Loaded MCP '{mcp_name}' with {len(tools)} tools.\n"
+            f"SUCCESS: Loaded MCP '{mcp_name}' with {len(raw_tools)} tools.\n"
             f"Tools now available: {tool_list}"
         )
+        # Convert BaseTool objects to dicts (matching agent_executor pattern)
+        tools = [
+            {"name": t.name, "description": t.description or ""}
+            for t in raw_tools
+        ]
     else:
         response_text = f"SUCCESS: Tools for MCP '{mcp_name}' are now available."
     

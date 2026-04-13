@@ -49,7 +49,7 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     available_skills = state.get("available_skills", [])
     loaded_skills = state.get("loaded_skills", [])
-    loaded_skill_names = [s.get("name") for s in loaded_skills if s.get("name")]
+    loaded_skill_names = [s.get("name") for s in loaded_skills if isinstance(s, dict) and s.get("name")]
     
     unique_event_types = list(set(msg["event_type"] for msg in pending_messages))
 
@@ -57,7 +57,7 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
     
     newly_loaded = []
     for s in matched_skills:
-        if s.get("name") and s["name"] not in loaded_skill_names:
+        if isinstance(s, dict) and s.get("name") and s.get("name") not in loaded_skill_names:
             newly_loaded.append({
                 "name": s.get("name"),
                 "description": s.get("description", ""),

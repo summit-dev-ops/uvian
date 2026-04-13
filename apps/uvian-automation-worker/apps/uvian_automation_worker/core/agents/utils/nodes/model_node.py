@@ -44,13 +44,13 @@ def create_model_node(model, default_tools, mcp_registry):
         
         loaded_skills = state.get("loaded_skills", [])
         available_skills = state.get("available_skills", [])
-        loaded_skill_names = [s.get("name") for s in loaded_skills if s.get("name")]
-        available_skill_names = [s.get("name") for s in available_skills if s.get("name")]
+        loaded_skill_names = [s.get("name") for s in loaded_skills if isinstance(s, dict) and s.get("name")]
+        available_skill_names = [s.get("name") for s in available_skills if isinstance(s, dict) and s.get("name")]
         
         available_mcps = state.get("available_mcps", [])
         loaded_mcps = state.get("loaded_mcps", [])
-        loaded_mcp_names = [m.get("name") for m in loaded_mcps if m.get("name")]
-        available_mcp_names = [m.get("name") for m in available_mcps if m.get("name")]
+        loaded_mcp_names = [m.get("name") for m in loaded_mcps if isinstance(m, dict) and m.get("name")]
+        available_mcp_names = [m.get("name") for m in available_mcps if isinstance(m, dict) and m.get("name")]
 
         all_mcp_tools = await mcp_registry.get_all_tools()
         active_tools = list(default_tools) + [tool for tools in all_mcp_tools.values() for tool in tools]
@@ -75,22 +75,24 @@ def create_model_node(model, default_tools, mcp_registry):
         
         skills_section = ""
         
-        unloaded_skills = [s for s in available_skills if s.get("name") not in loaded_skill_names]
+        unloaded_skills = [s for s in available_skills if isinstance(s, dict) and s.get("name") not in loaded_skill_names]
         if unloaded_skills:
-            skills_list = [f"- **{s['name']}**: {s.get('description', '')}" for s in unloaded_skills]
+            skills_list = [f"- **{s.get('name', 'unknown')}**: {s.get('description', '')}" for s in unloaded_skills if isinstance(s, dict)]
             skills_section += "\n\n## Skills you can load\n\n" + "\n".join(skills_list)
         
         if loaded_skills:
-            loaded_list = [f"### {s['name']}\n{s.get('content', '')}" for s in loaded_skills if s.get("name")]
-            skills_section += "\n\n## Loaded Skills\n\n" + "\n\n".join(loaded_list)
+            loaded_list = [f"### {s.get('name', 'unknown')}\n{s.get('content', '')}" for s in loaded_skills if isinstance(s, dict) and s.get("name")]
+            skills_section += "\n## Loaded Skills\n\n" + "\n\n".join(loaded_list)
         
         
         mcps_section = ""
         
-        unloaded_mcps = [m for m in available_mcps if m.get("name") not in loaded_mcp_names]
+        unloaded_mcps = [m for m in available_mcps if isinstance(m, dict) and m.get("name") not in loaded_mcp_names]
         if unloaded_mcps:
             mcps_list = []
             for m in unloaded_mcps:
+                if not isinstance(m, dict):
+                    continue
                 tool_names = m.get("tool_names", [])
                 tool_str = ", ".join(tool_names[:5])
                 if len(tool_names) > 5:
@@ -101,8 +103,10 @@ def create_model_node(model, default_tools, mcp_registry):
         if loaded_mcps:
             loaded_mcp_list = []
             for m in loaded_mcps:
+                if not isinstance(m, dict):
+                    continue
                 tools = m.get("tools", [])
-                tool_names = ", ".join([t.get("name", "") for t in tools]) if tools else "no tools"
+                tool_names = ", ".join([t.get("name", "") for t in tools if isinstance(t, dict)]) if tools else "no tools"
                 loaded_mcp_list.append(f"### {m.get('name', 'unknown')}\n{m.get('description', '')}\nAvailable tools: {tool_names}")
             mcps_section += "\n\n## Loaded MCP Servers\n\n" + "\n\n".join(loaded_mcp_list)
         

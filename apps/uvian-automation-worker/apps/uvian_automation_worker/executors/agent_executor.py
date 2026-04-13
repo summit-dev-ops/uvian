@@ -184,8 +184,6 @@ class AgentExecutor(BaseExecutor):
                 ):
                     full_response.append(part)
                     final_response = part
-                    
-                print(final_response)
 
                 return {
                     "status": "completed",
