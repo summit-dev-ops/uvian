@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
 import { llmService } from '../services';
+import { createLlm, updateLlm, deleteLlm } from '../commands';
 
 export default async function llmRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -18,7 +19,7 @@ export default async function llmRoutes(fastify: FastifyInstance) {
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.post(
@@ -51,14 +52,14 @@ export default async function llmRoutes(fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const llm = await llmService
-          .scoped(clients)
-          .create(request.body as any);
+        const { llm } = await createLlm(clients, request.body as any, {
+          eventEmitter: fastify.eventEmitter,
+        });
         return reply.code(201).send({ llm });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.put(
@@ -96,14 +97,16 @@ export default async function llmRoutes(fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const { llmId } = request.params as any as { llmId: string };
-        const llm = await llmService
-          .scoped(clients)
-          .update(llmId, request.body as any);
+        const { llm } = await updateLlm(
+          clients,
+          { llmId, ...(request.body as any) },
+          { eventEmitter: fastify.eventEmitter },
+        );
         return reply.send({ llm });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.delete(
@@ -125,11 +128,15 @@ export default async function llmRoutes(fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const { llmId } = request.params as any as { llmId: string };
-        await llmService.scoped(clients).delete(llmId);
+        await deleteLlm(
+          clients,
+          { llmId },
+          { eventEmitter: fastify.eventEmitter },
+        );
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 }

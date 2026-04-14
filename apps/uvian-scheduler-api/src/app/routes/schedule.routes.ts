@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase, createUserClient } from '../clients/supabase.client';
-import { scheduleService, subscriptionService } from '../services/factory';
-import { ScheduleEvents } from '@org/uvian-events';
+import { scheduleService } from '../services/factory';
 import { fireSchedule, SYNC_INTERVAL_MINUTES } from '../plugins/cron.plugin';
+import { createSchedule, updateSchedule, cancelSchedule } from '../commands';
 
 interface CreateScheduleBody {
   type?: 'one_time' | 'recurring';
@@ -72,11 +72,11 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           ),
         };
 
-        const schedule = await scheduleService
-          .scoped(clients)
-          .createSchedule(userId, request.body);
-
-        await createSubscriptions(schedule.id, request.body.subscriberIds);
+        const { schedule } = await createSchedule(
+          clients,
+          { ...request.body, userId },
+          { eventEmitter: fastify.schedulerEmitter as any },
+        );
 
         const now = new Date();
         const windowEnd = new Date(
@@ -103,19 +103,6 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             );
           }
         }
-
-        fastify.schedulerEmitter.emitEvent(
-          ScheduleEvents.SCHEDULE_CREATED,
-          `/schedules/${schedule.id}`,
-          {
-            scheduleId: schedule.id,
-            type: schedule.type,
-            cronExpression: schedule.cronExpression || undefined,
-            subscriberIds: request.body.subscriberIds,
-            createdBy: userId,
-          },
-          userId,
-        );
 
         reply.code(201).send(schedule);
       } catch (error: any) {
@@ -172,9 +159,11 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           ),
         };
 
-        const schedule = await scheduleService
-          .scoped(clients)
-          .updateSchedule(userId, request.params.id, request.body);
+        const { schedule } = await updateSchedule(
+          clients,
+          { userId, scheduleId: request.params.id, ...request.body },
+          { eventEmitter: fastify.schedulerEmitter as any },
+        );
 
         const now = new Date();
         const windowEnd = new Date(
@@ -201,16 +190,6 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
             );
           }
         }
-
-        fastify.schedulerEmitter.emitEvent(
-          ScheduleEvents.SCHEDULE_UPDATED,
-          `/schedules/${schedule.id}`,
-          {
-            scheduleId: schedule.id,
-            updatedBy: userId,
-          },
-          userId,
-        );
 
         reply.send(schedule);
       } catch (error: any) {
@@ -353,18 +332,10 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
           ),
         };
 
-        const schedule = await scheduleService
-          .scoped(clients)
-          .cancelSchedule(userId, request.params.id);
-
-        fastify.schedulerEmitter.emitEvent(
-          ScheduleEvents.SCHEDULE_CANCELLED,
-          `/schedules/${schedule.id}`,
-          {
-            scheduleId: schedule.id,
-            cancelledBy: userId,
-          },
-          userId,
+        await cancelSchedule(
+          clients,
+          { userId, scheduleId: request.params.id },
+          { eventEmitter: fastify.schedulerEmitter as any },
         );
 
         reply.code(204).send();
@@ -545,34 +516,4 @@ export default async function scheduleRoutes(fastify: FastifyInstance) {
       }
     },
   );
-}
-
-async function createSubscriptions(
-  scheduleId: string,
-  subscriberIds: string[],
-): Promise<void> {
-  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
-  const subService = subscriptionService.admin(clients);
-
-  const existingSubs = await subService.getSubscriptionsByResource(
-    'uvian.schedule',
-    scheduleId,
-  );
-
-  const existingUserIds = new Set(existingSubs.map((s) => s.user_id));
-  const newSubscriberIds = subscriberIds.filter(
-    (uid) => !existingUserIds.has(uid),
-  );
-
-  if (newSubscriberIds.length === 0) return;
-
-  const scopedService = subscriptionService.scoped(clients);
-
-  for (const userId of newSubscriberIds) {
-    await scopedService.activateSubscription(
-      userId,
-      'uvian.schedule',
-      scheduleId,
-    );
-  }
 }

@@ -1,6 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { identityService } from '../services/factory';
 import { adminSupabase } from '../clients/supabase.client';
+import {
+  createIdentity,
+  updateIdentity,
+  deleteIdentity,
+} from '../commands/identity';
+import type { CommandContext } from '../commands/types';
 
 function getClients(request: FastifyRequest) {
   return {
@@ -49,7 +55,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to fetch identities' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: IdentityParams }>(
@@ -59,7 +65,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: IdentityParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -85,7 +91,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to fetch identity' });
       }
-    }
+    },
   );
 
   fastify.post<{ Body: CreateIdentityBody }>(
@@ -110,7 +116,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Body: CreateIdentityBody }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -124,7 +130,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           .admin(clients)
           .getIdentityByProviderUserId(
             request.body.provider || 'whatsapp',
-            request.body.provider_user_id
+            request.body.provider_user_id,
           );
 
         if (existing) {
@@ -134,26 +140,28 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        const identity = await identityService
-          .scoped(clients)
-          .createIdentity(userId, {
-            ...request.body,
-            provider: request.body.provider || 'whatsapp',
-            user_id: userId,
-          });
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
 
-        fastify.eventEmitter.emitIdentityCreated(
-          { identityId: identity.id, userId, provider: identity.provider },
-          userId
+        const result = await createIdentity(
+          clients,
+          {
+            userId,
+            provider: request.body.provider,
+            provider_user_id: request.body.provider_user_id,
+            metadata: request.body.metadata,
+          },
+          context,
         );
 
-        reply.send({ identity });
+        reply.send({ identity: result.identity });
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to create identity' });
       }
-    }
+    },
   );
 
   fastify.put<{ Params: IdentityParams; Body: UpdateIdentityBody }>(
@@ -180,7 +188,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         Params: IdentityParams;
         Body: UpdateIdentityBody;
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -192,22 +200,29 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         const { identityId } = request.params;
         const clients = getClients(request);
 
-        const identity = await identityService
-          .scoped(clients)
-          .updateIdentity(userId, identityId, request.body);
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
 
-        fastify.eventEmitter.emitIdentityUpdated(
-          { identityId: identity.id, userId },
-          userId
+        const result = await updateIdentity(
+          clients,
+          {
+            userId,
+            identityId,
+            provider: request.body.provider,
+            provider_user_id: request.body.provider_user_id,
+            metadata: request.body.metadata,
+          },
+          context,
         );
 
-        reply.send({ identity });
+        reply.send({ identity: result.identity });
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to update identity' });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: IdentityParams }>(
@@ -217,7 +232,7 @@ export default async function identityRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: IdentityParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -229,14 +244,11 @@ export default async function identityRoutes(fastify: FastifyInstance) {
         const { identityId } = request.params;
         const clients = getClients(request);
 
-        await identityService
-          .scoped(clients)
-          .deleteIdentity(userId, identityId);
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
 
-        fastify.eventEmitter.emitIdentityDeleted(
-          { identityId, userId },
-          userId
-        );
+        await deleteIdentity(clients, { userId, identityId }, context);
 
         reply.code(204).send();
       } catch (error: any) {
@@ -244,6 +256,6 @@ export default async function identityRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to delete identity' });
       }
-    }
+    },
   );
 }

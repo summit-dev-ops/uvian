@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
 import { mcpService } from '../services';
+import { createMcp, updateMcp, deleteMcp } from '../commands';
 
 export default async function mcpRoutes(fastify: FastifyInstance) {
   fastify.get(
@@ -18,7 +19,7 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.post(
@@ -47,14 +48,12 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const mcp = await mcpService
-          .scoped(clients)
-          .create(request.body as any);
+        const { mcp } = await createMcp(clients, request.body as any);
         return reply.code(201).send({ mcp });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.put(
@@ -88,14 +87,15 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const { mcpId } = request.params as any as { mcpId: string };
-        const mcp = await mcpService
-          .scoped(clients)
-          .update(mcpId, request.body as any);
+        const { mcp } = await updateMcp(clients, {
+          mcpId,
+          ...(request.body as any),
+        });
         return reply.send({ mcp });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.delete(
@@ -117,11 +117,11 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const { mcpId } = request.params as any as { mcpId: string };
-        await mcpService.scoped(clients).delete(mcpId);
+        await deleteMcp(clients, { mcpId });
         return reply.send({ success: true });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 }

@@ -1,6 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { externalPlatformService } from '../services/factory';
 import { adminSupabase } from '../clients/supabase.client';
+import {
+  createPlatform,
+  updatePlatform,
+  deletePlatform,
+} from '../commands/external-platform';
 
 interface PlatformParams {
   platformId: string;
@@ -63,7 +68,7 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
           error instanceof Error ? error.message : 'Failed to fetch platforms';
         reply.code(400).send({ error: errorMessage });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: PlatformParams }>(
@@ -73,7 +78,7 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: PlatformParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -99,7 +104,7 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
           error instanceof Error ? error.message : 'Failed to fetch platform';
         reply.code(400).send({ error: errorMessage });
       }
-    }
+    },
   );
 
   fastify.post<{ Body: CreatePlatformBody }>(
@@ -131,7 +136,7 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Body: CreatePlatformBody }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -141,17 +146,21 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const platform = await externalPlatformService
-          .scoped(clients)
-          .createPlatform(userId, request.body);
+        const result = await createPlatform(clients, {
+          userId,
+          name: request.body.name,
+          platform: request.body.platform,
+          config: request.body.config,
+          is_active: request.body.is_active,
+        });
 
-        reply.code(201).send({ platform });
+        reply.code(201).send({ platform: result.platform });
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : 'Failed to create platform';
         reply.code(400).send({ error: errorMessage });
       }
-    }
+    },
   );
 
   fastify.put<{ Params: PlatformParams; Body: UpdatePlatformBody }>(
@@ -185,7 +194,7 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
         Params: PlatformParams;
         Body: UpdatePlatformBody;
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -196,17 +205,22 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
 
         const { platformId } = request.params;
         const clients = getClients(request);
-        const platform = await externalPlatformService
-          .scoped(clients)
-          .updatePlatform(userId, platformId, request.body);
+        const result = await updatePlatform(clients, {
+          userId,
+          platformId,
+          name: request.body.name,
+          platform: request.body.platform,
+          config: request.body.config,
+          is_active: request.body.is_active,
+        });
 
-        reply.send({ platform });
+        reply.send({ platform: result.platform });
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : 'Failed to update platform';
         reply.code(400).send({ error: errorMessage });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: PlatformParams }>(
@@ -216,7 +230,7 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: PlatformParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -227,9 +241,7 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
 
         const { platformId } = request.params;
         const clients = getClients(request);
-        await externalPlatformService
-          .scoped(clients)
-          .deletePlatform(userId, platformId);
+        await deletePlatform(clients, { userId, platformId });
 
         reply.code(204).send();
       } catch (error: unknown) {
@@ -237,6 +249,6 @@ export default async function externalPlatformRoutes(fastify: FastifyInstance) {
           error instanceof Error ? error.message : 'Failed to delete platform';
         reply.code(400).send({ error: errorMessage });
       }
-    }
+    },
   );
 }

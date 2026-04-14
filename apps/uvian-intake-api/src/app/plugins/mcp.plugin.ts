@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { intakeService, secretsService } from '../services';
+import { createIntake, revokeIntake } from '../commands';
 import {
   generateRSAKeyPair,
   decryptRSA,
@@ -196,9 +197,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const result = await intakeService
-            .scoped(clients)
-            .createIntake(userId, {
+          const { result } = await createIntake(
+            clients,
+            {
               title: args.title,
               description: args.description,
               submitLabel: args.submitLabel,
@@ -208,7 +209,9 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               expiresInSeconds: args.expiresInSeconds,
               requiresAuth: args.requiresAuth,
               createdBy: userId,
-            });
+            },
+            { eventEmitter: fastify.eventEmitter as any },
+          );
           return {
             content: [
               {
@@ -280,14 +283,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args) => {
         try {
-          const revoked = await intakeService
-            .scoped(clients)
-            .revokeIntake(args.tokenId, userId);
+          const { success } = await revokeIntake(
+            clients,
+            { tokenId: args.tokenId, userId },
+            { eventEmitter: fastify.eventEmitter as any },
+          );
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify({ success: revoked }),
+                text: JSON.stringify({ success }),
               },
             ],
           } as ToolResult;

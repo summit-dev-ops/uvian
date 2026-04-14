@@ -20,9 +20,6 @@
   ],
   "references": [
     {
-      "path": "../../packages/services/secrets/tsconfig.lib.json"
-    },
-    {
       "path": "../../packages/services/queue/tsconfig.lib.json"
     },
     {
@@ -32,10 +29,16 @@
       "path": "../../packages/services/api-key/tsconfig.lib.json"
     },
     {
+      "path": "../../packages/utils/encryption/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/uvian-events/tsconfig.lib.json"
     },
     {
-      "path": "../../packages/utils/encryption/tsconfig.lib.json"
+      "path": "../../packages/plugins/event-emitter/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/services/secrets/tsconfig.lib.json"
     }
   ]
 }

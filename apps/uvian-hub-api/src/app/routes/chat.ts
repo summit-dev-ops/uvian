@@ -1,4 +1,14 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {
+  createConversation,
+  deleteConversation,
+  createMessage,
+  deleteMessage,
+  updateMessage,
+  inviteConversationMember,
+  removeConversationMember,
+  updateConversationMemberRole,
+} from '../commands/chat';
 import { createChatService } from '../services/chat';
 import { adminSupabase } from '../clients/supabase.client';
 
@@ -44,7 +54,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<GetConversationsRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const conversations = await chatService
@@ -54,7 +64,7 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch conversations' });
       }
-    }
+    },
   );
 
   fastify.get<GetConversationRequest>(
@@ -72,13 +82,13 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<GetConversationRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const { conversationId } = request.params;
-        const conversation = await chatService.scoped(getClients(request)).getConversation(
-          conversationId
-        );
+        const conversation = await chatService
+          .scoped(getClients(request))
+          .getConversation(conversationId);
         reply.send(conversation);
       } catch (error: any) {
         if (error.message.includes('not found')) {
@@ -87,7 +97,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to fetch conversation' });
         }
       }
-    }
+    },
   );
 
   fastify.get<GetConversationMembersRequest>(
@@ -105,18 +115,18 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<GetConversationMembersRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const { conversationId } = request.params;
-        const members = await chatService.scoped(getClients(request)).getConversationMembers(
-          conversationId
-        );
+        const members = await chatService
+          .scoped(getClients(request))
+          .getConversationMembers(conversationId);
         reply.send(members);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch conversation members' });
       }
-    }
+    },
   );
 
   fastify.post<CreateConversationRequest>(
@@ -138,7 +148,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<CreateConversationRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -146,24 +156,19 @@ export default async function (fastify: FastifyInstance) {
           reply.code(401).send({ error: 'Not authenticated' });
           return;
         }
-        const conversation = await chatService.scoped(getClients(request)).createConversation(
-          userId,
-          request.body || {}
-        );
-        fastify.services.eventEmitter.emitConversationCreated(
+        const result = await createConversation(
+          getClients(request),
           {
-            conversationId: conversation.id,
-            spaceId: conversation.spaceId,
-            createdBy: userId,
-            memberIds: [userId],
+            userId,
+            ...(request.body || {}),
           },
-          userId
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        reply.code(201).send(conversation);
+        reply.code(201).send(result.conversation);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to create conversation' });
       }
-    }
+    },
   );
 
   fastify.post<InviteConversationMemberRequest>(
@@ -195,7 +200,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<InviteConversationMemberRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -205,17 +210,17 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId } = request.params;
         const { userId: targetUserId, role } = request.body || {};
-        const membership = await chatService.scoped(getClients(request)).inviteMember(
-          userId,
-          conversationId,
-          targetUserId,
-          role || { name: 'member' }
+        const result = await inviteConversationMember(
+          getClients(request),
+          {
+            userId,
+            conversationId,
+            targetUserId,
+            role: role || { name: 'member' },
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        fastify.services.eventEmitter.emitConversationMemberJoined(
-          { conversationId, userId: targetUserId, invitedBy: userId },
-          userId
-        );
-        reply.code(201).send(membership);
+        reply.code(201).send(result.member);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
           reply
@@ -227,7 +232,7 @@ export default async function (fastify: FastifyInstance) {
             .send({ error: 'Failed to invite conversation member' });
         }
       }
-    }
+    },
   );
 
   fastify.delete<DeleteConversationMemberRequest>(
@@ -248,7 +253,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<DeleteConversationMemberRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -257,14 +262,14 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId, userId: targetUserId } = request.params;
-        await chatService.scoped(getClients(request)).removeMember(
-          userId,
-          conversationId,
-          targetUserId
-        );
-        fastify.services.eventEmitter.emitConversationMemberLeft(
-          { conversationId, userId: targetUserId, removedBy: userId },
-          userId
+        await removeConversationMember(
+          getClients(request),
+          {
+            userId,
+            conversationId,
+            targetUserId,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -278,7 +283,7 @@ export default async function (fastify: FastifyInstance) {
             .send({ error: 'Failed to remove conversation member' });
         }
       }
-    }
+    },
   );
 
   fastify.patch<UpdateConversationMemberRoleRequest>(
@@ -312,7 +317,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<UpdateConversationMemberRoleRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -322,13 +327,13 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId, userId: targetUserId } = request.params;
         const { role } = request.body || {};
-        const membership = await chatService.scoped(getClients(request)).updateMemberRole(
+        const result = await updateConversationMemberRole(getClients(request), {
           userId,
           conversationId,
           targetUserId,
-          role
-        );
-        reply.send(membership);
+          role,
+        });
+        reply.send(result.member);
       } catch (error: any) {
         if (error.message.includes('permissions')) {
           reply
@@ -338,7 +343,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to update member role' });
         }
       }
-    }
+    },
   );
 
   fastify.post<CreateMessageRequest>(
@@ -367,7 +372,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<CreateMessageRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -377,28 +382,23 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId } = request.params;
         const { id, content, role, attachments } = request.body || {};
-        const message = await chatService.scoped(getClients(request)).createMessage(
-          userId,
-          conversationId,
-          { id, content, role, attachments }
-        );
-
-        fastify.services.eventEmitter.emitMessageCreated(
+        const result = await createMessage(
+          getClients(request),
           {
-            messageId: message.id,
+            userId,
             conversationId,
-            content: message.content,
-            senderId: message.senderId,
+            id,
+            content,
+            role,
+            attachments,
           },
-          userId
+          {
+            eventEmitter: fastify.services.eventEmitter,
+            io: fastify.io as any,
+          },
         );
 
-        fastify.io.to(conversationId).emit('new_message', {
-          conversationId,
-          message,
-        });
-
-        reply.code(201).send(message);
+        reply.code(201).send(result.message);
       } catch (error: any) {
         if (error.message.includes('not a member')) {
           reply.code(403).send({ error: 'Not a member of this conversation' });
@@ -406,7 +406,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to create message' });
         }
       }
-    }
+    },
   );
 
   fastify.get<GetMessagesRequest>(
@@ -424,18 +424,18 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<GetMessagesRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const { conversationId } = request.params;
-        const messages = await chatService.scoped(getClients(request)).getMessages(
-          conversationId
-        );
+        const messages = await chatService
+          .scoped(getClients(request))
+          .getMessages(conversationId);
         reply.send(messages);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch messages' });
       }
-    }
+    },
   );
 
   fastify.get<SearchMessagesRequest>(
@@ -464,22 +464,28 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<SearchMessagesRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const { conversationId } = request.params;
         const { q, senderId, from, to, limit, offset } = request.query || {};
 
-        const messages = await chatService.scoped(getClients(request)).searchMessages(
-          conversationId,
-          { q, senderId, from, to, limit, offset }
-        );
+        const messages = await chatService
+          .scoped(getClients(request))
+          .searchMessages(conversationId, {
+            q,
+            senderId,
+            from,
+            to,
+            limit,
+            offset,
+          });
 
         reply.send(messages);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to search messages' });
       }
-    }
+    },
   );
 
   fastify.delete<DeleteConversationRequest>(
@@ -497,7 +503,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<DeleteConversationRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -506,13 +512,13 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId } = request.params;
-        await chatService.scoped(getClients(request)).deleteConversation(
-          userId,
-          conversationId
-        );
-        fastify.services.eventEmitter.emitConversationDeleted(
-          { conversationId, deletedBy: userId },
-          userId
+        await deleteConversation(
+          getClients(request),
+          {
+            userId,
+            conversationId,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -524,7 +530,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to delete conversation' });
         }
       }
-    }
+    },
   );
 
   fastify.delete<DeleteMessageRequest>(
@@ -545,7 +551,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<DeleteMessageRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -554,14 +560,14 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
         const { conversationId, messageId } = request.params;
-        await chatService.scoped(getClients(request)).deleteMessage(
-          userId,
-          conversationId,
-          messageId
-        );
-        fastify.services.eventEmitter.emitMessageDeleted(
-          { messageId, conversationId, deletedBy: userId },
-          userId
+        await deleteMessage(
+          getClients(request),
+          {
+            userId,
+            conversationId,
+            messageId,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
         reply.code(204).send();
       } catch (error: any) {
@@ -571,7 +577,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to delete message' });
         }
       }
-    }
+    },
   );
 
   fastify.patch<UpdateMessageRequest>(
@@ -601,7 +607,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<UpdateMessageRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -611,18 +617,18 @@ export default async function (fastify: FastifyInstance) {
         }
         const { conversationId, messageId } = request.params;
         const { content, attachments } = request.body || {};
-        const message = await chatService.scoped(getClients(request)).updateMessage(
-          userId,
-          conversationId,
-          messageId,
-          content,
-          attachments
+        const result = await updateMessage(
+          getClients(request),
+          {
+            userId,
+            conversationId,
+            messageId,
+            content,
+            attachments,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
-        fastify.services.eventEmitter.emitMessageUpdated(
-          { messageId, conversationId, content, updatedBy: userId },
-          userId
-        );
-        reply.send(message);
+        reply.send(result.message);
       } catch (error: any) {
         if (error.message.includes('only your own')) {
           reply.code(403).send({ error: error.message });
@@ -630,6 +636,6 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to update message' });
         }
       }
-    }
+    },
   );
 }

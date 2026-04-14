@@ -5,8 +5,14 @@ import { createUserClient, adminSupabase } from '../clients/supabase.client';
 import { z } from 'zod';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcryptjs';
-import { scheduleService, subscriptionService } from '../services/factory';
-import { ScheduleEvents } from '@org/uvian-events';
+import { scheduleService } from '../services/factory';
+import {
+  createSchedule,
+  updateSchedule,
+  cancelSchedule,
+  pauseSchedule,
+  resumeSchedule,
+} from '../commands';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -94,36 +100,6 @@ function extractUserIdFromJwt(token: string): string {
   }
 }
 
-async function createSubscriptions(
-  scheduleId: string,
-  subscriberIds: string[],
-): Promise<void> {
-  const clients = { adminClient: adminSupabase, userClient: adminSupabase };
-  const subService = subscriptionService.admin(clients);
-
-  const existingSubs = await subService.getSubscriptionsByResource(
-    'uvian.schedule',
-    scheduleId,
-  );
-
-  const existingUserIds = new Set(existingSubs.map((s) => s.user_id));
-  const newSubscriberIds = subscriberIds.filter(
-    (uid) => !existingUserIds.has(uid),
-  );
-
-  if (newSubscriberIds.length === 0) return;
-
-  const scopedService = subscriptionService.scoped(clients);
-
-  for (const userId of newSubscriberIds) {
-    await scopedService.activateSubscription(
-      userId,
-      'uvian.schedule',
-      scheduleId,
-    );
-  }
-}
-
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   async function createAuthenticatedServer(
     userId: string,
@@ -189,28 +165,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const schedule = await svc.createSchedule(userId, {
-            type: args.type,
-            start: args.start,
-            end: args.end,
-            cronExpression: args.cronExpression,
-            eventData: args.eventData,
-            subscriberIds: [userId],
-          });
-
-          await createSubscriptions(schedule.id, [userId]);
-
-          fastify.schedulerEmitter.emitEvent(
-            ScheduleEvents.SCHEDULE_CREATED,
-            `/schedules/${schedule.id}`,
+          const { schedule } = await createSchedule(
+            clients,
             {
-              scheduleId: schedule.id,
-              type: schedule.type,
-              cronExpression: schedule.cronExpression || undefined,
+              userId,
+              type: args.type,
+              start: args.start,
+              end: args.end,
+              cronExpression: args.cronExpression,
+              eventData: args.eventData,
               subscriberIds: [userId],
-              createdBy: userId,
             },
-            userId,
+            { eventEmitter: fastify.schedulerEmitter as any },
           );
 
           return {
@@ -286,7 +252,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const schedule = await svc.cancelSchedule(userId, args.scheduleId);
+          const { schedule } = await cancelSchedule(
+            clients,
+            { userId, scheduleId: args.scheduleId },
+            { eventEmitter: fastify.schedulerEmitter as any },
+          );
 
           return {
             content: [{ type: 'text', text: JSON.stringify(schedule) }],
@@ -309,7 +279,10 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const schedule = await svc.pauseSchedule(userId, args.scheduleId);
+          const { schedule } = await pauseSchedule(clients, {
+            userId,
+            scheduleId: args.scheduleId,
+          });
 
           return {
             content: [{ type: 'text', text: JSON.stringify(schedule) }],
@@ -332,7 +305,10 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const schedule = await svc.resumeSchedule(userId, args.scheduleId);
+          const { schedule } = await resumeSchedule(clients, {
+            userId,
+            scheduleId: args.scheduleId,
+          });
 
           return {
             content: [{ type: 'text', text: JSON.stringify(schedule) }],
@@ -360,10 +336,10 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { scheduleId, ...updateData } = args;
-          const schedule = await svc.updateSchedule(
-            userId,
-            scheduleId,
-            updateData,
+          const { schedule } = await updateSchedule(
+            clients,
+            { userId, scheduleId, ...updateData },
+            { eventEmitter: fastify.schedulerEmitter as any },
           );
 
           return {

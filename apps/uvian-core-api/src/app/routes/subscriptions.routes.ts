@@ -1,6 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { subscriptionService } from '../services';
 import { adminSupabase } from '../clients/supabase.client';
+import {
+  createSubscription,
+  deleteSubscription,
+} from '../commands/subscription';
+import type { CommandContext } from '../commands/types';
 
 interface CreateSubscriptionBody {
   resource_type: string;
@@ -43,7 +48,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to fetch subscriptions' });
       }
-    }
+    },
   );
 
   fastify.post<{ Body: CreateSubscriptionBody }>(
@@ -77,7 +82,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Body: CreateSubscriptionBody }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -87,31 +92,29 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients(request);
-        const subscription = await subscriptionService
-          .scoped(clients)
-          .createSubscription(userId, {
+
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
+
+        const result = await createSubscription(
+          clients,
+          {
+            userId,
             resource_type: request.body.resource_type,
             resource_id: request.body.resource_id,
             is_active: request.body.is_active,
-          });
-
-        fastify.eventEmitter.emitSubscriptionCreated(
-          {
-            subscriptionId: subscription.id,
-            userId: subscription.user_id,
-            resourceType: subscription.resource_type,
-            resourceId: subscription.resource_id,
           },
-          userId
+          context,
         );
 
-        reply.send({ subscription });
+        reply.send({ subscription: result.subscription });
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to create subscription' });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: DeleteSubscriptionParams }>(
@@ -121,7 +124,7 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: DeleteSubscriptionParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -133,14 +136,11 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
         const { subscriptionId } = request.params;
         const clients = getClients(request);
 
-        await subscriptionService
-          .scoped(clients)
-          .deleteSubscription(userId, subscriptionId);
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
 
-        fastify.eventEmitter.emitSubscriptionDeleted(
-          { subscriptionId, userId },
-          userId
-        );
+        await deleteSubscription(clients, { userId, subscriptionId }, context);
 
         reply.code(204).send();
       } catch (error: any) {
@@ -148,6 +148,6 @@ export default async function subscriptionRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to delete subscription' });
       }
-    }
+    },
   );
 }

@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
 import { agentConfigService } from '../services';
+import { createAgent, updateAgent } from '../commands';
 
 export default async function agentConfigRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { agentUserId: string } }>(
@@ -23,7 +24,7 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
           .code(500)
           .send({ error: error.message || 'Failed to fetch agent secrets' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: { agentUserId: string } }>(
@@ -52,7 +53,7 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
           .code(500)
           .send({ error: error.message || 'Failed to fetch agent skills' });
       }
-    }
+    },
   );
 
   fastify.get(
@@ -83,7 +84,7 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
       } catch (error: any) {
         return reply.code(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.post(
@@ -113,19 +114,15 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
         };
         const body = request.body as any;
 
-        const agent = await agentConfigService.scoped(clients).create({
-          userId: body.userId,
-          accountId: body.accountId,
-          systemPrompt: body.systemPrompt,
-          maxConversationHistory: body.maxConversationHistory,
-          config: body.config,
+        const { agent } = await createAgent(clients, body, {
+          eventEmitter: fastify.eventEmitter,
         });
 
         return reply.code(201).send({ agent });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 
   fastify.put(
@@ -158,18 +155,18 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
         };
         const { agentId } = request.params as any as { agentId: string };
         const body = request.body as any;
+        const userId = (request as any).user?.id || body.userId || '';
 
-        const agent = await agentConfigService.scoped(clients).update(agentId, {
-          systemPrompt: body.systemPrompt,
-          maxConversationHistory: body.maxConversationHistory,
-          config: body.config,
-          isActive: body.isActive,
-        });
+        const { agent } = await updateAgent(
+          clients,
+          { agentId, userId, ...body },
+          { eventEmitter: fastify.eventEmitter },
+        );
 
         return reply.send({ agent });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });
       }
-    }
+    },
   );
 }

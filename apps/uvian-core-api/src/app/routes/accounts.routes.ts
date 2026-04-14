@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { agentService } from '../services/factory';
 import { adminSupabase } from '../clients/supabase.client';
+import { createAgent, deleteAgent } from '../commands/agent';
 
 interface GetAgentsParams {
   accountId: string;
@@ -39,7 +40,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: GetAgentsParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -58,7 +59,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to fetch agents' });
       }
-    }
+    },
   );
 
   fastify.post<{ Params: CreateAgentParams; Body: CreateAgentBody }>(
@@ -81,7 +82,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         Params: CreateAgentParams;
         Body: CreateAgentBody;
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -94,16 +95,14 @@ export default async function accountRoutes(fastify: FastifyInstance) {
 
         const { name } = request.body;
         const clients = getClients(request);
-        const agent = await agentService
-          .scoped(clients)
-          .createAgent(userId, accountId, name);
-        reply.code(201).send({ agent });
+        const result = await createAgent(clients, { userId, accountId, name });
+        reply.code(201).send({ agent: result.agent });
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to create agent' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: GetAgentParams }>(
@@ -113,7 +112,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: GetAgentParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -140,7 +139,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to fetch agent' });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: DeleteAgentParams }>(
@@ -150,7 +149,7 @@ export default async function accountRoutes(fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<{ Params: DeleteAgentParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -162,15 +161,13 @@ export default async function accountRoutes(fastify: FastifyInstance) {
         const { accountId, agentId } = request.params;
         const clients = getClients(request);
 
-        await agentService
-          .scoped(clients)
-          .deleteAgent(userId, agentId, accountId);
+        await deleteAgent(clients, { userId, agentId, accountId });
         reply.code(204).send();
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to delete agent' });
       }
-    }
+    },
   );
 }

@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { createNote, updateNote, deleteNote } from '../commands/note';
 import { createNoteService } from '../services/note';
 import { adminSupabase } from '../clients/supabase.client';
 
@@ -55,7 +56,7 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch notes' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: GetNoteParams }>(
@@ -79,7 +80,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to fetch note' });
         }
       }
-    }
+    },
   );
 
   fastify.post<{ Params: GetSpaceNotesParams; Body: CreateNoteBody }>(
@@ -98,32 +99,25 @@ export default async function (fastify: FastifyInstance) {
         const { spaceId } = request.params;
         const { title, body, attachments } = request.body || {};
 
-        const note = await noteService
-          .scoped(getClients(request))
-          .createNote(userId, {
+        const result = await createNote(
+          getClients(request),
+          {
+            userId,
             spaceId,
             title,
             body,
             attachments,
-          });
-
-        fastify.services.eventEmitter.emitNoteCreated(
-          {
-            noteId: note.id,
-            title: note.title,
-            content: note.body || '',
-            createdBy: userId,
           },
-          userId
+          { eventEmitter: fastify.services.eventEmitter },
         );
 
-        reply.code(201).send(note);
+        reply.code(201).send(result.note);
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to create note' });
       }
-    }
+    },
   );
 
   fastify.patch<{ Params: GetNoteParams; Body: UpdateNoteBody }>(
@@ -142,22 +136,25 @@ export default async function (fastify: FastifyInstance) {
         const { noteId } = request.params;
         const { title, body, attachments } = request.body || {};
 
-        const note = await noteService
-          .scoped(getClients(request))
-          .updateNote(userId, noteId, { title, body, attachments });
-
-        fastify.services.eventEmitter.emitNoteUpdated(
-          { noteId, updatedBy: userId, title, content: body },
-          userId
+        const result = await updateNote(
+          getClients(request),
+          {
+            userId,
+            noteId,
+            title,
+            body,
+            attachments,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
 
-        reply.send(note);
+        reply.send(result.note);
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to update note' });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: GetNoteParams }>(
@@ -175,13 +172,13 @@ export default async function (fastify: FastifyInstance) {
 
         const { noteId } = request.params;
 
-        await noteService
-          .scoped(getClients(request))
-          .deleteNote(userId, noteId);
-
-        fastify.services.eventEmitter.emitNoteDeleted(
-          { noteId, deletedBy: userId },
-          userId
+        await deleteNote(
+          getClients(request),
+          {
+            userId,
+            noteId,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
 
         reply.send({ success: true });
@@ -190,6 +187,6 @@ export default async function (fastify: FastifyInstance) {
           .code(400)
           .send({ error: error.message || 'Failed to delete note' });
       }
-    }
+    },
   );
 }

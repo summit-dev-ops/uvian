@@ -13,6 +13,24 @@ import {
   identityService,
   agentService,
 } from '../services/factory';
+import {
+  createProvider,
+  updateProvider,
+  deleteProvider,
+  linkUserProvider,
+  unlinkUserProvider,
+} from '../commands/automation-provider';
+import {
+  createSubscription,
+  deleteSubscription,
+} from '../commands/subscription';
+import {
+  createIdentity,
+  updateIdentity,
+  deleteIdentity,
+} from '../commands/identity';
+import { createAgent, deleteAgent } from '../commands/agent';
+import type { CommandContext } from '../commands/types';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -29,7 +47,7 @@ const jwtCache = new Map<string, { jwt: string; expiresAt: number }>();
 const JWT_TTL_MS = 50 * 60 * 1000;
 
 async function authenticateWithApiKey(
-  apiKey: string
+  apiKey: string,
 ): Promise<{ userId: string; jwt: string } | null> {
   if (!apiKey.startsWith('sk_agent_')) {
     return null;
@@ -103,7 +121,7 @@ function extractUserIdFromJwt(token: string): string {
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   async function createAuthenticatedServer(
     userId: string,
-    _userJwt: string
+    _userJwt: string,
   ): Promise<McpServer> {
     const server = new McpServer(
       {
@@ -116,12 +134,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           resources: {},
           prompts: {},
         },
-      }
+      },
     );
 
     const adminClient = adminSupabase;
     const userClient = createUserClient(_userJwt);
     const clients = { adminClient, userClient };
+
+    const commandContext: CommandContext = {
+      eventEmitter: fastify.services.eventEmitter,
+    };
 
     server.registerTool(
       'get_account',
@@ -140,7 +162,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -160,7 +182,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -180,7 +202,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -202,7 +224,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -224,7 +246,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -249,7 +271,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -271,7 +293,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -289,20 +311,22 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await automationProviderService
-            .scoped(clients)
-            .createProvider(userId, args.accountId, {
-              account_id: args.accountId,
-              owner_user_id: userId,
+          const result = await createProvider(
+            clients,
+            {
+              userId,
+              accountId: args.accountId,
               name: args.name,
               type: args.type,
               url: args.url,
               auth_method: args.auth_method,
               auth_config: args.auth_config,
               is_active: args.is_active,
-            });
+            },
+            commandContext,
+          );
           return {
-            content: [{ type: 'text', text: JSON.stringify(provider) }],
+            content: [{ type: 'text', text: JSON.stringify(result.provider) }],
           };
         } catch (error: any) {
           return {
@@ -310,7 +334,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -329,18 +353,23 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await automationProviderService
-            .scoped(clients)
-            .updateProvider(userId, args.providerId, args.accountId, {
+          const result = await updateProvider(
+            clients,
+            {
+              userId,
+              providerId: args.providerId,
+              accountId: args.accountId,
               name: args.name,
               type: args.type,
               url: args.url,
               auth_method: args.auth_method,
               auth_config: args.auth_config,
               is_active: args.is_active,
-            });
+            },
+            commandContext,
+          );
           return {
-            content: [{ type: 'text', text: JSON.stringify(provider) }],
+            content: [{ type: 'text', text: JSON.stringify(result.provider) }],
           };
         } catch (error: any) {
           return {
@@ -348,7 +377,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -361,9 +390,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await automationProviderService
-            .scoped(clients)
-            .deleteProvider(userId, args.providerId, args.accountId);
+          await deleteProvider(
+            clients,
+            { userId, providerId: args.providerId, accountId: args.accountId },
+            commandContext,
+          );
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -375,7 +406,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -397,7 +428,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -419,7 +450,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -444,7 +475,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -458,15 +489,20 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const subscription = await subscriptionService
-            .scoped(clients)
-            .createSubscription(userId, {
+          const result = await createSubscription(
+            clients,
+            {
+              userId,
               resource_type: args.resourceType,
               resource_id: args.resourceId,
               is_active: args.isActive,
-            });
+            },
+            commandContext,
+          );
           return {
-            content: [{ type: 'text', text: JSON.stringify(subscription) }],
+            content: [
+              { type: 'text', text: JSON.stringify(result.subscription) },
+            ],
           };
         } catch (error: any) {
           return {
@@ -474,7 +510,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -484,9 +520,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await subscriptionService
-            .scoped(clients)
-            .deleteSubscription(userId, args.subscriptionId);
+          await deleteSubscription(
+            clients,
+            { userId, subscriptionId: args.subscriptionId },
+            commandContext,
+          );
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -498,7 +536,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -520,7 +558,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -542,7 +580,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -567,7 +605,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -581,16 +619,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const identity = await identityService
-            .scoped(clients)
-            .createIdentity(userId, {
-              user_id: userId,
-              provider: args.provider,
+          const result = await createIdentity(
+            clients,
+            {
+              userId,
+              provider: args.provider as any,
               provider_user_id: args.providerUserId,
               metadata: args.metadata,
-            } as any);
+            },
+            commandContext,
+          );
           return {
-            content: [{ type: 'text', text: JSON.stringify(identity) }],
+            content: [{ type: 'text', text: JSON.stringify(result.identity) }],
           };
         } catch (error: any) {
           return {
@@ -598,7 +638,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -613,15 +653,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const identity = await identityService
-            .scoped(clients)
-            .updateIdentity(userId, args.identityId, {
-              provider: args.provider,
+          const result = await updateIdentity(
+            clients,
+            {
+              userId,
+              identityId: args.identityId,
+              provider: args.provider as any,
               provider_user_id: args.providerUserId,
               metadata: args.metadata,
-            });
+            },
+            commandContext,
+          );
           return {
-            content: [{ type: 'text', text: JSON.stringify(identity) }],
+            content: [{ type: 'text', text: JSON.stringify(result.identity) }],
           };
         } catch (error: any) {
           return {
@@ -629,7 +673,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -639,9 +683,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await identityService
-            .scoped(clients)
-            .deleteIdentity(userId, args.identityId);
+          await deleteIdentity(
+            clients,
+            { userId, identityId: args.identityId },
+            commandContext,
+          );
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -653,7 +699,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -673,7 +719,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -693,7 +739,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -703,17 +749,21 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const agent = await agentService
-            .scoped(clients)
-            .createAgent(userId, args.accountId, args.name);
-          return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
+          const result = await createAgent(clients, {
+            userId,
+            accountId: args.accountId,
+            name: args.name,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result.agent) }],
+          };
         } catch (error: any) {
           return {
             content: [{ type: 'text', text: error.message || String(error) }],
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -723,9 +773,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await agentService
-            .scoped(clients)
-            .deleteAgent(userId, args.agentId, args.accountId);
+          await deleteAgent(clients, {
+            userId,
+            agentId: args.agentId,
+            accountId: args.accountId,
+          });
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -737,7 +789,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -759,7 +811,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -781,7 +833,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -791,11 +843,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const provider = await automationProviderService
-            .scoped(clients)
-            .linkUserToProvider(userId, args.automationProviderId);
+          const result = await linkUserProvider(clients, {
+            userId,
+            automationProviderId: args.automationProviderId,
+          });
           return {
-            content: [{ type: 'text', text: JSON.stringify(provider) }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result.userAutomationProvider),
+              },
+            ],
           };
         } catch (error: any) {
           return {
@@ -803,7 +861,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     server.registerTool(
@@ -813,9 +871,10 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await automationProviderService
-            .scoped(clients)
-            .unlinkUserFromProvider(userId, args.providerLinkId);
+          await unlinkUserProvider(clients, {
+            userId,
+            providerLinkId: args.providerLinkId,
+          });
           return {
             content: [
               { type: 'text', text: JSON.stringify({ success: true }) },
@@ -827,7 +886,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             isError: true,
           };
         }
-      }
+      },
     );
 
     console.log('[MCP] Server created with tools');
@@ -916,7 +975,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
       console.log(
         '[MCP] handleRequest returned, status:',
-        reply.raw.statusCode
+        reply.raw.statusCode,
       );
       console.log('[MCP] ========== POST /v1/mcp END ==========');
     } catch (error) {

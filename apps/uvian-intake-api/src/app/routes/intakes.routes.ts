@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { intakeService } from '../services';
 import { adminSupabase } from '../clients/supabase.client';
+import { createIntake, revokeIntake } from '../commands';
 
 interface TokenIdParams {
   tokenId: string;
@@ -102,28 +103,8 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
         const body = request.body as CreateIntakeBody;
         const clients = getClients();
 
-        const result = await intakeService
-          .scoped(clients)
-          .createIntake(body.createdBy, {
-            title: body.title,
-            description: body.description,
-            submitLabel: body.submitLabel,
-            publicKey: body.publicKey,
-            schema: body.schema,
-            metadata: body.metadata,
-            expiresInSeconds: body.expiresInSeconds,
-            createdBy: body.createdBy,
-            requiresAuth: body.requiresAuth,
-          });
-
-        fastify.eventEmitter.emitIntakeCreated({
-          intakeId: result.tokenId,
-          title: body.title,
-          publicKey: body.publicKey,
-          expiresAt: new Date(
-            Date.now() + (body.expiresInSeconds ?? 3600) * 1000
-          ).toISOString(),
-          createdBy: body.createdBy,
+        const { result } = await createIntake(clients, body, {
+          eventEmitter: fastify.eventEmitter as any,
         });
 
         return reply.code(201).send(result);
@@ -131,7 +112,7 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
         fastify.log.error({ error }, 'Failed to create intake');
         return reply.code(500).send({ error: 'Failed to create intake' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: TokenIdParams }>(
@@ -153,7 +134,7 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
         fastify.log.error({ error }, 'Failed to get intake');
         return reply.code(500).send({ error: 'Failed to get intake status' });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: TokenIdParams }>(
@@ -168,26 +149,23 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
         }
 
         const clients = getClients();
-        const revoked = await intakeService
-          .scoped(clients)
-          .revokeIntake(tokenId, userId);
+        const { success } = await revokeIntake(
+          clients,
+          { tokenId, userId },
+          { eventEmitter: fastify.eventEmitter as any },
+        );
 
-        if (!revoked) {
+        if (!success) {
           return reply
             .code(404)
             .send({ error: 'Intake not found or already processed' });
         }
-
-        fastify.eventEmitter.emitIntakeRevoked({
-          intakeId: tokenId,
-          revokedBy: userId,
-        });
 
         return reply.send({ success: true });
       } catch (error: unknown) {
         fastify.log.error({ error }, 'Failed to revoke intake');
         return reply.code(500).send({ error: 'Failed to revoke intake' });
       }
-    }
+    },
   );
 }

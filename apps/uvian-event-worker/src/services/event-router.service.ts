@@ -75,7 +75,7 @@ export class EventRouter {
 
     if (this.isAutomationProviderEvent(event.type)) {
       console.log(
-        '[EventRouter] Automation provider event detected, invalidating related caches'
+        '[EventRouter] Automation provider event detected, invalidating related caches',
       );
       const data = event.data as { automationProviderId?: string };
       if (data.automationProviderId) {
@@ -94,14 +94,14 @@ export class EventRouter {
     if (!resourceType) {
       console.log(
         '[EventRouter] Resource type not subscribable:',
-        sourcePath.type
+        sourcePath.type,
       );
       return;
     }
 
     if (this.isSubscriptionEvent(event.type)) {
       console.log(
-        '[EventRouter] Subscription event detected, invalidating cache'
+        '[EventRouter] Subscription event detected, invalidating cache',
       );
       await this.invalidateCache(resourceType, sourcePath.id);
       return;
@@ -145,19 +145,19 @@ export class EventRouter {
 
   private isMemberEvent(eventType: string): boolean {
     return MEMBER_EVENT_TYPES.includes(
-      eventType as (typeof MEMBER_EVENT_TYPES)[number]
+      eventType as (typeof MEMBER_EVENT_TYPES)[number],
     );
   }
 
   private isAutomationProviderEvent(eventType: string): boolean {
     return AUTOMATION_PROVIDER_EVENTS.includes(
-      eventType as (typeof AUTOMATION_PROVIDER_EVENTS)[number]
+      eventType as (typeof AUTOMATION_PROVIDER_EVENTS)[number],
     );
   }
 
   private isSubscriptionEvent(eventType: string): boolean {
     return SUBSCRIPTION_EVENTS.includes(
-      eventType as (typeof SUBSCRIPTION_EVENTS)[number]
+      eventType as (typeof SUBSCRIPTION_EVENTS)[number],
     );
   }
 
@@ -171,7 +171,7 @@ export class EventRouter {
 
   private async invalidateCache(
     resourceType: string,
-    resourceId: string
+    resourceId: string,
   ): Promise<void> {
     const cacheKey = this.buildCacheKey(resourceType, resourceId);
     try {
@@ -183,7 +183,7 @@ export class EventRouter {
   }
 
   private async invalidateCacheForProvider(
-    automationProviderId: string
+    automationProviderId: string,
   ): Promise<void> {
     try {
       const { data: subscriptions, error } = await supabaseAdmin
@@ -194,7 +194,7 @@ export class EventRouter {
       if (error) {
         console.error(
           '[EventRouter] Error fetching provider subscriptions:',
-          error
+          error,
         );
         return;
       }
@@ -214,7 +214,7 @@ export class EventRouter {
       }
 
       console.log(
-        `[EventRouter] Invalidated ${uniqueKeys.size} caches for provider ${automationProviderId}`
+        `[EventRouter] Invalidated ${uniqueKeys.size} caches for provider ${automationProviderId}`,
       );
     } catch (error) {
       console.error('[EventRouter] Error invalidating provider cache:', error);
@@ -226,14 +226,14 @@ export class EventRouter {
 
     if (!data.agentId || !data.accountId) {
       console.log(
-        '[EventRouter] MCP provisioning event missing agentId or accountId'
+        '[EventRouter] MCP provisioning event missing agentId or accountId',
       );
       return;
     }
 
     console.log(
       '[EventRouter] Processing MCP provisioning event for agent:',
-      data.agentId
+      data.agentId,
     );
 
     try {
@@ -248,7 +248,7 @@ export class EventRouter {
       if (error) {
         console.error(
           '[EventRouter] Error fetching internal provider for MCP provisioning:',
-          error
+          error,
         );
         return;
       }
@@ -257,7 +257,7 @@ export class EventRouter {
       if (!internalProvider) {
         console.log(
           '[EventRouter] No internal provider found for account:',
-          data.accountId
+          data.accountId,
         );
         return;
       }
@@ -281,7 +281,7 @@ export class EventRouter {
     } catch (error) {
       console.error(
         '[EventRouter] Error processing MCP provisioning event:',
-        error
+        error,
       );
     }
   }
@@ -292,19 +292,19 @@ export class EventRouter {
       '[EventRouter] Processing intake event:',
       event.type,
       'intakeId:',
-      intakeId
+      intakeId,
     );
 
     try {
       const providers = await cachedSubscriptionService.getProvidersForResource(
         'uvian.intake',
-        intakeId
+        intakeId,
       );
 
       if (providers.length === 0) {
         console.log(
           '[EventRouter] No providers subscribed to intake/',
-          intakeId
+          intakeId,
         );
         return;
       }
@@ -312,7 +312,7 @@ export class EventRouter {
       console.log(
         '[EventRouter] Routing intake event to',
         providers.length,
-        'provider(s)'
+        'provider(s)',
       );
 
       const routingPromises = providers.map((provider) =>
@@ -321,9 +321,9 @@ export class EventRouter {
             '[EventRouter] Error routing to provider',
             provider.provider_id,
             ':',
-            error
+            error,
           );
-        })
+        }),
       );
 
       await Promise.all(routingPromises);
@@ -335,14 +335,14 @@ export class EventRouter {
   private async routeToSubscribers(
     event: CloudEvent,
     resourceType: ResourceType,
-    resourceId: string
+    resourceId: string,
   ): Promise<void> {
     let providers: SubscriptionProvider[];
 
     try {
       providers = await cachedSubscriptionService.getProvidersForResource(
         resourceType,
-        resourceId
+        resourceId,
       );
     } catch (error) {
       console.error('[EventRouter] Error fetching providers:', error);
@@ -351,33 +351,53 @@ export class EventRouter {
 
     if (providers.length === 0) {
       console.log(
-        `[EventRouter] No providers subscribed to ${resourceType}/${resourceId}`
+        `[EventRouter] No providers subscribed to ${resourceType}/${resourceId}`,
       );
       return;
     }
 
     console.log(
-      `[EventRouter] Routing event to ${providers.length} provider(s)`
+      `[EventRouter] Routing event to ${providers.length} provider(s)`,
     );
 
     const routingPromises = providers.map((provider) =>
       this.routeToProvider(provider, event).catch((error) => {
         console.error(
           `[EventRouter] Error routing to provider ${provider.provider_id}:`,
-          error
+          error,
         );
-      })
+      }),
     );
 
     await Promise.all(routingPromises);
   }
 
+  private getActorId(event: CloudEvent): string | null {
+    if (event.subject) {
+      return event.subject;
+    }
+    const data = event.data as Record<string, unknown>;
+    if (data?.actorId) {
+      return data.actorId as string;
+    }
+    return null;
+  }
+
   private async routeToProvider(
     provider: SubscriptionProvider,
-    event: CloudEvent
+    event: CloudEvent,
   ): Promise<void> {
+    const actorId = this.getActorId(event);
+
+    if (actorId && actorId === provider.dependent_user_id) {
+      console.log(
+        `[EventRouter] Skipping event ${event.id} - actor ${actorId} matches subscriber ${provider.dependent_user_id}`,
+      );
+      return;
+    }
+
     console.log(
-      `[EventRouter] Routing to provider: ${provider.provider_name} (${provider.type})`
+      `[EventRouter] Routing to provider: ${provider.provider_name} (${provider.type})`,
     );
 
     if (provider.type === 'internal') {
@@ -391,7 +411,7 @@ export class EventRouter {
 
   private async sendToInternalProvider(
     provider: SubscriptionProvider,
-    event: CloudEvent
+    event: CloudEvent,
   ): Promise<void> {
     const url = `${AUTOMATION_API_URL}/api/webhooks/agents/${provider.dependent_user_id}/events`;
 
@@ -410,12 +430,12 @@ export class EventRouter {
       }
 
       console.log(
-        `[EventRouter] Successfully sent to internal provider ${provider.provider_id}`
+        `[EventRouter] Successfully sent to internal provider ${provider.provider_id}`,
       );
     } catch (error) {
       console.error(
         `[EventRouter] Failed to send to internal provider ${provider.provider_id}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -423,11 +443,11 @@ export class EventRouter {
 
   private async sendToWebhookProvider(
     provider: SubscriptionProvider,
-    event: CloudEvent
+    event: CloudEvent,
   ): Promise<void> {
     if (!provider.url) {
       console.warn(
-        `[EventRouter] Webhook provider ${provider.provider_id} has no URL`
+        `[EventRouter] Webhook provider ${provider.provider_id} has no URL`,
       );
       return;
     }
@@ -457,12 +477,12 @@ export class EventRouter {
       }
 
       console.log(
-        `[EventRouter] Successfully sent to webhook provider ${provider.provider_id}`
+        `[EventRouter] Successfully sent to webhook provider ${provider.provider_id}`,
       );
     } catch (error) {
       console.error(
         `[EventRouter] Failed to send to webhook provider ${provider.provider_id}:`,
-        error
+        error,
       );
       throw error;
     }

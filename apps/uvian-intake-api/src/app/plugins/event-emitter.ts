@@ -10,6 +10,7 @@ import {
   IntakeCreatedData,
   IntakeCompletedData,
   IntakeRevokedData,
+  IntakeDeletedData,
 } from '@org/uvian-events';
 
 class IntakeEventEmitter extends BaseEventEmitter {
@@ -18,7 +19,7 @@ class IntakeEventEmitter extends BaseEventEmitter {
       IntakeEvents.INTAKE_CREATED,
       `/intakes/${data.intakeId}`,
       data,
-      data.createdBy
+      data.createdBy,
     );
   }
 
@@ -27,7 +28,7 @@ class IntakeEventEmitter extends BaseEventEmitter {
       IntakeEvents.INTAKE_COMPLETED,
       `/intakes/${data.intakeId}`,
       data,
-      data.createdBy
+      data.createdBy,
     );
   }
 
@@ -36,7 +37,16 @@ class IntakeEventEmitter extends BaseEventEmitter {
       IntakeEvents.INTAKE_REVOKED,
       `/intakes/${data.intakeId}`,
       data,
-      data.revokedBy
+      data.revokedBy,
+    );
+  }
+
+  emitIntakeDeleted(data: IntakeDeletedData): void {
+    this.emit(
+      IntakeEvents.INTAKE_DELETED,
+      `/intakes/${data.intakeId}`,
+      data,
+      data.deletedBy,
     );
   }
 }

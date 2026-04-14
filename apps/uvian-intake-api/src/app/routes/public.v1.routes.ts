@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import jwt from 'jsonwebtoken';
 import { intakeService } from '../services';
 import { adminSupabase } from '../clients/supabase.client';
+import { completeIntake } from '../commands';
 
 interface TokenIdParams {
   tokenId: string;
@@ -46,7 +47,7 @@ function getClients() {
 
 async function linkDiscordIdentity(
   userId: string,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<void> {
   const { error } = await adminSupabase.from('user_identities').upsert(
     {
@@ -54,7 +55,7 @@ async function linkDiscordIdentity(
       provider: 'discord',
       provider_user_id: discordUserId,
     },
-    { onConflict: 'provider,provider_user_id', ignoreDuplicates: true }
+    { onConflict: 'provider,provider_user_id', ignoreDuplicates: true },
   );
 
   if (error) {
@@ -87,7 +88,7 @@ export async function publicV1Routes(fastify: FastifyInstance) {
         fastify.log.error({ error }, 'Failed to get intake schema');
         return reply.code(500).send({ error: 'Failed to retrieve form' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: TokenIdParams }>(
@@ -114,7 +115,7 @@ export async function publicV1Routes(fastify: FastifyInstance) {
         fastify.log.error({ error }, 'Failed to get intake status');
         return reply.code(500).send({ error: 'Failed to get intake status' });
       }
-    }
+    },
   );
 
   fastify.post<{ Params: TokenIdParams; Body: SubmitBody }>(
@@ -164,9 +165,16 @@ export async function publicV1Routes(fastify: FastifyInstance) {
           }
         }
 
-        const result = await intakeService
-          .scoped(clients)
-          .submitIntake(tokenId, request.body, submittedBy);
+        const { submissionId } = await completeIntake(
+          clients,
+          {
+            tokenId,
+            submittedBy,
+            payload: request.body,
+            title: intake.title,
+          },
+          { eventEmitter: fastify.eventEmitter as any },
+        );
 
         if (
           intake.metadata?.type === 'discord_link' &&
@@ -175,19 +183,11 @@ export async function publicV1Routes(fastify: FastifyInstance) {
         ) {
           await linkDiscordIdentity(
             submittedBy,
-            intake.metadata.discordUserId as string
+            intake.metadata.discordUserId as string,
           );
         }
 
-        fastify.eventEmitter.emitIntakeCompleted({
-          intakeId: tokenId,
-          submissionId: result.submissionId,
-          title: intake.title,
-          submittedAt: new Date().toISOString(),
-          createdBy: intake.created_by,
-        });
-
-        return reply.send({ success: true, submissionId: result.submissionId });
+        return reply.send({ success: true, submissionId });
       } catch (error: unknown) {
         const err = error as Error;
 
@@ -207,7 +207,7 @@ export async function publicV1Routes(fastify: FastifyInstance) {
         fastify.log.error({ error }, 'Failed to submit intake');
         return reply.code(500).send({ error: 'Failed to submit form' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: SubmissionIdParams }>(
@@ -244,6 +244,6 @@ export async function publicV1Routes(fastify: FastifyInstance) {
         fastify.log.error({ error }, 'Failed to get submission');
         return reply.code(500).send({ error: 'Failed to retrieve submission' });
       }
-    }
+    },
   );
 }

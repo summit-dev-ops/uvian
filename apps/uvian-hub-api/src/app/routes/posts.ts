@@ -1,16 +1,15 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { createPost, deletePost } from '../commands/post';
 import { createPostService } from '../services/post';
-import { createNoteService } from '../services/note';
 import { adminSupabase } from '../clients/supabase.client';
-
-const postService = createPostService({});
-const noteService = createNoteService({});
 import {
   GetSpacePostsRequest,
   GetPostRequest,
   CreatePostRequest,
   DeletePostRequest,
 } from '../types/post.types';
+
+const postService = createPostService({});
 
 function getClients(request: any) {
   return {
@@ -43,7 +42,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<GetSpacePostsRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const { spaceId } = request.params;
@@ -57,7 +56,7 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch posts' });
       }
-    }
+    },
   );
 
   fastify.get<GetPostRequest>(
@@ -87,7 +86,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to fetch post' });
         }
       }
-    }
+    },
   );
 
   fastify.post<CreatePostRequest>(
@@ -164,92 +163,18 @@ export default async function (fastify: FastifyInstance) {
           return;
         }
 
-        // Create the post first
-        const { data: post, error: postError } = await adminSupabase
-          .schema('core_hub')
-          .from('posts')
-          .insert({
-            id,
-            space_id: spaceId,
-            author_id: userId,
-          })
-          .select()
-          .single();
-
-        if (postError || !post) {
-          throw new Error(postError?.message || 'Failed to create post');
-        }
-
-        // Process each content item
-        for (let i = 0; i < contents.length; i++) {
-          const item = contents[i];
-
-          if (item.type === 'note') {
-            let noteId = item.noteId;
-
-            // Create note if provided
-            if (item.note?.title) {
-              const createdNote = await noteService
-                .scoped(getClients(request))
-                .createNote(userId, {
-                  id: item.noteId,
-                  spaceId,
-                  title: item.note.title,
-                  body: item.note.body,
-                  attachments: item.note.attachments,
-                });
-              noteId = createdNote.id;
-            }
-
-            // Insert into post_contents
-            await adminSupabase
-              .schema('core_hub')
-              .from('post_contents')
-              .insert({
-                post_id: post.id,
-                content_type: 'note',
-                note_id: noteId,
-                position: i,
-              });
-          } else if (item.type === 'asset') {
-            await adminSupabase
-              .schema('core_hub')
-              .from('post_contents')
-              .insert({
-                post_id: post.id,
-                content_type: 'asset',
-                asset_id: item.assetId,
-                position: i,
-              });
-          } else if (item.type === 'external') {
-            await adminSupabase
-              .schema('core_hub')
-              .from('post_contents')
-              .insert({
-                post_id: post.id,
-                content_type: 'external',
-                url: item.url,
-                position: i,
-              });
-          }
-        }
-
-        // Fetch the complete post with contents
-        const fullPost = await postService
-          .scoped(getClients(request))
-          .getPost(post.id);
-
-        fastify.services.eventEmitter.emitPostCreated(
+        const result = await createPost(
+          getClients(request),
           {
-            postId: post.id,
-            content: JSON.stringify(contents),
-            authorId: userId,
+            id,
             spaceId,
+            userId,
+            contents,
           },
-          userId
+          { eventEmitter: fastify.services.eventEmitter },
         );
 
-        reply.code(201).send(fullPost);
+        reply.code(201).send(result.post);
       } catch (error: any) {
         if (error.message.includes('Not a member')) {
           reply.code(403).send({ error: 'Not a member of this space' });
@@ -257,7 +182,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to create post' });
         }
       }
-    }
+    },
   );
 
   fastify.delete<DeletePostRequest>(
@@ -283,11 +208,13 @@ export default async function (fastify: FastifyInstance) {
 
         const { id } = request.params;
 
-        await postService.scoped(getClients(request)).deletePost(id, userId);
-
-        fastify.services.eventEmitter.emitPostDeleted(
-          { postId: id, deletedBy: userId },
-          userId
+        await deletePost(
+          getClients(request),
+          {
+            postId: id,
+            userId,
+          },
+          { eventEmitter: fastify.services.eventEmitter },
         );
 
         reply.code(204).send();
@@ -300,6 +227,6 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to delete post' });
         }
       }
-    }
+    },
   );
 }

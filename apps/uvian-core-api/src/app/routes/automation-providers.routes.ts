@@ -2,6 +2,14 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { automationProviderService } from '../services';
 import { adminSupabase } from '../clients/supabase.client';
 import type { Database } from '../clients/supabase.client';
+import {
+  createProvider,
+  updateProvider,
+  deleteProvider,
+  linkUserProvider,
+  unlinkUserProvider,
+} from '../commands/automation-provider';
+import type { CommandContext } from '../commands/types';
 
 type UserAutomationProvider =
   Database['public']['Tables']['user_automation_providers']['Row'];
@@ -70,7 +78,7 @@ interface ManageUserAutomationProviderParams {
 }
 
 export default async function automationProviderRoutes(
-  fastify: FastifyInstance
+  fastify: FastifyInstance,
 ) {
   fastify.get<{ Params: GetAutomationProvidersParams }>(
     '/api/accounts/:accountId/automation-providers',
@@ -79,7 +87,7 @@ export default async function automationProviderRoutes(
     },
     async (
       request: FastifyRequest<{ Params: GetAutomationProvidersParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -100,7 +108,7 @@ export default async function automationProviderRoutes(
           .code(400)
           .send({ error: error.message || 'Failed to fetch providers' });
       }
-    }
+    },
   );
 
   fastify.post<{
@@ -134,7 +142,7 @@ export default async function automationProviderRoutes(
         Params: CreateAutomationProviderParams;
         Body: CreateProviderBody;
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -146,26 +154,32 @@ export default async function automationProviderRoutes(
         const { accountId } = request.params;
         const clients = getClients(request);
 
-        const provider = await automationProviderService
-          .scoped(clients)
-          .createProvider(userId, accountId, {
-            ...request.body,
-            account_id: accountId,
-            owner_user_id: userId,
-          });
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
 
-        fastify.eventEmitter.emitAutomationProviderCreated(
-          { automationProviderId: provider.id, accountId, name: provider.name },
-          userId
+        const result = await createProvider(
+          clients,
+          {
+            userId,
+            accountId,
+            name: request.body.name,
+            type: request.body.type,
+            url: request.body.url,
+            auth_method: request.body.auth_method,
+            auth_config: request.body.auth_config,
+            is_active: request.body.is_active,
+          },
+          context,
         );
 
-        reply.send({ provider });
+        reply.send({ provider: result.provider });
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to create provider' });
       }
-    }
+    },
   );
 
   fastify.put<{
@@ -198,7 +212,7 @@ export default async function automationProviderRoutes(
         Params: UpdateAutomationProviderParams;
         Body: UpdateProviderBody;
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -210,27 +224,33 @@ export default async function automationProviderRoutes(
         const { accountId, automationProviderId } = request.params;
         const clients = getClients(request);
 
-        const provider = await automationProviderService
-          .scoped(clients)
-          .updateProvider(
-            userId,
-            automationProviderId,
-            accountId,
-            request.body
-          );
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
 
-        fastify.eventEmitter.emitAutomationProviderUpdated(
-          { automationProviderId: provider.id, accountId },
-          userId
+        const result = await updateProvider(
+          clients,
+          {
+            userId,
+            providerId: automationProviderId,
+            accountId,
+            name: request.body.name,
+            type: request.body.type,
+            url: request.body.url,
+            auth_method: request.body.auth_method,
+            auth_config: request.body.auth_config,
+            is_active: request.body.is_active,
+          },
+          context,
         );
 
-        reply.send({ provider });
+        reply.send({ provider: result.provider });
       } catch (error: any) {
         reply
           .code(400)
           .send({ error: error.message || 'Failed to update provider' });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: DeleteAutomationProviderParams }>(
@@ -240,7 +260,7 @@ export default async function automationProviderRoutes(
     },
     async (
       request: FastifyRequest<{ Params: DeleteAutomationProviderParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -260,13 +280,18 @@ export default async function automationProviderRoutes(
           return;
         }
 
-        await automationProviderService
-          .scoped(clients)
-          .deleteProvider(userId, automationProviderId, accountId);
+        const context: CommandContext = {
+          eventEmitter: fastify.eventEmitter,
+        };
 
-        fastify.eventEmitter.emitAutomationProviderDeleted(
-          { automationProviderId, accountId },
-          userId
+        await deleteProvider(
+          clients,
+          {
+            userId,
+            providerId: automationProviderId,
+            accountId,
+          },
+          context,
         );
 
         reply.code(204).send();
@@ -275,7 +300,7 @@ export default async function automationProviderRoutes(
           .code(400)
           .send({ error: error.message || 'Failed to delete provider' });
       }
-    }
+    },
   );
 
   fastify.get<{ Params: GetUserAutomationProvidersParams }>(
@@ -285,7 +310,7 @@ export default async function automationProviderRoutes(
     },
     async (
       request: FastifyRequest<{ Params: GetUserAutomationProvidersParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const requestUserId = request.user?.id;
@@ -322,7 +347,7 @@ export default async function automationProviderRoutes(
         }
 
         const providerMap = new Map<string, AutomationProvider>(
-          (providers || []).map((p) => [p.id, p])
+          (providers || []).map((p) => [p.id, p]),
         );
 
         const linkedProviders: Array<
@@ -343,7 +368,7 @@ export default async function automationProviderRoutes(
           error: error.message || 'Failed to fetch automation providers',
         });
       }
-    }
+    },
   );
 
   fastify.post<{
@@ -369,7 +394,7 @@ export default async function automationProviderRoutes(
         Params: LinkUserAutomationProviderParams;
         Body: LinkUserAutomationProviderBody;
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const requestUserId = request.user?.id;
@@ -408,11 +433,12 @@ export default async function automationProviderRoutes(
           return;
         }
 
-        const userProvider = await automationProviderService
-          .scoped(clients)
-          .linkUserToProvider(userId, request.body.automation_provider_id);
+        const result = await linkUserProvider(clients, {
+          userId,
+          automationProviderId: request.body.automation_provider_id,
+        });
 
-        reply.send({ userAutomationProvider: userProvider });
+        reply.send({ userAutomationProvider: result.userAutomationProvider });
       } catch (error: any) {
         if (error.message.includes('duplicate')) {
           reply
@@ -424,7 +450,7 @@ export default async function automationProviderRoutes(
           .code(400)
           .send({ error: error.message || 'Failed to link provider' });
       }
-    }
+    },
   );
 
   fastify.delete<{ Params: ManageUserAutomationProviderParams }>(
@@ -434,7 +460,7 @@ export default async function automationProviderRoutes(
     },
     async (
       request: FastifyRequest<{ Params: ManageUserAutomationProviderParams }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const requestUserId = request.user?.id;
@@ -450,9 +476,10 @@ export default async function automationProviderRoutes(
         }
 
         const clients = getClients(request);
-        await automationProviderService
-          .scoped(clients)
-          .unlinkUserFromProvider(userId, id);
+        await unlinkUserProvider(clients, {
+          userId,
+          providerLinkId: id,
+        });
 
         reply.code(204).send();
       } catch (error: any) {
@@ -460,6 +487,6 @@ export default async function automationProviderRoutes(
           .code(400)
           .send({ error: error.message || 'Failed to unlink provider' });
       }
-    }
+    },
   );
 }

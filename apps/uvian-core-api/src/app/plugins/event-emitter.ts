@@ -18,64 +18,64 @@ import type {
   IdentityDeletedData,
 } from '@org/uvian-events';
 
-class CoreEventEmitter extends BaseEventEmitter {
+export class CoreEventEmitter extends BaseEventEmitter {
   emitAutomationProviderCreated(
     data: AutomationProviderCreatedData,
-    actorId: string
+    actorId: string,
   ): void {
     this.emit(
       CoreEvents.AUTOMATION_PROVIDER_CREATED,
       '/api/automation-providers',
       data,
-      actorId
+      actorId,
     );
   }
 
   emitAutomationProviderUpdated(
     data: AutomationProviderUpdatedData,
-    actorId: string
+    actorId: string,
   ): void {
     this.emit(
       CoreEvents.AUTOMATION_PROVIDER_UPDATED,
       '/api/automation-providers',
       data,
-      actorId
+      actorId,
     );
   }
 
   emitAutomationProviderDeleted(
     data: AutomationProviderDeletedData,
-    actorId: string
+    actorId: string,
   ): void {
     this.emit(
       CoreEvents.AUTOMATION_PROVIDER_DELETED,
       '/api/automation-providers',
       data,
-      actorId
+      actorId,
     );
   }
 
   emitSubscriptionCreated(
     data: SubscriptionCreatedData,
-    actorId: string
+    actorId: string,
   ): void {
     this.emit(
       CoreEvents.SUBSCRIPTION_CREATED,
       '/api/subscriptions',
       data,
-      actorId
+      actorId,
     );
   }
 
   emitSubscriptionDeleted(
     data: SubscriptionDeletedData,
-    actorId: string
+    actorId: string,
   ): void {
     this.emit(
       CoreEvents.SUBSCRIPTION_DELETED,
       '/api/subscriptions',
       data,
-      actorId
+      actorId,
     );
   }
 

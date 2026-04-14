@@ -1,15 +1,14 @@
 import fp from 'fastify-plugin';
 import { apiKeyService, accountService, scheduleService } from '../services';
 
-export interface Services {
-  schedule: typeof scheduleService;
-  apiKey: typeof apiKeyService;
-  account: typeof accountService;
-}
-
 declare module 'fastify' {
   interface FastifyInstance {
-    services: Services;
+    services: {
+      schedule: typeof scheduleService;
+      apiKey: typeof apiKeyService;
+      account: typeof accountService;
+      schedulerEmitter: any;
+    };
   }
 }
 
@@ -18,5 +17,6 @@ export default fp(async (fastify) => {
     schedule: scheduleService,
     apiKey: apiKeyService,
     account: accountService,
+    schedulerEmitter: fastify.schedulerEmitter,
   });
 });
