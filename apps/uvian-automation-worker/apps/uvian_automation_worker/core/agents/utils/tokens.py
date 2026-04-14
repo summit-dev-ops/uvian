@@ -6,7 +6,7 @@ def count_tokens(messages: list, system_prompt: str = "") -> int:
     return total_chars // 4
 
 def check_context(state: MessagesState) -> str:
-    MAX_TOKENS = 8192
+    MAX_TOKENS = 124000
     SAFETY_BUFFER = 500
     TRIGGER_THRESHOLD = MAX_TOKENS - SAFETY_BUFFER
     
