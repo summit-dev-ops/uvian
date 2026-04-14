@@ -1,6 +1,6 @@
 import time
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from core.agents.utils.state import MessagesState
 from core.logging import log
 
@@ -37,12 +37,16 @@ def create_compaction_node(model):
             ("system", f"""Summarize this conversation history CONCISELY.
 
 Focus on:
-- Topics discussed (not verbatim data)
+- Topics discussed
 - User requests and your responses
 - Key decisions or information shared
+- Current task (what you're actively working on)
+- What is next to do? (pending items or next steps)
 
 Output format:
-"Previously: [2-4 sentence summary]"
+"Previously: [2-4 sentence summary]
+Current task: [1-2 sentences]
+What is next to do?: [1-2 sentences]"
 
 Keep under 150 words."""),
             ("human", "Conversation history to summarize:\n{old_text}"),
@@ -78,10 +82,11 @@ Keep under 150 words."""),
         return {
             "compaction_state": {
                 "summary": summary_response.content,
-                "message_offset": len(messages),
+                "message_offset": len(messages) + 1,
                 "compacted_at": now,
                 "history": history,
-            }
+            },
+            "messages": [HumanMessage(content="Your session has been compacted. You must carefully consider the compaction information in the system prompt and then resume your work. Proceed.")],
         }
 
     return compaction_node
