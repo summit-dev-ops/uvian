@@ -7,7 +7,7 @@ rate_limiter = InMemoryRateLimiter(requests_per_second=0.4)
 
 def create_openai_model(config: Dict[str, Any]) -> ChatOpenAI:
      return ChatOpenAI(
-        model="MiniMaxAI/MiniMax-M2.5:novita",
+        model="MiniMaxAI/MiniMax-M2.7:novita",
         stream_usage=True,
         streaming=True,
         temperature=0.6,
