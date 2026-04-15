@@ -269,6 +269,16 @@ class MCPRegistry:
     def __init__(self, client: Optional[PersistentMCPClient] = None):
         self._client = client
 
+    async def connect(self, mcp_id: str):
+        """Connect to a specific MCP server by ID."""
+        if self._client:
+            await self._client.connect(mcp_id)
+
+    async def fetch_all_metadata(self):
+        """Fetch metadata for all connected MCP servers."""
+        if self._client:
+            await self._client.fetch_all_metadata()
+
     async def get_tools_for_mcp(self, mcp_id: str) -> List[BaseTool]:
         if not self._client:
             return []
