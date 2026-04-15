@@ -8,9 +8,7 @@ from core.agents.utils.nodes.sync_node import create_sync_node
 from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.compaction_node import create_compaction_node
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
-from core.agents.utils.nodes.throttle_node import throttle_node
 from core.agents.utils.nodes.tool_node import ToolNode, tools_condition
-from langchain_core.tools import BaseTool
 from clients.mcp import MCPRegistry
 
 
@@ -37,7 +35,6 @@ def build_agent(
     agent_builder.add_node("model_node", model_node)
     agent_builder.add_node("tool_node", tool_node)
     agent_builder.add_node("compaction_node", compaction_node)
-    agent_builder.add_node("throttle_node", throttle_node)
 
     # Graph starts after checkpoint restoration - sync_node handles initialization
     agent_builder.add_edge(START, "sync_node")
@@ -59,7 +56,6 @@ def build_agent(
         {"tools": "tool_node", "__end__": END},
     )
 
-    agent_builder.add_edge("tool_node", "throttle_node")
-    agent_builder.add_edge("throttle_node", "sync_node")
+    agent_builder.add_edge("tool_node", "sync_node")
 
     return agent_builder.compile(checkpointer=checkpointer)

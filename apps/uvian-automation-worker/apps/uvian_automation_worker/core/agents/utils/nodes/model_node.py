@@ -31,7 +31,6 @@ You will see what Skills you can load under the Available skills section. These 
 Rules:
 - Only call tools that are directly relevant to the event
 - Do not call the same tool twice with the same arguments
-- You must use the proper tool call format
 - Do not explore unrelated resources
 - When the event is handled, simply summarise what you did with text.
 """
