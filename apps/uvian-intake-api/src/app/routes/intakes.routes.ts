@@ -27,6 +27,7 @@ interface CreateIntakeBody {
   expiresInSeconds?: number;
   createdBy: string;
   requiresAuth?: boolean;
+  subscriberIds?: string[];
 }
 
 function getClients() {
@@ -94,6 +95,10 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
             expiresInSeconds: { type: 'number', minimum: 60, maximum: 604800 },
             createdBy: { type: 'string', minLength: 1 },
             requiresAuth: { type: 'boolean' },
+            subscriberIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+            },
           },
         },
       },
@@ -103,9 +108,13 @@ export default async function intakesRoutes(fastify: FastifyInstance) {
         const body = request.body as CreateIntakeBody;
         const clients = getClients();
 
-        const { result } = await createIntake(clients, body, {
-          eventEmitter: fastify.eventEmitter as any,
-        });
+        const { result } = await createIntake(
+          clients,
+          { ...body, subscriberIds: body.subscriberIds },
+          {
+            eventEmitter: fastify.eventEmitter as any,
+          },
+        );
 
         return reply.code(201).send(result);
       } catch (error: unknown) {

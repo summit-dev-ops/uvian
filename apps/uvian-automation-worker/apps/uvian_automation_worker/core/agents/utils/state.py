@@ -12,10 +12,10 @@ class MessagesState(TypedDict):
     response_message_id: str
     custom_instructions: str
     channel_id: str
+    loaded_skills: Annotated[List[Dict[str, Any]], operator.add]
+    loaded_mcps: Annotated[List[Dict[str, Any]], operator.add]
     available_skills: List[Dict[str, str]]
-    loaded_skills: List[Dict[str, Any]]
     available_mcps: List[Dict[str, str]]
-    loaded_mcps: List[Dict[str, Any]]
     conversation_id: str
     agent_profile_id: str
     message_id: str

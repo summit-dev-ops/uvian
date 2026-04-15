@@ -20,6 +20,9 @@
   ],
   "references": [
     {
+      "path": "../../packages/services/subscription/tsconfig.lib.json"
+    },
+    {
       "path": "../../packages/services/secrets/tsconfig.lib.json"
     },
     {

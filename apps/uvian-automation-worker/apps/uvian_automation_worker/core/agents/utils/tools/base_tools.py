@@ -109,7 +109,7 @@ def load_skill(
     
     return Command(
         update={
-            "loaded_skills": loaded_skills + [new_skill_entry],
+            "loaded_skills": [new_skill_entry],
             "messages": [ToolMessage(
                 f"Successfully loaded skill '{skill_name_found}'. Content has been added to your context.",
                 tool_call_id=runtime.tool_call_id
@@ -249,7 +249,7 @@ async def load_mcp(
     
     return Command(
         update={
-            "loaded_mcps": loaded_mcps + [new_mcp_entry],
+            "loaded_mcps": [new_mcp_entry],
             "messages": [ToolMessage(response_text,
                 tool_call_id=runtime.tool_call_id,
             )]

@@ -19,16 +19,16 @@ function generateSubmissionId(): string {
 }
 
 export function createIntakeScopedService(
-  clients: ServiceClients
+  clients: ServiceClients,
 ): IntakeScopedService {
   return {
     async createIntake(
       userId: string,
-      input: CreateIntakeInput
-    ): Promise<{ tokenId: string; url: string }> {
+      input: CreateIntakeInput,
+    ): Promise<{ id: string; tokenId: string; url: string }> {
       const tokenId = generateTokenId();
       const expiresAt = new Date(
-        Date.now() + (input.expiresInSeconds ?? 3600) * 1000
+        Date.now() + (input.expiresInSeconds ?? 3600) * 1000,
       ).toISOString();
 
       const { error } = await clients.adminClient
@@ -53,6 +53,7 @@ export function createIntakeScopedService(
       }
 
       return {
+        id: tokenId,
         tokenId,
         url: `${INTAKE_BASE_URL}/t/${tokenId}`,
       };
@@ -131,7 +132,7 @@ export function createIntakeScopedService(
         .schema('core_intake')
         .from('intakes')
         .select(
-          'title, description, submit_label, public_key, schema, status, expires_at, requires_auth'
+          'title, description, submit_label, public_key, schema, status, expires_at, requires_auth',
         )
         .eq('id', tokenId)
         .single();
@@ -169,7 +170,7 @@ export function createIntakeScopedService(
     async submitIntake(
       tokenId: string,
       payload: Record<string, unknown>,
-      userId?: string
+      userId?: string,
     ): Promise<{ submissionId: string }> {
       const { data: intake, error: intakeError } = await clients.adminClient
         .schema('core_intake')
@@ -198,7 +199,7 @@ export function createIntakeScopedService(
       const submissionId = generateSubmissionId();
       const expiryDays = Number(process.env.SUBMISSION_EXPIRY_DAYS) || 30;
       const expiresAt = new Date(
-        Date.now() + expiryDays * 24 * 60 * 60 * 1000
+        Date.now() + expiryDays * 24 * 60 * 60 * 1000,
       ).toISOString();
 
       const { error: submissionError } = await clients.adminClient
@@ -214,7 +215,7 @@ export function createIntakeScopedService(
 
       if (submissionError) {
         throw new Error(
-          `Failed to store submission: ${submissionError.message}`
+          `Failed to store submission: ${submissionError.message}`,
         );
       }
 
@@ -229,7 +230,7 @@ export function createIntakeScopedService(
 
     async getSubmission(
       submissionId: string,
-      userId: string
+      userId: string,
     ): Promise<Submission | null> {
       const { data, error } = await clients.userClient
         .schema('core_intake')
@@ -254,7 +255,7 @@ export function createIntakeScopedService(
 
     async getSubmissionsByIntakeId(
       intakeId: string,
-      userId: string
+      userId: string,
     ): Promise<Submission[]> {
       const { data: intake, error: intakeError } = await clients.userClient
         .schema('core_intake')

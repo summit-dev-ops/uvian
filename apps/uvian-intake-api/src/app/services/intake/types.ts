@@ -61,8 +61,8 @@ export interface CreateIntakeServiceConfig {}
 export interface IntakeScopedService {
   createIntake(
     userId: string,
-    input: CreateIntakeInput
-  ): Promise<{ tokenId: string; url: string }>;
+    input: CreateIntakeInput,
+  ): Promise<{ id: string; tokenId: string; url: string }>;
   getIntakeStatus(tokenId: string): Promise<{
     status: Intake['status'];
     expiresAt: string;
@@ -88,15 +88,15 @@ export interface IntakeScopedService {
   submitIntake(
     tokenId: string,
     payload: Record<string, unknown>,
-    userId?: string
+    userId?: string,
   ): Promise<{ submissionId: string }>;
   getSubmission(
     submissionId: string,
-    userId: string
+    userId: string,
   ): Promise<Submission | null>;
   getSubmissionsByIntakeId(
     intakeId: string,
-    userId: string
+    userId: string,
   ): Promise<Submission[]>;
   revokeIntake(tokenId: string, userId: string): Promise<boolean>;
 }

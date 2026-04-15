@@ -1,15 +1,44 @@
 import { ServiceClients, CreateIntakeInput } from '../../services/intake/types';
 import { createIntakeService } from '../../services/intake';
+import { subscriptionService } from '../../services/factory';
 import type { CommandContext } from '../../commands/types';
 
 const intakeService = createIntakeService({});
 
+async function createSubscriptions(
+  clients: ServiceClients,
+  intakeId: string,
+  subscriberIds: string[],
+): Promise<void> {
+  const subService = subscriptionService.admin(clients);
+
+  const existingSubs = await subService.getSubscriptionsByResource(
+    'uvian.intake',
+    intakeId,
+  );
+
+  const existingUserIds = new Set(existingSubs.map((s: any) => s.user_id));
+  const newSubscriberIds = subscriberIds.filter(
+    (uid) => !existingUserIds.has(uid),
+  );
+
+  if (newSubscriberIds.length === 0) return;
+
+  const scopedService = subscriptionService.scoped(clients);
+
+  for (const userId of newSubscriberIds) {
+    await scopedService.activateSubscription(userId, 'uvian.intake', intakeId);
+  }
+}
+
 export type CreateIntakeCommandInput = CreateIntakeInput & {
   createdBy: string;
+  subscriberIds?: string[];
 };
 
 export interface CreateIntakeCommandOutput {
   result: { tokenId: string; url: string };
+  intake: { id: string; tokenId: string; url: string };
 }
 
 export async function createIntake(
@@ -17,13 +46,24 @@ export async function createIntake(
   input: CreateIntakeCommandInput,
   context?: CommandContext,
 ): Promise<CreateIntakeCommandOutput> {
-  const result = await intakeService
+  const subscriberIds = input.subscriberIds ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { subscriberIds: _subscriberIds, ...inputWithoutSubscribers } = input;
+
+  const intake = await intakeService
     .scoped(clients)
-    .createIntake(input.createdBy, input);
+    .createIntake(
+      input.createdBy,
+      inputWithoutSubscribers as CreateIntakeInput,
+    );
+
+  if (subscriberIds.length > 0) {
+    await createSubscriptions(clients, intake.id, subscriberIds);
+  }
 
   if (context?.eventEmitter) {
     context.eventEmitter.emitIntakeCreated({
-      intakeId: result.tokenId,
+      intakeId: intake.tokenId,
       title: input.title,
       publicKey: input.publicKey,
       expiresAt: new Date(
@@ -33,7 +73,7 @@ export async function createIntake(
     });
   }
 
-  return { result };
+  return { result: { tokenId: intake.tokenId, url: intake.url }, intake };
 }
 
 export interface RevokeIntakeCommandInput {
