@@ -32,17 +32,20 @@ class SelectiveCheckpointer(BaseCheckpointSaver):
         return replace(checkpoint_tuple, checkpoint=filtered_checkpoint)
 
     def _filter_excluded_keys(self, checkpoint: Checkpoint) -> Checkpoint:
-        """Remove excluded keys from checkpoint channels."""
-        if not checkpoint.channels:
+        """Remove excluded keys from checkpoint channel_values."""
+        channel_values = checkpoint.get("channel_values", {})
+        if not channel_values:
             return checkpoint
-
-        filtered_channels = {}
-        for key, value in checkpoint.channels.items():
-            if key in self.exclude_keys:
-                continue
-            filtered_channels[key] = value
-
-        return replace(checkpoint, channels=filtered_channels)
+        
+        filtered_values = {
+            k: v for k, v in channel_values.items()
+            if k not in self.exclude_keys
+        }
+        
+        return {
+            **checkpoint,
+            "channel_values": filtered_values
+        }
 
     async def aput(
         self,
