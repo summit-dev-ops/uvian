@@ -40,7 +40,7 @@ def build_agent(
 
     # Graph starts after checkpoint restoration - sync_node handles initialization
     agent_builder.add_edge(START, "sync_node")
-
+    agent_builder.add_edge("sync_node", "model_node")
     # Check context after throttling - handles routing (compaction vs model)
     agent_builder.add_conditional_edges(
         "throttle_node",
