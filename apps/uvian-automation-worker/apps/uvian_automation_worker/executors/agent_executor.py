@@ -9,7 +9,7 @@ Uses the EventLoader composable module for unified event processing:
 
 Used by both initial event processing and thread-wakeup (inbox) processing.
 """
-from typing import List, Any
+from typing import Any
 from executors.base import BaseExecutor, JobData, JobResult
 from core.agents.universal_agent.agent import build_agent
 from core.agents.utils.loader import prepare_for_inbox_events
@@ -73,9 +73,6 @@ class AgentExecutor(BaseExecutor):
         all_mcp_configs = secrets.get("mcps", [])
         all_skills = await get_agent_skills(agent_user_id)
         
-        mcp_registry = None
-        available_mcps = []
-        
         pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
         
         event_types = list(set(msg["event_type"] for msg in pending_messages)) if pending_messages else []
@@ -99,6 +96,24 @@ class AgentExecutor(BaseExecutor):
                 seen[mcp_id] = True
                 unique_mcp_configs.append(cfg)
         relevant_mcp_configs = unique_mcp_configs
+        
+        base_checkpointer = PostgresAsyncCheckpointer()
+        checkpoint_config = {"configurable": {"thread_id": thread_id}}
+        previous_checkpoint_tuple = await base_checkpointer.aget_tuple(checkpoint_config)
+        
+        previous_loaded_mcp_names = set()
+        previous_loaded_skill_names = set()
+        
+        if previous_checkpoint_tuple:
+            channel_values = previous_checkpoint_tuple.checkpoint.get("channel_values", {})
+            previous_loaded_mcp_names = {
+                m.get("name") for m in channel_values.get("loaded_mcps", [])
+                if isinstance(m, dict) and m.get("name")
+            }
+            previous_loaded_skill_names = {
+                s.get("name") for s in channel_values.get("loaded_skills", [])
+                if isinstance(s, dict) and s.get("name")
+            }
         
         async with PersistentMCPClient() as persistent_client:
             persistent_client.register_all(all_mcp_configs)
@@ -126,7 +141,7 @@ class AgentExecutor(BaseExecutor):
             
             loaded_skills = [
                 {"name": s.get("name"), "description": s.get("description", ""), "content": s.get("content", "")}
-                for s in matched_skills if s.get("name")
+                for s in matched_skills if s.get("name") and s.get("name") not in previous_loaded_skill_names
             ]
             
             available_mcps = [
@@ -145,7 +160,7 @@ class AgentExecutor(BaseExecutor):
             
             loaded_mcps = []
             for mcp in available_mcps_catalog:
-                if mcp.get("name") in matched_mcp_names:
+                if mcp.get("name") in matched_mcp_names and mcp.get("name") not in previous_loaded_mcp_names:
                     loaded_mcps.append({
                         "name": mcp.get("name"),
                         "description": mcp.get("description", ""),
@@ -175,18 +190,11 @@ class AgentExecutor(BaseExecutor):
             if mcp_registry:
                 config["configurable"]["mcp_registry"] = mcp_registry
             
-            base_checkpointer = PostgresAsyncCheckpointer()
             checkpointer = SelectiveCheckpointer(
                 base_checkpointer,
-                exclude_keys=["agent_memory"],
-                fresh_values={
-                    "loaded_mcps": loaded_mcps,
-                    "loaded_skills": loaded_skills
-                }
+                exclude_keys=["agent_memory"]
             )
             
-            full_response: List[Any] = []
-            final_response = {}
             try:
                 agent = build_agent(llm_config, mcp_registry, checkpointer=checkpointer)
                 async for part in agent.astream(
@@ -194,8 +202,7 @@ class AgentExecutor(BaseExecutor):
                     config=config,
                     stream_mode=["values","messages"],
                 ):
-                    full_response.append(part)
-                    final_response = part
+                    pass
 
                 return {
                     "status": "completed",
