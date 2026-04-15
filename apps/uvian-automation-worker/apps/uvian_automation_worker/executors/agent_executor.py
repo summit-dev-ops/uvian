@@ -1,27 +1,31 @@
 # executors/agent_executor.py
 """
-AgentExecutor - Multi-agent system executor with modular architecture.
+AgentExecutor - Simplified agent startup executor.
 
-Uses the EventLoader composable module for unified event processing:
-- Event-to-message transformation via EventTransformerRegistry
-- Skill loading based on event types
-- MCP loading (filter + connect + load tools) based on event types
+Responsibilities:
+- Fetch agent secrets (LLM config, MCP configs, skills)
+- Register all MCP configs with PersistentMCPClient (but don't connect)
+- Build initial config for agent (available_skills, available_mcps)
+- Pass control to agent graph where sync_node handles event processing
 
-Used by both initial event processing and thread-wakeup (inbox) processing.
+The sync_node (in agent graph) handles:
+- Fetching pending messages
+- Transforming events to messages
+- Connecting MCPs based on event types
+- Loading skills based on event types
+- Fetching agent memory
 """
-from typing import Any
+from typing import Optional, Dict
 from executors.base import BaseExecutor, JobData, JobResult
 from core.agents.universal_agent.agent import build_agent
-from core.agents.utils.loader import prepare_for_inbox_events
 from clients.mcp import PersistentMCPClient, MCPRegistry
 from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills
-from repositories.thread_inbox import thread_inbox_repository
-from core.agents.utils.mcp_mapping import get_mcps_for_event
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
 from core.agents.utils.memory.selective_checkpointer import SelectiveCheckpointer
 from core.logging import log
 import uuid
+
 
 class AgentExecutor(BaseExecutor):
     
@@ -73,115 +77,31 @@ class AgentExecutor(BaseExecutor):
         all_mcp_configs = secrets.get("mcps", [])
         all_skills = await get_agent_skills(agent_user_id)
         
-        pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
+        available_skills = [
+            {"name": s.get("name"), "description": s.get("description", "")}
+            for s in all_skills if s.get("name")
+        ]
         
-        event_types = list(set(msg["event_type"] for msg in pending_messages)) if pending_messages else []
-        
-        relevant_mcp_configs = []
-        
-        if event_types:
-            for event_type in event_types:
-                matched = get_mcps_for_event(event_type, all_mcp_configs)
-                relevant_mcp_configs.extend(matched)
-        else:
-            for cfg in all_mcp_configs:
-                if cfg.get("is_default"):
-                    relevant_mcp_configs.append(cfg)
-        
-        seen = {}
-        unique_mcp_configs = []
-        for cfg in relevant_mcp_configs:
-            mcp_id = cfg.get("id", "")
-            if mcp_id and mcp_id not in seen:
-                seen[mcp_id] = True
-                unique_mcp_configs.append(cfg)
-        relevant_mcp_configs = unique_mcp_configs
-        
-        base_checkpointer = PostgresAsyncCheckpointer()
-        checkpoint_config = {"configurable": {"thread_id": thread_id}}
-        previous_checkpoint_tuple = await base_checkpointer.aget_tuple(checkpoint_config)
-        
-        previous_loaded_mcp_names = set()
-        previous_loaded_skill_names = set()
-        
-        if previous_checkpoint_tuple:
-            channel_values = previous_checkpoint_tuple.checkpoint.get("channel_values", {})
-            previous_loaded_mcp_names = {
-                m.get("name") for m in channel_values.get("loaded_mcps", [])
-                if isinstance(m, dict) and m.get("name")
+        available_mcps = [
+            {
+                "id": cfg.get("id"),
+                "name": cfg.get("name", ""),
+                "description": cfg.get("usage_guidance", ""),
             }
-            previous_loaded_skill_names = {
-                s.get("name") for s in channel_values.get("loaded_skills", [])
-                if isinstance(s, dict) and s.get("name")
-            }
-        
-        for mcp_name in previous_loaded_mcp_names:
-            mcp_config = next(
-                (cfg for cfg in all_mcp_configs if cfg.get("name") == mcp_name),
-                None
-            )
-            if mcp_config and mcp_config not in relevant_mcp_configs:
-                relevant_mcp_configs.append(mcp_config)
+            for cfg in all_mcp_configs if cfg.get("name")
+        ]
         
         async with PersistentMCPClient() as persistent_client:
             persistent_client.register_all(all_mcp_configs)
-            
-            relevant_mcp_ids = [cfg["id"] for cfg in relevant_mcp_configs]
-            await persistent_client.connect_and_load(relevant_mcp_ids)
-
-            available_mcps_catalog = persistent_client.get_rich_catalog()
             mcp_registry = MCPRegistry(client=persistent_client)
-            
-            human_messages, matched_skills, matched_mcp_names, processed_ids = await prepare_for_inbox_events(
-                pending_messages=pending_messages,
-                skills=all_skills,
-                mcp_configs=relevant_mcp_configs,
-                persistent_client=persistent_client,
-            )
-            
-            if processed_ids:
-                await thread_inbox_repository.mark_processed(processed_ids)
-            
-            available_skills = [
-                {"name": s.get("name"), "description": s.get("description", "")}
-                for s in all_skills if s.get("name")
-            ]
-            
-            loaded_skills = [
-                {"name": s.get("name"), "description": s.get("description", ""), "content": s.get("content", "")}
-                for s in matched_skills if s.get("name") and s.get("name") not in previous_loaded_skill_names
-            ]
-            
-            available_mcps = [
-                {
-                    "id": cfg.get("id"),
-                    "name": cfg.get("name", ""),
-                    "description": cfg.get("usage_guidance", ""),
-                    "tool_names": [
-                        t.get("name") for m in available_mcps_catalog
-                        if m.get("name") == cfg.get("name")
-                        for t in m.get("tools", [])
-                    ] if any(m.get("name") == cfg.get("name") for m in available_mcps_catalog) else []
-                }
-                for cfg in all_mcp_configs if cfg.get("name")
-            ]
-            
-            loaded_mcps = []
-            for mcp in available_mcps_catalog:
-                if mcp.get("name") in matched_mcp_names and mcp.get("name") not in previous_loaded_mcp_names:
-                    loaded_mcps.append({
-                        "name": mcp.get("name"),
-                        "description": mcp.get("description", ""),
-                        "tools": mcp.get("tools", [])
-                    })
             
             channel = f"agent:{agent_user_id}:messages"
             agent_input = {
-                "messages": human_messages,
+                "messages": [],
                 "available_skills": available_skills,
-                "loaded_skills": loaded_skills,
+                "loaded_skills": [],
                 "available_mcps": available_mcps,
-                "loaded_mcps": loaded_mcps,
+                "loaded_mcps": [],
                 "custom_instructions": "",
                 "agent_name": "Agent",
                 "llm_calls": 0,
@@ -194,10 +114,17 @@ class AgentExecutor(BaseExecutor):
                 "execution_id": execution_id,
             }
             
-            config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 100}
-            if mcp_registry:
-                config["configurable"]["mcp_registry"] = mcp_registry
+            config = {
+                "configurable": {
+                    "thread_id": thread_id,
+                    "mcp_registry": mcp_registry,
+                    "all_mcp_configs": all_mcp_configs,
+                    "all_skills": all_skills,
+                },
+                "recursion_limit": 100
+            }
             
+            base_checkpointer = PostgresAsyncCheckpointer()
             checkpointer = SelectiveCheckpointer(
                 base_checkpointer,
                 exclude_keys=["agent_memory"]
