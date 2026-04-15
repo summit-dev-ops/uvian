@@ -61,6 +61,7 @@ def build_agent(
     )
 
     # After tools run, check for new messages before throttling
-    agent_builder.add_edge("tool_node", "throttle_node")
+    agent_builder.add_edge("sync_node", "throttle_node")
+    agent_builder.add_edge("tool_node", "sync_node")
 
     return agent_builder.compile(checkpointer=checkpointer)
