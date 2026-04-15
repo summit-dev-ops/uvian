@@ -18,6 +18,8 @@ from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills
 from repositories.thread_inbox import thread_inbox_repository
 from core.agents.utils.mcp_mapping import get_mcps_for_event
+from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
+from core.agents.utils.memory.selective_checkpointer import SelectiveCheckpointer
 from core.logging import log
 import uuid
 
@@ -173,10 +175,16 @@ class AgentExecutor(BaseExecutor):
             if mcp_registry:
                 config["configurable"]["mcp_registry"] = mcp_registry
             
+            base_checkpointer = PostgresAsyncCheckpointer()
+            checkpointer = SelectiveCheckpointer(
+                base_checkpointer,
+                exclude_keys=["loaded_mcps", "loaded_skills", "agent_memory"]
+            )
+            
             full_response: List[Any] = []
             final_response = {}
             try:
-                agent = build_agent(llm_config, mcp_registry)
+                agent = build_agent(llm_config, mcp_registry, checkpointer=checkpointer)
                 async for part in agent.astream(
                     agent_input,
                     config=config,

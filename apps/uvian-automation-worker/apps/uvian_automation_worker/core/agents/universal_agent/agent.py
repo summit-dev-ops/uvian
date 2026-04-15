@@ -18,13 +18,15 @@ from clients.mcp import MCPRegistry
 def build_agent(
     llm_config: Optional[Dict[str, Any]] = None,
     mcp_registry: Optional[MCPRegistry] = None,
+    checkpointer=None,
 ) -> Any:
     default_tools = base_tools.copy()
 
     llm_cfg = llm_config or {}
     llm = create_openai_model(llm_cfg)
 
-    checkpointer = PostgresAsyncCheckpointer()
+    if checkpointer is None:
+        checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
 
     model_node = create_model_node(llm, default_tools, mcp_registry=mcp_registry)
