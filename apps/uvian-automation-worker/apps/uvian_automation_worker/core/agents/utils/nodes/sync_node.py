@@ -13,7 +13,6 @@ This consolidates logic previously spread across:
 - fetch_inbox_node (message fetching, skill loading)
 - fetch_agent_memory_node (memory fetching)
 """
-import asyncio
 from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -135,15 +134,12 @@ def create_sync_node(mcp_registry):
             
             for mcp_id in mcp_ids_to_connect:
                 try:
-                    await asyncio.wait_for(mcp_registry.connect(mcp_id), timeout=15)
+                    await mcp_registry.connect(mcp_id)
                     mcp_name = next(
                         (cfg.get("name") for cfg in relevant_mcp_configs if cfg.get("id") == mcp_id),
                         mcp_id
                     )
                     connected_mcp_names.append(mcp_name)
-                except asyncio.TimeoutError:
-                    log.warning("mcp_connection_timeout", mcp_id=mcp_id, node="sync_node")
-                    failed_mcp_names.append(mcp_id)
                 except Exception as e:
                     log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
                     failed_mcp_names.append(mcp_id)
