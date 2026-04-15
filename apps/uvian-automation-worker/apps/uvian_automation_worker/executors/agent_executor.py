@@ -115,6 +115,14 @@ class AgentExecutor(BaseExecutor):
                 if isinstance(s, dict) and s.get("name")
             }
         
+        for mcp_name in previous_loaded_mcp_names:
+            mcp_config = next(
+                (cfg for cfg in all_mcp_configs if cfg.get("name") == mcp_name),
+                None
+            )
+            if mcp_config and mcp_config not in relevant_mcp_configs:
+                relevant_mcp_configs.append(mcp_config)
+        
         async with PersistentMCPClient() as persistent_client:
             persistent_client.register_all(all_mcp_configs)
             
