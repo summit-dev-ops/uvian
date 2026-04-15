@@ -120,7 +120,7 @@ async def prepare_for_inbox_events(
     skills: List[Dict[str, Any]],
     mcp_configs: List[Dict[str, Any]],
     persistent_client
-) -> Tuple[List[HumanMessage], List[BaseTool], List[Dict[str, Any]], List[str], List[str]]:
+) -> Tuple[List[HumanMessage], List[Dict[str, Any]], List[str], List[str]]:
     """Prepare all events from inbox - transform and load resources for all unique event types.
     
     Called by subscription node to process multiple pending inbox messages.
@@ -133,10 +133,10 @@ async def prepare_for_inbox_events(
         persistent_client: PersistentMCPClient for MCP connections
         
     Returns:
-        Tuple of (human_messages, mcp_tools, matched_skills, matched_mcp_names, processed_ids)
+        Tuple of (human_messages, matched_skills, matched_mcp_names, processed_ids)
     """
     if not pending_messages:
-        return [], [], [], [], []
+        return [], [], [], []
     
     unique_event_types = list(set(msg["event_type"] for msg in pending_messages))
     

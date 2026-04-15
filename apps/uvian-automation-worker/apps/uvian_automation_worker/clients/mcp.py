@@ -212,18 +212,10 @@ class PersistentMCPClient:
         return result
 
     async def get_all_tools(self) -> Dict[str, List[BaseTool]]:
-        """Load and return tools from all connected MCPs.
+        """Load and return tools from all loaded MCPs.
         
         Returns a dict mapping mcp_id to list of tools for each server."""
-        result = {}
-        for mcp_id in self._connections:
-            try:
-                tools = await self.load_tools(mcp_id)
-                result[mcp_id] = tools
-            except Exception as e:
-                log.warning("mcp_load_tools_failed", mcp_id=mcp_id, error=str(e))
-                result[mcp_id] = []
-        return result
+        return dict(self._tool_cache)
 
     async def get_all_metadata(self) -> Dict[str, List[Dict[str, Any]]]:
         """Fetch and return metadata from all MCPs.
