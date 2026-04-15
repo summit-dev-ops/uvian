@@ -28,17 +28,17 @@ export class BaseEventEmitter {
     type: string,
     source: string,
     data: T,
-    actorId: string
+    actorId: string,
   ): void {
     try {
+      const eventData = {
+        ...data,
+        actorId: actorId || undefined,
+      };
       const event = createCloudEvent({
         type,
         source,
-        subject: actorId,
-        data: {
-          ...data,
-          actorId,
-        },
+        data: eventData,
       });
       this.config.log.info({ event }, 'Event emitted');
 
@@ -50,7 +50,7 @@ export class BaseEventEmitter {
     } catch (error) {
       this.config.log.error(
         { err: error, type, source },
-        'Failed to emit event'
+        'Failed to emit event',
       );
     }
   }

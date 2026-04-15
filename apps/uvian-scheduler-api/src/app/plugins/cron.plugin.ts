@@ -51,7 +51,6 @@ export async function fireSchedule(
   const event = createCloudEvent({
     type: ScheduleEvents.SCHEDULE_FIRED,
     source: `/schedules/${scheduleId}`,
-    subject: userId,
     data: {
       scheduleId,
       type,

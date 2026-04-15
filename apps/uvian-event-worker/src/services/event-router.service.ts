@@ -287,7 +287,12 @@ export class EventRouter {
   }
 
   private async processIntakeEvent(event: CloudEvent): Promise<void> {
-    const intakeId = event.subject as string;
+    const data = event.data as { intakeId?: string };
+    const intakeId = data?.intakeId;
+    if (!intakeId) {
+      console.log('[EventRouter] Intake event missing intakeId in data');
+      return;
+    }
     console.log(
       '[EventRouter] Processing intake event:',
       event.type,
@@ -373,9 +378,6 @@ export class EventRouter {
   }
 
   private getActorId(event: CloudEvent): string | null {
-    if (event.subject) {
-      return event.subject;
-    }
     const data = event.data as Record<string, unknown>;
     if (data?.actorId) {
       return data.actorId as string;
