@@ -152,36 +152,13 @@ class AgentExecutor(BaseExecutor):
                         "tools": mcp.get("tools", [])
                     })
             
-            checkpoint_checkpointer = PostgresAsyncCheckpointer()
-            checkpoint_config = {"configurable": {"thread_id": thread_id}}
-            previous_checkpoint_tuple = await checkpoint_checkpointer.aget_tuple(checkpoint_config)
-            
-            previous_loaded_mcps = []
-            previous_loaded_skills = []
-            
-            if previous_checkpoint_tuple:
-                channel_values = previous_checkpoint_tuple.checkpoint.get("channel_values", {})
-                previous_loaded_mcps = channel_values.get("loaded_mcps", [])
-                previous_loaded_skills = channel_values.get("loaded_skills", [])
-            
-            def merge_by_name(previous: List[Dict[str, Any]], fresh: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-                seen = {}
-                for item in previous + fresh:
-                    name = item.get("name")
-                    if name:
-                        seen[name] = item
-                return list(seen.values())
-            
-            merged_loaded_mcps = merge_by_name(previous_loaded_mcps, loaded_mcps)
-            merged_loaded_skills = merge_by_name(previous_loaded_skills, loaded_skills)
-            
             channel = f"agent:{agent_user_id}:messages"
             agent_input = {
                 "messages": human_messages,
                 "available_skills": available_skills,
-                "loaded_skills": merged_loaded_skills,
+                "loaded_skills": loaded_skills,
                 "available_mcps": available_mcps,
-                "loaded_mcps": merged_loaded_mcps,
+                "loaded_mcps": loaded_mcps,
                 "custom_instructions": "",
                 "agent_name": "Agent",
                 "llm_calls": 0,
@@ -201,7 +178,11 @@ class AgentExecutor(BaseExecutor):
             base_checkpointer = PostgresAsyncCheckpointer()
             checkpointer = SelectiveCheckpointer(
                 base_checkpointer,
-                exclude_keys=["agent_memory"]
+                exclude_keys=["agent_memory"],
+                fresh_values={
+                    "loaded_mcps": loaded_mcps,
+                    "loaded_skills": loaded_skills
+                }
             )
             
             full_response: List[Any] = []
