@@ -1,5 +1,4 @@
 from typing import Any, AsyncIterator, Dict, Optional, Sequence, Tuple
-from dataclasses import replace
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
     BaseCheckpointSaver,
@@ -29,7 +28,12 @@ class SelectiveCheckpointer(BaseCheckpointSaver):
             return None
 
         filtered_checkpoint = self._filter_excluded_keys(checkpoint_tuple.checkpoint)
-        return replace(checkpoint_tuple, checkpoint=filtered_checkpoint)
+        return CheckpointTuple(
+            config=checkpoint_tuple.config,
+            checkpoint=filtered_checkpoint,
+            metadata=checkpoint_tuple.metadata,
+            parent_config=checkpoint_tuple.parent_config
+        )
 
     def _filter_excluded_keys(self, checkpoint: Checkpoint) -> Checkpoint:
         """Remove excluded keys from checkpoint channel_values."""
@@ -66,7 +70,12 @@ class SelectiveCheckpointer(BaseCheckpointSaver):
     ) -> AsyncIterator[CheckpointTuple]:
         async for checkpoint_tuple in self.base.alist(config, filter=filter, before=before, limit=limit):
             filtered_checkpoint = self._filter_excluded_keys(checkpoint_tuple.checkpoint)
-            yield replace(checkpoint_tuple, checkpoint=filtered_checkpoint)
+            yield CheckpointTuple(
+                config=checkpoint_tuple.config,
+                checkpoint=filtered_checkpoint,
+                metadata=checkpoint_tuple.metadata,
+                parent_config=checkpoint_tuple.parent_config
+            )
 
     async def aput_writes(
         self,
