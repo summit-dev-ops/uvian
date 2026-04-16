@@ -287,7 +287,7 @@ export function createAgentConfigScopedService(
           auth_method: authMethod,
           _auth_secret: authSecret,
           usage_guidance: (r.mcp_usage_guidance as string) || undefined,
-          auto_load_events: (r.mcp_auto_load_events as string[]) || undefined,
+          autoLoadEvents: (r.mcp_auto_load_events as string[]) || [],
           is_default: (r.is_default as boolean) || false,
         };
       });
@@ -562,7 +562,7 @@ export function createAgentConfigScopedService(
           auth_method: authMethod,
           _auth_secret: authSecret,
           usage_guidance: (r.mcp_usage_guidance as string) || undefined,
-          auto_load_events: (r.mcp_auto_load_events as string[]) || undefined,
+          autoLoadEvents: (r.mcp_auto_load_events as string[]) || [],
           is_default: (r.is_default as boolean) || false,
         };
       });

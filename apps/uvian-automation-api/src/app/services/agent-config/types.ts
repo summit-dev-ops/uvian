@@ -78,7 +78,7 @@ export interface LinkedMcp {
   auth_method: string;
   _auth_secret?: string | null;
   usage_guidance?: string;
-  auto_load_events?: string[];
+  autoLoadEvents?: string[];
   is_default?: boolean;
 }
 
