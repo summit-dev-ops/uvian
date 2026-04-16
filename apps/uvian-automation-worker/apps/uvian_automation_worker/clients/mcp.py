@@ -67,7 +67,7 @@ class PersistentMCPClient:
 
         Args:
             mcp_configs: List of MCP configuration dicts with keys like:
-                id, url, auth_method, _auth_secret, _jwt_secret, name, usage_guidance
+                id, url, auth_method, auth_secret, jwt_secret, name, usage_guidance
         """
         for cfg in mcp_configs:
             if not cfg.get("url"):
@@ -76,8 +76,8 @@ class PersistentMCPClient:
                 mcp_id=cfg.get("id", ""),
                 url=cfg["url"],
                 auth_method=cfg.get("auth_method", "bearer"),
-                auth_secret=cfg.get("_auth_secret"),
-                jwt_secret=cfg.get("_jwt_secret"),
+                auth_secret=cfg.get("auth_secret"),
+                jwt_secret=cfg.get("jwt_secret"),
                 name=cfg.get("name"),
                 usage_guidance=cfg.get("usage_guidance"),
             )
@@ -318,8 +318,8 @@ async def create_mcp_registry(mcp_configs: list) -> List[BaseTool]:
         config = _build_connection_config(
             cfg["url"],
             cfg.get("auth_method", "bearer"),
-            cfg.get("_auth_secret"),
-            cfg.get("_jwt_secret"),
+            cfg.get("auth_secret"),
+            cfg.get("jwt_secret"),
         )
         client = MultiServerMCPClient({"uvian-hub": config})
         tools.extend(await client.get_tools())
