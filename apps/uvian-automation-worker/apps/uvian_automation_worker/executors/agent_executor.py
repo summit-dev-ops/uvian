@@ -160,3 +160,5 @@ class AgentExecutor(BaseExecutor):
                         "thread_id": thread_id,
                     },
                 }
+            finally:
+                await mcp_registry.close()
