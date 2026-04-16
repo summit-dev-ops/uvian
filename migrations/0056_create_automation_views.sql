@@ -9,6 +9,7 @@ SELECT
     l.model_name,
     l.base_url,
     l.temperature,
+    l.config AS config,
     s.id AS secret_id,
     s.encrypted_value AS secret_encrypted_value
 FROM core_automation.agent_llms al

@@ -25,6 +25,8 @@ class MessagesState(TypedDict):
     inbox_messages_added: int
     agent_memory: Dict[str, Any]
     compaction_state: Dict[str, Any]
+    session_context_size: int
+    tokens_used: int
 
 
 class Skill(TypedDict):

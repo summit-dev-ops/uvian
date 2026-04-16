@@ -41,6 +41,8 @@ readme = 'README.md'
   jinja2 = "^3.1.0"
   langchain = "1.0.2"
   langchain-mcp-adapters = "^0.2.1"
+  anthropic = "^0.39.0"
+  google-generativeai = "^0.8.0"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.3.1"

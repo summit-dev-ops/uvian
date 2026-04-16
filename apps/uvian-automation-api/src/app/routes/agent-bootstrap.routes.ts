@@ -34,14 +34,17 @@ export default async function agentBootstrapRoutes(fastify: FastifyInstance) {
               type: 'array',
               items: {
                 type: 'object',
-                required: ['name', 'modelName', 'baseUrl', 'apiKey'],
+                required: ['name', 'type', 'modelName', 'apiKey'],
                 properties: {
                   name: { type: 'string' },
+                  type: { type: 'string' },
                   modelName: { type: 'string' },
                   baseUrl: { type: 'string' },
                   apiKey: { type: 'string' },
                   temperature: { type: 'number' },
+                  maxTokens: { type: 'number' },
                   isDefault: { type: 'boolean' },
+                  config: { type: 'object' },
                 },
                 additionalProperties: false,
               },
@@ -62,11 +65,14 @@ export default async function agentBootstrapRoutes(fastify: FastifyInstance) {
         }>;
         llms?: Array<{
           name: string;
+          type: string;
           modelName: string;
-          baseUrl: string;
+          baseUrl?: string;
           apiKey: string;
           temperature?: number;
+          maxTokens?: number;
           isDefault?: boolean;
+          config?: Record<string, unknown>;
         }>;
       };
 
@@ -83,6 +89,6 @@ export default async function agentBootstrapRoutes(fastify: FastifyInstance) {
           .code(500)
           .send({ error: error.message || 'Failed to configure agent' });
       }
-    }
+    },
   );
 }

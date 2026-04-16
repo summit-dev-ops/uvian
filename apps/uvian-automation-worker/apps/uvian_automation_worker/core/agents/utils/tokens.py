@@ -9,12 +9,14 @@ def check_context(state: MessagesState) -> str:
     MAX_TOKENS = 124000
     SAFETY_BUFFER = 500
     TRIGGER_THRESHOLD = MAX_TOKENS - SAFETY_BUFFER
-    
-    system_msgs = [m for m in state["messages"] if isinstance(m, SystemMessage)]
-    system_prompt = system_msgs[0].content if system_msgs else ""
-    
-    current_tokens = count_tokens(state["messages"], system_prompt)
-    
-    if current_tokens > TRIGGER_THRESHOLD:
+
+    context_size = state.get("session_context_size", 0)
+
+    if context_size is None or context_size == 0:
+        system_msgs = [m for m in state["messages"] if isinstance(m, SystemMessage)]
+        system_prompt = system_msgs[0].content if system_msgs else ""
+        context_size = count_tokens(state["messages"], system_prompt)
+
+    if context_size > TRIGGER_THRESHOLD:
         return "compaction_node"
     return "model_node"

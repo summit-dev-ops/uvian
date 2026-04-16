@@ -2,7 +2,7 @@ from typing import List, Any, Optional, Dict
 from core.agents.utils.state import MessagesState
 from langgraph.graph import StateGraph, START, END
 from core.agents.utils.tools.base_tools import tools as base_tools
-from core.agents.utils.models import create_openai_model
+from core.agents.utils.models import create_llm
 from core.agents.utils.nodes.model_node import create_model_node
 from core.agents.utils.nodes.sync_node import create_sync_node
 from core.agents.utils.tokens import check_context
@@ -20,7 +20,7 @@ def build_agent(
     default_tools = base_tools.copy()
 
     llm_cfg = llm_config or {}
-    llm = create_openai_model(llm_cfg)
+    llm = create_llm(llm_cfg)
 
     if checkpointer is None:
         checkpointer = PostgresAsyncCheckpointer()

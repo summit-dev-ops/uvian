@@ -161,11 +161,19 @@ def create_model_node(model, default_tools, mcp_registry):
         response = model_with_tools.invoke(messages)
 
         tool_calls = getattr(response, "tool_calls", []) or []
-        
+
         new_llm_calls = state.get('llm_calls', 0) + 1
-        
+
         response_content = getattr(response, 'content', '') or ''
-        
+
+        usage = response.usage_metadata or {}
+        input_tokens = usage.get("input_tokens", 0) or 0
+        output_tokens = usage.get("output_tokens", 0) or 0
+        total_tokens = usage.get("total_tokens", input_tokens + output_tokens)
+
+        current_session = state.get("session_context_size", 0) or 0
+        current_total = state.get("tokens_used", 0) or 0
+
         if tool_calls:
             tool_names = [tc.get("name") for tc in tool_calls]
             tool_args = {tc.get("name"): str(tc.get("args", {}))[:200] for tc in tool_calls}
@@ -176,7 +184,13 @@ def create_model_node(model, default_tools, mcp_registry):
                 llm_calls=new_llm_calls,
                 execution_id=execution_id,
                 node="model_node",
-                extra={"tool_calls": tool_names, "tool_args": tool_args},
+                extra={
+                    "tool_calls": tool_names,
+                    "tool_args": tool_args,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
+                },
             )
         else:
             log.info(
@@ -189,12 +203,17 @@ def create_model_node(model, default_tools, mcp_registry):
                 extra={
                     "response_content": response_content[:500] if response_content else "(empty)",
                     "response_type": type(response).__name__,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
                 },
             )
-        
+
         return {
             "messages": [response],
-            "llm_calls": new_llm_calls
+            "llm_calls": new_llm_calls,
+            "session_context_size": current_session + total_tokens,
+            "tokens_used": current_total + total_tokens,
         }
     
     return model_node

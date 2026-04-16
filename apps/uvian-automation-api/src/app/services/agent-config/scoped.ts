@@ -527,6 +527,7 @@ export function createAgentConfigScopedService(
           api_key: apiKey,
           temperature: Number(r.temperature),
           is_default: Boolean(r.is_default),
+          config: (r.config as Record<string, unknown>) || {},
         };
       });
 

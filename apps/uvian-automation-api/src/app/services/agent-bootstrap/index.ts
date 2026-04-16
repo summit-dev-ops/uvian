@@ -12,11 +12,14 @@ export interface SystemConfig {
 
 export interface LlmConfig {
   name: string;
+  type: string;
   modelName: string;
-  baseUrl: string;
+  baseUrl?: string;
   apiKey: string;
   temperature?: number;
+  maxTokens?: number;
   isDefault?: boolean;
+  config?: Record<string, unknown>;
 }
 
 export interface BootstrapResult {
@@ -37,7 +40,7 @@ async function bootstrapMcps(
   agentId: string,
   accountId: string,
   userId: string,
-  systems: SystemConfig[]
+  systems: SystemConfig[],
 ): Promise<BootstrapResult[]> {
   const results: BootstrapResult[] = [];
 
@@ -59,7 +62,7 @@ async function bootstrapMcps(
             },
             is_active: true,
           },
-          { onConflict: 'account_id,name' }
+          { onConflict: 'account_id,name' },
         )
         .select()
         .single();
@@ -128,7 +131,7 @@ async function bootstrapMcps(
 async function bootstrapLlms(
   agentId: string,
   accountId: string,
-  llmConfigs: LlmConfig[]
+  llmConfigs: LlmConfig[],
 ): Promise<BootstrapResult[]> {
   const results: BootstrapResult[] = [];
 
@@ -151,12 +154,14 @@ async function bootstrapLlms(
         const created = await llmService.scoped(clients).create({
           accountId,
           name: config.name,
-          type: 'openai',
-          provider: 'openai',
+          type: config.type,
+          provider: config.type,
           modelName: config.modelName,
           baseUrl: config.baseUrl,
           temperature: config.temperature ?? 0.7,
+          maxTokens: config.maxTokens,
           isDefault: config.isDefault ?? false,
+          config: config.config,
         });
         llmId = created.id;
       }
@@ -197,7 +202,7 @@ async function bootstrapLlms(
 
 export async function configureAgent(
   agentId: string,
-  config: { mcps?: SystemConfig[]; llms?: LlmConfig[] }
+  config: { mcps?: SystemConfig[]; llms?: LlmConfig[] },
 ): Promise<ConfigureAgentResult> {
   const { data: agent, error } = await adminSupabase
     .schema('core_automation')

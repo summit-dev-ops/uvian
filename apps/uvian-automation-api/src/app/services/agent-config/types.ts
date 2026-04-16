@@ -68,6 +68,7 @@ export interface LinkedLlm {
   api_key?: string | null;
   temperature: number;
   is_default: boolean;
+  config?: Record<string, unknown>;
 }
 
 export interface LinkedMcp {

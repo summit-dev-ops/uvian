@@ -56,6 +56,13 @@ Keep under 150 words."""),
             summary_prompt.format_messages(old_text=old_text)
         )
 
+        usage = summary_response.usage_metadata or {}
+        input_tokens = usage.get("input_tokens", 0) or 0
+        output_tokens = usage.get("output_tokens", 0) or 0
+        compaction_tokens = usage.get("total_tokens", input_tokens + output_tokens) or 0
+
+        current_total = state.get("tokens_used", 0) or 0
+
         now = int(time.time())
         new_compaction = {
             "summary": summary_response.content,
@@ -87,6 +94,8 @@ Keep under 150 words."""),
                 "history": history,
             },
             "messages": [HumanMessage(content="Your session has been compacted. You must carefully consider the compaction information in the system prompt and then resume your work. Proceed.")],
+            "session_context_size": 0,
+            "tokens_used": current_total + compaction_tokens,
         }
 
     return compaction_node
