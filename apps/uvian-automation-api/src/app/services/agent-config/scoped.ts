@@ -144,11 +144,11 @@ export function createAgentConfigScopedService(
           id: String(r.llm_id),
           name: String(r.llm_name),
           type: String(r.llm_type),
-          model_name: String(r.model_name),
-          base_url: String(r.base_url),
-          api_key: apiKey,
+          modelName: String(r.model_name),
+          baseUrl: String(r.base_url),
+          apiKey: apiKey,
           temperature: Number(r.temperature),
-          is_default: Boolean(r.is_default),
+          isDefault: Boolean(r.is_default),
         };
       });
     },
@@ -284,11 +284,11 @@ export function createAgentConfigScopedService(
           id: String(r.mcp_id),
           name: String(r.mcp_name),
           url: String(r.mcp_url),
-          auth_method: authMethod,
-          _auth_secret: authSecret,
-          usage_guidance: (r.mcp_usage_guidance as string) || undefined,
+          authMethod: authMethod,
+          authSecret: authSecret,
+          usageGuidance: (r.mcp_usage_guidance as string) || undefined,
           autoLoadEvents: (r.mcp_auto_load_events as string[]) || [],
-          is_default: (r.is_default as boolean) || false,
+          isDefault: (r.is_default as boolean) || false,
         };
       });
     },
@@ -522,11 +522,11 @@ export function createAgentConfigScopedService(
           id: String(r.llm_id),
           name: String(r.llm_name),
           type: String(r.llm_type),
-          model_name: String(r.model_name),
-          base_url: String(r.base_url),
-          api_key: apiKey,
+          modelName: String(r.model_name),
+          baseUrl: String(r.base_url),
+          apiKey: apiKey,
           temperature: Number(r.temperature),
-          is_default: Boolean(r.is_default),
+          isDefault: Boolean(r.is_default),
           config: (r.config as Record<string, unknown>) || {},
         };
       });
@@ -559,11 +559,11 @@ export function createAgentConfigScopedService(
           id: String(r.mcp_id),
           name: String(r.mcp_name),
           url: String(r.mcp_url),
-          auth_method: authMethod,
-          _auth_secret: authSecret,
-          usage_guidance: (r.mcp_usage_guidance as string) || undefined,
+          authMethod: authMethod,
+          authSecret: authSecret,
+          usageGuidance: (r.mcp_usage_guidance as string) || undefined,
           autoLoadEvents: (r.mcp_auto_load_events as string[]) || [],
-          is_default: (r.is_default as boolean) || false,
+          isDefault: (r.is_default as boolean) || false,
         };
       });
 

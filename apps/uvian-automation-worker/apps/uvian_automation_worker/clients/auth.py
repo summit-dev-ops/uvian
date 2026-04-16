@@ -1,5 +1,20 @@
+import re
 import httpx
 from core.config import UVIAN_AUTOMATION_API_URL, UVIAN_INTERNAL_API_KEY
+
+
+def _camel_to_snake(camel_str: str) -> str:
+    """Convert camelCase to snake_case."""
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', camel_str).lower()
+
+
+def _normalize_keys(obj):
+    """Recursively convert camelCase keys to snake_case."""
+    if isinstance(obj, dict):
+        return {_camel_to_snake(k): _normalize_keys(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_normalize_keys(i) for i in obj]
+    return obj
 
 
 async def get_agent_secrets(agent_user_id: str) -> dict:
@@ -13,4 +28,4 @@ async def get_agent_secrets(agent_user_id: str) -> dict:
     async with httpx.AsyncClient() as client:
         response = await client.get(url, headers=headers)
         response.raise_for_status()
-        return response.json()
+        return _normalize_keys(response.json())

@@ -63,11 +63,11 @@ export interface LinkedLlm {
   id: string;
   name: string;
   type: string;
-  model_name: string;
-  base_url: string;
-  api_key?: string | null;
+  modelName: string;
+  baseUrl: string;
+  apiKey?: string | null;
   temperature: number;
-  is_default: boolean;
+  isDefault: boolean;
   config?: Record<string, unknown>;
 }
 
@@ -75,11 +75,11 @@ export interface LinkedMcp {
   id: string;
   name: string;
   url: string;
-  auth_method: string;
-  _auth_secret?: string | null;
-  usage_guidance?: string;
+  authMethod: string;
+  authSecret?: string | null;
+  usageGuidance?: string;
   autoLoadEvents?: string[];
-  is_default?: boolean;
+  isDefault?: boolean;
 }
 
 export interface LinkedSkill {
