@@ -5,6 +5,7 @@ from core.agents.utils.tools.base_tools import tools as base_tools
 from core.agents.utils.models import create_llm
 from core.agents.utils.nodes.model_node import create_model_node
 from core.agents.utils.nodes.sync_node import create_sync_node
+from core.agents.utils.nodes.cleanup_node import create_cleanup_node
 from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.compaction_node import create_compaction_node
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
@@ -30,11 +31,13 @@ def build_agent(
     compaction_node = create_compaction_node(llm)
     tool_node = ToolNode(default_tools, handle_tool_errors=True, mcp_registry=mcp_registry)
     sync = create_sync_node(mcp_registry)
+    cleanup = create_cleanup_node(mcp_registry)
 
     agent_builder.add_node("sync_node", sync)
     agent_builder.add_node("model_node", model_node)
     agent_builder.add_node("tool_node", tool_node)
     agent_builder.add_node("compaction_node", compaction_node)
+    agent_builder.add_node("cleanup_node", cleanup)
 
     # Graph starts after checkpoint restoration - sync_node handles initialization
     agent_builder.add_edge(START, "sync_node")
@@ -53,8 +56,10 @@ def build_agent(
     agent_builder.add_conditional_edges(
         "model_node",
         tools_condition,
-        {"tools": "tool_node", "__end__": END},
+        {"tools": "tool_node", "__end__": "cleanup_node"},
     )
+
+    agent_builder.add_edge("cleanup_node", END)
 
     agent_builder.add_edge("tool_node", "sync_node")
 
