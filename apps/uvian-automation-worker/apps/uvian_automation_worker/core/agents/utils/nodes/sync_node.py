@@ -146,6 +146,16 @@ def create_sync_node(mcp_registry):
             
             if connected_mcp_names:
                 await mcp_registry.fetch_all_metadata()
+            
+            # Ensure tools are loaded for all connected MCPs (not just new ones)
+            # This populates the tool cache in PersistentMCPClient so get_all_tools() works
+            for mcp_name in connected_mcp_names:
+                mcp_info = next(
+                    (cfg for cfg in relevant_mcp_configs if cfg.get("name") == mcp_name),
+                    None
+                )
+                if mcp_info:
+                    await mcp_registry.get_tools_for_mcp(mcp_info.get("id"))
         
         available_mcps = [
             {

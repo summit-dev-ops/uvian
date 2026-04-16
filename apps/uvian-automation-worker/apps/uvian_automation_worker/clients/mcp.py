@@ -93,13 +93,9 @@ class PersistentMCPClient:
         """
         for mcp_id_or_name in mcp_ids_or_names:
             try:
-                async with asyncio.timeout(15):
-                    await self.connect(mcp_id_or_name)
+                await asyncio.wait_for(self.connect(mcp_id_or_name), timeout=15)
             except asyncio.TimeoutError:
                 log.warning("mcp_connection_timeout", mcp_id=mcp_id_or_name)
-            except asyncio.CancelledError:
-                log.warning("mcp_connection_cancelled", mcp_id=mcp_id_or_name)
-                raise
             except Exception as e:
                 log.warning("mcp_connect_failed", mcp_id=mcp_id_or_name, error=str(e))
 
@@ -141,13 +137,9 @@ class PersistentMCPClient:
         in the same task context."""
         for mcp_id in self._connections:
             try:
-                async with asyncio.timeout(15):
-                    await self.connect(mcp_id)
+                await asyncio.wait_for(self.connect(mcp_id), timeout=15)
             except asyncio.TimeoutError:
                 log.warning("mcp_connection_timeout", mcp_id=mcp_id)
-            except asyncio.CancelledError:
-                log.warning("mcp_connection_cancelled", mcp_id=mcp_id)
-                raise
             except Exception as e:
                 log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e))
 
@@ -194,13 +186,9 @@ class PersistentMCPClient:
         AsyncExitStack requires all session operations in the same task."""
         for mcp_id in self._connections:
             try:
-                async with asyncio.timeout(10):
-                    await self.get_tool_metadata(mcp_id)
+                await asyncio.wait_for(self.get_tool_metadata(mcp_id), timeout=10)
             except asyncio.TimeoutError:
                 log.warning("mcp_metadata_timeout", mcp_id=mcp_id)
-            except asyncio.CancelledError:
-                log.warning("mcp_metadata_cancelled", mcp_id=mcp_id)
-                raise
             except Exception as e:
                 log.warning("mcp_fetch_metadata_failed", mcp_id=mcp_id, error=str(e))
 
