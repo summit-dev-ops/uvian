@@ -65,18 +65,19 @@ class AgentExecutor(BaseExecutor):
                 (al for al in secrets["llms"] if al.get("is_default")),
                 secrets["llms"][0],
             )
-            if default_llm and default_llm.get("llms"):
-                llm = default_llm["llms"]
+            if default_llm and default_llm.get("type"):
+                llm = default_llm
                 additional_config = llm.get("config", {})
                 llm_config = {
                     "type": llm.get("type"),
-                    "model_name": llm.get("model_name"),
+                    "model": llm.get("model_name"),
                     "base_url": llm.get("base_url"),
                     "api_key": llm.get("api_key"),
                     "temperature": llm.get("temperature", 0.6),
                     "max_tokens": llm.get("max_tokens"),
                     "requests_per_second": additional_config.get("requests_per_second"),
                     "streaming": additional_config.get("streaming", True),
+                    "stream_usage": additional_config.get("stream_usage", True),
                 }
         
         all_mcp_configs = secrets.get("mcps", [])

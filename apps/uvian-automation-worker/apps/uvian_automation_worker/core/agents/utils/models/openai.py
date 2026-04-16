@@ -8,11 +8,15 @@ def create(config: dict[str, Any]) -> ChatOpenAI:
     llm_type = config.get("type", "openai")
     use_responses_api = llm_type == "openai_responses"
 
+    api_key = config.get("api_key")
+    if not api_key:
+        raise ValueError("api_key is required for OpenAI models")
+
     return ChatOpenAI(
         model=config.get("model", config.get("model_name", "gpt-4o")),
         temperature=config.get("temperature", 0.6),
         max_tokens=config.get("max_tokens"),
-        api_key=config.get("api_key"),
+        api_key=api_key,
         base_url=config.get("base_url"),
         streaming=config.get("streaming", True),
         stream_usage=config.get("stream_usage", True),
