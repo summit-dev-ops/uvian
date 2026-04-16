@@ -890,7 +890,7 @@ class ToolNode(RunnableCallable):
         coros = []
         for call, tool_runtime in zip(tool_calls, tool_runtimes, strict=False):
             coros.append(self._arun_one(call, input_type, tool_runtime))  # type: ignore[arg-type]
-        outputs = await asyncio.gather(*coros)
+        outputs = await asyncio.gather(*coros, return_exceptions=True)
 
         return self._combine_tool_outputs(outputs, input_type)
 
