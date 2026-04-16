@@ -58,6 +58,7 @@ class AgentExecutor(BaseExecutor):
         )
         
         secrets = await get_agent_secrets(agent_user_id)
+        print(secrets)
         
         llm_config = {}
         if secrets.get("llms"):
@@ -97,6 +98,12 @@ class AgentExecutor(BaseExecutor):
             for cfg in all_mcp_configs if cfg.get("name")
         ]
         
+        base_checkpointer = PostgresAsyncCheckpointer()
+        checkpointer = SelectiveCheckpointer(
+            base_checkpointer,
+            exclude_keys=["agent_memory"]
+        )
+            
         async with PersistentMCPClient() as persistent_client:
             persistent_client.register_all(all_mcp_configs)
             mcp_registry = MCPRegistry(client=persistent_client)
@@ -130,12 +137,6 @@ class AgentExecutor(BaseExecutor):
                 "recursion_limit": 100
             }
             
-            base_checkpointer = PostgresAsyncCheckpointer()
-            checkpointer = SelectiveCheckpointer(
-                base_checkpointer,
-                exclude_keys=["agent_memory"]
-            )
-            
             try:
                 agent = build_agent(llm_config, mcp_registry, checkpointer=checkpointer)
                 async for part in agent.astream(
@@ -153,6 +154,7 @@ class AgentExecutor(BaseExecutor):
                     },
                 }
             except Exception as e:
+                print(e)
                 return {
                     "status": "failed",
                     "result": {
