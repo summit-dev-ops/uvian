@@ -76,6 +76,8 @@ Keep under 150 words."""),
             "summary": summary_response.content,
             "compacted_at": now,
         })
+        if len(history) > 5:
+            history = history[-5:]
 
         log.debug(
             "conversation_compacted",
@@ -89,7 +91,7 @@ Keep under 150 words."""),
         return {
             "compaction_state": {
                 "summary": summary_response.content,
-                "message_offset": len(messages) + 1,
+                "message_offset": len(messages) - len(recent),
                 "compacted_at": now,
                 "history": history,
             },
