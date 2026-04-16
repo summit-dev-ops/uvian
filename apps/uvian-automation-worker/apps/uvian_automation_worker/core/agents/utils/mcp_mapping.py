@@ -5,13 +5,13 @@ def get_mcps_for_event(event_type: str, all_mcp_configs: List[Dict[str, Any]]) -
     """Filter MCP configs to those relevant for the given event type.
 
     Includes MCPs that:
-    1. Have matching autoLoadEvents for the event type
+    1. Have matching auto_load_events for the event type
     2. Are marked as is_default=True (always loaded)
 
-    If no configs have autoLoadEvents or is_default set, returns empty list.
+    If no configs have auto_load_events or is_default set, returns empty list.
     """
     has_any_loading_config = any(
-        cfg.get("autoLoadEvents") or cfg.get("is_default")
+        cfg.get("auto_load_events") or cfg.get("is_default")
         for cfg in all_mcp_configs
     )
 
@@ -31,9 +31,9 @@ def get_mcps_for_event(event_type: str, all_mcp_configs: List[Dict[str, Any]]) -
                 matched.append(cfg)
             continue
 
-        # Include MCPs with matching autoLoadEvents
-        autoLoadEvents = cfg.get("autoLoadEvents", [])
-        for pattern in autoLoadEvents:
+        # Include MCPs with matching auto_load_events
+        auto_load_events = cfg.get("auto_load_events", [])
+        for pattern in auto_load_events:
             if event_type == pattern or event_type.startswith(pattern):
                 if cfg_id and cfg_id not in seen_ids:
                     seen_ids.add(cfg_id)

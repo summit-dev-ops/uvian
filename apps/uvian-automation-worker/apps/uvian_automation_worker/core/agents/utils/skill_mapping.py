@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 
 
 def get_skills_for_event(event_type: str, all_skills: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Filter skills whose autoLoadEvents match the event type.
+    """Filter skills whose auto_load_events match the event type.
 
     Supports both exact match and prefix matching.
     e.g. pattern "message." matches "message.created", "message.updated"
@@ -10,7 +10,7 @@ def get_skills_for_event(event_type: str, all_skills: List[Dict[str, Any]]) -> L
     """
     matched = []
     for skill in all_skills:
-        for pattern in skill.get("autoLoadEvents", []):
+        for pattern in skill.get("auto_load_events", []):
             if event_type == pattern or event_type.startswith(pattern):
                 matched.append(skill)
                 break
