@@ -26,6 +26,9 @@ export interface CreateTicketRequest {
     priority?: 'low' | 'medium' | 'high' | 'critical';
     assignedTo?: string;
     requesterJobId?: string;
+    toolName?: string;
+    toolCallId?: string;
+    approveSubsequent?: boolean;
   };
 }
 

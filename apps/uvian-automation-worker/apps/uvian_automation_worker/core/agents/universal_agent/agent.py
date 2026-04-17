@@ -1,4 +1,5 @@
 from typing import List, Any, Optional, Dict
+from langgraph.types import Command
 from core.agents.utils.state import MessagesState
 from langgraph.graph import StateGraph, START, END
 from core.agents.utils.tools.base_tools import tools as base_tools
@@ -17,6 +18,7 @@ def build_agent(
     llm_config: Optional[Dict[str, Any]] = None,
     mcp_registry: Optional[MCPRegistry] = None,
     checkpointer=None,
+    hooks: Optional[List[Dict[str, Any]] = None,
 ) -> Any:
     default_tools = base_tools.copy()
 
@@ -33,11 +35,19 @@ def build_agent(
     sync = create_sync_node(mcp_registry)
     cleanup = create_cleanup_node(mcp_registry)
 
+    # Approval routing node - forces END if pending approval
+    def approval_routing_node(state: MessagesState) -> Command:
+        pending_tool_approval = state.get("pending_tool_approval")
+        if pending_tool_approval:
+            return Command(goto=END)
+        return Command(goto="sync_node")
+
     agent_builder.add_node("sync_node", sync)
     agent_builder.add_node("model_node", model_node)
     agent_builder.add_node("tool_node", tool_node)
     agent_builder.add_node("compaction_node", compaction_node)
     agent_builder.add_node("cleanup_node", cleanup)
+    agent_builder.add_node("approval_routing_node", approval_routing_node)
 
     # Graph starts after checkpoint restoration - sync_node handles initialization
     agent_builder.add_edge(START, "sync_node")
@@ -61,6 +71,8 @@ def build_agent(
 
     agent_builder.add_edge("cleanup_node", END)
 
-    agent_builder.add_edge("tool_node", "sync_node")
+    # Route tool_node through approval routing node
+    agent_builder.add_edge("tool_node", "approval_routing_node")
+    agent_builder.add_edge("approval_routing_node", END)
 
     return agent_builder.compile(checkpointer=checkpointer)

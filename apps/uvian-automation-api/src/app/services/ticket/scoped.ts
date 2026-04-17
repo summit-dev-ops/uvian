@@ -9,7 +9,7 @@ import {
 } from './types';
 
 export function createTicketScopedService(
-  clients: ServiceClients
+  clients: ServiceClients,
 ): TicketScopedService {
   async function verifyTicketAccess(ticketId: string): Promise<void> {
     const { data, error } = await clients.userClient
@@ -24,19 +24,32 @@ export function createTicketScopedService(
 
   return {
     async create(
-      payload: CreateTicketPayload
+      payload: CreateTicketPayload,
     ): Promise<{ ticketId: string; status: string; threadId: string }> {
+      const insertData: Record<string, unknown> = {
+        thread_id: payload.threadId,
+        title: payload.title,
+        description: payload.description || null,
+        priority: payload.priority || 'medium',
+        assigned_to: payload.assignedTo || null,
+        requester_job_id: payload.requesterJobId || null,
+      };
+
+      if (payload.toolName) {
+        insertData.tool_name = payload.toolName;
+        insertData.status = 'pending';
+      }
+      if (payload.toolCallId) {
+        insertData.tool_call_id = payload.toolCallId;
+      }
+      if (payload.approveSubsequent !== undefined) {
+        insertData.approve_subsequent = payload.approveSubsequent;
+      }
+
       const { data, error } = await clients.adminClient
         .schema('core_automation')
         .from('tickets')
-        .insert({
-          thread_id: payload.threadId,
-          title: payload.title,
-          description: payload.description || null,
-          priority: payload.priority || 'medium',
-          assigned_to: payload.assignedTo || null,
-          requester_job_id: payload.requesterJobId || null,
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -84,7 +97,7 @@ export function createTicketScopedService(
 
     async update(
       ticketId: string,
-      payload: UpdateTicketPayload
+      payload: UpdateTicketPayload,
     ): Promise<TicketRecord> {
       await verifyTicketAccess(ticketId);
 
@@ -110,7 +123,7 @@ export function createTicketScopedService(
 
     async resolve(
       ticketId: string,
-      resolutionPayload: Record<string, unknown> = {}
+      resolutionPayload: Record<string, unknown> = {},
     ): Promise<TicketRecord> {
       await verifyTicketAccess(ticketId);
 
@@ -133,7 +146,7 @@ export function createTicketScopedService(
 
     async assign(
       ticketId: string,
-      assignedTo: string | null
+      assignedTo: string | null,
     ): Promise<TicketRecord> {
       await verifyTicketAccess(ticketId);
 
@@ -180,5 +193,8 @@ function mapRow(row: unknown): TicketRecord {
     assignedTo: r.assigned_to as string | undefined,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
+    toolName: r.tool_name as string | undefined,
+    toolCallId: r.tool_call_id as string | undefined,
+    approveSubsequent: r.approve_subsequent as boolean | undefined,
   };
 }

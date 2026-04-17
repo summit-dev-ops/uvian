@@ -92,3 +92,44 @@ Resource: ticket/{resource_id}"""
 # Backwards compatibility aliases
 TicketCreatedTrigger = TicketCreatedTransformer
 TicketUpdatedTrigger = TicketUpdatedTransformer
+
+
+@EventTransformerRegistry.register("com.uvian.ticket.ticket_resolved")
+class TicketResolvedTransformer(BaseEventTransformer):
+    """Transform com.uvian.ticket.ticket_resolved events into AI-readable messages."""
+
+    @property
+    def event_type(self) -> str:
+        return "com.uvian.ticket.ticket_resolved"
+
+    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+        ticket_id = event_data.get("ticketId", "unknown")
+        resolved_by = event_data.get("resolvedBy", "unknown")
+        thread_id = event_data.get("threadId", "")
+        tool_name = event_data.get("toolName")
+        approval_status = event_data.get("approvalStatus", "denied")
+        reason = event_data.get("reason", "")
+
+        if approval_status == "approved":
+            content = f"Tool approval granted for ticket {ticket_id}"
+        else:
+            content = f"Tool approval denied for ticket {ticket_id}"
+
+        if tool_name:
+            content += f"\nTool: {tool_name}"
+
+        if reason:
+            content += f"\nReason: {reason}"
+
+        return EventMessage(
+            content=content,
+            event_type=self.event_type,
+            metadata={
+                "ticket_id": ticket_id,
+                "resolved_by": resolved_by,
+                "thread_id": thread_id,
+                "tool_name": tool_name,
+                "approval_status": approval_status,
+                "reason": reason,
+            }
+        )

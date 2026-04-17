@@ -31,6 +31,11 @@ export interface TicketUpdatedData {
 export interface TicketResolvedData {
   ticketId: string;
   resolvedBy: string;
+  threadId: string;
+  toolName?: string;
+  toolCallId?: string;
+  approvalStatus: 'approved' | 'denied';
+  reason?: string;
 }
 
 export interface TicketClosedData {

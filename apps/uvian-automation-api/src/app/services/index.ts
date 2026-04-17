@@ -8,6 +8,7 @@ export {
 export { createLlmService, llmService } from './llm';
 export { createMcpService, mcpService } from './mcp';
 export { createTicketService, ticketService } from './ticket';
+export { createHookService, hookService } from './hooks';
 export { createAgentConfigService, agentConfigService } from './agent-config';
 export { createJobService, jobService } from './job';
 export { configureAgent } from './agent-bootstrap';

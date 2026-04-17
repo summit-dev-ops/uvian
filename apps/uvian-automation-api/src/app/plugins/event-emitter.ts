@@ -9,6 +9,7 @@ import { queueService } from '../services';
 import {
   SkillEvents,
   AgentEvents,
+  TicketEvents,
   SkillCreatedData,
   SkillUpdatedData,
   SkillDeletedData,
@@ -19,6 +20,7 @@ import {
   AgentDeletedData,
   AgentActivatedData,
   AgentDeactivatedData,
+  TicketResolvedData,
 } from '@org/uvian-events';
 
 function buildSourcePath(type: string, id: string): string {
@@ -74,6 +76,11 @@ export class AutomationEventEmitter extends BaseEventEmitter {
   emitAgentDeactivated(data: AgentDeactivatedData, actorId: string): void {
     const source = buildSourcePath('agents', data.agentId);
     this.emit(AgentEvents.AGENT_DEACTIVATED, source, data, actorId);
+  }
+
+  emitTicketResolved(data: TicketResolvedData, actorId: string): void {
+    const source = buildSourcePath('tickets', data.ticketId);
+    this.emit(TicketEvents.TICKET_RESOLVED, source, data, actorId);
   }
 }
 

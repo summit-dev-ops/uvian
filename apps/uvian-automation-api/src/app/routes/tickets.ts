@@ -8,6 +8,7 @@ import {
   UpdateTicketRequest,
   DeleteTicketRequest,
 } from '../types/ticket.types';
+import { TicketResolvedData } from '@org/uvian-events';
 
 export default async function (fastify: FastifyInstance) {
   fastify.post<CreateTicketRequest>(
@@ -35,7 +36,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<CreateTicketRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const body = request.body || {};
@@ -78,7 +79,7 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to create ticket' });
       }
-    }
+    },
   );
 
   fastify.get<GetTicketsRequest>(
@@ -101,7 +102,7 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch tickets' });
       }
-    }
+    },
   );
 
   fastify.get<GetTicketRequest>(
@@ -134,7 +135,7 @@ export default async function (fastify: FastifyInstance) {
           reply.code(400).send({ error: 'Failed to fetch ticket' });
         }
       }
-    }
+    },
   );
 
   fastify.patch<UpdateTicketRequest>(
@@ -161,7 +162,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<UpdateTicketRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -183,7 +184,7 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to update ticket' });
       }
-    }
+    },
   );
 
   fastify.post<{
@@ -206,7 +207,7 @@ export default async function (fastify: FastifyInstance) {
         Params: { id: string };
         Body: { resolutionPayload?: Record<string, any> };
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -226,11 +227,25 @@ export default async function (fastify: FastifyInstance) {
           .scoped(clients)
           .resolve(id, body.resolutionPayload || {});
 
+        if (ticket) {
+          const resolvedPayload = body.resolutionPayload || {};
+          const eventData: TicketResolvedData = {
+            ticketId: id,
+            resolvedBy: userId,
+            threadId: ticket.threadId,
+            toolName: ticket.toolName,
+            toolCallId: ticket.toolCallId,
+            approvalStatus: resolvedPayload?.approved ? 'approved' : 'denied',
+            reason: resolvedPayload?.reason as string | undefined,
+          };
+          request.server.eventEmitter.emitTicketResolved(eventData, userId);
+        }
+
         reply.send(ticket);
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to resolve ticket' });
       }
-    }
+    },
   );
 
   fastify.post<{ Params: { id: string }; Body: { assignedTo?: string } }>(
@@ -257,7 +272,7 @@ export default async function (fastify: FastifyInstance) {
         Params: { id: string };
         Body: { assignedTo?: string };
       }>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -281,7 +296,7 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to assign ticket' });
       }
-    }
+    },
   );
 
   fastify.delete<DeleteTicketRequest>(
@@ -298,7 +313,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (
       request: FastifyRequest<DeleteTicketRequest>,
-      reply: FastifyReply
+      reply: FastifyReply,
     ) => {
       try {
         const userId = request.user?.id;
@@ -319,6 +334,6 @@ export default async function (fastify: FastifyInstance) {
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to delete ticket' });
       }
-    }
+    },
   );
 }

@@ -20,7 +20,7 @@ from executors.base import BaseExecutor, JobData, JobResult
 from core.agents.universal_agent.agent import build_agent
 from clients.mcp import PersistentMCPClient, MCPRegistry
 from clients.auth import get_agent_secrets
-from clients.config import get_agent_skills
+from clients.config import get_agent_skills, get_agent_hooks
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
 from core.agents.utils.memory.selective_checkpointer import SelectiveCheckpointer
 from core.logging import log
@@ -97,7 +97,18 @@ class AgentExecutor(BaseExecutor):
             }
             for cfg in all_mcp_configs if cfg.get("name")
         ]
-        
+
+        all_hooks = await get_agent_hooks(agent_user_id)
+        available_hooks = [
+            {
+                "id": h.get("hook_id"),
+                "name": h.get("name"),
+                "trigger_json": h.get("trigger_json"),
+                "action": h.get("action"),
+            }
+            for h in all_hooks if h.get("name")
+        ]
+
         base_checkpointer = PostgresAsyncCheckpointer()
         checkpointer = SelectiveCheckpointer(
             base_checkpointer,
@@ -133,12 +144,18 @@ class AgentExecutor(BaseExecutor):
                     "mcp_registry": mcp_registry,
                     "all_mcp_configs": all_mcp_configs,
                     "all_skills": all_skills,
+                    "available_hooks": available_hooks,
                 },
                 "recursion_limit": 100
             }
-            
+
             try:
-                agent = build_agent(llm_config, mcp_registry, checkpointer=checkpointer)
+                agent = build_agent(
+                    llm_config,
+                    mcp_registry,
+                    checkpointer=checkpointer,
+                    hooks=available_hooks,
+                )
                 async for part in agent.astream(
                     agent_input,
                     config=config,
