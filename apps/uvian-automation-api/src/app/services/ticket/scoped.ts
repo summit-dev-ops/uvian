@@ -55,6 +55,27 @@ export function createTicketScopedService(
 
       if (error) throw new Error(error.message);
 
+      const ticketId = data.id;
+
+      if (payload.toolName) {
+        const { data: threadData } = await clients.adminClient
+          .schema('core_automation')
+          .from('process_threads')
+          .select('user_id')
+          .eq('id', payload.threadId)
+          .single();
+
+        if (threadData?.user_id) {
+          await clients.adminClient.from('subscriptions').insert({
+            id: `ticket_${ticketId}`,
+            user_id: threadData.user_id,
+            resource_type: 'uvian.ticket',
+            resource_id: ticketId,
+            is_active: true,
+          });
+        }
+      }
+
       return {
         ticketId: data.id,
         status: data.status,
