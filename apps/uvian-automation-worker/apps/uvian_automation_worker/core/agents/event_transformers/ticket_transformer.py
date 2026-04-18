@@ -133,3 +133,29 @@ class TicketResolvedTransformer(BaseEventTransformer):
                 "reason": reason,
             }
         )
+
+
+@EventTransformerRegistry.register("com.uvian.ticket.ticket_assigned")
+class TicketAssignedTransformer(BaseEventTransformer):
+    """Transform com.uvian.ticket.ticket_assigned events into AI-readable messages."""
+
+    @property
+    def event_type(self) -> str:
+        return "com.uvian.ticket.ticket_assigned"
+
+    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+        ticket_id = event_data.get("ticketId", "unknown")
+        assigned_to = event_data.get("assignedTo", "unknown")
+        assigned_by = event_data.get("assignedBy", "unknown")
+
+        content = f"Ticket {ticket_id} has been assigned to user {assigned_to}"
+
+        return EventMessage(
+            content=content,
+            event_type=self.event_type,
+            metadata={
+                "ticket_id": ticket_id,
+                "assigned_to": assigned_to,
+                "assigned_by": assigned_by,
+            }
+        )
