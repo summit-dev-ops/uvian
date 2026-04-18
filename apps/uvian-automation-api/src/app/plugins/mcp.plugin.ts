@@ -9,6 +9,7 @@ import {
   mcpService,
   skillService,
   agentConfigService,
+  ticketService,
 } from '../services';
 import {
   createLlm,
@@ -1001,6 +1002,186 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
           return {
             content: [{ type: 'text', text: JSON.stringify(data || []) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    // =========================================================================
+    // Ticket Management Tools
+    // =========================================================================
+
+    server.registerTool(
+      'create_ticket',
+      {
+        inputSchema: z.object({
+          threadId: z.string(),
+          title: z.string(),
+          description: z.string().optional(),
+          priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+          assignedTo: z.string().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const result = await ticketService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .create({
+              threadId: args.threadId,
+              title: args.title,
+              description: args.description,
+              priority: args.priority,
+              assignedTo: args.assignedTo,
+            });
+          return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'list_tickets',
+      {
+        inputSchema: z.object({
+          status: z.string().optional(),
+          priority: z.string().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const result = await ticketService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .list({ status: args.status, priority: args.priority });
+          return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'get_ticket',
+      {
+        inputSchema: z.object({
+          ticketId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const ticket = await ticketService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .get(args.ticketId);
+          return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'update_ticket',
+      {
+        inputSchema: z.object({
+          ticketId: z.string(),
+          title: z.string().optional(),
+          description: z.string().optional(),
+          status: z.string().optional(),
+          priority: z.string().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const { ticketId, ...payload } = args;
+          const ticket = await ticketService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .update(ticketId, payload);
+          return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'resolve_ticket',
+      {
+        inputSchema: z.object({
+          ticketId: z.string(),
+          resolutionPayload: z.record(z.string(), z.unknown()).optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const ticket = await ticketService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .resolve(args.ticketId, args.resolutionPayload || {});
+          return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'assign_ticket',
+      {
+        inputSchema: z.object({
+          ticketId: z.string(),
+          assignedTo: z.string().nullable(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const ticket = await ticketService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .assign(args.ticketId, args.assignedTo);
+          return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'delete_ticket',
+      {
+        inputSchema: z.object({
+          ticketId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          await ticketService
+            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .delete(args.ticketId);
+          return {
+            content: [
+              { type: 'text', text: JSON.stringify({ success: true }) },
+            ],
           };
         } catch (error) {
           return {
