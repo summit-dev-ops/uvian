@@ -8,7 +8,7 @@ import {
   UpdateTicketRequest,
   DeleteTicketRequest,
 } from '../types/ticket.types';
-import { TicketResolvedData } from '@org/uvian-events';
+import { TicketResolvedData, TicketAssignedData } from '@org/uvian-events';
 
 export default async function (fastify: FastifyInstance) {
   fastify.post<CreateTicketRequest>(
@@ -291,6 +291,17 @@ export default async function (fastify: FastifyInstance) {
         const ticket = await ticketService
           .scoped(clients)
           .assign(id, assignedTo ?? null);
+
+        if (assignedTo && ticket) {
+          request.server.eventEmitter.emitTicketAssigned(
+            {
+              ticketId: id,
+              assignedTo,
+              assignedBy: userId,
+            } as TicketAssignedData,
+            userId,
+          );
+        }
 
         reply.send(ticket);
       } catch (error: any) {

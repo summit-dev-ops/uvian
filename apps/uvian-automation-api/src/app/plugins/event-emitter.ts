@@ -21,6 +21,7 @@ import {
   AgentActivatedData,
   AgentDeactivatedData,
   TicketResolvedData,
+  TicketAssignedData,
 } from '@org/uvian-events';
 
 function buildSourcePath(type: string, id: string): string {
@@ -81,6 +82,11 @@ export class AutomationEventEmitter extends BaseEventEmitter {
   emitTicketResolved(data: TicketResolvedData, actorId: string): void {
     const source = buildSourcePath('tickets', data.ticketId);
     this.emit(TicketEvents.TICKET_RESOLVED, source, data, actorId);
+  }
+
+  emitTicketAssigned(data: TicketAssignedData, actorId: string): void {
+    const source = buildSourcePath('tickets', data.ticketId);
+    this.emit(TicketEvents.TICKET_ASSIGNED, source, data, actorId);
   }
 }
 

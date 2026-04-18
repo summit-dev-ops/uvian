@@ -171,6 +171,15 @@ export function createTicketScopedService(
     ): Promise<TicketRecord> {
       await verifyTicketAccess(ticketId);
 
+      const { data: currentTicket } = await clients.adminClient
+        .schema('core_automation')
+        .from('tickets')
+        .select('assigned_to')
+        .eq('id', ticketId)
+        .single();
+
+      const previousAssignee = currentTicket?.assigned_to;
+
       const { data: ticket, error } = await clients.adminClient
         .schema('core_automation')
         .from('tickets')
@@ -184,6 +193,36 @@ export function createTicketScopedService(
         .single();
 
       if (error) throw new Error(error.message);
+
+      if (assignedTo) {
+        const existingSub = await clients.adminClient
+          .from('subscriptions')
+          .select('id')
+          .eq('resource_type', 'uvian.ticket')
+          .eq('resource_id', ticketId)
+          .eq('user_id', assignedTo)
+          .single();
+
+        if (!existingSub) {
+          await clients.adminClient.from('subscriptions').insert({
+            id: `ticket_${ticketId}_assign_${assignedTo}`,
+            user_id: assignedTo,
+            resource_type: 'uvian.ticket',
+            resource_id: ticketId,
+            is_active: true,
+          });
+        }
+      }
+
+      if (previousAssignee && previousAssignee !== assignedTo) {
+        await clients.adminClient
+          .from('subscriptions')
+          .delete()
+          .eq('resource_type', 'uvian.ticket')
+          .eq('resource_id', ticketId)
+          .eq('user_id', previousAssignee);
+      }
+
       return mapRow(ticket);
     },
 
