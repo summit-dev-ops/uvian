@@ -206,10 +206,23 @@ def create_sync_node(mcp_registry):
         new_messages: List[HumanMessage] = []
         processed_ids: List[str] = []
         
+        pending_tool_approval_cleared = False
+        
         for msg_data in pending_messages:
             event_type = msg_data["event_type"]
             payload = msg_data["payload"]
             message_id = msg_data["id"]
+            
+            if event_type == "com.uvian.ticket.ticket_resolved":
+                approval_status = payload.get("approvalStatus")
+                if approval_status == "approved":
+                    pending_tool_approval_cleared = True
+                    log.info(
+                        "tool_approval_resolved",
+                        ticket_id=payload.get("ticketId"),
+                        tool_name=payload.get("toolName"),
+                        node="sync_node",
+                    )
             
             event_message = transform_event(event_type, payload)
             
@@ -242,13 +255,18 @@ def create_sync_node(mcp_registry):
             },
         )
         
-        return {
+        result = {
             "messages": new_messages,
             "loaded_skills": new_skills,
             "loaded_mcps": new_mcps,
             "available_mcps": available_mcps,
             **memory_result
         }
+        
+        if pending_tool_approval_cleared:
+            result["pending_tool_approval"] = None
+        
+        return result
     
     return sync_node
 

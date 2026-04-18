@@ -1,8 +1,28 @@
 # SPEC: Tool Governance & Hooks System
 
+## Status: ✅ IMPLEMENTED
+
+The tool governance system is complete and operational.
+
 ## 1. Goal
 
 Create a governance system enabling detection and interruption of agent tool activities using the existing ticket system for approval workflows.
+
+---
+
+## Future: Permission Passes (Out of Scope)
+
+A future layer for broader permissions:
+
+| Pass Type     | Description                           |
+| ------------- | ------------------------------------- |
+| Time-based    | Auto-approve for X hours/days         |
+| Context-based | Based on conversation context         |
+| Session       | Valid for entire user session         |
+| Thread        | Valid for thread lifecycle            |
+| Tool+args     | Specific tool with specific arguments |
+
+This would be a separate feature - not part of this implementation.
 
 ---
 
@@ -246,14 +266,14 @@ def build_agent(
     llm_config: Optional[Dict[str, Any]] = None,
     mcp_registry: Optional[MCPRegistry] = None,
     checkpointer=None,
-    hooks: Optional[List[Dict[str, Any]] = None,  # NEW
+    hooks: Optional[List[Dict[str, Any]]] = None,
 ) -> Any:
     # ...
     tool_node = ToolNode(
         default_tools,
         handle_tool_errors=True,
         mcp_registry=mcp_registry,
-        awrap_tool_call=create_tool_approval_wrapper(hooks) if hooks else None,
+        awrap_tool_call=create_tool_approval_wrapper(hooks, create_tool_approval_ticket) if hooks else None,
     )
 ```
 
@@ -262,19 +282,13 @@ def build_agent(
 ```python
 async def create_tool_approval_wrapper(
     hooks: Optional[List[Dict[str, Any]]] = None,
-    tool_approval_cache: Optional[Dict] = None,  # NEW: cache for approved tools
+    create_ticket_fn: callable = None,
 ) -> AsyncToolCallWrapper:
     """Intercepts tool calls matching hook triggers."""
 
     async def handler(request, execute):
         tool_name = request.tool_call.get("name")
         thread_id = request.state.get("thread_id")
-
-        # Check cache first for approved_subsequent
-        if tool_approval_cache:
-            cache_key = f"{thread_id}:{tool_name}"
-            if tool_approval_cache.get(cache_key):
-                return await execute(request)
 
         matched_hook = _find_matching_hook(hooks, tool_name)
 
@@ -303,26 +317,30 @@ def _find_matching_hook(hooks, tool_name):
     return None
 
 
-async def _handle_interrupt(request, hook):
+async def _handle_interrupt(request, hook, create_ticket_fn):
     """Create ticket - routing node will force END immediately."""
 
     # 1. Create ticket (status=pending)
-    ticket_id = await _create_approval_ticket(
+    ticket_id = await create_ticket_fn(
         thread_id=request.state.get("thread_id"),
         tool_name=request.tool_call.get("name"),
         tool_call_id=request.tool_call.get("id"),
     )
 
-    # 2. Return pending - routing node will force END
-    # Agent cannot continue - no path around END
-    return ToolMessage(
-        content=f"Tool approval pending. Ticket: {ticket_id}",
-        tool_call_id=request.tool_call.get("id"),
-        status="pending_approval",
-        extra={
-            "ticket_id": ticket_id,
-            "tool_name": request.tool_call.get("name"),
-        }
+    # 2. Return Command with pending_tool_approval - routing node will force END
+    return Command(
+        update={
+            "pending_tool_approval": {
+                "ticket_id": ticket_id,
+                "tool_name": request.tool_call.get("name"),
+            }
+        },
+        messages=[
+            ToolMessage(
+                content=f"Tool approval pending. Ticket: {ticket_id}",
+                tool_call_id=request.tool_call.get("id"),
+            )
+        ],
     )
 ```
 
@@ -364,36 +382,18 @@ This ensures the graph has no path around the END - the agent cannot skip the ap
 
 ### 6.6 Agent Resume on Ticket Resolution
 
-When the agent resumes after ticket resolution:
+Handled in sync_node - when processing ticket_resolved events, checks approvalStatus. If approved, clears pending_tool_approval:
 
 ```python
-async def _handle_resume_on_approval(request):
-    """Handle agent resuming after ticket resolution."""
-    # Called from sync_node or model_node after receiving resolution event
-    pending_approval = request.state.get("pending_tool_approval")
+# In sync_node.py
+for msg_data in pending_messages:
+    event_type = msg_data["event_type"]
+    payload = msg_data["payload"]
 
-    if not pending_approval:
-        return None
-
-    ticket_id = pending_approval.get("ticket_id")
-    tool_name = pending_approval.get("tool_name")
-
-    # Fetch ticket resolution
-    ticket = await _get_ticket_status(ticket_id)
-
-    if ticket.status in ("denied", "cancelled"):
-        return ToolMessage(
-            content=f"Tool call denied: {ticket.resolution_payload.get('reason', 'Not approved')}",
-            tool_call_id=pending_approval.get("tool_call_id"),
-            status="error"
-        )
-
-    # If approved and approve_subsequent, add to cache
-    if ticket.status == "resolved" and ticket.approve_subsequent:
-        cache_key = f"{request.state.get('thread_id')}:{tool_name}"
-        await _add_to_approval_cache(cache_key)
-
-    return None  # Continue normal execution - tool will be re-called
+    if event_type == "com.uvian.ticket.ticket_resolved":
+        approval_status = payload.get("approvalStatus")
+        if approval_status == "approved":
+            pending_tool_approval_cleared = True
 ```
 
 ---
@@ -525,35 +525,75 @@ async def _handle_resume_on_approval(request):
 
 ## 9. File Changes Summary
 
-| File                                                               | Change                              |
-| ------------------------------------------------------------------ | ----------------------------------- |
-| `migrations/0077_add_require_ticket_approval.sql`                  | agent_mcps column                   |
-| `migrations/0078_create_hooks_tables.sql`                          | hooks + agent_hooks tables          |
-| `migrations/0079_extend_tickets_for_tool_approval.sql`             | ticket fields + pending status      |
-| `uvian-automation-api/src/app/routes/hooks.ts`                     | Hooks CRUD endpoints                |
-| `uvian-automation-api/src/app/services/hooks/*`                    | Hooks service                       |
-| `uvian-automation-api/src/app/services/ticket/types.ts`            | Extend types + tool approval fields |
-| `uvian-automation-api/src/app/routes/tickets.ts`                   | Emit ticket_resolved event          |
-| `uvian-automation-worker/.../executors/agent_executor.py`          | Fetch hooks                         |
-| `uvian-automation-worker/.../core/agents/universal_agent/agent.py` | Pass hooks                          |
-| `uvian-automation-worker/.../core/agents/utils/nodes/tool_node.py` | Tool approval wrapper               |
-| `uvian-automation-worker/.../core/agents/event_transformers/*`     | TicketResolvedTransformer           |
+| File                                                                               | Change                              |
+| ---------------------------------------------------------------------------------- | ----------------------------------- |
+| `migrations/0077_add_require_ticket_approval.sql`                                  | agent_mcps column                   |
+| `migrations/0078_create_hooks_tables.sql`                                          | hooks + agent_hooks tables          |
+| `migrations/0079_extend_tickets_for_tool_approval.sql`                             | ticket fields + pending status      |
+| `uvian-automation-api/src/app/routes/hooks.ts`                                     | Hooks CRUD endpoints                |
+| `uvian-automation-api/src/app/services/hooks/*`                                    | Hooks service                       |
+| `uvian-automation-api/src/app/services/ticket/types.ts`                            | Extend types + tool approval fields |
+| `uvian-automation-api/src/app/routes/tickets.ts`                                   | Emit ticket_resolved event          |
+| `uvian-automation-worker/.../executors/agent_executor.py`                          | Fetch hooks (unchanged)             |
+| `uvian-automation-worker/.../core/agents/utils/state.py`                           | Add pending_tool_approval field     |
+| `uvian-automation-worker/.../clients/config.py`                                    | Add create_tool_approval_ticket()   |
+| `uvian-automation-worker/.../core/agents/utils/tool_approval.py`                   | NEW - Tool approval wrapper         |
+| `uvian-automation-worker/.../core/agents/universal_agent/agent.py`                 | Pass hooks to ToolNode + routing    |
+| `uvian-automation-worker/.../core/agents/utils/nodes/sync_node.py`                 | Clear pending on ticket_resolved    |
+| `uvian-automation-worker/.../core/agents/event_transformers/ticket_transformer.py` | TicketResolvedTransformer exists    |
 
-### Additional Components to Add
+### Components
 
-| Component                 | Description                                     |
-| ------------------------- | ----------------------------------------------- |
-| TicketResolvedTransformer | Converts ticket_resolved event to agent message |
+| Component                 | Status                 |
+| ------------------------- | ---------------------- |
+| TicketResolvedTransformer | Already exists         |
+| Tool approval wrapper     | NEW (tool_approval.py) |
+
+---
+
+## Implementation Files
+
+### New Files Created
+
+| File                                                                  | Purpose                                  |
+| --------------------------------------------------------------------- | ---------------------------------------- |
+| `apps/uvian-automation-worker/.../core/agents/utils/tool_approval.py` | Tool approval wrapper with hook matching |
+
+### Files Modified
+
+| File                                                                    | Change                                |
+| ----------------------------------------------------------------------- | ------------------------------------- |
+| `apps/uvian-automation-worker/.../core/agents/utils/state.py`           | Added `pending_tool_approval` field   |
+| `apps/uvian-automation-worker/.../clients/config.py`                    | Added `create_tool_approval_ticket()` |
+| `apps/uvian-automation-worker/.../core/agents/universal_agent/agent.py` | Wired wrapper to ToolNode             |
+| `apps/uvian-automation-worker/.../core/agents/utils/nodes/sync_node.py` | Clear pending on ticket_resolved      |
+
+### Pre-existing Components Used
+
+- Tickets CRUD API
+- Event emitter (ticket_resolved, ticket_assigned)
+- Event transformer (TicketResolvedTransformer)
+- Thread inbox / subscription system
+- ToolNode interceptor pattern
 
 ---
 
 ## 10. Prioritization
 
-| Phase | Items                   | Description                                          |
-| ----- | ----------------------- | ---------------------------------------------------- |
-| 1     | 4.1, 4.2, 4.3, 4.5      | DB schema (hooks tables, linking, ticket extensions) |
-| 2     | 5.1, 5.2, 5.3           | API (hooks service + endpoints, ticket types)        |
-| 3     | 6.1, 6.2, 6.3, 6.4, 6.5 | Worker (fetch hooks, wire into ToolNode, routing)    |
-| 4     | 6.6                     | Event emit + transformer                             |
+| Phase | Items                   | Description                                          | Status      |
+| ----- | ----------------------- | ---------------------------------------------------- | ----------- |
+| 1     | 4.1, 4.2, 4.3, 4.5      | DB schema (hooks tables, linking, ticket extensions) | ✅ Complete |
+| 2     | 5.1, 5.2, 5.3           | API (hooks service + endpoints, ticket types)        | ✅ Complete |
+| 3     | 6.1, 6.2, 6.3, 6.4, 6.5 | Worker (fetch hooks, wire into ToolNode, routing)    | ✅ Complete |
+| 4     | 6.6                     | Event emit + transformer                             | ✅ Complete |
 
-Note: Phase 4 depends on event emitter being added to ticket resolve endpoint.
+---
+
+## Implementation Complete ✅
+
+All phases implemented. Feature includes:
+
+- Hook-based tool interception
+- Ticket creation for governance
+- Event-based resume on resolution
+- sync_node clears pending_tool_approval on approved

@@ -27,6 +27,7 @@ class MessagesState(TypedDict):
     compaction_state: Dict[str, Any]
     session_context_size: int
     tokens_used: int
+    pending_tool_approval: Dict[str, Any] | None
 
 
 class Skill(TypedDict):
