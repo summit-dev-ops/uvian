@@ -1177,7 +1177,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       {
         inputSchema: z.object({
           ticketId: z.string(),
-          assignedTo: z.string().nullable(),
+          assignedTo: z.string(),
         }),
       },
       async (args): Promise<ToolResult> => {
