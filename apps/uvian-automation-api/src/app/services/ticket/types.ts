@@ -12,6 +12,7 @@ export interface CreateTicketPayload {
   priority?: 'low' | 'medium' | 'high' | 'critical';
   assignedTo?: string;
   requesterJobId?: string;
+  createdBy?: string;
   content?: Record<string, unknown>;
 }
 
@@ -29,6 +30,7 @@ export interface TicketRecord {
   description?: string;
   priority: string;
   assignedTo?: string;
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
   content?: Record<string, unknown>;

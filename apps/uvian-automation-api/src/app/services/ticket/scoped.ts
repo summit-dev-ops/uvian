@@ -33,6 +33,7 @@ export function createTicketScopedService(
         priority: payload.priority || 'medium',
         assigned_to: payload.assignedTo || null,
         requester_job_id: payload.requesterJobId || null,
+        created_by: payload.createdBy || null,
       };
 
       if (payload.content) {
@@ -234,6 +235,7 @@ function mapRow(row: unknown): TicketRecord {
     description: r.description as string | undefined,
     priority: r.priority as string,
     assignedTo: r.assigned_to as string | undefined,
+    createdBy: r.created_by as string | undefined,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
     content: r.content as Record<string, unknown> | undefined,

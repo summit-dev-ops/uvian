@@ -29,7 +29,10 @@ export async function createTicket(
 ): Promise<CreateTicketCommandOutput> {
   const { userId, ...payload } = input;
 
-  const result = await ticketService.scoped(clients).create(payload);
+  const result = await ticketService.scoped(clients).create({
+    ...payload,
+    createdBy: userId,
+  });
 
   if (context?.eventEmitter) {
     context.eventEmitter.emitTicketCreated(

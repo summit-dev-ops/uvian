@@ -93,6 +93,7 @@ export type Database = {
           title: string;
           description: string | null;
           assigned_to: string | null;
+          created_by: string | null;
           created_at: string;
           updated_at: string;
           resolved_at: string | null;
@@ -106,6 +107,7 @@ export type Database = {
           title: string;
           description?: string | null;
           assigned_to?: string | null;
+          created_by?: string | null;
           content?: Record<string, unknown>;
         };
       };

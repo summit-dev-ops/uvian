@@ -23,7 +23,14 @@ ALTER TABLE core_automation.tickets DROP COLUMN IF EXISTS resolution_payload CAS
 -- 4. Set Default for content column
 ALTER TABLE core_automation.tickets ALTER COLUMN content SET DEFAULT '{}';
 
--- 5. Recreate v_pending_tool_approvals view (was dropped by CASCADE above)
+-- 5. Recreate get_tickets_for_current_user view (was dropped by CASCADE)
+DROP VIEW IF EXISTS core_automation.get_tickets_for_current_user;
+CREATE OR REPLACE VIEW core_automation.get_tickets_for_current_user AS
+SELECT *
+FROM core_automation.tickets
+WHERE assigned_to = auth.uid();
+
+-- 6. Recreate v_pending_tool_approvals view (was dropped by CASCADE above)
 DROP VIEW IF EXISTS core_automation.v_pending_tool_approvals;
 CREATE OR REPLACE VIEW core_automation.v_pending_tool_approvals AS
 SELECT id, title, created_at
