@@ -25,9 +25,8 @@ export function createTicketScopedService(
   return {
     async create(
       payload: CreateTicketPayload,
-    ): Promise<{ ticketId: string; status: string; threadId: string }> {
+    ): Promise<{ ticketId: string; status: string }> {
       const insertData: Record<string, unknown> = {
-        thread_id: payload.threadId,
         title: payload.title,
         description: payload.description || null,
         priority: payload.priority || 'medium',
@@ -55,31 +54,9 @@ export function createTicketScopedService(
 
       if (error) throw new Error(error.message);
 
-      const ticketId = data.id;
-
-      if (payload.toolName) {
-        const { data: threadData } = await clients.adminClient
-          .schema('core_automation')
-          .from('process_threads')
-          .select('user_id')
-          .eq('id', payload.threadId)
-          .single();
-
-        if (threadData?.user_id) {
-          await clients.adminClient.from('subscriptions').insert({
-            id: `ticket_${ticketId}`,
-            user_id: threadData.user_id,
-            resource_type: 'uvian.ticket',
-            resource_id: ticketId,
-            is_active: true,
-          });
-        }
-      }
-
       return {
         ticketId: data.id,
         status: data.status,
-        threadId: data.thread_id,
       };
     },
 
@@ -246,7 +223,6 @@ function mapRow(row: unknown): TicketRecord {
   return {
     ticketId: r.id as string,
     status: r.status as string,
-    threadId: r.thread_id as string,
     title: r.title as string,
     description: r.description as string | undefined,
     priority: r.priority as string,

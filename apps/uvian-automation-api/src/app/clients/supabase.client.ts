@@ -111,22 +111,6 @@ export type Database = {
           assigned_to?: string | null;
         };
       };
-      process_threads: {
-        Row: {
-          id: string;
-          user_id: string;
-          current_status: string;
-          metadata: any;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          current_status?: string;
-          metadata?: any;
-        };
-      };
       agent_checkpoints: {
         Row: {
           id: string;

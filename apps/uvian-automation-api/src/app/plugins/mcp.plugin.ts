@@ -1041,7 +1041,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { ticket } = await createTicket(
             clients,
             {
-              threadId: args.threadId,
               title: args.title,
               description: args.description,
               priority: args.priority,

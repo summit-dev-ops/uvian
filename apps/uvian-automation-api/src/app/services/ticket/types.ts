@@ -6,7 +6,6 @@ export interface ServiceClients {
 }
 
 export interface CreateTicketPayload {
-  threadId: string;
   title: string;
   description?: string;
   priority?: 'low' | 'medium' | 'high' | 'critical';
@@ -27,7 +26,6 @@ export interface UpdateTicketPayload {
 export interface TicketRecord {
   ticketId: string;
   status: string;
-  threadId: string;
   title: string;
   description?: string;
   priority: string;
@@ -55,7 +53,7 @@ export interface ListTicketsResult {
 export interface TicketScopedService {
   create(
     payload: CreateTicketPayload,
-  ): Promise<{ ticketId: string; status: string; threadId: string }>;
+  ): Promise<{ ticketId: string; status: string }>;
   list(filters?: ListTicketsFilters): Promise<ListTicketsResult>;
   get(ticketId: string): Promise<TicketRecord | null>;
   update(ticketId: string, payload: UpdateTicketPayload): Promise<TicketRecord>;

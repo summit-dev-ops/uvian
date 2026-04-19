@@ -67,14 +67,6 @@ def convert_keys_to_camel(data: Any) -> Any:
 
 # Database field mappings for common entity types
 DB_FIELD_MAPPINGS = {
-    'process_threads': {
-        'id': 'id',
-        'agentProfileId': 'user_id',
-        'resourceScopeId': 'resource_scope_id',
-        'currentStatus': 'current_status',
-        'createdAt': 'created_at',
-        'updatedAt': 'updated_at'
-    },
     # Backward compatibility - keep agent_threads mapping
     'agent_threads': {
         'id': 'id',

@@ -19,7 +19,7 @@ export interface CreateTicketCommandInput extends CreateTicketPayload {
 }
 
 export interface CreateTicketCommandOutput {
-  ticket: { ticketId: string; status: string; threadId: string };
+  ticket: { ticketId: string; status: string };
 }
 
 export async function createTicket(
@@ -108,7 +108,6 @@ export async function resolveTicket(
       {
         ticketId,
         resolvedBy: userId,
-        threadId: ticket.threadId,
         toolName: ticket.toolName,
         toolCallId: ticket.toolCallId,
         approvalStatus: resolvedPayload?.approved ? 'approved' : 'denied',

@@ -24,9 +24,8 @@ export default async function (fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['threadId', 'title'],
+          required: ['title'],
           properties: {
-            threadId: { type: 'string' },
             title: { type: 'string' },
             description: { type: 'string' },
             priority: {
@@ -46,16 +45,10 @@ export default async function (fastify: FastifyInstance) {
     ) => {
       try {
         const body = request.body || {};
-        const {
-          threadId,
-          title,
-          description,
-          priority,
-          assignedTo,
-          requesterJobId,
-        } = body;
+        const { title, description, priority, assignedTo, requesterJobId } =
+          body;
 
-        if (!threadId || !title) {
+        if (!title) {
           reply.code(400).send({
             error: 'threadId and title are required',
           });
@@ -75,7 +68,6 @@ export default async function (fastify: FastifyInstance) {
         const { ticket } = await createTicket(
           clients,
           {
-            threadId,
             title,
             description,
             priority,
