@@ -198,7 +198,7 @@ export default async function (fastify: FastifyInstance) {
 
   fastify.post<{
     Params: { id: string };
-    Body: { resolutionPayload?: Record<string, any> };
+    Body: { resolution?: Record<string, any> };
   }>(
     '/api/tickets/:id/resolve',
     {
@@ -214,7 +214,7 @@ export default async function (fastify: FastifyInstance) {
     async (
       request: FastifyRequest<{
         Params: { id: string };
-        Body: { resolutionPayload?: Record<string, any> };
+        Body: { resolution?: Record<string, any> };
       }>,
       reply: FastifyReply,
     ) => {
@@ -237,7 +237,7 @@ export default async function (fastify: FastifyInstance) {
           {
             ticketId: id,
             userId,
-            resolutionPayload: body.resolutionPayload || {},
+            resolution: body.resolution || {},
           },
           { eventEmitter: request.server.eventEmitter },
         );

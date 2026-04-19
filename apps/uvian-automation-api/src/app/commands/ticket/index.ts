@@ -84,7 +84,7 @@ export async function updateTicket(
 export interface ResolveTicketCommandInput {
   ticketId: string;
   userId: string;
-  resolutionPayload?: Record<string, unknown>;
+  resolution?: Record<string, unknown>;
 }
 
 export interface ResolveTicketCommandOutput {
@@ -96,20 +96,18 @@ export async function resolveTicket(
   input: ResolveTicketCommandInput,
   context?: CommandContext,
 ): Promise<ResolveTicketCommandOutput> {
-  const { ticketId, userId, resolutionPayload } = input;
+  const { ticketId, userId, resolution } = input;
 
   const ticket = await ticketService
     .scoped(clients)
-    .resolve(ticketId, resolutionPayload || {});
+    .resolve(ticketId, resolution || {});
 
   if (context?.eventEmitter) {
-    const resolvedPayload = resolutionPayload || {};
+    const resolvedPayload = resolution || {};
     context.eventEmitter.emitTicketResolved(
       {
         ticketId,
         resolvedBy: userId,
-        toolName: ticket.toolName,
-        toolCallId: ticket.toolCallId,
         approvalStatus: resolvedPayload?.approved ? 'approved' : 'denied',
         reason: resolvedPayload?.reason as string | undefined,
       } as TicketResolvedData,

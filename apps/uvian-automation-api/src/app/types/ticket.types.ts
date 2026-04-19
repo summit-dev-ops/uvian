@@ -1,16 +1,15 @@
 export interface Ticket {
   id: string;
-  threadId: string | null;
   requesterJobId: string | null;
   status: 'open' | 'in_progress' | 'resolved' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   description: string | null;
-  resolutionPayload: Record<string, any> | null;
   assignedTo: string | null;
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
+  content: Record<string, unknown> | null;
   assignedProfile?: {
     id: string;
     displayName: string;
@@ -26,9 +25,7 @@ export interface CreateTicketRequest {
     priority?: 'low' | 'medium' | 'high' | 'critical';
     assignedTo?: string;
     requesterJobId?: string;
-    toolName?: string;
-    toolCallId?: string;
-    approveSubsequent?: boolean;
+    content?: Record<string, unknown>;
   };
 }
 
@@ -38,7 +35,7 @@ export interface UpdateTicketRequest {
   status?: 'open' | 'in_progress' | 'resolved' | 'cancelled';
   priority?: 'low' | 'medium' | 'high' | 'critical';
   assignedTo?: string | null;
-  resolutionPayload?: Record<string, any> | null;
+  content?: Record<string, unknown>;
 }
 
 export interface TicketFilters {
@@ -86,7 +83,7 @@ export interface GetTicketMetricsRequest {
 }
 
 export interface ResolveTicketRequest {
-  resolutionPayload: Record<string, any>;
+  resolution: Record<string, any>;
 }
 
 export interface AssignTicketRequest {

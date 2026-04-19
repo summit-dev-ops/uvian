@@ -1144,7 +1144,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       {
         inputSchema: z.object({
           ticketId: z.string(),
-          resolutionPayload: z.record(z.string(), z.unknown()).optional(),
+          resolution: z.record(z.string(), z.unknown()).optional(),
         }),
       },
       async (args): Promise<ToolResult> => {
@@ -1158,7 +1158,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             {
               ticketId: args.ticketId,
               userId,
-              resolutionPayload: args.resolutionPayload,
+              resolution: args.resolution,
             },
             { eventEmitter: fastify.eventEmitter },
           );

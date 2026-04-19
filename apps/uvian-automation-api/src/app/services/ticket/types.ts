@@ -12,9 +12,7 @@ export interface CreateTicketPayload {
   priority?: 'low' | 'medium' | 'high' | 'critical';
   assignedTo?: string;
   requesterJobId?: string;
-  toolName?: string;
-  toolCallId?: string;
-  approveSubsequent?: boolean;
+  content?: Record<string, unknown>;
 }
 
 export interface UpdateTicketPayload {
@@ -33,9 +31,7 @@ export interface TicketRecord {
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
-  toolName?: string;
-  toolCallId?: string;
-  approveSubsequent?: boolean;
+  content?: Record<string, unknown>;
 }
 
 export interface ListTicketsFilters {
@@ -60,7 +56,7 @@ export interface TicketScopedService {
   update(ticketId: string, payload: UpdateTicketPayload): Promise<TicketRecord>;
   resolve(
     ticketId: string,
-    resolutionPayload?: Record<string, unknown>,
+    resolution?: Record<string, unknown>,
   ): Promise<TicketRecord>;
   assign(ticketId: string, assignedTo: string | null): Promise<TicketRecord>;
   delete(ticketId: string): Promise<{ success: boolean }>;

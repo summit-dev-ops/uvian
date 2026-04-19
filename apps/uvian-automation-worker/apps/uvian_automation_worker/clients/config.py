@@ -102,7 +102,7 @@ async def create_tool_approval_ticket(
     reason: str | None = None,
 ) -> str:
     """Create a pending ticket for tool approval.
-    
+
     Returns the ticket ID.
     """
     if not UVIAN_INTERNAL_API_KEY:
@@ -114,12 +114,14 @@ async def create_tool_approval_ticket(
         "content-type": "application/json",
     }
     payload = {
-        "threadId": thread_id,
         "title": f"Tool Approval: {tool_name}",
         "description": reason or f"Approval required to execute tool: {tool_name}",
         "status": "pending",
-        "toolName": tool_name,
-        "toolCallId": tool_call_id,
+        "content": {
+            "toolName": tool_name,
+            "toolCallId": tool_call_id,
+            "threadId": thread_id,
+        },
     }
 
     async with httpx.AsyncClient() as client:

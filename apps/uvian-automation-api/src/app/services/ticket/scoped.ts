@@ -35,15 +35,11 @@ export function createTicketScopedService(
         requester_job_id: payload.requesterJobId || null,
       };
 
-      if (payload.toolName) {
-        insertData.tool_name = payload.toolName;
-        insertData.status = 'pending';
-      }
-      if (payload.toolCallId) {
-        insertData.tool_call_id = payload.toolCallId;
-      }
-      if (payload.approveSubsequent !== undefined) {
-        insertData.approve_subsequent = payload.approveSubsequent;
+      if (payload.content) {
+        insertData.content = payload.content;
+        if (payload.content.toolName) {
+          insertData.status = 'pending';
+        }
       }
 
       const { data, error } = await clients.adminClient
@@ -122,16 +118,26 @@ export function createTicketScopedService(
 
     async resolve(
       ticketId: string,
-      resolutionPayload: Record<string, unknown> = {},
+      resolution: Record<string, unknown> = {},
     ): Promise<TicketRecord> {
       await verifyTicketAccess(ticketId);
+
+      const { data: existing } = await clients.adminClient
+        .schema('core_automation')
+        .from('tickets')
+        .select('content')
+        .eq('id', ticketId)
+        .single();
+
+      const existingContent = (existing?.content || {}) as Record<string, unknown>;
+      const updatedContent = { ...existingContent, resolution: resolution };
 
       const { data: ticket, error } = await clients.adminClient
         .schema('core_automation')
         .from('tickets')
         .update({
           status: 'resolved',
-          resolution_payload: resolutionPayload,
+          content: updatedContent,
           resolved_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -230,8 +236,6 @@ function mapRow(row: unknown): TicketRecord {
     assignedTo: r.assigned_to as string | undefined,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
-    toolName: r.tool_name as string | undefined,
-    toolCallId: r.tool_call_id as string | undefined,
-    approveSubsequent: r.approve_subsequent as boolean | undefined,
+    content: r.content as Record<string, unknown> | undefined,
   };
 }

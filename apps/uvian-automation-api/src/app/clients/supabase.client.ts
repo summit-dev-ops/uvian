@@ -87,28 +87,26 @@ export type Database = {
       tickets: {
         Row: {
           id: string;
-          thread_id: string | null;
           requester_job_id: string | null;
           status: string;
           priority: string;
           title: string;
           description: string | null;
-          resolution_payload: any | null;
           assigned_to: string | null;
           created_at: string;
           updated_at: string;
           resolved_at: string | null;
+          content: Record<string, unknown> | null;
         };
         Insert: {
           id?: string;
-          thread_id?: string | null;
           requester_job_id?: string | null;
           status?: string;
           priority?: string;
           title: string;
           description?: string | null;
-          resolution_payload?: any | null;
           assigned_to?: string | null;
+          content?: Record<string, unknown>;
         };
       };
       agent_checkpoints: {
