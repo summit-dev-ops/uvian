@@ -27,6 +27,11 @@ import {
   unlinkSkill,
   createSecret,
   deleteSecret,
+  createTicket,
+  updateTicket,
+  resolveTicket,
+  assignTicket,
+  deleteTicket,
 } from '../commands';
 import { generateRSAKeyPair, decryptRSA } from '@org/utils-encryption';
 import jwt from 'jsonwebtoken';
@@ -1029,16 +1034,23 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const result = await ticketService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
-            .create({
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { ticket } = await createTicket(
+            clients,
+            {
               threadId: args.threadId,
               title: args.title,
               description: args.description,
               priority: args.priority,
               assignedTo: args.assignedTo,
-            });
-          return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+              userId,
+            },
+            { eventEmitter: fastify.eventEmitter },
+          );
+          return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
           return {
             content: [{ type: 'text', text: `Error: ${error}` }],
@@ -1106,10 +1118,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const { ticketId, ...payload } = args;
-          const ticket = await ticketService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
-            .update(ticketId, payload);
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { ticketId, ...updates } = args;
+          const { ticket } = await updateTicket(
+            clients,
+            { ticketId, userId, updates },
+            { eventEmitter: fastify.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
           return {
@@ -1130,9 +1148,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const ticket = await ticketService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
-            .resolve(args.ticketId, args.resolutionPayload || {});
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { ticket } = await resolveTicket(
+            clients,
+            {
+              ticketId: args.ticketId,
+              userId,
+              resolutionPayload: args.resolutionPayload,
+            },
+            { eventEmitter: fastify.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
           return {
@@ -1153,9 +1181,19 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const ticket = await ticketService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
-            .assign(args.ticketId, args.assignedTo);
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { ticket } = await assignTicket(
+            clients,
+            {
+              ticketId: args.ticketId,
+              assignedTo: args.assignedTo,
+              assignedBy: userId,
+            },
+            { eventEmitter: fastify.eventEmitter },
+          );
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
           return {
@@ -1175,13 +1213,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          await ticketService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
-            .delete(args.ticketId);
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const result = await deleteTicket(
+            clients,
+            { ticketId: args.ticketId, userId },
+            { eventEmitter: fastify.eventEmitter },
+          );
           return {
-            content: [
-              { type: 'text', text: JSON.stringify({ success: true }) },
-            ],
+            content: [{ type: 'text', text: JSON.stringify(result) }],
           };
         } catch (error) {
           return {
