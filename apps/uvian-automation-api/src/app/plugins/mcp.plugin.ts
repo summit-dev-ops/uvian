@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import { FastifyPluginAsync } from 'fastify';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -1025,7 +1027,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'create_ticket',
       {
         inputSchema: z.object({
-          threadId: z.string(),
           title: z.string(),
           description: z.string().optional(),
           priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
@@ -1041,6 +1042,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { ticket } = await createTicket(
             clients,
             {
+              id: randomUUID(),
               title: args.title,
               description: args.description,
               priority: args.priority,

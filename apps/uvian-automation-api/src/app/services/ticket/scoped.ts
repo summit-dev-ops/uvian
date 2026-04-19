@@ -27,6 +27,7 @@ export function createTicketScopedService(
       payload: CreateTicketPayload,
     ): Promise<{ ticketId: string; status: string }> {
       const insertData: Record<string, unknown> = {
+        ...(payload.id && { id: payload.id }),
         title: payload.title,
         description: payload.description || null,
         priority: payload.priority || 'medium',

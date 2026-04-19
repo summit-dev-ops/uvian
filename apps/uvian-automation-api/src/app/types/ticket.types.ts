@@ -20,7 +20,7 @@ export interface Ticket {
 
 export interface CreateTicketRequest {
   Body: {
-    threadId: string;
+    id?: string;
     title: string;
     description?: string;
     priority?: 'low' | 'medium' | 'high' | 'critical';
