@@ -6,7 +6,7 @@ export default async function agentHookRoutes(fastify: FastifyInstance) {
     Params: { agentId: string };
   }>(
     '/api/agents/:agentId/hooks',
-    { preHandler: [fastify.authenticate] },
+    { preHandler: [fastify.authenticateInternal] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { agentId } = request.params as any as { agentId: string };
