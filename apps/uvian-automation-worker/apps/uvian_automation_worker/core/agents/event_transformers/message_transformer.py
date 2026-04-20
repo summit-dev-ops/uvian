@@ -14,7 +14,7 @@ class MessageCreatedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.message.created"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         message_id = event_data.get("messageId") or event_data.get("id", "")
         conversation_id = event_data.get("conversationId")
@@ -24,9 +24,11 @@ class MessageCreatedTransformer(BaseEventTransformer):
         external_channel_id = event_data.get("externalChannelId")
         external_user_id = event_data.get("externalUserId")
         
+        prefix = "You" if is_self_action else "User"
+        
         if platform and platform != "internal":
             timestamp = event_data.get("createdAt")
-            message_content = f"""[{platform}] User said: {content}
+            message_content = f"""[{platform}] {prefix} said: {content}
 External Channel: {external_channel_id or 'unknown'}
 External User: {external_user_id or 'unknown'}"""
             if timestamp:
@@ -44,12 +46,13 @@ External User: {external_user_id or 'unknown'}"""
                     "external_channel_id": external_channel_id,
                     "external_user_id": external_user_id,
                     "timestamp": timestamp,
+                    "is_self_action": is_self_action,
                 }
             )
         
         timestamp = event_data.get("createdAt")
         message_content = f"""Event: com.uvian.message.created
-Actor: {actor_id}
+{prefix} (actor): {actor_id}
 Resource: message/{message_id}
 Context: conversation {conversation_id}
 Content: {content}"""
@@ -65,6 +68,7 @@ Content: {content}"""
                 "sender_id": actor_id,
                 "asset_ids": event_data.get("assetIds", []),
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
@@ -77,13 +81,15 @@ class ConversationMemberJoinedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.conversation.member_joined"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "")
         conversation_id = event_data.get("conversationId")
         
+        prefix = "You" if is_self_action else "Actor"
+        
         message_content = f"""Event: com.uvian.conversation.member_joined
-Actor: {actor_id}
+{prefix}: {actor_id}
 Resource: conversation/{resource_id}
 Context: conversation {conversation_id}"""
         timestamp = event_data.get("createdAt")
@@ -97,6 +103,7 @@ Context: conversation {conversation_id}"""
                 "conversation_id": conversation_id or resource_id,
                 "user_id": actor_id,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 

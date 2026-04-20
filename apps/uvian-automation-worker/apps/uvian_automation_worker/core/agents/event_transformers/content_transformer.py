@@ -14,13 +14,15 @@ class PostCreatedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.post.created"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "unknown")
         space_id = event_data.get("spaceId")
         
+        prefix = "You" if is_self_action else "Actor"
+        
         message_content = f"""Event: com.uvian.post.created
-Actor: {actor_id}
+{prefix}: {actor_id}
 Resource: post/{resource_id}
 Context: space {space_id}"""
         timestamp = event_data.get("createdAt")
@@ -35,6 +37,7 @@ Context: space {space_id}"""
                 "author_id": actor_id,
                 "space_id": space_id,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
@@ -47,14 +50,15 @@ class NoteUpdatedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.note.updated"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "unknown")
         
         title = event_data.get("title", "")
+        prefix = "You" if is_self_action else "Actor"
         
         message_content = f"""Event: com.uvian.note.updated
-Actor: {actor_id}
+{prefix}: {actor_id}
 Resource: note/{resource_id}
 Title: {title}"""
         timestamp = event_data.get("updatedAt")
@@ -69,6 +73,7 @@ Title: {title}"""
                 "title": title,
                 "updated_by": actor_id,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
@@ -81,7 +86,7 @@ class AssetUploadedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.asset.uploaded"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         resource_id = event_data.get("id", "unknown")
         space_id = event_data.get("spaceId")
         conversation_id = event_data.get("conversationId")
@@ -109,6 +114,7 @@ Context: space {space_id}, conversation {conversation_id}"""
                 "space_id": space_id,
                 "conversation_id": conversation_id,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 

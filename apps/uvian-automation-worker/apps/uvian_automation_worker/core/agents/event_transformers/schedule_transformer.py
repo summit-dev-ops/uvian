@@ -15,7 +15,7 @@ class ScheduleTriggeredTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.schedule.schedule_fired"
 
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         schedule_id = event_data.get("scheduleId", "unknown")
         schedule_type = event_data.get("type", "one_time")
         fired_at = event_data.get("firedAt", "unknown")
@@ -70,6 +70,7 @@ IMPORTANT: You must call mark_schedule_executed after handling this event, regar
                 "lastExecutedAt": last_executed,
                 "lastSuccessfulExecutedAt": last_successful,
                 "eventData": payload,
+                "is_self_action": is_self_action,
             },
         )
 

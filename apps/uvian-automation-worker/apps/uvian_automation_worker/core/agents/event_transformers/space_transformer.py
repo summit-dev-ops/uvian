@@ -14,15 +14,16 @@ class SpaceMemberJoinedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.space.member_joined"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "unknown")
         space_id = event_data.get("spaceId") or resource_id
         
         role = event_data.get("role", "member")
+        prefix = "You" if is_self_action else "Actor"
         
         message_content = f"""Event: com.uvian.space.member_joined
-Actor: {actor_id}
+{prefix}: {actor_id}
 Resource: space/{resource_id}
 Context: space {space_id}
 Role: {role}"""
@@ -38,6 +39,7 @@ Role: {role}"""
                 "user_id": actor_id,
                 "role": role,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
@@ -50,16 +52,17 @@ class SpaceMemberRoleChangedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.space.member_role_changed"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "unknown")
         space_id = event_data.get("spaceId") or resource_id
         
         old_role = event_data.get("oldRole", "unknown")
         new_role = event_data.get("newRole", "unknown")
+        prefix = "You" if is_self_action else "Actor"
         
         message_content = f"""Event: com.uvian.space.member_role_changed
-Actor: {actor_id}
+{prefix}: {actor_id}
 Resource: space/{resource_id}
 Context: space {space_id}
 Changed: {old_role} -> {new_role}"""
@@ -76,6 +79,7 @@ Changed: {old_role} -> {new_role}"""
                 "old_role": old_role,
                 "new_role": new_role,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
@@ -88,15 +92,16 @@ class SpaceCreatedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.space.created"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         resource_id = event_data.get("id", "unknown")
         space_id = event_data.get("spaceId") or resource_id
         
         name = event_data.get("name", "unknown")
+        prefix = "You" if is_self_action else "Actor"
         
         message_content = f"""Event: com.uvian.space.created
-Actor: {actor_id}
+{prefix}: {actor_id}
 Resource: space/{resource_id}
 Context: space {space_id}
 Name: {name}"""
@@ -112,6 +117,7 @@ Name: {name}"""
                 "name": name,
                 "created_by": actor_id,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 

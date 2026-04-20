@@ -14,15 +14,16 @@ class JobCreatedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.job.created"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         actor_id = event_data.get("actorId", "unknown")
         actor_type = event_data.get("actorType", "system")
         resource_id = event_data.get("id", "unknown")
         
         job_type = event_data.get("jobType", "unknown")
+        prefix = "You" if is_self_action else "Actor"
         
         message_content = f"""Event: com.uvian.job.created
-Actor: {actor_id} ({actor_type})
+{prefix}: {actor_id} ({actor_type})
 Resource: job/{resource_id}
 JobType: {job_type}"""
         timestamp = event_data.get("createdAt")
@@ -39,6 +40,7 @@ JobType: {job_type}"""
                 "actor_type": actor_type,
                 "input_payload": event_data.get("inputPayload"),
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
@@ -51,7 +53,7 @@ class JobCancelledTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.job.cancelled"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         resource_id = event_data.get("id", "unknown")
         
         message_content = f"""Event: com.uvian.job.cancelled
@@ -66,6 +68,7 @@ Resource: job/{resource_id}"""
             metadata={
                 "job_id": resource_id,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
@@ -78,7 +81,7 @@ class JobRetryTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.job.retry"
     
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(self, event_data: Dict[str, Any], is_self_action: bool = False) -> EventMessage:
         resource_id = event_data.get("id", "unknown")
         
         message_content = f"""Event: com.uvian.job.retry
@@ -93,6 +96,7 @@ Resource: job/{resource_id}"""
             metadata={
                 "job_id": resource_id,
                 "timestamp": timestamp,
+                "is_self_action": is_self_action,
             }
         )
 
