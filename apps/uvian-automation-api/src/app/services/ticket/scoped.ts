@@ -7,6 +7,7 @@ import {
   ListTicketsResult,
   TicketRecord,
 } from './types';
+import { subscriptionService } from '../factory';
 
 export function createTicketScopedService(
   clients: ServiceClients,
@@ -180,32 +181,15 @@ export function createTicketScopedService(
       if (error) throw new Error(error.message);
 
       if (assignedTo) {
-        const existingSub = await clients.adminClient
-          .from('subscriptions')
-          .select('id')
-          .eq('resource_type', 'uvian.ticket')
-          .eq('resource_id', ticketId)
-          .eq('user_id', assignedTo)
-          .single();
-
-        if (!existingSub) {
-          await clients.adminClient.from('subscriptions').insert({
-            id: `ticket_${ticketId}_assign_${assignedTo}`,
-            user_id: assignedTo,
-            resource_type: 'uvian.ticket',
-            resource_id: ticketId,
-            is_active: true,
-          });
-        }
+        await subscriptionService
+          .scoped(clients)
+          .activateSubscription(assignedTo, 'uvian.ticket', ticketId);
       }
 
       if (previousAssignee && previousAssignee !== assignedTo) {
-        await clients.adminClient
-          .from('subscriptions')
-          .delete()
-          .eq('resource_type', 'uvian.ticket')
-          .eq('resource_id', ticketId)
-          .eq('user_id', previousAssignee);
+        await subscriptionService
+          .scoped(clients)
+          .deactivateSubscription(previousAssignee, 'uvian.ticket', ticketId);
       }
 
       return mapRow(ticket);
