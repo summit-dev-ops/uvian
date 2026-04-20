@@ -143,12 +143,19 @@ class TicketAssignedTransformer(BaseEventTransformer):
     def event_type(self) -> str:
         return "com.uvian.ticket.ticket_assigned"
 
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(
+        self,
+        event_data: Dict[str, Any],
+        is_self_action: bool = False,
+    ) -> EventMessage:
         ticket_id = event_data.get("ticketId", "unknown")
         assigned_to = event_data.get("assignedTo", "unknown")
         assigned_by = event_data.get("assignedBy", "unknown")
 
-        content = f"Ticket {ticket_id} has been assigned to user {assigned_to}"
+        if is_self_action:
+            content = f"You assigned ticket {ticket_id} to yourself"
+        else:
+            content = f"Ticket {ticket_id} has been assigned to user {assigned_to}"
 
         return EventMessage(
             content=content,
@@ -157,5 +164,6 @@ class TicketAssignedTransformer(BaseEventTransformer):
                 "ticket_id": ticket_id,
                 "assigned_to": assigned_to,
                 "assigned_by": assigned_by,
+                "is_self_action": is_self_action,
             }
         )

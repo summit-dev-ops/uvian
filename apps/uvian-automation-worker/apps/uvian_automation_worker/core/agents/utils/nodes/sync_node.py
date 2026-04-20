@@ -224,7 +224,7 @@ def create_sync_node(mcp_registry):
                         node="sync_node",
                     )
             
-            event_message = transform_event(event_type, payload)
+            event_message = transform_event(event_type, payload, agent_user_id)
             
             if event_message:
                 new_messages.append(event_message)

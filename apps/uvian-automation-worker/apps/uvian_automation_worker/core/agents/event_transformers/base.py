@@ -35,11 +35,16 @@ class BaseEventTransformer(ABC):
     """
     
     @abstractmethod
-    def create_message(self, event_data: Dict[str, Any]) -> EventMessage:
+    def create_message(
+        self,
+        event_data: Dict[str, Any],
+        is_self_action: bool = False,
+    ) -> EventMessage:
         """Transform event data into an EventMessage.
         
         Args:
             event_data: The input data from the event (event payload)
+            is_self_action: Whether the event was triggered by the agent itself
             
         Returns:
             EventMessage with content and metadata for the agent
@@ -72,13 +77,24 @@ class EventTransformerRegistry:
         return cls._transformers.get(event_type)
     
     @classmethod
-    def create_message(cls, event_type: str, event_data: Dict[str, Any]) -> Optional[EventMessage]:
-        """Create an event message for an event type."""
+    def create_message(
+        cls,
+        event_type: str,
+        event_data: Dict[str, Any],
+        is_self_action: bool = False,
+    ) -> Optional[EventMessage]:
+        """Create an event message for an event type.
+        
+        Args:
+            event_type: The type of the event
+            event_data: The event data payload
+            is_self_action: Whether the event was triggered by the agent itself
+        """
         transformer_class = cls.get_transformer(event_type)
         if not transformer_class:
             return None
         transformer = transformer_class()
-        return transformer.create_message(event_data)
+        return transformer.create_message(event_data, is_self_action=is_self_action)
     
     @classmethod
     def list_registered(cls) -> list[str]:

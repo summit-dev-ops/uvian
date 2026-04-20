@@ -377,27 +377,10 @@ export class EventRouter {
     await Promise.all(routingPromises);
   }
 
-  private getActorId(event: CloudEvent): string | null {
-    const data = event.data as Record<string, unknown>;
-    if (data?.actorId) {
-      return data.actorId as string;
-    }
-    return null;
-  }
-
   private async routeToProvider(
     provider: SubscriptionProvider,
     event: CloudEvent,
   ): Promise<void> {
-    const actorId = this.getActorId(event);
-
-    if (actorId && actorId === provider.dependent_user_id) {
-      console.log(
-        `[EventRouter] Skipping event ${event.id} - actor ${actorId} matches subscriber ${provider.dependent_user_id}`,
-      );
-      return;
-    }
-
     console.log(
       `[EventRouter] Routing to provider: ${provider.provider_name} (${provider.type})`,
     );

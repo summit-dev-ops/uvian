@@ -17,13 +17,27 @@ from core.agents.utils.mcp_mapping import get_mcps_for_event
 from core.agents.utils.tools.base_tools import flatten_skill_content
 
 
-def transform_event(event_type: str, event_data: Dict[str, Any]) -> Optional[HumanMessage]:
-    event_message = EventTransformerRegistry.create_message(event_type, event_data)
+def is_self_action(event_data: Dict[str, Any], agent_user_id: str) -> bool:
+    """Check if the event was triggered by the agent itself."""
+    actor_id = event_data.get("actorId")
+    return actor_id == agent_user_id
+
+def transform_event(
+    event_type: str,
+    event_data: Dict[str, Any],
+    agent_user_id: Optional[str] = None,
+) -> Optional[HumanMessage]:
+    is_self = agent_user_id and is_self_action(event_data, agent_user_id)
+    
+    event_message = EventTransformerRegistry.create_message(
+        event_type, event_data, is_self_action=is_self
+    )
     
     if event_message:
         return HumanMessage(content=event_message.content)
     
-    return HumanMessage(content=f"Event received: {event_type}")
+    prefix = "You" if is_self else "Event"
+    return HumanMessage(content=f"{prefix} received: {event_type}")
 
 
 def filter_skills(event_types: List[str], skills: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

@@ -74,7 +74,7 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
         payload = msg_data["payload"]
         message_id = msg_data["id"]
 
-        event_message = transform_event(event_type, payload)
+        event_message = transform_event(event_type, payload, agent_user_id)
         
         if event_message:
             new_messages.append(event_message)
