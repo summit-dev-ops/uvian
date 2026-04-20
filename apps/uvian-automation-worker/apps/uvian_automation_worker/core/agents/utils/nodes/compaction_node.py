@@ -96,7 +96,6 @@ Keep under 150 words."""),
                 "history": history,
             },
             "messages": [HumanMessage(content="Your session has been compacted. You must carefully consider the compaction information in the system prompt and then resume your work. Proceed.")],
-            "session_context_size": 0,
             "tokens_used": current_total + compaction_tokens,
         }
 
