@@ -24,7 +24,6 @@ export function createSkillService(): {
           name: r.name as string,
           description: r.description as string,
           content: r.content as Record<string, unknown>,
-          autoLoadEvents: (r.auto_load_events as string[]) || [],
           isPrivate: r.is_private as boolean,
           isActive: r.is_active as boolean,
           createdAt: r.created_at as string,

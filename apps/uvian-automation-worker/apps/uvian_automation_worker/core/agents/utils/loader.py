@@ -2,8 +2,7 @@
 
 Provides unified functions for:
 - Event-to-message transformation using EventTransformerRegistry
-- Skill loading based on event types
-- MCP loading (filtering + connecting + loading tools) based on event types
+- Hook-based loading (skills + MCPs) based on event types
 
 Used by both the executor (initial event processing) and the subscription node (inbox processing).
 """
@@ -12,8 +11,6 @@ from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
 from core.agents.event_transformers import EventTransformerRegistry
-from core.agents.utils.skill_mapping import get_skills_for_event
-from core.agents.utils.mcp_mapping import get_mcps_for_event
 from core.agents.utils.tools.base_tools import flatten_skill_content
 
 
@@ -40,56 +37,58 @@ def transform_event(
     return HumanMessage(content=f"{prefix} received: {event_type}")
 
 
-def filter_skills(event_types: List[str], skills: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Filter skills that match any of the given event types.
-    
-    Args:
-        event_types: List of event types to match against
-        skills: List of all available skills
-        
-    Returns:
-        List of skills that have matching auto_load_events
-    """
-    if not event_types or not skills:
-        return []
-    
-    matched_skills = []
-    seen = set()
-    
-    for event_type in event_types:
-        for skill in get_skills_for_event(event_type, skills):
-            skill_name = skill.get("name", "")
-            if skill_name and skill_name not in seen:
-                seen.add(skill_name)
-                matched_skills.append(skill)
-    
-    return matched_skills
+def _match_event_pattern(event_type: str, patterns: List[str]) -> bool:
+    """Match event type against patterns (supports exact match and prefix)."""
+    for pattern in patterns:
+        if event_type == pattern or event_type.startswith(pattern):
+            return True
+    return False
 
 
-def filter_mcps(event_types: List[str], mcp_configs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Filter MCP configs that match any of the given event types.
+def get_hooks_for_event(
+    event_type: str,
+    hooks: List[Dict[str, Any]]
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Filter hooks matching event type and extract MCPs/skills to load.
     
     Args:
-        event_types: List of event types to match against
-        mcp_configs: List of all available MCP configurations
+        event_type: Event type to match (e.g., "com.uvian.message.created")
+        hooks: List of hooks from v_agent_hooks_for_worker view
         
     Returns:
-        List of MCP configs that have matching auto_load_events
+        Dict with 'load_mcp' and 'load_skill' lists of configs to load
     """
-    if not event_types or not mcp_configs:
-        return []
+    if not event_type or not hooks:
+        return {"load_mcp": [], "load_skill": []}
     
-    matched_configs = []
-    seen = set()
+    mcps_to_load = []
+    skills_to_load = []
+    seen_mcps = set()
+    seen_skills = set()
     
-    for event_type in event_types:
-        for cfg in get_mcps_for_event(event_type, mcp_configs):
-            cfg_id = cfg.get("id", "")
-            if cfg_id and cfg_id not in seen:
-                seen.add(cfg_id)
-                matched_configs.append(cfg)
+    for hook in hooks:
+        trigger_json = hook.get("trigger_json", {})
+        trigger_type = trigger_json.get("type")
+        
+        if trigger_type == "event":
+            patterns = trigger_json.get("patterns", [])
+            if _match_event_pattern(event_type, patterns):
+                effect_type = hook.get("effect_type")
+                effect_id = hook.get("effect_id")
+                
+                if effect_type == "load_mcp" and effect_id and effect_id not in seen_mcps:
+                    seen_mcps.add(effect_id)
+                    mcps_to_load.append({"effect_id": effect_id, "hook_name": hook.get("name")})
+                
+                elif effect_type == "load_skill" and effect_id and effect_id not in seen_skills:
+                    seen_skills.add(effect_id)
+                    skills_to_load.append({"effect_id": effect_id, "hook_name": hook.get("name")})
     
-    return matched_configs
+    return {
+        "load_mcp": mcps_to_load,
+        "load_skill": skills_to_load,
+    }
+
 
 async def load_mcps(
     mcp_configs: List[Dict[str, Any]],
@@ -111,19 +110,19 @@ async def load_mcps(
     loaded_tools = []
     
     for cfg in mcp_configs:
-        mcp_name = cfg.get("name", cfg.get("id", "unknown"))
+        mcp_id = cfg.get("id", cfg.get("mcp_id", "unknown"))
         
         try:
-            tools = await persistent_client.load_tools(cfg["id"])
+            tools = await persistent_client.load_tools(mcp_id)
             loaded_tools.extend(tools)
             info_messages.append(ToolMessage(
-                content=f"Auto-loaded MCP server: {mcp_name}. This server provides tools for handling events.",
-                tool_call_id=f"preload-mcp-{mcp_name}",
+                content=f"Auto-loaded MCP server. This server provides tools for handling events.",
+                tool_call_id=f"preload-mcp-{mcp_id}",
             ))
         except Exception as e:
             info_messages.append(ToolMessage(
-                content=f"Failed to load MCP server: {mcp_name}. Error: {str(e)}",
-                tool_call_id=f"preload-mcp-{mcp_name}",
+                content=f"Failed to load MCP server: {mcp_id}. Error: {str(e)}",
+                tool_call_id=f"preload-mcp-{mcp_id}",
             ))
     
     return info_messages, loaded_tools
@@ -133,6 +132,7 @@ async def prepare_for_inbox_events(
     pending_messages: List[Dict[str, Any]],
     skills: List[Dict[str, Any]],
     mcp_configs: List[Dict[str, Any]],
+    hooks: List[Dict[str, Any]],
     persistent_client
 ) -> Tuple[List[HumanMessage], List[Dict[str, Any]], List[str], List[str]]:
     """Prepare all events from inbox - transform and load resources for all unique event types.
@@ -144,6 +144,7 @@ async def prepare_for_inbox_events(
         pending_messages: List of pending messages from inbox
         skills: All available skills
         mcp_configs: All available MCP configurations
+        hooks: All available hooks from v_agent_hooks_for_worker
         persistent_client: PersistentMCPClient for MCP connections
         
     Returns:
@@ -154,9 +155,20 @@ async def prepare_for_inbox_events(
     
     unique_event_types = list(set(msg["event_type"] for msg in pending_messages))
     
-    matched_skills = filter_skills(unique_event_types, skills)
+    hooks_by_effect = {"load_mcp": [], "load_skill": []}
+    for event_type in unique_event_types:
+        hooks_result = get_hooks_for_event(event_type, hooks)
+        if hooks_result["load_mcp"]:
+            hooks_by_effect["load_mcp"].extend(hooks_result["load_mcp"])
+        if hooks_result["load_skill"]:
+            hooks_by_effect["load_skill"].extend(hooks_result["load_skill"])
     
-    matched_mcp_configs = filter_mcps(unique_event_types, mcp_configs)
+    mcp_ids_to_load = [h.get("effect_id") for h in hooks_by_effect["load_mcp"] if h.get("effect_id")]
+    matched_mcp_configs = [c for c in mcp_configs if c.get("id") in mcp_ids_to_load]
+    
+    skill_ids_to_load = [h.get("effect_id") for h in hooks_by_effect["load_skill"] if h.get("effect_id")]
+    matched_skills = [s for s in skills if s.get("id") in skill_ids_to_load]
+    
     _, _ = await load_mcps(matched_mcp_configs, persistent_client)
     matched_mcp_names = [c.get("name", c.get("id", "")) for c in matched_mcp_configs]
     

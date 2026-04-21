@@ -256,4 +256,158 @@ export default async function (fastify: FastifyInstance) {
       }
     },
   );
+
+  fastify.post<{
+    Params: { id: string };
+    Body: {
+      effectType: string;
+      effectId?: string;
+      config?: Record<string, unknown>;
+    };
+  }>(
+    '/api/hooks/:id/effects',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          required: ['effectType'],
+          properties: {
+            effectType: {
+              type: 'string',
+              enum: ['load_mcp', 'load_skill', 'interrupt', 'block', 'log'],
+            },
+            effectId: { type: 'string' },
+            config: { type: 'object' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{
+        Params: { id: string };
+        Body: {
+          effectType: string;
+          effectId?: string;
+          config?: Record<string, unknown>;
+        };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const { id } = request.params;
+        const { effectType, effectId, config } = request.body || {};
+
+        if (
+          (effectType === 'load_mcp' || effectType === 'load_skill') &&
+          !effectId
+        ) {
+          reply
+            .code(400)
+            .send({
+              error: 'effectId is required for load_mcp and load_skill effects',
+            });
+          return;
+        }
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        await hookService.scoped(clients).addEffect(id, {
+          effectType: effectType as any,
+          effectId,
+          config,
+        });
+
+        reply.code(201).send({ success: true });
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to add effect to hook' });
+      }
+    },
+  );
+
+  fastify.delete<{
+    Params: { id: string; type: string; effectId: string };
+  }>(
+    '/api/hooks/:id/effects/:type/:effectId',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            type: { type: 'string' },
+            effectId: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{
+        Params: { id: string; type: string; effectId: string };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const { id, type, effectId } = request.params;
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        await hookService
+          .scoped(clients)
+          .removeEffect(id, type as any, effectId);
+
+        reply.code(204).send();
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to remove effect from hook' });
+      }
+    },
+  );
+
+  fastify.get<{
+    Params: { id: string };
+  }>(
+    '/api/hooks/:id/effects',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{
+        Params: { id: string };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const { id } = request.params;
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        const result = await hookService.scoped(clients).listEffects(id);
+
+        reply.send(result);
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to list effects for hook' });
+      }
+    },
+  );
 }

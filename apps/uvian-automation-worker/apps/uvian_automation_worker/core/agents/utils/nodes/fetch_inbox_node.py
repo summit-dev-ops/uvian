@@ -9,7 +9,7 @@ is handled by the executor at startup - this node focuses on message transformat
 from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage
 from repositories.thread_inbox import thread_inbox_repository
-from core.agents.utils.loader import transform_event, filter_skills
+from core.agents.utils.loader import transform_event, get_hooks_for_event
 from core.logging import log
 
 
@@ -49,11 +49,20 @@ async def fetch_inbox_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     available_skills = state.get("available_skills", [])
     loaded_skills = state.get("loaded_skills", [])
+    available_hooks = state.get("available_hooks", [])
     loaded_skill_names = [s.get("name") for s in loaded_skills if isinstance(s, dict) and s.get("name")]
     
     unique_event_types = list(set(msg["event_type"] for msg in pending_messages))
 
-    matched_skills = filter_skills(unique_event_types, available_skills)
+    matched_skills = []
+    for event_type in unique_event_types:
+        hooks_result = get_hooks_for_event(event_type, available_hooks)
+        for hook_info in hooks_result.get("load_skill", []):
+            effect_id = hook_info.get("effect_id")
+            if effect_id:
+                skill = next((s for s in available_skills if s.get("id") == effect_id), None)
+                if skill and skill not in matched_skills:
+                    matched_skills.append(skill)
     
     newly_loaded = []
     for s in matched_skills:

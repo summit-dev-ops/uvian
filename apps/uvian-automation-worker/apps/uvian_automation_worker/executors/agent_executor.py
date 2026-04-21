@@ -126,6 +126,7 @@ class AgentExecutor(BaseExecutor):
                 "loaded_skills": [],
                 "available_mcps": available_mcps,
                 "loaded_mcps": [],
+                "available_hooks": available_hooks,
                 "custom_instructions": "",
                 "agent_name": "Agent",
                 "llm_calls": 0,

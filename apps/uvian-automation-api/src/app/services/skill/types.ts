@@ -10,7 +10,6 @@ export interface CreateSkillPayload {
   name: string;
   description: string;
   content: Record<string, unknown>;
-  autoLoadEvents?: string[];
   isPrivate?: boolean;
 }
 
@@ -18,7 +17,6 @@ export interface UpdateSkillPayload {
   name?: string;
   description?: string;
   content?: Record<string, unknown>;
-  autoLoadEvents?: string[];
   isPrivate?: boolean;
   isActive?: boolean;
 }
@@ -29,7 +27,6 @@ export interface SkillRecord {
   name: string;
   description: string;
   content: Record<string, unknown>;
-  autoLoadEvents: string[];
   isPrivate: boolean;
   isActive: boolean;
   createdAt: string;
@@ -41,7 +38,6 @@ export interface LinkedSkill {
   name: string;
   description: string;
   content: Record<string, unknown>;
-  autoLoadEvents: string[];
   isPrivate: boolean;
   linkConfig: Record<string, unknown>;
 }

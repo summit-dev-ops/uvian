@@ -18,8 +18,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from repositories.thread_inbox import thread_inbox_repository
 from repositories.agent_memory import agent_memory_repository
-from core.agents.utils.loader import transform_event, filter_skills
-from core.agents.utils.mcp_mapping import get_mcps_for_event
+from core.agents.utils.loader import transform_event, get_hooks_for_event
 from core.logging import log
 
 
@@ -95,16 +94,36 @@ def create_sync_node(mcp_registry):
         
         all_mcp_configs = config.get("configurable", {}).get("all_mcp_configs", [])
         all_skills = config.get("configurable", {}).get("all_skills", [])
+        all_hooks = config.get("configurable", {}).get("available_hooks", [])
         
         relevant_mcp_configs = []
+        
         if unique_event_types:
-            for event_type in unique_event_types:
-                matched = get_mcps_for_event(event_type, all_mcp_configs)
-                relevant_mcp_configs.extend(matched)
+            unique_event_set = set(unique_event_types)
+            hooks_by_effect = {"load_mcp": [], "load_skill": []}
+            for event_type in unique_event_set:
+                hooks_result = get_hooks_for_event(event_type, all_hooks)
+                if hooks_result["load_mcp"]:
+                    hooks_by_effect["load_mcp"].extend(hooks_result["load_mcp"])
+                if hooks_result["load_skill"]:
+                    hooks_by_effect["load_skill"].extend(hooks_result["load_skill"])
+            
+            mcp_ids_to_load = [h.get("effect_id") for h in hooks_by_effect["load_mcp"] if h.get("effect_id")]
+            for mcp_id in mcp_ids_to_load:
+                mcp_cfg = next((c for c in all_mcp_configs if c.get("id") == mcp_id), None)
+                if mcp_cfg and mcp_cfg not in relevant_mcp_configs:
+                    relevant_mcp_configs.append(mcp_cfg)
+            
+            skills_to_load = []
+            skill_ids_to_load = [h.get("effect_id") for h in hooks_by_effect["load_skill"] if h.get("effect_id")]
+            for skill_id in skill_ids_to_load:
+                skill = next((s for s in all_skills if s.get("id") == skill_id), None)
+                if skill and skill not in skills_to_load:
+                    skills_to_load.append(skill)
+            
+            matched_skills = skills_to_load
         else:
-            for cfg in all_mcp_configs:
-                if cfg.get("is_default"):
-                    relevant_mcp_configs.append(cfg)
+            matched_skills = []
         
         seen = {}
         unique_mcp_configs = []
@@ -168,7 +187,7 @@ def create_sync_node(mcp_registry):
             if cfg.get("name") and cfg.get("id") not in failed_mcp_names
         ]
         
-        matched_skills = filter_skills(unique_event_types, all_skills)
+        matched_skills = matched_skills  # Already set above from hooks
         
         loaded_skills = state.get("loaded_skills", [])
         loaded_skill_names = {s.get("name") for s in loaded_skills if isinstance(s, dict) and s.get("name")}

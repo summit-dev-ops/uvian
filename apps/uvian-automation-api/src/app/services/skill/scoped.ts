@@ -7,7 +7,7 @@ import {
 } from './types';
 
 export function createSkillScopedService(
-  clients: ServiceClients
+  clients: ServiceClients,
 ): SkillScopedService {
   return {
     async list(accountId: string): Promise<SkillRecord[]> {
@@ -16,7 +16,7 @@ export function createSkillScopedService(
         .from('skills')
         .select('*')
         .or(
-          `account_id.eq.${accountId},and(is_private.eq.false,is_active.eq.true)`
+          `account_id.eq.${accountId},and(is_private.eq.false,is_active.eq.true)`,
         )
         .order('created_at', { ascending: false });
 
@@ -45,7 +45,6 @@ export function createSkillScopedService(
           name: payload.name,
           description: payload.description,
           content: payload.content,
-          auto_load_events: payload.autoLoadEvents || [],
           is_private: payload.isPrivate ?? false,
           is_active: true,
         })
@@ -58,7 +57,7 @@ export function createSkillScopedService(
 
     async update(
       skillId: string,
-      payload: UpdateSkillPayload
+      payload: UpdateSkillPayload,
     ): Promise<SkillRecord> {
       const updateData: Record<string, unknown> = {};
 
@@ -66,8 +65,6 @@ export function createSkillScopedService(
       if (payload.description !== undefined)
         updateData.description = payload.description;
       if (payload.content !== undefined) updateData.content = payload.content;
-      if (payload.autoLoadEvents !== undefined)
-        updateData.auto_load_events = payload.autoLoadEvents;
       if (payload.isPrivate !== undefined)
         updateData.is_private = payload.isPrivate;
       if (payload.isActive !== undefined)
@@ -106,7 +103,6 @@ function mapRow(row: unknown): SkillRecord {
     name: r.name as string,
     description: r.description as string,
     content: r.content as Record<string, unknown>,
-    autoLoadEvents: (r.auto_load_events as string[]) || [],
     isPrivate: r.is_private as boolean,
     isActive: r.is_active as boolean,
     createdAt: r.created_at as string,

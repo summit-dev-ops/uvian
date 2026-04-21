@@ -28,4 +28,8 @@ export type {
   UpdateHookPayload,
   HookRecord,
   ListHooksFilters,
+  TriggerJson,
+  EffectType,
+  AddEffectPayload,
+  HookEffect,
 } from './types';

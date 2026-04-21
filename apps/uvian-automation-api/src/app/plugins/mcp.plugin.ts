@@ -720,7 +720,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               name: args.name,
               description: args.description,
               content: args.content,
-              autoLoadEvents: args.autoLoadEvents,
               isPrivate: args.isPrivate,
             },
             { eventEmitter: fastify.eventEmitter },

@@ -5,6 +5,9 @@ import {
   UpdateHookPayload,
   ListHooksFilters,
   HookRecord,
+  AddEffectPayload,
+  HookEffect,
+  EffectType,
 } from './types';
 
 export function createHookScopedService(
@@ -196,6 +199,68 @@ export function createHookScopedService(
 
       if (error) throw new Error('Cannot unlink hook from agent');
       return { success: true };
+    },
+
+    async addEffect(
+      hookId: string,
+      payload: AddEffectPayload,
+    ): Promise<{ success: boolean }> {
+      await verifyHookAccess(hookId);
+
+      const { error } = await clients.adminClient
+        .schema('core_automation')
+        .from('hook_effects')
+        .insert({
+          hook_id: hookId,
+          effect_type: payload.effectType,
+          effect_id: payload.effectId || null,
+          config: payload.config || {},
+        });
+
+      if (error) throw new Error('Cannot add effect to hook');
+      return { success: true };
+    },
+
+    async removeEffect(
+      hookId: string,
+      effectType: EffectType,
+      effectId: string,
+    ): Promise<{ success: boolean }> {
+      await verifyHookAccess(hookId);
+
+      const { error } = await clients.adminClient
+        .schema('core_automation')
+        .from('hook_effects')
+        .delete()
+        .eq('hook_id', hookId)
+        .eq('effect_type', effectType)
+        .eq('effect_id', effectId);
+
+      if (error) throw new Error('Cannot remove effect from hook');
+      return { success: true };
+    },
+
+    async listEffects(hookId: string): Promise<{ effects: HookEffect[] }> {
+      await verifyHookAccess(hookId);
+
+      const { data, error } = await clients.userClient
+        .schema('core_automation')
+        .from('hook_effects')
+        .select('*')
+        .eq('hook_id', hookId);
+
+      if (error) throw new Error(error.message);
+
+      return {
+        effects: (data || []).map((row: unknown) => {
+          const r = row as Record<string, unknown>;
+          return {
+            effectType: r.effect_type as string,
+            effectId: r.effect_id as string | null,
+            config: r.config as Record<string, unknown>,
+          };
+        }),
+      };
     },
   };
 }

@@ -287,7 +287,7 @@ export function createAgentConfigScopedService(
           authMethod: authMethod,
           authSecret: authSecret,
           usageGuidance: (r.mcp_usage_guidance as string) || undefined,
-          autoLoadEvents: (r.mcp_auto_load_events as string[]) || [],
+
           isDefault: (r.is_default as boolean) || false,
         };
       });
@@ -408,7 +408,6 @@ export function createAgentConfigScopedService(
           name: String(r.name),
           description: String(r.description),
           content: (r.content as Record<string, unknown>) || {},
-          autoLoadEvents: (r.auto_load_events as string[]) || [],
           isPrivate: Boolean(r.is_private),
           linkConfig: (r.link_config as Record<string, unknown>) || {},
         };
@@ -562,7 +561,7 @@ export function createAgentConfigScopedService(
           authMethod: authMethod,
           authSecret: authSecret,
           usageGuidance: (r.mcp_usage_guidance as string) || undefined,
-          autoLoadEvents: (r.mcp_auto_load_events as string[]) || [],
+
           isDefault: (r.is_default as boolean) || false,
         };
       });

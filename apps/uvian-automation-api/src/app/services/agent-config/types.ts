@@ -78,7 +78,6 @@ export interface LinkedMcp {
   authMethod: string;
   authSecret?: string | null;
   usageGuidance?: string;
-  autoLoadEvents?: string[];
   isDefault?: boolean;
 }
 
@@ -87,7 +86,6 @@ export interface LinkedSkill {
   name: string;
   description: string;
   content: Record<string, unknown>;
-  autoLoadEvents: string[];
   isPrivate: boolean;
   linkConfig: Record<string, unknown>;
 }
