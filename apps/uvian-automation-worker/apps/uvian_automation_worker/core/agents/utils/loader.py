@@ -73,16 +73,19 @@ def get_hooks_for_event(
         if trigger_type == "event":
             patterns = trigger_json.get("patterns", [])
             if _match_event_pattern(event_type, patterns):
-                effect_type = hook.get("effect_type")
-                effect_id = hook.get("effect_id")
-                
-                if effect_type == "load_mcp" and effect_id and effect_id not in seen_mcps:
-                    seen_mcps.add(effect_id)
-                    mcps_to_load.append({"effect_id": effect_id, "hook_name": hook.get("name")})
-                
-                elif effect_type == "load_skill" and effect_id and effect_id not in seen_skills:
-                    seen_skills.add(effect_id)
-                    skills_to_load.append({"effect_id": effect_id, "hook_name": hook.get("name")})
+                hook_name = hook.get("name")
+                effects = hook.get("effects", [])
+                for effect in effects:
+                    effect_type = effect.get("effect_type")
+                    effect_id = effect.get("effect_id")
+                    
+                    if effect_type == "load_mcp" and effect_id and effect_id not in seen_mcps:
+                        seen_mcps.add(effect_id)
+                        mcps_to_load.append({"effect_id": effect_id, "hook_name": hook_name})
+                    
+                    elif effect_type == "load_skill" and effect_id and effect_id not in seen_skills:
+                        seen_skills.add(effect_id)
+                        skills_to_load.append({"effect_id": effect_id, "hook_name": hook_name})
     
     return {
         "load_mcp": mcps_to_load,

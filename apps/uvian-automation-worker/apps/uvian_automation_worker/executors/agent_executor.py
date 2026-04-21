@@ -99,15 +99,37 @@ class AgentExecutor(BaseExecutor):
         ]
 
         all_hooks = await get_agent_hooks(agent_user_id)
-        available_hooks = [
-            {
-                "id": h.get("hook_id"),
+        hooks_by_id: dict = {}
+        for h in all_hooks:
+            hook_id = h.get("hook_id")
+            if not hook_id or not h.get("name"):
+                continue
+            if hook_id not in hooks_by_id:
+                hooks_by_id[hook_id] = {
+                    "id": hook_id,
+                    "name": h.get("name"),
+                    "trigger_json": h.get("trigger_json"),
+                    "action": h.get("action"),
+                    "effects": [],
+                }
+            if h.get("effect_type") and h.get("effect_id"):
+                hooks_by_id[hook_id]["effects"].append({
+                    "effect_type": h.get("effect_type"),
+                    "effect_id": h.get("effect_id"),
+                })
+        available_hooks = list(hooks_by_id.values())
+        log.debug(
+            "agent_executor_hooks_loaded",
+            agent_user_id=agent_user_id,
+            thread_id=thread_id,
+            hooks_count=len(available_hooks),
+            hooks=[{
+                "id": h.get("id"),
                 "name": h.get("name"),
-                "trigger_json": h.get("trigger_json"),
-                "action": h.get("action"),
-            }
-            for h in all_hooks if h.get("name")
-        ]
+                "patterns": h.get("trigger_json", {}).get("patterns", []),
+                "effects": h.get("effects", []),
+            } for h in available_hooks],
+        )
 
         base_checkpointer = PostgresAsyncCheckpointer()
         checkpointer = SelectiveCheckpointer(
