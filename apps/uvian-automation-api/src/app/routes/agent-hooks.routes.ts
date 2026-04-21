@@ -1,21 +1,35 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
+import { agentConfigService } from '../services';
 
 export default async function agentHookRoutes(fastify: FastifyInstance) {
   fastify.get<{
-    Params: { agentId: string };
+    Params: { agentUserId: string };
   }>(
-    '/api/agents/:agentId/hooks',
+    '/api/agents/:agentUserId/hooks',
     { preHandler: [fastify.authenticateInternal] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { agentId } = request.params as any as { agentId: string };
+        const { agentUserId } = request.params as any as { agentUserId: string };
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: adminSupabase,
+        };
+
+        const agent = await agentConfigService
+          .scoped(clients)
+          .getByUserId(agentUserId);
+
+        if (!agent) {
+          return reply.send({ hooks: [] });
+        }
 
         const { data, error } = await adminSupabase
           .schema('core_automation')
           .from('v_agent_hooks_for_worker')
           .select('*')
-          .eq('agent_id', agentId);
+          .eq('agent_id', agent.id);
 
         if (error) throw new Error(error.message);
 
