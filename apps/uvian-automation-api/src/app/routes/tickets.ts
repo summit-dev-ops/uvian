@@ -7,6 +7,7 @@ import {
   resolveTicket,
   assignTicket,
   deleteTicket,
+  pingTicket,
 } from '../commands';
 import {
   CreateTicketRequest,
@@ -344,6 +345,60 @@ export default async function (fastify: FastifyInstance) {
         reply.code(204).send();
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to delete ticket' });
+      }
+    },
+  );
+
+  fastify.post<{ Params: { id: string }; Body: { message: string } }>(
+    '/api/tickets/:id/ping',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' } },
+          additionalProperties: false,
+        },
+        body: {
+          type: 'object',
+          required: ['message'],
+          properties: {
+            message: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{
+        Params: { id: string };
+        Body: { message: string };
+      }>,
+      reply: FastifyReply,
+    ) => {
+      try {
+        const userId = request.user?.id;
+        if (!userId) {
+          reply.code(401).send({ error: 'Not authenticated' });
+          return;
+        }
+
+        const { id } = request.params;
+        const { message } = request.body || {};
+
+        const clients = {
+          adminClient: adminSupabase,
+          userClient: request.supabase,
+        };
+        await pingTicket(
+          clients,
+          { ticketId: id, message, pingedBy: userId },
+          { eventEmitter: request.server.eventEmitter },
+        );
+
+        reply.send({ success: true });
+      } catch (error: any) {
+        reply.code(400).send({ error: 'Failed to ping ticket' });
       }
     },
   );

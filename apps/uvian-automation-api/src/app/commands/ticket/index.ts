@@ -12,6 +12,7 @@ import {
   TicketCreatedData,
   TicketUpdatedData,
   TicketClosedData,
+  TicketPingData,
 } from '@org/uvian-events';
 
 export interface CreateTicketCommandInput extends CreateTicketPayload {
@@ -181,6 +182,37 @@ export async function deleteTicket(
         closedBy: userId,
       } as TicketClosedData,
       userId,
+    );
+  }
+
+  return { success: true };
+}
+
+export interface PingTicketCommandInput {
+  ticketId: string;
+  message: string;
+  pingedBy: string;
+}
+
+export interface PingTicketCommandOutput {
+  success: boolean;
+}
+
+export async function pingTicket(
+  _clients: ServiceClients,
+  input: PingTicketCommandInput,
+  context?: CommandContext,
+): Promise<PingTicketCommandOutput> {
+  const { ticketId, message, pingedBy } = input;
+
+  if (context?.eventEmitter) {
+    context.eventEmitter.emitTicketPing(
+      {
+        ticketId,
+        message,
+        pingedBy,
+      } as TicketPingData,
+      pingedBy,
     );
   }
 

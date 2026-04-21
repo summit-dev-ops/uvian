@@ -8,6 +8,7 @@ export const TicketEvents = {
   TICKET_RESOLVED: `${prefix}.ticket.ticket_resolved`,
   TICKET_CLOSED: `${prefix}.ticket.ticket_closed`,
   TICKET_ASSIGNED: `${prefix}.ticket.ticket_assigned`,
+  TICKET_PING: `${prefix}.ticket.ping`,
 } as const;
 
 export type TicketEventType = (typeof TicketEvents)[keyof typeof TicketEvents];
@@ -46,9 +47,16 @@ export interface TicketAssignedData {
   assignedBy: string;
 }
 
+export interface TicketPingData {
+  ticketId: string;
+  message: string;
+  pingedBy: string;
+}
+
 export type TicketEventData =
   | TicketCreatedData
   | TicketUpdatedData
   | TicketResolvedData
   | TicketClosedData
-  | TicketAssignedData;
+  | TicketAssignedData
+  | TicketPingData;
