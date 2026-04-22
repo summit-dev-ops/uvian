@@ -24,4 +24,4 @@ RUN poetry install --only main --no-interaction --no-ansi
 COPY . .
 
 # Run the worker using the in-project virtualenv directly, matching railway.toml
-CMD [".venv/bin/python", "uvian_automation_worker/main.py"]
+CMD [".venv/bin/python", "apps/uvian_automation_worker/main.py"]
