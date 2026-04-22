@@ -1,7 +1,7 @@
 from core.agents.utils.state import MessagesState
 
 def check_context(state: MessagesState) -> str:
-    MAX_TOKENS = 124000
+    MAX_TOKENS = 20500
     SAFETY_BUFFER = 500
     TRIGGER_THRESHOLD = MAX_TOKENS - SAFETY_BUFFER
 
