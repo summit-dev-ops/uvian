@@ -988,12 +988,15 @@ class ToolNode(RunnableCallable):
 
         try:
             try:
-                log.warning(
+                log.error(
                     "tool_invoke_sync_debug",
                     tool_name=call["name"],
                     tool_type=str(type(tool)),
+                    tool_module=str(type(tool).__module__),
                     has_invoke=hasattr(tool, 'invoke'),
+                    invoke_callable=callable(getattr(tool, 'invoke', None)),
                     invoke_type=str(type(getattr(tool, 'invoke', None))),
+                    call_args_keys=list(call_args.keys()),
                 )
                 response = tool.invoke(call_args, config)
             except ValidationError as exc:
@@ -1119,6 +1122,12 @@ class ToolNode(RunnableCallable):
             return self._wrap_tool_call(tool_request, execute)
         except Exception as e:
             # Wrapper threw an exception
+            log.error(
+                "wrapper_sync_exception",
+                tool_name=tool_request.tool_call["name"],
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             if not self._handle_tool_errors:
                 raise
             # Convert to error message
@@ -1166,12 +1175,15 @@ class ToolNode(RunnableCallable):
 
         try:
             try:
-                log.warning(
+                log.error(
                     "tool_invoke_debug",
                     tool_name=call["name"],
                     tool_type=str(type(tool)),
+                    tool_module=str(type(tool).__module__),
                     has_ainvoke=hasattr(tool, 'ainvoke'),
+                    ainvoke_callable=callable(getattr(tool, 'ainvoke', None)),
                     ainvoke_type=str(type(getattr(tool, 'ainvoke', None))),
+                    call_args_keys=list(call_args.keys()),
                 )
                 response = await tool.ainvoke(call_args, config)
             except ValidationError as exc:
@@ -1305,6 +1317,12 @@ class ToolNode(RunnableCallable):
             return self._wrap_tool_call(tool_request, _sync_execute)
         except Exception as e:
             # Wrapper threw an exception
+            log.error(
+                "wrapper_exception",
+                tool_name=tool_request.tool_call["name"],
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             if not self._handle_tool_errors:
                 raise
             # Convert to error message

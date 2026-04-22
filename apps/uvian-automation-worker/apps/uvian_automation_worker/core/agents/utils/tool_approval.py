@@ -75,7 +75,17 @@ async def create_tool_approval_wrapper(
         matched_hook = _match_hook(hooks, tool_name, tool_args)
         
         if not matched_hook:
-            return await execute(request)
+            log.debug("tool_approval_execute", tool_name=tool_name, matched_hook=None)
+            try:
+                return await execute(request)
+            except Exception as e:
+                log.error(
+                    "tool_approval_execute_error",
+                    tool_name=tool_name,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                raise
         
         action = matched_hook.get("action", "interrupt")
         
