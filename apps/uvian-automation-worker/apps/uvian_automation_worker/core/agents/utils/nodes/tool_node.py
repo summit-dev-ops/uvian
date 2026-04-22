@@ -795,10 +795,10 @@ class ToolNode(RunnableCallable):
             if not isinstance(self._mcp_registry, MCPRegistry):
                 return None
             if not self._mcp_registry._client:
-                log.debug("mcp_registry_client_not_ready", tool_name=tool_name)
+                log.warning("mcp_registry_client_not_ready", tool_name=tool_name)
                 return None
             tool_cache_keys = list(self._mcp_registry._client._tool_cache.keys()) if self._mcp_registry._client._tool_cache else []
-            log.debug(
+            log.warning(
                 "resolve_tool_attempt",
                 tool_name=tool_name,
                 tool_cache_keys=tool_cache_keys,
@@ -1140,7 +1140,7 @@ class ToolNode(RunnableCallable):
 
         try:
             try:
-                log.debug(
+                log.warning(
                     "tool_invoke_debug",
                     tool_name=call["name"],
                     tool_type=str(type(tool)),
@@ -1231,7 +1231,7 @@ class ToolNode(RunnableCallable):
         tool = self.tools_by_name.get(call["name"])
         if tool is None and self._mcp_registry:
             tool = await self._resolve_tool_from_mcp_registry(call["name"])
-            log.debug(
+            log.warning(
                 "mcp_tool_resolved",
                 tool_name=call["name"],
                 resolved=tool is not None,
