@@ -822,7 +822,14 @@ class ToolNode(RunnableCallable):
             if not isinstance(self._mcp_registry, MCPRegistry):
                 return None
             if not self._mcp_registry._client:
+                log.warning("mcp_registry_client_not_ready_sync", tool_name=tool_name)
                 return None
+            tool_cache_keys = list(self._mcp_registry._client._tool_cache.keys()) if self._mcp_registry._client._tool_cache else []
+            log.warning(
+                "resolve_tool_sync_attempt",
+                tool_name=tool_name,
+                tool_cache_keys=tool_cache_keys,
+            )
             for mcp_id in self._mcp_registry._client._tool_cache:
                 tools = self._mcp_registry._client._tool_cache.get(mcp_id, [])
                 for tool in tools:
@@ -981,6 +988,13 @@ class ToolNode(RunnableCallable):
 
         try:
             try:
+                log.warning(
+                    "tool_invoke_sync_debug",
+                    tool_name=call["name"],
+                    tool_type=str(type(tool)),
+                    has_invoke=hasattr(tool, 'invoke'),
+                    invoke_type=str(type(getattr(tool, 'invoke', None))),
+                )
                 response = tool.invoke(call_args, config)
             except ValidationError as exc:
                 # Filter out errors for injected arguments
@@ -1065,6 +1079,12 @@ class ToolNode(RunnableCallable):
         tool = self.tools_by_name.get(call["name"])
         if tool is None and self._mcp_registry:
             tool = self._resolve_tool_from_mcp_registry_sync(call["name"])
+            log.warning(
+                "mcp_tool_resolved_sync",
+                tool_name=call["name"],
+                resolved=tool is not None,
+                tool_type=str(type(tool)) if tool else None,
+            )
             if tool:
                 self._tools_by_name[tool.name] = tool
                 self._injected_args[tool.name] = _get_all_injected_args(tool)
@@ -1078,6 +1098,12 @@ class ToolNode(RunnableCallable):
         )
 
         config = tool_runtime.config
+
+        log.warning(
+            "tool_wrapper_path_sync",
+            tool_name=call["name"],
+            has_wrap=bool(self._wrap_tool_call),
+        )
 
         if self._wrap_tool_call is None:
             # No wrapper - execute directly
@@ -1266,6 +1292,12 @@ class ToolNode(RunnableCallable):
 
         # Call wrapper with request and execute callable
         try:
+            log.warning(
+                "tool_wrapper_path",
+                tool_name=call["name"],
+                has_awrap=bool(self._awrap_tool_call),
+                has_wrap=bool(self._wrap_tool_call),
+            )
             if self._awrap_tool_call is not None:
                 return await self._awrap_tool_call(tool_request, execute)
             # None check was performed above already
