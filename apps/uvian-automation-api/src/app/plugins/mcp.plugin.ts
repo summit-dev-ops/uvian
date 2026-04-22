@@ -34,6 +34,16 @@ import {
   resolveTicket,
   assignTicket,
   deleteTicket,
+  createHook,
+  updateHook,
+  deleteHook,
+  listHooks,
+  getHook,
+  linkHook,
+  unlinkHook,
+  addHookEffect,
+  removeHookEffect,
+  listHookEffects,
 } from '../commands';
 import { generateRSAKeyPair, decryptRSA } from '@org/utils-encryption';
 import jwt from 'jsonwebtoken';
@@ -1224,6 +1234,342 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           );
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'create_hook',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          name: z.string().min(1),
+          triggerJson: z.union([
+            z.object({ type: z.literal('event'), patterns: z.array(z.string()).min(1) }),
+            z.object({ type: z.literal('tool_name_prefix'), pattern: z.string().min(1) }),
+          ]),
+          action: z.enum(['interrupt', 'log', 'block']),
+          config: z.record(z.string(), z.unknown()).optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { hook } = await createHook(clients, {
+            accountId: args.accountId,
+            name: args.name,
+            triggerJson: args.triggerJson,
+            action: args.action,
+            config: args.config,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ hookId: hook.hookId }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'list_hooks',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          isActive: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { hooks } = await listHooks(clients, {
+            accountId: args.accountId,
+            isActive: args.isActive,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ hooks }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'get_hook',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { hook } = await getHook(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ hook }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'update_hook',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+          name: z.string().min(1).optional(),
+          triggerJson: z.union([
+            z.object({ type: z.literal('event'), patterns: z.array(z.string()).min(1) }),
+            z.object({ type: z.literal('tool_name_prefix'), pattern: z.string().min(1) }),
+          ]).optional(),
+          action: z.enum(['interrupt', 'log', 'block']).optional(),
+          config: z.record(z.string(), z.unknown()).optional(),
+          isActive: z.boolean().optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { hook } = await updateHook(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+            name: args.name,
+            triggerJson: args.triggerJson,
+            action: args.action,
+            config: args.config,
+            isActive: args.isActive,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ hook }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'delete_hook',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { success } = await deleteHook(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'link_hook',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+          agentId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { success } = await linkHook(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+            agentId: args.agentId,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'unlink_hook',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+          agentId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { success } = await unlinkHook(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+            agentId: args.agentId,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'add_hook_effect',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+          effectType: z.enum(['load_mcp', 'load_skill']),
+          effectId: z.string().optional(),
+          config: z.record(z.string(), z.unknown()).optional(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { success } = await addHookEffect(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+            effectType: args.effectType,
+            effectId: args.effectId,
+            config: args.config,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'remove_hook_effect',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+          effectType: z.enum(['load_mcp', 'load_skill']),
+          effectId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { success } = await removeHookEffect(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+            effectType: args.effectType,
+            effectId: args.effectId,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ success }) }],
+          };
+        } catch (error) {
+          return {
+            content: [{ type: 'text', text: `Error: ${error}` }],
+            isError: true,
+          };
+        }
+      },
+    );
+
+    server.registerTool(
+      'list_hook_effects',
+      {
+        inputSchema: z.object({
+          accountId: z.string(),
+          hookId: z.string(),
+        }),
+      },
+      async (args): Promise<ToolResult> => {
+        try {
+          const clients = {
+            adminClient: adminSupabase,
+            userClient: adminSupabase,
+          };
+          const { effects } = await listHookEffects(clients, {
+            accountId: args.accountId,
+            hookId: args.hookId,
+          });
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ effects }) }],
           };
         } catch (error) {
           return {
