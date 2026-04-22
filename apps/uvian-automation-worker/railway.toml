@@ -1,5 +1,4 @@
 [deploy]
-startCommand = "cd apps/uvian-automation-worker && .venv/bin/python apps/uvian_automation_worker/main.py"
 restartPolicyType = "on_failure"
 numReplicas = 1
 
