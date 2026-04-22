@@ -173,7 +173,7 @@ class AgentExecutor(BaseExecutor):
             }
 
             try:
-                agent = build_agent(
+                agent = await build_agent(
                     llm_config,
                     mcp_registry,
                     checkpointer=checkpointer,

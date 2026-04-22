@@ -16,7 +16,7 @@ from clients.mcp import MCPRegistry
 from clients.config import create_tool_approval_ticket
 
 
-def build_agent(
+async def build_agent(
     llm_config,
     mcp_registry=None,
     checkpointer=None,
@@ -35,7 +35,7 @@ def build_agent(
 
     tool_approval_wrapper = None
     if hooks:
-        tool_approval_wrapper = create_tool_approval_wrapper(hooks, create_tool_approval_ticket)
+        tool_approval_wrapper = await create_tool_approval_wrapper(hooks, create_tool_approval_ticket)
 
     tool_node = ToolNode(
         default_tools,
