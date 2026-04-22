@@ -65,12 +65,23 @@ async def create_tool_approval_wrapper(
     """
     
     async def handler(request, execute):
+        log.debug(
+            "wrapper_start",
+            request_type=str(type(request)),
+            has_execute=execute is not None,
+            execute_type=str(type(execute)),
+        )
         tool_call = request.tool_call
+        log.debug("wrapper_after_tool_call", tool_call_type=str(type(tool_call)))
         tool_name = tool_call.get("name", "")
+        log.debug("wrapper_after_get_name", tool_name=tool_name)
         tool_args = tool_call.get("args", {})
+        log.debug("wrapper_after_get_args", tool_args_keys=list(tool_args.keys()) if tool_args else [])
         tool_call_id = tool_call.get("id", "")
+        log.debug("wrapper_after_get_id", tool_call_id=tool_call_id)
         
         thread_id = request.state.get("thread_id", "")
+        log.debug("wrapper_after_state", thread_id=thread_id)
         
         matched_hook = _match_hook(hooks, tool_name, tool_args)
         
