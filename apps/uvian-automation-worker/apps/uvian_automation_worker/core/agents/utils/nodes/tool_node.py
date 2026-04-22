@@ -1311,7 +1311,24 @@ class ToolNode(RunnableCallable):
                 has_wrap=bool(self._wrap_tool_call),
             )
             if self._awrap_tool_call is not None:
-                return await self._awrap_tool_call(tool_request, execute)
+                log.warning(
+                    "awrap_tool_call_invoke",
+                    awrap_type=str(type(self._awrap_tool_call)),
+                    execute_type=str(type(execute)),
+                    tool_request_type=str(type(tool_request)),
+                )
+                try:
+                    result = await self._awrap_tool_call(tool_request, execute)
+                    log.warning("awrap_success", tool_name=call["name"])
+                    return result
+                except Exception as wrapper_err:
+                    log.error(
+                        "awrap_exception",
+                        tool_name=call["name"],
+                        error=str(wrapper_err),
+                        error_type=type(wrapper_err).__name__,
+                    )
+                    raise
             # None check was performed above already
             self._wrap_tool_call = cast("ToolCallWrapper", self._wrap_tool_call)
             return self._wrap_tool_call(tool_request, _sync_execute)
