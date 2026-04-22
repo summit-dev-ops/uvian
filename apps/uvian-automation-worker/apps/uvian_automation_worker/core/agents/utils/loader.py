@@ -56,16 +56,19 @@ def get_hooks_for_event(
         hooks: List of hooks from v_agent_hooks_for_worker view
         
     Returns:
-        Dict with 'load_mcp' and 'load_skill' lists of configs to load
+        Dict with 'load_mcp', 'load_skill', 'expected_tool_calls' lists
     """
     if not event_type or not hooks:
-        return {"load_mcp": [], "load_skill": []}
+        return {"load_mcp": [], "load_skill": [], "expected_tool_calls": []}
     
     mcps_to_load = []
     skills_to_load = []
+    expected_tool_calls = []
     seen_mcps = set()
     seen_skills = set()
+    seen_patterns = set()
     
+    matched_hooks = []
     for hook in hooks:
         trigger_json = hook.get("trigger_json", {})
         trigger_type = trigger_json.get("type")
@@ -73,23 +76,35 @@ def get_hooks_for_event(
         if trigger_type == "event":
             patterns = trigger_json.get("patterns", [])
             if _match_event_pattern(event_type, patterns):
-                hook_name = hook.get("name")
-                effects = hook.get("effects", [])
-                for effect in effects:
-                    effect_type = effect.get("effect_type")
-                    effect_id = effect.get("effect_id")
-                    
-                    if effect_type == "load_mcp" and effect_id and effect_id not in seen_mcps:
-                        seen_mcps.add(effect_id)
-                        mcps_to_load.append({"effect_id": effect_id, "hook_name": hook_name})
-                    
-                    elif effect_type == "load_skill" and effect_id and effect_id not in seen_skills:
-                        seen_skills.add(effect_id)
-                        skills_to_load.append({"effect_id": effect_id, "hook_name": hook_name})
+                matched_hooks.append(hook)
+    
+    for hook in matched_hooks:
+        hook_name = hook.get("name")
+        effects = hook.get("effects", [])
+        for effect in effects:
+            effect_type = effect.get("effect_type")
+            effect_id = effect.get("effect_id")
+            
+            if effect_type == "load_mcp" and effect_id and effect_id not in seen_mcps:
+                seen_mcps.add(effect_id)
+                mcps_to_load.append({"effect_id": effect_id, "hook_name": hook_name})
+            
+            elif effect_type == "load_skill" and effect_id and effect_id not in seen_skills:
+                seen_skills.add(effect_id)
+                skills_to_load.append({"effect_id": effect_id, "hook_name": hook_name})
+            
+            elif effect_type == "expect_tool_call" and effect_id and effect_id not in seen_patterns:
+                seen_patterns.add(effect_id)
+                expected_tool_calls.append({
+                    "pattern": effect_id,
+                    "source_hook": hook_name,
+                    "event_type": event_type,
+                })
     
     return {
         "load_mcp": mcps_to_load,
         "load_skill": skills_to_load,
+        "expected_tool_calls": expected_tool_calls,
     }
 
 
@@ -158,13 +173,15 @@ async def prepare_for_inbox_events(
     
     unique_event_types = list(set(msg["event_type"] for msg in pending_messages))
     
-    hooks_by_effect = {"load_mcp": [], "load_skill": []}
+    hooks_by_effect = {"load_mcp": [], "load_skill": [], "expected_tool_calls": []}
     for event_type in unique_event_types:
         hooks_result = get_hooks_for_event(event_type, hooks)
         if hooks_result["load_mcp"]:
             hooks_by_effect["load_mcp"].extend(hooks_result["load_mcp"])
         if hooks_result["load_skill"]:
             hooks_by_effect["load_skill"].extend(hooks_result["load_skill"])
+        if hooks_result["expected_tool_calls"]:
+            hooks_by_effect["expected_tool_calls"].extend(hooks_result["expected_tool_calls"])
     
     mcp_ids_to_load = [h.get("effect_id") for h in hooks_by_effect["load_mcp"] if h.get("effect_id")]
     matched_mcp_configs = [c for c in mcp_configs if c.get("id") in mcp_ids_to_load]

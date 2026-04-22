@@ -280,7 +280,7 @@ export default async function (fastify: FastifyInstance) {
           properties: {
             effectType: {
               type: 'string',
-              enum: ['load_mcp', 'load_skill', 'interrupt', 'block', 'log'],
+              enum: ['load_mcp', 'load_skill', 'interrupt', 'block', 'log', 'expect_tool_call'],
             },
             effectId: { type: 'string' },
             config: { type: 'object' },

@@ -1486,7 +1486,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         inputSchema: z.object({
           accountId: z.string(),
           hookId: z.string(),
-          effectType: z.enum(['load_mcp', 'load_skill']),
+          effectType: z.enum(['load_mcp', 'load_skill', 'expect_tool_call']),
           effectId: z.string().optional(),
           config: z.record(z.string(), z.unknown()).optional(),
         }),
@@ -1522,7 +1522,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         inputSchema: z.object({
           accountId: z.string(),
           hookId: z.string(),
-          effectType: z.enum(['load_mcp', 'load_skill']),
+          effectType: z.enum(['load_mcp', 'load_skill', 'expect_tool_call']),
           effectId: z.string(),
         }),
       },

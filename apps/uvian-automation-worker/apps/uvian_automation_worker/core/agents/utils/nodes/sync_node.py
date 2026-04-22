@@ -100,13 +100,15 @@ def create_sync_node(mcp_registry):
         
         if unique_event_types:
             unique_event_set = set(unique_event_types)
-            hooks_by_effect = {"load_mcp": [], "load_skill": []}
+            hooks_by_effect = {"load_mcp": [], "load_skill": [], "expected_tool_calls": []}
             for event_type in unique_event_set:
                 hooks_result = get_hooks_for_event(event_type, all_hooks)
                 if hooks_result["load_mcp"]:
                     hooks_by_effect["load_mcp"].extend(hooks_result["load_mcp"])
                 if hooks_result["load_skill"]:
                     hooks_by_effect["load_skill"].extend(hooks_result["load_skill"])
+                if hooks_result["expected_tool_calls"]:
+                    hooks_by_effect["expected_tool_calls"].extend(hooks_result["expected_tool_calls"])
             
             mcp_ids_to_load = [h.get("effect_id") for h in hooks_by_effect["load_mcp"] if h.get("effect_id")]
             for mcp_id in mcp_ids_to_load:
@@ -122,8 +124,11 @@ def create_sync_node(mcp_registry):
                     skills_to_load.append(skill)
             
             matched_skills = skills_to_load
+            
+            new_expected_tool_calls = hooks_by_effect.get("expected_tool_calls", [])
         else:
             matched_skills = []
+            new_expected_tool_calls = []
         
         seen = {}
         unique_mcp_configs = []
@@ -271,6 +276,7 @@ def create_sync_node(mcp_registry):
                 "new_mcps_loaded": [m.get("name") for m in new_mcps],
                 "failed_mcps": failed_mcp_names,
                 "connected_mcps": connected_mcp_names,
+                "expected_tool_calls": [e.get("pattern") for e in new_expected_tool_calls],
             },
         )
         
@@ -279,6 +285,7 @@ def create_sync_node(mcp_registry):
             "loaded_skills": new_skills,
             "loaded_mcps": new_mcps,
             "available_mcps": available_mcps,
+            "expected_tool_calls": new_expected_tool_calls,
             **memory_result
         }
         

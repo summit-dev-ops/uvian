@@ -29,6 +29,7 @@ class MessagesState(TypedDict):
     session_context_size: int
     tokens_used: int
     pending_tool_approval: Dict[str, Any] | None
+    expected_tool_calls: Annotated[List[Dict[str, Any]], operator.add]
 
 
 class Skill(TypedDict):
