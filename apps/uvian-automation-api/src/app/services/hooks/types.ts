@@ -72,7 +72,8 @@ export type EffectType =
   | 'load_skill'
   | 'interrupt'
   | 'block'
-  | 'log';
+  | 'log'
+  | 'expect_tool_call';
 
 export interface AddEffectPayload {
   effectType: EffectType;
