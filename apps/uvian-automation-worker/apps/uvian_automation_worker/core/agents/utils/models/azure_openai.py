@@ -5,7 +5,7 @@ from .rate_limiters import create_rate_limiter
 
 
 def create(config: dict[str, Any]) -> AzureChatOpenAI:
-    return AzureOpenAIChat(
+    return AzureChatOpenAI(
         model=config.get("model_name"),
         temperature=config.get("temperature", 0.6),
         max_tokens=config.get("max_tokens"),
