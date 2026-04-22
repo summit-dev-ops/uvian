@@ -795,7 +795,14 @@ class ToolNode(RunnableCallable):
             if not isinstance(self._mcp_registry, MCPRegistry):
                 return None
             if not self._mcp_registry._client:
+                log.debug("mcp_registry_client_not_ready", tool_name=tool_name)
                 return None
+            tool_cache_keys = list(self._mcp_registry._client._tool_cache.keys()) if self._mcp_registry._client._tool_cache else []
+            log.debug(
+                "resolve_tool_attempt",
+                tool_name=tool_name,
+                tool_cache_keys=tool_cache_keys,
+            )
             for mcp_id in self._mcp_registry._client._tool_cache:
                 tools = await self._mcp_registry.get_tools_for_mcp(mcp_id)
                 for tool in tools:
@@ -1133,6 +1140,13 @@ class ToolNode(RunnableCallable):
 
         try:
             try:
+                log.debug(
+                    "tool_invoke_debug",
+                    tool_name=call["name"],
+                    tool_type=str(type(tool)),
+                    has_ainvoke=hasattr(tool, 'ainvoke'),
+                    ainvoke_type=str(type(getattr(tool, 'ainvoke', None))),
+                )
                 response = await tool.ainvoke(call_args, config)
             except ValidationError as exc:
                 # Filter out errors for injected arguments
@@ -1217,6 +1231,12 @@ class ToolNode(RunnableCallable):
         tool = self.tools_by_name.get(call["name"])
         if tool is None and self._mcp_registry:
             tool = await self._resolve_tool_from_mcp_registry(call["name"])
+            log.debug(
+                "mcp_tool_resolved",
+                tool_name=call["name"],
+                resolved=tool is not None,
+                tool_type=str(type(tool)) if tool else None,
+            )
             if tool:
                 self._tools_by_name[tool.name] = tool
                 self._injected_args[tool.name] = _get_all_injected_args(tool)
