@@ -1,5 +1,5 @@
 from typing import List, Any, Optional, Dict
-from langgraph.types import Command
+from langgraph.types import Command, RetryPolicy
 from core.agents.utils.state import MessagesState
 from langgraph.graph import StateGraph, START, END
 from core.agents.utils.tools.base_tools import tools as base_tools
@@ -30,6 +30,38 @@ async def build_agent(
         checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
 
+    llm_retry_policy = RetryPolicy(
+        initial_interval=2.0,
+        backoff_factor=2.0,
+        max_attempts=5,
+        max_interval=32.0,
+        jitter=True,
+    )
+
+    tool_retry_policy = RetryPolicy(
+        initial_interval=1.0,
+        backoff_factor=2.0,
+        max_attempts=3,
+        max_interval=16.0,
+        jitter=True,
+    )
+
+    sync_retry_policy = RetryPolicy(
+        initial_interval=1.0,
+        backoff_factor=2.0,
+        max_attempts=3,
+        max_interval=16.0,
+        jitter=True,
+    )
+
+    compaction_retry_policy = RetryPolicy(
+        initial_interval=1.0,
+        backoff_factor=2.0,
+        max_attempts=2,
+        max_interval=4.0,
+        jitter=True,
+    )
+
     model_node = create_model_node(llm, default_tools, mcp_registry=mcp_registry)
     compaction_node = create_compaction_node(llm)
 
@@ -52,10 +84,10 @@ async def build_agent(
             return Command(goto=END)
         return Command(goto="sync_node")
 
-    agent_builder.add_node("sync_node", sync)
-    agent_builder.add_node("model_node", model_node)
-    agent_builder.add_node("tool_node", tool_node)
-    agent_builder.add_node("compaction_node", compaction_node)
+    agent_builder.add_node("sync_node", sync, retry=sync_retry_policy)
+    agent_builder.add_node("model_node", model_node, retry=llm_retry_policy)
+    agent_builder.add_node("tool_node", tool_node, retry=tool_retry_policy)
+    agent_builder.add_node("compaction_node", compaction_node, retry=compaction_retry_policy)
     agent_builder.add_node("cleanup_node", cleanup)
     agent_builder.add_node("approval_routing_node", approval_routing_node)
 
