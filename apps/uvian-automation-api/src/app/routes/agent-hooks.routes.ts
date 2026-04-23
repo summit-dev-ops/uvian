@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { adminSupabase, createUserClient } from '../clients/supabase.client';
+import { adminSupabase } from '../clients/supabase.client';
 import { agentConfigService } from '../services';
 
 export default async function agentHookRoutes(fastify: FastifyInstance) {
@@ -12,16 +12,9 @@ export default async function agentHookRoutes(fastify: FastifyInstance) {
       try {
         const { agentUserId } = request.params as any as { agentUserId: string };
 
-        const authHeader = request.headers.authorization as string | undefined;
-        if (!authHeader?.startsWith('Bearer ')) {
-          reply.code(401).send({ error: 'Missing or invalid authorization token' });
-          return;
-        }
-        const userClient = createUserClient(authHeader.replace('Bearer ', ''));
-
         const clients = {
           adminClient: adminSupabase,
-          userClient,
+          userClient: request.supabase,
         };
 
         const agent = await agentConfigService
