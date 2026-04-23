@@ -57,7 +57,20 @@ export default async function (fastify: FastifyInstance) {
 
   fastify.get<GetHooksRequest>(
     '/api/hooks',
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: 'object',
+          required: ['accountId'],
+          properties: {
+            accountId: { type: 'string' },
+            isActive: { type: 'boolean' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
     async (request: FastifyRequest<GetHooksRequest>, reply: FastifyReply) => {
       try {
         const query = request.query || {};
@@ -67,6 +80,7 @@ export default async function (fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const result = await hookService.scoped(clients).list({
+          accountId: query.accountId,
           isActive: query.isActive,
         });
 

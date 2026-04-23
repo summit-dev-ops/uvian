@@ -13,50 +13,8 @@ import {
 export function createHookScopedService(
   clients: ServiceClients,
 ): HookScopedService {
-  async function verifyHookAccess(hookId: string): Promise<void> {
-    const { data, error } = await clients.userClient
-      .schema('core_automation')
-      .from('hooks')
-      .select('id, account_id')
-      .eq('id', hookId)
-      .single();
-
-    if (error || !data) throw new Error('Hook not found or access denied');
-
-    const { data: memberData, error: memberError } = await clients.userClient
-      .schema('public')
-      .from('account_members')
-      .select('account_id')
-      .eq('account_id', data.account_id)
-      .eq('user_id', (await clients.userClient.auth.getUser()).data.user?.id)
-      .single();
-
-    if (memberError || !memberData) throw new Error('Access denied to hook');
-  }
-
-  async function verifyAccountAdmin(accountId: string): Promise<void> {
-    const userId = (await clients.userClient.auth.getUser()).data.user?.id;
-    if (!userId) throw new Error('Not authenticated');
-
-    const { data, error } = await clients.userClient
-      .schema('public')
-      .from('account_members')
-      .select('role')
-      .eq('account_id', accountId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) throw new Error('Not a member of account');
-    const role = data.role as { name?: string };
-    if (!role.name || !['owner', 'admin'].includes(role.name)) {
-      throw new Error('Not an admin of account');
-    }
-  }
-
   return {
     async create(payload: CreateHookPayload): Promise<{ hookId: string }> {
-      await verifyAccountAdmin(payload.accountId);
-
       const { data, error } = await clients.adminClient
         .schema('core_automation')
         .from('hooks')
@@ -76,34 +34,17 @@ export function createHookScopedService(
     },
 
     async list(
-      filters: ListHooksFilters = {},
+      filters: ListHooksFilters,
     ): Promise<{ hooks: HookRecord[] }> {
-      const userId = (await clients.userClient.auth.getUser()).data.user?.id;
-      if (!userId) throw new Error('Not authenticated');
-
-      const { data: memberData, error: memberError } = await clients.userClient
-        .schema('public')
-        .from('account_members')
-        .select('account_id')
-        .eq('user_id', userId);
-
-      if (memberError || !memberData) {
-        return { hooks: [] };
-      }
-
-      const accountIds = memberData.map((m) => m.account_id);
-
-      let q = clients.userClient
+      const { data, error } = await clients.userClient
         .schema('core_automation')
         .from('hooks')
         .select('*')
-        .in('account_id', accountIds);
+        .or(
+          `account_id.eq.${filters.accountId},and(is_active.eq.true)`,
+        )
+        .order('created_at', { ascending: false });
 
-      if (filters.isActive !== undefined) {
-        q = q.eq('is_active', filters.isActive);
-      }
-
-      const { data, error } = await q;
       if (error) throw new Error(error.message);
 
       return {
@@ -112,8 +53,6 @@ export function createHookScopedService(
     },
 
     async get(hookId: string): Promise<HookRecord | null> {
-      await verifyHookAccess(hookId);
-
       const { data, error } = await clients.userClient
         .schema('core_automation')
         .from('hooks')
@@ -129,8 +68,6 @@ export function createHookScopedService(
       hookId: string,
       payload: UpdateHookPayload,
     ): Promise<HookRecord> {
-      await verifyHookAccess(hookId);
-
       const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
@@ -154,8 +91,6 @@ export function createHookScopedService(
     },
 
     async delete(hookId: string): Promise<{ success: boolean }> {
-      await verifyHookAccess(hookId);
-
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('hooks')
@@ -170,8 +105,6 @@ export function createHookScopedService(
       hookId: string,
       agentId: string,
     ): Promise<{ success: boolean }> {
-      await verifyHookAccess(hookId);
-
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('agent_hooks')
@@ -188,8 +121,6 @@ export function createHookScopedService(
       hookId: string,
       agentId: string,
     ): Promise<{ success: boolean }> {
-      await verifyHookAccess(hookId);
-
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('agent_hooks')
@@ -205,8 +136,6 @@ export function createHookScopedService(
       hookId: string,
       payload: AddEffectPayload,
     ): Promise<{ success: boolean }> {
-      await verifyHookAccess(hookId);
-
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('hook_effects')
@@ -226,8 +155,6 @@ export function createHookScopedService(
       effectType: EffectType,
       effectId: string,
     ): Promise<{ success: boolean }> {
-      await verifyHookAccess(hookId);
-
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('hook_effects')
@@ -241,8 +168,6 @@ export function createHookScopedService(
     },
 
     async listEffects(hookId: string): Promise<{ effects: HookEffect[] }> {
-      await verifyHookAccess(hookId);
-
       const { data, error } = await clients.userClient
         .schema('core_automation')
         .from('hook_effects')

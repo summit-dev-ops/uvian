@@ -37,6 +37,7 @@ export interface HookRecord {
 }
 
 export interface ListHooksFilters {
+  accountId: string;
   isActive?: boolean;
 }
 

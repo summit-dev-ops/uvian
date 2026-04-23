@@ -45,6 +45,7 @@ export interface UpdateHookRequest {
 }
 
 export interface HookFilters {
+  accountId: string;
   isActive?: boolean;
 }
 
