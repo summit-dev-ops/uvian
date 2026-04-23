@@ -12,9 +12,10 @@ export default async function agentHookRoutes(fastify: FastifyInstance) {
       try {
         const { agentUserId } = request.params as any as { agentUserId: string };
 
+        const userClient = (request as any).supabase || adminSupabase;
         const clients = {
           adminClient: adminSupabase,
-          userClient: request.supabase,
+          userClient,
         };
 
         const agent = await agentConfigService
