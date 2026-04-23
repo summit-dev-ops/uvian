@@ -13,9 +13,11 @@ export default async function agentHookRoutes(fastify: FastifyInstance) {
         const { agentUserId } = request.params as any as { agentUserId: string };
 
         const authHeader = request.headers.authorization as string | undefined;
-        const userClient = authHeader
-          ? createUserClient(authHeader.replace('Bearer ', ''))
-          : adminSupabase;
+        if (!authHeader?.startsWith('Bearer ')) {
+          reply.code(401).send({ error: 'Missing or invalid authorization token' });
+          return;
+        }
+        const userClient = createUserClient(authHeader.replace('Bearer ', ''));
 
         const clients = {
           adminClient: adminSupabase,

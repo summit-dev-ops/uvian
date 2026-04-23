@@ -4,7 +4,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import { adminSupabase } from '../clients/supabase.client';
+import { adminSupabase, createUserClient } from '../clients/supabase.client';
 import {
   secretsService,
   llmService,
@@ -136,8 +136,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   async function createAuthenticatedServer(
     userId: string,
     accountId: string,
-    _userJwt: string,
+    userJwt: string,
   ): Promise<McpServer> {
+    const userClient = createUserClient(userJwt);
+    const clients = { adminClient: adminSupabase, userClient };
+
     const server = new McpServer(
       {
         name: 'uvian-automation-secrets',
@@ -213,7 +216,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const secret = await secretsService
-            .admin({ adminClient: adminSupabase, userClient: adminSupabase })
+            .admin(clients)
             .getByIdWithDecryptedValue(args.secretId);
           if (!secret) {
             return {
@@ -241,7 +244,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (): Promise<ToolResult> => {
         try {
           const secrets = await secretsService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .list(accountId);
           return {
             content: [{ type: 'text', text: JSON.stringify(secrets) }],
@@ -265,7 +268,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           await deleteSecret(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             { accountId, secretId: args.secretId },
             { eventEmitter: fastify.eventEmitter },
           );
@@ -294,7 +297,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const secret = await secretsService
-            .admin({ adminClient: adminSupabase, userClient: adminSupabase })
+            .admin(clients)
             .getByIdWithDecryptedValue(args.secretId);
           if (!secret) {
             return {
@@ -332,7 +335,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { agent } = await createAgent(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             {
               userId: args.userId,
               accountId: args.accountId,
@@ -360,7 +363,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const agent = await agentConfigService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .getById(args.agentId);
           return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
         } catch (error) {
@@ -386,7 +389,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { agent } = await updateAgent(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             {
               agentId: args.agentId,
               userId: userId,
@@ -415,7 +418,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const llms = await llmService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .list(args.accountId);
           return { content: [{ type: 'text', text: JSON.stringify(llms) }] };
         } catch (error) {
@@ -435,7 +438,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const llm = await llmService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .get(args.llmId);
           return { content: [{ type: 'text', text: JSON.stringify(llm) }] };
         } catch (error) {
@@ -466,7 +469,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { llm } = await createLlm(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             args,
             { eventEmitter: fastify.eventEmitter },
           );
@@ -488,7 +491,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const mcps = await mcpService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .list(args.accountId);
           return { content: [{ type: 'text', text: JSON.stringify(mcps) }] };
         } catch (error) {
@@ -508,7 +511,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const mcp = await mcpService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .get(args.mcpId);
           return { content: [{ type: 'text', text: JSON.stringify(mcp) }] };
         } catch (error) {
@@ -535,7 +538,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { mcp } = await createMcp(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             args,
           );
           return { content: [{ type: 'text', text: JSON.stringify(mcp) }] };
@@ -562,7 +565,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { link } = await linkLlm(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             {
               agentId: args.agentId,
               userId: userId,
@@ -593,7 +596,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           await unlinkLlm(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             { agentId: args.agentId, llmId: args.llmId },
           );
           return {
@@ -623,7 +626,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { link } = await linkMcp(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             {
               agentId: args.agentId,
               mcpId: args.mcpId,
@@ -652,7 +655,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           await unlinkMcp(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             { agentId: args.agentId, mcpId: args.mcpId },
           );
           return {
@@ -677,7 +680,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const llms = await agentConfigService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .getLlms(args.agentId);
           return { content: [{ type: 'text', text: JSON.stringify(llms) }] };
         } catch (error) {
@@ -697,7 +700,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const mcps = await agentConfigService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .getMcps(args.agentId);
           return { content: [{ type: 'text', text: JSON.stringify(mcps) }] };
         } catch (error) {
@@ -724,7 +727,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { skill } = await createSkill(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             {
               accountId: args.accountId,
               name: args.name,
@@ -752,7 +755,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const skills = await skillService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .list(args.accountId);
           return { content: [{ type: 'text', text: JSON.stringify(skills) }] };
         } catch (error) {
@@ -772,7 +775,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const skill = await skillService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .get(args.skillId);
           return { content: [{ type: 'text', text: JSON.stringify(skill) }] };
         } catch (error) {
@@ -802,7 +805,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const { skillId, accountId, ...updateData } = args;
           const { skill } = await updateSkill(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             { skillId, accountId, ...updateData },
             { eventEmitter: fastify.eventEmitter },
           );
@@ -824,7 +827,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           await deleteSkill(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             { skillId: args.skillId, accountId: args.accountId },
             { eventEmitter: fastify.eventEmitter },
           );
@@ -853,7 +856,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const { link } = await linkSkill(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             { agentId: args.agentId, userId: userId, skillId: args.skillId },
             { eventEmitter: fastify.eventEmitter },
           );
@@ -878,7 +881,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           await unlinkSkill(
-            { adminClient: adminSupabase, userClient: adminSupabase },
+            clients,
             { agentId: args.agentId, userId: userId, skillId: args.skillId },
             { eventEmitter: fastify.eventEmitter },
           );
@@ -904,7 +907,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const skills = await agentConfigService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .getSkills(args.agentId);
           return { content: [{ type: 'text', text: JSON.stringify(skills) }] };
         } catch (error) {
@@ -1081,7 +1084,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const result = await ticketService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .list({ status: args.status, priority: args.priority });
           return { content: [{ type: 'text', text: JSON.stringify(result) }] };
         } catch (error) {
@@ -1103,7 +1106,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       async (args): Promise<ToolResult> => {
         try {
           const ticket = await ticketService
-            .scoped({ adminClient: adminSupabase, userClient: adminSupabase })
+            .scoped(clients)
             .get(args.ticketId);
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
@@ -1643,18 +1646,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         userJwt = token;
 
         if (!accountId) {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
-          const agentSecrets = await agentConfigService
+          const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+          const agent = await agentConfigService
             .scoped(clients)
-            .getAgentSecrets(userId);
-          if (!agentSecrets) {
+            .getByUserId(userId);
+          if (!agent) {
             return reply
               .code(401)
-              .send({ error: 'Unauthorized', message: 'Account not found' });
+              .send({ error: 'Unauthorized', message: 'Agent not found' });
           }
+          accountId = agent.accountId;
         }
       }
 
