@@ -90,6 +90,20 @@ export interface LinkedSkill {
   linkConfig: Record<string, unknown>;
 }
 
+export interface LinkedHook {
+  id: string;
+  name: string;
+  triggerJson: Record<string, unknown>;
+  action: string;
+  effects: HookEffect[];
+}
+
+export interface HookEffect {
+  effectType: string;
+  effectId: string | null;
+  config: Record<string, unknown>;
+}
+
 export interface AgentSecrets {
   llms: LinkedLlm[];
   mcps: LinkedMcp[];
@@ -122,6 +136,7 @@ export interface AgentConfigScopedService {
   getSkills(agentId: string): Promise<LinkedSkill[]>;
   linkSkill(agentId: string, payload: LinkSkillPayload): Promise<unknown>;
   unlinkSkill(agentId: string, skillId: string): Promise<{ success: boolean }>;
+  getHooks(agentId: string): Promise<LinkedHook[]>;
   getAgentSecrets(ownerUserId: string): Promise<AgentSecrets>;
 }
 

@@ -1,7 +1,18 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { adminSupabase } from '../clients/supabase.client';
+import { adminSupabase, createUserClient } from '../clients/supabase.client';
 import { agentConfigService } from '../services';
 import { createAgent, updateAgent } from '../commands';
+
+function getClients(request: FastifyRequest) {
+  const authHeader = request.headers.authorization as string | undefined;
+  const userClient = authHeader
+    ? createUserClient(authHeader.replace('Bearer ', ''))
+    : adminSupabase;
+  return {
+    adminClient: adminSupabase,
+    userClient,
+  };
+}
 
 export default async function agentConfigRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { agentUserId: string } }>(
@@ -10,10 +21,7 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { agentUserId } = request.params;
-        const clients = {
-          adminClient: adminSupabase,
-          userClient: adminSupabase,
-        };
+        const clients = getClients(request);
         const secrets = await agentConfigService
           .scoped(clients)
           .getAgentSecrets(agentUserId);
@@ -33,10 +41,7 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { agentUserId } = request.params;
-        const clients = {
-          adminClient: adminSupabase,
-          userClient: adminSupabase,
-        };
+        const clients = getClients(request);
         const agent = await agentConfigService
           .scoped(clients)
           .getByUserId(agentUserId);

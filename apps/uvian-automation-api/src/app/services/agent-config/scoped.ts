@@ -14,6 +14,7 @@ import {
   LinkedLlm,
   LinkedMcp,
   LinkedSkill,
+  LinkedHook,
   AgentSecrets,
 } from './types';
 
@@ -412,6 +413,45 @@ export function createAgentConfigScopedService(
           linkConfig: (r.link_config as Record<string, unknown>) || {},
         };
       });
+    },
+
+    async getHooks(agentId: string): Promise<LinkedHook[]> {
+      const { data, error } = await clients.userClient
+        .schema('core_automation')
+        .from('v_agent_hooks_for_worker')
+        .select('*')
+        .eq('agent_id', agentId);
+
+      if (error) throw new Error(error.message);
+
+      const hooksMap = new Map<string, LinkedHook>();
+
+      for (const row of data || []) {
+        const r = row as Record<string, unknown>;
+        const hookId = String(r.hook_id);
+
+        if (!hooksMap.has(hookId)) {
+          hooksMap.set(hookId, {
+            id: hookId,
+            name: String(r.name),
+            triggerJson: (r.trigger_json as Record<string, unknown>) || {},
+            action: String(r.hook_action || r.action || ''),
+            effects: [],
+          });
+        }
+
+        const effectType = r.effect_type as string | null;
+        const effectId = r.effect_id as string | null;
+        if (effectType && effectId) {
+          hooksMap.get(hookId)!.effects.push({
+            effectType,
+            effectId,
+            config: (r.effect_config as Record<string, unknown>) || {},
+          });
+        }
+      }
+
+      return Array.from(hooksMap.values());
     },
 
     async linkSkill(

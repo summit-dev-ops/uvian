@@ -1,7 +1,22 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { adminSupabase } from '../clients/supabase.client';
+import { adminSupabase, createUserClient } from '../clients/supabase.client';
 import { encrypt } from '@org/utils-encryption';
 import { configureAgent } from '../services';
+import { createAgent } from '../commands/agent';
+import { createSecret } from '../commands/secret';
+import { createMcp } from '../commands/mcp';
+import { linkMcp } from '../commands/agent';
+
+function getClients(request: FastifyRequest) {
+  const authHeader = request.headers.authorization as string | undefined;
+  const userClient = authHeader
+    ? createUserClient(authHeader.replace('Bearer ', ''))
+    : adminSupabase;
+  return {
+    adminClient: adminSupabase,
+    userClient,
+  };
+}
 
 interface SystemConfig {
   name: string;
@@ -92,84 +107,51 @@ export default async function agentRoutes(fastify: FastifyInstance) {
       }
 
       try {
+        const clients = getClients(request);
         const encryptedApiKey = encrypt(api_key, encryptionSecret);
 
-        const { data: agent, error: agentError } = await adminSupabase
-          .schema('core_automation')
-          .from('agents')
-          .insert({
-            user_id,
-            account_id,
-            is_active: true,
-          })
-          .select('id')
-          .single();
+        const { agent } = await createAgent(clients, {
+          userId: user_id,
+          accountId: account_id,
+        });
 
-        if (agentError) {
-          reply.code(400).send({ error: agentError.message });
-          return;
-        }
-
-        const secret = await adminSupabase
-          .schema('public')
-          .from('secrets')
-          .insert({
-            account_id,
-            name: 'Uvian Hub API Key',
-            value_type: 'text',
-            encrypted_value: encryptedApiKey,
-            metadata: { api_key_prefix },
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (secret.error) {
-          reply.code(400).send({ error: secret.error.message });
-          return;
-        }
+        await createSecret(clients, {
+          accountId: account_id,
+          name: 'Uvian Hub API Key',
+          valueType: 'text',
+          value: encryptedApiKey,
+          metadata: { api_key_prefix },
+        });
 
         const hubMcpUrl = `${request.headers.origin}/v1/mcp`;
 
-        const { data: hubMcp, error: mcpError } = await adminSupabase
-          .schema('core_automation')
-          .from('mcps')
-          .upsert(
-            {
-              account_id,
-              name: 'Uvian Hub',
-              type: 'external',
-              auth_method: 'bearer',
-              url: hubMcpUrl,
-              config: {
-                system: 'uvian-hub',
-                description: 'Uvian Hub event and messaging MCP',
-              },
-              is_active: true,
+        let mcpId: string;
+        try {
+          const { mcp } = await createMcp(clients, {
+            accountId: account_id,
+            name: 'Uvian Hub',
+            type: 'external',
+            authMethod: 'bearer',
+            url: hubMcpUrl,
+            config: {
+              system: 'uvian-hub',
+              description: 'Uvian Hub event and messaging MCP',
             },
-            { onConflict: 'account_id,name' }
-          )
-          .select()
-          .single();
-
-        if (mcpError) {
-          reply.code(400).send({ error: mcpError.message });
-          return;
-        }
-
-        const { error: linkError } = await adminSupabase
-          .schema('core_automation')
-          .from('agent_mcps')
-          .insert({
-            agent_id: agent.id,
-            mcp_id: hubMcp.id,
-            secret_id: secret.data.id,
           });
-
-        if (linkError) {
-          reply.code(400).send({ error: linkError.message });
-          return;
+          mcpId = mcp.id;
+        } catch (mcpErr: any) {
+          if (mcpErr.message?.includes('duplicate') || mcpErr.code === '23505') {
+            mcpId = 'existing';
+          } else {
+            throw mcpErr;
+          }
         }
+
+        await linkMcp(clients, {
+          agentId: agent.id,
+          mcpId,
+          secretName: 'Uvian Hub API Key',
+        });
 
         const systemConfigs = systems || DEFAULT_SYSTEM_CONFIGS;
         const resolvedSystems = systemConfigs
