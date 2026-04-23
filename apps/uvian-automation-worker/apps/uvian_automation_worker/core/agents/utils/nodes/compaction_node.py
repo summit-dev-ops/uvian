@@ -13,12 +13,8 @@ def create_compaction_node(model):
         agent_user_id = state.get("agent_user_id")
         llm_calls = state.get("llm_calls", 0)
 
-        RECENT_TO_KEEP = 6
-
         other_msgs = [m for m in messages if not isinstance(m, SystemMessage)]
-
-        recent = other_msgs[-RECENT_TO_KEEP:] if len(other_msgs) > RECENT_TO_KEEP else other_msgs
-        old = other_msgs[:-RECENT_TO_KEEP] if len(other_msgs) > RECENT_TO_KEEP else []
+        old = other_msgs
 
         if not old:
             return {}
@@ -64,11 +60,6 @@ Keep under 150 words."""),
         current_total = state.get("tokens_used", 0) or 0
 
         now = int(time.time())
-        new_compaction = {
-            "summary": summary_response.content,
-            "message_offset": len(messages) - len(recent),
-            "compacted_at": now,
-        }
 
         existing_compaction = state.get("compaction_state")
         history = existing_compaction.get("history", []) if existing_compaction else []
@@ -91,7 +82,7 @@ Keep under 150 words."""),
         return {
             "compaction_state": {
                 "summary": summary_response.content,
-                "message_offset": len(messages) - len(recent),
+                "message_offset": len(messages),
                 "compacted_at": now,
                 "history": history,
             },
