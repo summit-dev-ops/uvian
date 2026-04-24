@@ -1,6 +1,17 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { adminSupabase } from '../clients/supabase.client';
+import { adminSupabase, createUserClient } from '../clients/supabase.client';
 import { agentConfigService } from '../services';
+
+function getClients(request: FastifyRequest) {
+  const authHeader = request.headers.authorization as string | undefined;
+  const userClient = authHeader
+    ? createUserClient(authHeader.replace('Bearer ', ''))
+    : adminSupabase;
+  return {
+    adminClient: adminSupabase,
+    userClient,
+  };
+}
 
 export default async function agentHookRoutes(fastify: FastifyInstance) {
   fastify.get<{
@@ -12,18 +23,15 @@ export default async function agentHookRoutes(fastify: FastifyInstance) {
       try {
         const { agentUserId } = request.params as any as { agentUserId: string };
 
-        const userClient = (request as any).supabase || adminSupabase;
-        const clients = {
-          adminClient: adminSupabase,
-          userClient,
-        };
+        // Use same getClients() pattern as skills route
+        const clients = getClients(request);
 
         const agent = await agentConfigService
           .scoped(clients)
           .getByUserId(agentUserId);
 
         if (!agent) {
-          return reply.send({ hooks: [] });
+          return reply.code(404).send({ error: 'Agent not found' });
         }
 
         const hooks = await agentConfigService
