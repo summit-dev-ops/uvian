@@ -101,7 +101,7 @@ class AgentExecutor(BaseExecutor):
         all_hooks = await get_agent_hooks(agent_user_id)
         hooks_by_id: dict = {}
         for h in all_hooks:
-            hook_id = h.get("hook_id")
+            hook_id = h.get("hook_id") or h.get("id")
             if not hook_id or not h.get("name"):
                 continue
             if hook_id not in hooks_by_id:
@@ -112,10 +112,12 @@ class AgentExecutor(BaseExecutor):
                     "action": h.get("action"),
                     "effects": [],
                 }
-            if h.get("effect_type") and h.get("effect_id"):
+            effect_type = h.get("effect_type") or h.get("effectType")
+            effect_id = h.get("effect_id") or h.get("effectId")
+            if effect_type and effect_id:
                 hooks_by_id[hook_id]["effects"].append({
-                    "effect_type": h.get("effect_type"),
-                    "effect_id": h.get("effect_id"),
+                    "effect_type": effect_type,
+                    "effect_id": effect_id,
                 })
         available_hooks = list(hooks_by_id.values())
         log.debug(
