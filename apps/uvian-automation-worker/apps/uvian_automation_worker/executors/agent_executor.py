@@ -108,17 +108,18 @@ class AgentExecutor(BaseExecutor):
                 hooks_by_id[hook_id] = {
                     "id": hook_id,
                     "name": h.get("name"),
-                    "trigger_json": h.get("trigger_json"),
+                    "trigger_json": h.get("trigger_json") or h.get("triggerJson"),
                     "action": h.get("action"),
                     "effects": [],
                 }
-            effect_type = h.get("effect_type") or h.get("effectType")
-            effect_id = h.get("effect_id") or h.get("effectId")
-            if effect_type and effect_id:
-                hooks_by_id[hook_id]["effects"].append({
-                    "effect_type": effect_type,
-                    "effect_id": effect_id,
-                })
+            for effect in h.get("effects", []):
+                effect_type = effect.get("effect_type") or effect.get("effectType")
+                effect_id = effect.get("effect_id") or effect.get("effectId")
+                if effect_type and effect_id:
+                    hooks_by_id[hook_id]["effects"].append({
+                        "effect_type": effect_type,
+                        "effect_id": effect_id,
+                    })
         available_hooks = list(hooks_by_id.values())
         log.debug(
             "agent_executor_hooks_loaded",
