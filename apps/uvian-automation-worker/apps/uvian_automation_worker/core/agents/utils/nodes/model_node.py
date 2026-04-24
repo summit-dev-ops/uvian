@@ -131,10 +131,23 @@ def create_model_node(model, default_tools, mcp_registry):
         else:
             visible_messages = state["messages"]
 
+        # Expected tool calls section
+        expectations_section = ""
+        expected_tool_calls = state.get("expected_tool_calls", [])
+        if expected_tool_calls:
+            expected_lines = []
+            for e in expected_tool_calls:
+                pattern = e.get("pattern", "")
+                source_hook = e.get("source_hook", "unknown")
+                if pattern:
+                    expected_lines.append(f"- **{pattern}** (Required by hook: {source_hook})")
+            if expected_lines:
+                expectations_section = "\n\n## Expected Actions\n" + "\n".join(expected_lines)
+
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
             custom_instructions=state.get("custom_instructions", "")
-        ) + mcps_section + skills_section + memory_section
+        ) + mcps_section + skills_section + memory_section + expectations_section
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
         
