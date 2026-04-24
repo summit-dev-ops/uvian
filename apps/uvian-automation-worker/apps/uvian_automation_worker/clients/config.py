@@ -44,6 +44,7 @@ async def get_agent_hooks(agent_user_id: str) -> list:
         response = await client.get(url, headers=headers)
         response.raise_for_status()
         data = response.json()
+        print(data)
         return _normalize_keys(data.get("hooks", []))
 
 
