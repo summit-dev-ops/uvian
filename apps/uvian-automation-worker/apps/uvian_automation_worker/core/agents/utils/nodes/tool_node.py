@@ -119,6 +119,46 @@ TOOL_INVOCATION_ERROR_TEMPLATE = (
 )
 
 
+def _match_tool_pattern(tool_name: str, pattern: str) -> bool:
+    """Match tool name against pattern (supports prefix matching)."""
+    if pattern.endswith("*"):
+        return tool_name.startswith(pattern[:-1])
+    return tool_name == pattern
+
+
+def _filter_satisfied_expectations(
+    tool_calls_executed: list[str],
+    expected_tool_calls: list[dict],
+) -> list[dict]:
+    """Filter out expectations that have been satisfied by tool calls.
+
+    Args:
+        tool_calls_executed: List of tool names that were executed
+        expected_tool_calls: List of expectation dicts with 'pattern' key
+
+    Returns:
+        List of expectations that are still pending
+    """
+    if not expected_tool_calls:
+        return []
+
+    pending = []
+    satisfied_patterns = set()
+
+    for tool_name in tool_calls_executed:
+        for exp in expected_tool_calls:
+            pattern = exp.get("pattern", "")
+            if pattern and _match_tool_pattern(tool_name, pattern):
+                satisfied_patterns.add(pattern)
+
+    for exp in expected_tool_calls:
+        pattern = exp.get("pattern", "")
+        if pattern and pattern not in satisfied_patterns:
+            pending.append(exp)
+
+    return pending
+
+
 class _ToolCallRequestOverrides(TypedDict, total=False):
     """Possible overrides for ToolCallRequest.override() method."""
 
@@ -854,6 +894,9 @@ class ToolNode(RunnableCallable):
         tool_calls, input_type = self._parse_input(input)
         config_list = get_config_list(config, len(tool_calls))
 
+        # Extract tool names executed
+        tool_names_executed = [call["name"] for call in tool_calls]
+
         # Construct ToolRuntime instances at the top level for each tool call
         tool_runtimes = []
         for call, cfg in zip(tool_calls, config_list, strict=False):
@@ -875,7 +918,41 @@ class ToolNode(RunnableCallable):
                 executor.map(self._run_one, tool_calls, input_types, tool_runtimes)
             )
 
-        return self._combine_tool_outputs(outputs, input_type)
+        combined = self._combine_tool_outputs(outputs, input_type)
+
+        # Filter satisfied expectations from state
+        return self._filter_expectations(state, tool_names_executed, combined, input_type)
+
+    def _filter_expectations(
+        self,
+        state: Any,
+        tool_names_executed: list[str],
+        combined_output: Any,
+        input_type: str,
+    ) -> Any:
+        """Filter satisfied expected_tool_calls from state and update via Command."""
+        expected_tool_calls = []
+        if isinstance(state, dict):
+            expected_tool_calls = state.get("expected_tool_calls", [])
+        elif hasattr(state, "get"):
+            expected_tool_calls = getattr(state, "expected_tool_calls", [])
+
+        if not expected_tool_calls:
+            return combined_output
+
+        remaining = _filter_satisfied_expectations(tool_names_executed, expected_tool_calls)
+
+        if len(remaining) == len(expected_tool_calls):
+            return combined_output
+
+        if isinstance(combined_output, list):
+            return combined_output + [Command(update={"expected_tool_calls": remaining})]
+        elif isinstance(combined_output, dict):
+            result = combined_output.copy()
+            result["expected_tool_calls"] = remaining
+            return result
+        else:
+            return combined_output
 
     async def _afunc(
         self,
@@ -885,6 +962,9 @@ class ToolNode(RunnableCallable):
     ) -> Any:
         tool_calls, input_type = self._parse_input(input)
         config_list = get_config_list(config, len(tool_calls))
+
+        # Extract tool names executed
+        tool_names_executed = [call["name"] for call in tool_calls]
 
         # Construct ToolRuntime instances at the top level for each tool call
         tool_runtimes = []
@@ -906,7 +986,11 @@ class ToolNode(RunnableCallable):
             coros.append(self._arun_one(call, input_type, tool_runtime))  # type: ignore[arg-type]
         outputs = await asyncio.gather(*coros, return_exceptions=True)
 
-        return self._combine_tool_outputs(outputs, input_type)
+        combined = self._combine_tool_outputs(outputs, input_type)
+
+        # Filter satisfied expectations from state (use first tool_runtime's state)
+        state = tool_runtimes[0].state if tool_runtimes else {}
+        return self._filter_expectations(state, tool_names_executed, combined, input_type)
 
     def _combine_tool_outputs(
         self,
