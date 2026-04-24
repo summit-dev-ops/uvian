@@ -2,6 +2,7 @@ from langchain.messages import AnyMessage
 from typing import TypedDict, List, Dict, Any
 from typing_extensions import TypedDict, Annotated
 import operator
+from langgraph.types import Overwrite
 
 
 class MessagesState(TypedDict):
@@ -29,7 +30,7 @@ class MessagesState(TypedDict):
     session_context_size: int
     tokens_used: int
     pending_tool_approval: Dict[str, Any] | None
-    expected_tool_calls: Annotated[List[Dict[str, Any]], operator.add]
+    expected_tool_calls: Annotated[List[Dict[str, Any]], Overwrite]
 
 
 class Skill(TypedDict):
