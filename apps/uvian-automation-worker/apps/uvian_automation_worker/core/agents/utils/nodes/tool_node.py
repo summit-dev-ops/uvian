@@ -945,6 +945,16 @@ class ToolNode(RunnableCallable):
         if len(remaining) == len(expected_tool_calls):
             return combined_output
 
+        filtered_count = len(expected_tool_calls) - len(remaining)
+        log.debug(
+            "expected_tool_calls_filtered",
+            node="tool_node",
+            executed=tool_names_executed,
+            original=[e.get("pattern") for e in expected_tool_calls],
+            remaining=[e.get("pattern") for e in remaining],
+            filtered_count=filtered_count,
+        )
+
         if isinstance(combined_output, list):
             return combined_output + [Command(update={"expected_tool_calls": remaining})]
         elif isinstance(combined_output, dict):
