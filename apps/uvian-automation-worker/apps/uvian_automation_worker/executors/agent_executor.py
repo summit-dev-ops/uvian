@@ -16,6 +16,7 @@ The sync_node (in agent graph) handles:
 - Fetching agent memory
 """
 from typing import Optional, Dict, List
+from clients.mcp import PersistentMCPClient
 from executors.base import BaseExecutor, JobData, JobResult
 from core.agents.universal_agent.agent import build_agent
 from clients.auth import get_agent_secrets
@@ -170,11 +171,14 @@ class AgentExecutor(BaseExecutor):
             },
             "recursion_limit": 100
         }
+        
+        mcp_client = PersistentMCPClient()
+        mcp_client.register_all(all_mcp_configs)
 
         try:
-            agent, mcp_client = await build_agent(
+            agent = await build_agent(
                 llm_config,
-                all_mcp_configs=all_mcp_configs,
+                mcp_client=mcp_client,
                 checkpointer=checkpointer,
                 hooks=available_hooks,
             )

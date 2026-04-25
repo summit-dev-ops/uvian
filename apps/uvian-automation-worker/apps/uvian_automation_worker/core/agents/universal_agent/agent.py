@@ -9,17 +9,15 @@ from core.agents.utils.nodes.sync_node import create_sync_node
 from core.agents.utils.nodes.cleanup_node import create_cleanup_node
 from core.agents.utils.tokens import check_context
 from core.agents.utils.nodes.compaction_node import create_compaction_node
-from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
 from core.agents.utils.nodes.tool_node import ToolNode, tools_condition
 from core.agents.utils.tool_approval import create_tool_approval_wrapper
 from core.agents.utils.nodes.expected_tool_check_node import create_expected_tool_check_node
-from clients.mcp import PersistentMCPClient
 from clients.config import create_tool_approval_ticket
 
 
 async def build_agent(
     llm_config,
-    all_mcp_configs=None,
+    mcp_client=None,
     checkpointer=None,
     hooks=None,
 ):
@@ -27,13 +25,8 @@ async def build_agent(
     llm_cfg = llm_config or {}
     llm = create_llm(llm_cfg)
 
-    if checkpointer is None:
-        checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
 
-    mcp_client = PersistentMCPClient()
-    if all_mcp_configs:
-        mcp_client.register_all(all_mcp_configs)
 
     llm_retry_policy = RetryPolicy(
         initial_interval=2.0,
@@ -81,23 +74,14 @@ async def build_agent(
         awrap_tool_call=tool_approval_wrapper,
     )
     sync = create_sync_node(mcp_client)
-    cleanup = create_cleanup_node(mcp_client)
+    #cleanup = create_cleanup_node(mcp_client)
     expected_tool_check = create_expected_tool_check_node()
-
-
-    def tools_condition_with_expectations(state) -> Literal["tools", "no_tools"]:
-        """Route based on tool calls in model response."""
-        messages = state.get("messages", [])
-        last_message = messages[-1] if messages else None
-        if last_message and hasattr(last_message, "tool_calls") and last_message.tool_calls:
-            return "tools"
-        return "no_tools"
 
     agent_builder.add_node("sync_node", sync, retry=sync_retry_policy)
     agent_builder.add_node("model_node", model_node, retry=llm_retry_policy)
     agent_builder.add_node("tool_node", tool_node, retry=tool_retry_policy)
     agent_builder.add_node("compaction_node", compaction_node, retry=compaction_retry_policy)
-    agent_builder.add_node("cleanup_node", cleanup)
+    #agent_builder.add_node("cleanup_node", cleanup)
     agent_builder.add_node("expected_tool_check_node", expected_tool_check)
 
     agent_builder.add_edge(START, "sync_node")
@@ -114,15 +98,15 @@ async def build_agent(
 
     agent_builder.add_conditional_edges(
         "model_node",
-        tools_condition_with_expectations,
-        {"tools": "tool_node", "no_tools": "expected_tool_check_node"},
+        tools_condition,
+        {"tools": "tool_node", "__end__": "expected_tool_check_node"},
     )
 
     agent_builder.add_edge("tool_node", "sync_node")
 
-    agent_builder.add_edge("expected_tool_check_node", "cleanup_node")
+    agent_builder.add_edge("expected_tool_check_node", "END")
 
-    agent_builder.add_edge("cleanup_node", END)
+     #agent_builder.add_edge("cleanup_node", END)
 
     agent = agent_builder.compile(checkpointer=checkpointer)
     return agent, mcp_client
