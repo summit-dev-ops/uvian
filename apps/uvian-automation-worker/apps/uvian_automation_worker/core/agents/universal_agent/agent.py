@@ -114,6 +114,8 @@ async def build_agent(
         {"tools": "tool_node", "no_tools": "expected_tool_check_node"},
     )
 
+    agent_builder.add_edge("tool_node", "sync_node")
+
     agent_builder.add_edge("expected_tool_check_node", "cleanup_node")
 
     agent_builder.add_edge("cleanup_node", END)
