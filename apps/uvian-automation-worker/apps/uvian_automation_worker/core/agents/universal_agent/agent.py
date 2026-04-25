@@ -80,11 +80,6 @@ async def build_agent(
     cleanup = create_cleanup_node(mcp_registry)
     expected_tool_check = create_expected_tool_check_node()
 
-    def approval_routing_node(state):
-        pending_tool_approval = state.get("pending_tool_approval")
-        if pending_tool_approval:
-            return Command(goto=END)
-        return Command(goto="sync_node")
 
     def tools_condition_with_expectations(state) -> Literal["tools", "no_tools"]:
         """Route based on tool calls in model response."""
@@ -99,7 +94,6 @@ async def build_agent(
     agent_builder.add_node("tool_node", tool_node, retry=tool_retry_policy)
     agent_builder.add_node("compaction_node", compaction_node, retry=compaction_retry_policy)
     agent_builder.add_node("cleanup_node", cleanup)
-    agent_builder.add_node("approval_routing_node", approval_routing_node)
     agent_builder.add_node("expected_tool_check_node", expected_tool_check)
 
     agent_builder.add_edge(START, "sync_node")
@@ -123,8 +117,5 @@ async def build_agent(
     agent_builder.add_edge("expected_tool_check_node", "cleanup_node")
 
     agent_builder.add_edge("cleanup_node", END)
-
-    agent_builder.add_edge("tool_node", "approval_routing_node")
-    agent_builder.add_edge("approval_routing_node", END)
 
     return agent_builder.compile(checkpointer=checkpointer)
