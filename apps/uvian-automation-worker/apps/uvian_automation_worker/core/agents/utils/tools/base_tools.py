@@ -1,7 +1,6 @@
 from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
 from langchain_core.messages import ToolMessage
-from clients.mcp import MCPRegistry
 
 
 def flatten_skill_content(content: dict, prefix: str = "") -> str:
@@ -201,7 +200,7 @@ async def load_mcp(
         )
     
     mcp_name = mcp_info.get("name", "")
-    
+
     if mcp_name in loaded_mcp_names:
         return Command(
             update={
@@ -211,46 +210,18 @@ async def load_mcp(
                 )]
             }
         )
-    
-    registry = runtime.config["configurable"].get("mcp_registry")
-    if not registry:
-        return Command(
-            update={
-                "messages": [ToolMessage(
-                    f"Error: MCP registry not available.",
-                    tool_call_id=runtime.tool_call_id,
-                )]
-            }
-        )
-    
-    tools = []
-    if isinstance(registry, MCPRegistry):
-        mcp_id = mcp_info.get("id")
-        raw_tools = await registry.get_tools_for_mcp(mcp_id)
-        tool_names = [t.name for t in raw_tools]
-        tool_list = ", ".join(tool_names)
-        response_text = (
-            f"SUCCESS: Loaded MCP '{mcp_name}' with {len(raw_tools)} tools.\n"
-            f"Tools now available: {tool_list}"
-        )
-        # Convert BaseTool objects to dicts (matching agent_executor pattern)
-        tools = [
-            {"name": t.name, "description": t.description or ""}
-            for t in raw_tools
-        ]
-    else:
-        response_text = f"SUCCESS: Tools for MCP '{mcp_name}' are now available."
-    
+
     new_mcp_entry = {
         "name": mcp_name,
         "description": mcp_info.get("description", ""),
-        "tools": tools
+        "tools": []
     }
-    
+
     return Command(
         update={
             "loaded_mcps": [new_mcp_entry],
-            "messages": [ToolMessage(response_text,
+            "messages": [ToolMessage(
+                f"SUCCESS: Loaded MCP '{mcp_name}'.",
                 tool_call_id=runtime.tool_call_id,
             )]
         }

@@ -226,7 +226,31 @@ def create_sync_node(mcp_registry):
                             "description": mcp_info.get("description", ""),
                             "tools": tools
                         })
-        
+
+        updated_loaded_mcps = []
+        if mcp_registry:
+            for loaded_mcp in loaded_mcps:
+                if not isinstance(loaded_mcp, dict):
+                    continue
+                mcp_name = loaded_mcp.get("name", "")
+                existing_tools = loaded_mcp.get("tools", [])
+                if mcp_name and not existing_tools and mcp_name in connected_mcp_names:
+                    mcp_info = next(
+                        (cfg for cfg in relevant_mcp_configs if cfg.get("name") == mcp_name),
+                        None
+                    )
+                    if mcp_info:
+                        raw_tools = await mcp_registry.get_tools_for_mcp(mcp_info.get("id"))
+                        tools = [
+                            {"name": t.name, "description": t.description or ""}
+                            for t in raw_tools
+                        ]
+                        updated_loaded_mcps.append({
+                            "name": mcp_name,
+                            "description": loaded_mcp.get("description", ""),
+                            "tools": tools
+                        })
+
         new_messages: List[HumanMessage] = []
         processed_ids: List[str] = []
         
@@ -283,7 +307,7 @@ def create_sync_node(mcp_registry):
         result = {
             "messages": new_messages,
             "loaded_skills": new_skills,
-            "loaded_mcps": new_mcps,
+            "loaded_mcps": new_mcps + updated_loaded_mcps,
             "available_mcps": available_mcps,
             "expected_tool_calls": new_expected_tool_calls,
             **memory_result

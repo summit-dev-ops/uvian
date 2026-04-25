@@ -167,7 +167,6 @@ class AgentExecutor(BaseExecutor):
             config = {
                 "configurable": {
                     "thread_id": thread_id,
-                    "mcp_registry": mcp_registry,
                     "all_mcp_configs": all_mcp_configs,
                     "all_skills": all_skills,
                     "available_hooks": available_hooks,
