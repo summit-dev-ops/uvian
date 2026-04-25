@@ -151,8 +151,10 @@ class PersistentMCPClient:
             except Exception as e:
                 log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e))
 
-    async def load_tools(self, mcp_id: str) -> List[BaseTool]:
-        """Load tools from a specific server. Will lazily connect if not already connected."""
+    async def load_tools_for_mcp(self, mcp_id: str) -> List[BaseTool]:
+        """Load tools from a specific server. Will lazily connect if not already connected.
+        
+        Idempotent - returns cached tools if already loaded."""
         resolved_id = mcp_id
         if mcp_id not in self._connections and mcp_id in self._name_to_id:
             resolved_id = self._name_to_id[mcp_id]
@@ -165,6 +167,10 @@ class PersistentMCPClient:
         tools = await load_mcp_tools(session)
         self._tool_cache[resolved_id] = tools
         return tools
+
+    # Alias for backward compatibility
+    async def load_tools(self, mcp_id: str) -> List[BaseTool]:
+        return await self.load_tools_for_mcp(mcp_id)
 
     async def get_tool_metadata(self, mcp_id: str) -> List[Dict[str, Any]]:
         """Fetch tool metadata from a specific server. Lazily connects if needed."""
@@ -223,11 +229,19 @@ class PersistentMCPClient:
             })
         return result
 
-    async def get_all_tools(self) -> Dict[str, List[BaseTool]]:
-        """Load and return tools from all loaded MCPs.
+    async def get_loaded_tools(self) -> Dict[str, List[BaseTool]]:
+        """Return all tools that have been loaded into the cache.
         
         Returns a dict mapping mcp_id to list of tools for each server."""
         return dict(self._tool_cache)
+
+    # Alias for backward compatibility
+    async def get_all_tools(self) -> Dict[str, List[BaseTool]]:
+        return await self.get_loaded_tools()
+
+    # Alias for backward compatibility
+    async def get_tools_for_mcp(self, mcp_id: str) -> List[BaseTool]:
+        return await self.load_tools_for_mcp(mcp_id)
 
     async def get_all_metadata(self) -> Dict[str, List[Dict[str, Any]]]:
         """Fetch and return metadata from all MCPs.
@@ -275,37 +289,6 @@ class PersistentMCPClient:
         self._metadata_cache.clear()
 
 
-class MCPRegistry:
-    """Thin wrapper around PersistentMCPClient for agent framework compatibility."""
-
-    def __init__(self, client: Optional[PersistentMCPClient] = None):
-        self._client = client
-
-    async def connect(self, mcp_id: str):
-        """Connect to a specific MCP server by ID."""
-        if self._client:
-            await self._client.connect(mcp_id)
-
-    async def fetch_all_metadata(self):
-        """Fetch metadata for all connected MCP servers."""
-        if self._client:
-            await self._client.fetch_all_metadata()
-
-    async def get_tools_for_mcp(self, mcp_id: str) -> List[BaseTool]:
-        if not self._client:
-            return []
-        return await self._client.load_tools(mcp_id)
-
-    async def get_all_tools(self) -> Dict[str, List[BaseTool]]:
-        if not self._client:
-            return {}
-        return await self._client.get_all_tools()
-    
-    async def close(self):
-        if self._client:
-            await self._client.close()
-
-
 async def create_mcp_registry(mcp_configs: list) -> List[BaseTool]:
     """Legacy function: loads ALL tools from ALL MCP configs.
 
@@ -324,8 +307,3 @@ async def create_mcp_registry(mcp_configs: list) -> List[BaseTool]:
         client = MultiServerMCPClient({"uvian-hub": config})
         tools.extend(await client.get_tools())
     return tools
-
-
-async def build_mcp_registry(mcp_configs: list, persistent_client: Optional[PersistentMCPClient] = None) -> MCPRegistry:
-    """Build an MCPRegistry from a list of MCP configs."""
-    return MCPRegistry(client=persistent_client)

@@ -22,7 +22,7 @@ from core.agents.utils.loader import transform_event, get_hooks_for_event
 from core.logging import log
 
 
-def create_sync_node(mcp_registry):
+def create_sync_node(mcp_client):
     async def sync_node(state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
         """Synchronize agent state at start of each iteration.
         
@@ -39,7 +39,7 @@ def create_sync_node(mcp_registry):
         
         Args:
             state: Current agent state
-            config: RunnableConfig with mcp_registry, all_mcp_configs, all_skills
+            config: RunnableConfig with all_mcp_configs, all_skills
             
         Returns:
             Dictionary with updates for:
@@ -153,12 +153,12 @@ def create_sync_node(mcp_registry):
         connected_mcp_names = []
         failed_mcp_names = []
         
-        if mcp_registry:
+        if mcp_client:
             mcp_ids_to_connect = [cfg.get("id") for cfg in relevant_mcp_configs if cfg.get("id")]
             
             for mcp_id in mcp_ids_to_connect:
                 try:
-                    await mcp_registry.connect(mcp_id)
+                    await mcp_client.connect(mcp_id)
                     mcp_name = next(
                         (cfg.get("name") for cfg in relevant_mcp_configs if cfg.get("id") == mcp_id),
                         mcp_id
@@ -168,35 +168,16 @@ def create_sync_node(mcp_registry):
                     log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
                     failed_mcp_names.append(mcp_id)
             
-            for loaded_mcp in loaded_mcps:
-                if not isinstance(loaded_mcp, dict):
-                    continue
-                mcp_name = loaded_mcp.get("name", "")
-                if mcp_name and mcp_name not in connected_mcp_names:
-                    mcp_config = next(
-                        (cfg for cfg in all_mcp_configs if cfg.get("name") == mcp_name),
-                        None
-                    )
-                    if mcp_config and mcp_config.get("id"):
-                        try:
-                            await mcp_registry.connect(mcp_config.get("id"))
-                            connected_mcp_names.append(mcp_name)
-                        except Exception as e:
-                            log.warning("mcp_connect_failed_from_loaded", mcp_id=mcp_config.get("id"), error=str(e), node="sync_node")
-                            failed_mcp_names.append(mcp_config.get("id"))
-            
             if connected_mcp_names:
-                await mcp_registry.fetch_all_metadata()
+                await mcp_client.fetch_all_metadata()
             
-            # Ensure tools are loaded for all connected MCPs (not just new ones)
-            # This populates the tool cache in PersistentMCPClient so get_all_tools() works
             for mcp_name in connected_mcp_names:
                 mcp_info = next(
                     (cfg for cfg in relevant_mcp_configs if cfg.get("name") == mcp_name),
                     None
                 )
                 if mcp_info:
-                    await mcp_registry.get_tools_for_mcp(mcp_info.get("id"))
+                    await mcp_client.get_tools_for_mcp(mcp_info.get("id"))
         
         available_mcps = [
             {
@@ -225,7 +206,7 @@ def create_sync_node(mcp_registry):
                 })
         
         new_mcps = []
-        if mcp_registry:
+        if mcp_client:
             for mcp_name in connected_mcp_names:
                 if mcp_name not in loaded_mcp_names:
                     mcp_info = next(
@@ -233,7 +214,7 @@ def create_sync_node(mcp_registry):
                         None
                     )
                     if mcp_info:
-                        raw_tools = await mcp_registry.get_tools_for_mcp(mcp_info.get("id"))
+                        raw_tools = await mcp_client.get_tools_for_mcp(mcp_info.get("id"))
                         tools = [
                             {"name": t.name, "description": t.description or ""}
                             for t in raw_tools
@@ -245,7 +226,7 @@ def create_sync_node(mcp_registry):
                         })
 
         updated_loaded_mcps = []
-        if mcp_registry:
+        if mcp_client:
             for loaded_mcp in loaded_mcps:
                 if not isinstance(loaded_mcp, dict):
                     continue
@@ -257,7 +238,7 @@ def create_sync_node(mcp_registry):
                         None
                     )
                     if mcp_info:
-                        raw_tools = await mcp_registry.get_tools_for_mcp(mcp_info.get("id"))
+                        raw_tools = await mcp_client.get_tools_for_mcp(mcp_info.get("id"))
                         tools = [
                             {"name": t.name, "description": t.description or ""}
                             for t in raw_tools

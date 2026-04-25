@@ -13,13 +13,13 @@ from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
 from core.agents.utils.nodes.tool_node import ToolNode, tools_condition
 from core.agents.utils.tool_approval import create_tool_approval_wrapper
 from core.agents.utils.nodes.expected_tool_check_node import create_expected_tool_check_node
-from clients.mcp import MCPRegistry
+from clients.mcp import PersistentMCPClient
 from clients.config import create_tool_approval_ticket
 
 
 async def build_agent(
     llm_config,
-    mcp_registry=None,
+    all_mcp_configs=None,
     checkpointer=None,
     hooks=None,
 ):
@@ -30,6 +30,10 @@ async def build_agent(
     if checkpointer is None:
         checkpointer = PostgresAsyncCheckpointer()
     agent_builder = StateGraph(MessagesState)
+
+    mcp_client = PersistentMCPClient()
+    if all_mcp_configs:
+        mcp_client.register_all(all_mcp_configs)
 
     llm_retry_policy = RetryPolicy(
         initial_interval=2.0,
@@ -63,7 +67,7 @@ async def build_agent(
         jitter=True,
     )
 
-    model_node = create_model_node(llm, default_tools, mcp_registry=mcp_registry)
+    model_node = create_model_node(llm, default_tools, mcp_client=mcp_client)
     compaction_node = create_compaction_node(llm)
 
     tool_approval_wrapper = None
@@ -73,11 +77,11 @@ async def build_agent(
     tool_node = ToolNode(
         default_tools,
         handle_tool_errors=True,
-        mcp_registry=mcp_registry,
+        mcp_client=mcp_client,
         awrap_tool_call=tool_approval_wrapper,
     )
-    sync = create_sync_node(mcp_registry)
-    cleanup = create_cleanup_node(mcp_registry)
+    sync = create_sync_node(mcp_client)
+    cleanup = create_cleanup_node(mcp_client)
     expected_tool_check = create_expected_tool_check_node()
 
 
@@ -120,4 +124,5 @@ async def build_agent(
 
     agent_builder.add_edge("cleanup_node", END)
 
-    return agent_builder.compile(checkpointer=checkpointer)
+    agent = agent_builder.compile(checkpointer=checkpointer)
+    return agent, mcp_client

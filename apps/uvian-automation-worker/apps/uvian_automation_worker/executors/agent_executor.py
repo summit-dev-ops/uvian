@@ -18,7 +18,6 @@ The sync_node (in agent graph) handles:
 from typing import Optional, Dict
 from executors.base import BaseExecutor, JobData, JobResult
 from core.agents.universal_agent.agent import build_agent
-from clients.mcp import PersistentMCPClient, MCPRegistry
 from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills, get_agent_hooks
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
@@ -139,48 +138,45 @@ class AgentExecutor(BaseExecutor):
             base_checkpointer,
             exclude_keys=["agent_memory"]
         )
-            
-        async with PersistentMCPClient() as persistent_client:
-            persistent_client.register_all(all_mcp_configs)
-            mcp_registry = MCPRegistry(client=persistent_client)
-            
-            channel = f"agent:{agent_user_id}:messages"
-            agent_input = {
-                "messages": [],
-                "available_skills": available_skills,
-                "loaded_skills": [],
-                "available_mcps": available_mcps,
-                "loaded_mcps": [],
-                "available_hooks": available_hooks,
-                "custom_instructions": "",
-                "agent_name": "Agent",
-                "llm_calls": 0,
-                "channel_id": channel,
-                "conversation_id": "",
-                "agent_user_id": agent_user_id,
+        
+        channel = f"agent:{agent_user_id}:messages"
+        agent_input = {
+            "messages": [],
+            "available_skills": available_skills,
+            "loaded_skills": [],
+            "available_mcps": available_mcps,
+            "loaded_mcps": [],
+            "available_hooks": available_hooks,
+            "custom_instructions": "",
+            "agent_name": "Agent",
+            "llm_calls": 0,
+            "channel_id": channel,
+            "conversation_id": "",
+            "agent_user_id": agent_user_id,
+            "thread_id": thread_id,
+            "message_id": str(uuid.uuid4()),
+            "event_metadata": {},
+            "execution_id": execution_id,
+        }
+        
+        config = {
+            "configurable": {
                 "thread_id": thread_id,
-                "message_id": str(uuid.uuid4()),
-                "event_metadata": {},
-                "execution_id": execution_id,
-            }
-            
-            config = {
-                "configurable": {
-                    "thread_id": thread_id,
-                    "all_mcp_configs": all_mcp_configs,
-                    "all_skills": all_skills,
-                    "available_hooks": available_hooks,
-                },
-                "recursion_limit": 100
-            }
+                "all_mcp_configs": all_mcp_configs,
+                "all_skills": all_skills,
+                "available_hooks": available_hooks,
+            },
+            "recursion_limit": 100
+        }
 
+        try:
+            agent, mcp_client = await build_agent(
+                llm_config,
+                all_mcp_configs=all_mcp_configs,
+                checkpointer=checkpointer,
+                hooks=available_hooks,
+            )
             try:
-                agent = await build_agent(
-                    llm_config,
-                    mcp_registry,
-                    checkpointer=checkpointer,
-                    hooks=available_hooks,
-                )
                 async for part in agent.astream(
                     agent_input,
                     config=config,
@@ -195,14 +191,14 @@ class AgentExecutor(BaseExecutor):
                         "agent_id": agent_user_id,
                     },
                 }
-            except Exception as e:
-                print(e)
-                return {
-                    "status": "failed",
-                    "result": {
-                        "error": str(e),
-                        "thread_id": thread_id,
-                    },
-                }
             finally:
-                await mcp_registry.close()
+                await mcp_client.close()
+        except Exception as e:
+            print(e)
+            return {
+                "status": "failed",
+                "result": {
+                    "error": str(e),
+                    "thread_id": thread_id,
+                },
+            }
