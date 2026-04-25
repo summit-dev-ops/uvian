@@ -139,8 +139,14 @@ def create_sync_node(mcp_client):
                 unique_mcp_configs.append(cfg)
         relevant_mcp_configs = unique_mcp_configs
         
+        # Handle both string names and dict entries in loaded_mcps
         loaded_mcps = state.get("loaded_mcps", [])
-        loaded_mcp_names = {m.get("name") for m in loaded_mcps if isinstance(m, dict) and m.get("name")}
+        loaded_mcp_names: set = set()
+        for m in loaded_mcps:
+            if isinstance(m, dict) and m.get("name"):
+                loaded_mcp_names.add(m.get("name"))
+            elif isinstance(m, str):
+                loaded_mcp_names.add(m)
         
         for mcp_name in loaded_mcp_names:
             mcp_config = next(

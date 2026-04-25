@@ -1,5 +1,6 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
+from typing import List
 import json
 from core.logging import log
 
@@ -47,9 +48,15 @@ def create_model_node(model, default_tools, mcp_client):
         loaded_skill_names = [s.get("name") for s in loaded_skills if isinstance(s, dict) and s.get("name")]
         available_skill_names = [s.get("name") for s in available_skills if isinstance(s, dict) and s.get("name")]
         
+        # Handle both string names and dict entries
         available_mcps = state.get("available_mcps", [])
         loaded_mcps = state.get("loaded_mcps", [])
-        loaded_mcp_names = [m.get("name") for m in loaded_mcps if isinstance(m, dict) and m.get("name")]
+        loaded_mcp_names: List[str] = []
+        for m in loaded_mcps:
+            if isinstance(m, dict) and m.get("name"):
+                loaded_mcp_names.append(m.get("name"))
+            elif isinstance(m, str):
+                loaded_mcp_names.append(m)
         available_mcp_names = [m.get("name") for m in available_mcps if isinstance(m, dict) and m.get("name")]
 
         all_mcp_tools = await mcp_client.get_loaded_tools()
