@@ -168,6 +168,23 @@ def create_sync_node(mcp_registry):
                     log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
                     failed_mcp_names.append(mcp_id)
             
+            for loaded_mcp in loaded_mcps:
+                if not isinstance(loaded_mcp, dict):
+                    continue
+                mcp_name = loaded_mcp.get("name", "")
+                if mcp_name and mcp_name not in connected_mcp_names:
+                    mcp_config = next(
+                        (cfg for cfg in all_mcp_configs if cfg.get("name") == mcp_name),
+                        None
+                    )
+                    if mcp_config and mcp_config.get("id"):
+                        try:
+                            await mcp_registry.connect(mcp_config.get("id"))
+                            connected_mcp_names.append(mcp_name)
+                        except Exception as e:
+                            log.warning("mcp_connect_failed_from_loaded", mcp_id=mcp_config.get("id"), error=str(e), node="sync_node")
+                            failed_mcp_names.append(mcp_config.get("id"))
+            
             if connected_mcp_names:
                 await mcp_registry.fetch_all_metadata()
             
