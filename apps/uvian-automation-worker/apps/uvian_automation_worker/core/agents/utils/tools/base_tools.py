@@ -1,6 +1,9 @@
 from langchain.tools import tool, ToolRuntime
 from langgraph.types import Command
 from langchain_core.messages import ToolMessage
+from typing import TypedDict
+
+from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP
 
 
 def flatten_skill_content(content: dict, prefix: str = "") -> str:
@@ -130,9 +133,9 @@ def list_mcps(
 
     Use this to discover what additional tool sets are available beyond your currently loaded tools.
     """
-    available_mcps = runtime.state.get("available_mcps") or []
-    loaded_mcps = runtime.state.get("loaded_mcps") or []
-    loaded_mcp_names = [m.get("name") for m in loaded_mcps if isinstance(m, dict)]
+    available_mcps: list[AvailableMCP] = runtime.state.get("available_mcps") or []
+    loaded_mcps: list[LoadedMCP] = runtime.state.get("loaded_mcps") or []
+    loaded_mcp_names = [m.get("name") for m in loaded_mcps if isinstance(m, dict) and m.get("name")]
     
     if not available_mcps:
         return "No additional MCP tool servers are available."
@@ -180,8 +183,8 @@ async def load_mcp(
         mcp_id: The name of the MCP server to load (e.g., "discord", "uvian hub")
     """
     mcp_input = kargs["mcp_id"]
-    loaded_mcps = runtime.state.get("loaded_mcps") or []
-    available_mcps = runtime.state.get("available_mcps") or []
+    loaded_mcps: list[LoadedMCP] = runtime.state.get("loaded_mcps") or []
+    available_mcps: list[AvailableMCP] = runtime.state.get("available_mcps") or []
     loaded_mcp_names = [m.get("name") for m in loaded_mcps if isinstance(m, dict) and m.get("name")]
     
     mcp_info = next((m for m in available_mcps if m.get("name", "").lower() == mcp_input.lower()), None)
@@ -211,7 +214,7 @@ async def load_mcp(
             }
         )
 
-    new_mcp_entry = {
+    new_mcp_entry: LoadedMCP = {
         "name": mcp_name,
         "description": mcp_info.get("description", ""),
         "tools": []

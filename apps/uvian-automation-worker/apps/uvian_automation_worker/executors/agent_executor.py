@@ -15,13 +15,14 @@ The sync_node (in agent graph) handles:
 - Loading skills based on event types
 - Fetching agent memory
 """
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from executors.base import BaseExecutor, JobData, JobResult
 from core.agents.universal_agent.agent import build_agent
 from clients.auth import get_agent_secrets
 from clients.config import get_agent_skills, get_agent_hooks
 from core.agents.utils.memory.base_memory import PostgresAsyncCheckpointer
 from core.agents.utils.memory.selective_checkpointer import SelectiveCheckpointer
+from core.agents.utils.types.mcp import AvailableMCP, MCPServerConfig
 from core.logging import log
 import uuid
 
@@ -80,7 +81,7 @@ class AgentExecutor(BaseExecutor):
                     "stream_usage": additional_config.get("stream_usage", True),
                 }
         
-        all_mcp_configs = secrets.get("mcps", [])
+        all_mcp_configs: List[MCPServerConfig] = secrets.get("mcps", [])
         all_skills = await get_agent_skills(agent_user_id)
         
         available_skills = [
@@ -88,7 +89,8 @@ class AgentExecutor(BaseExecutor):
             for s in all_skills if s.get("name")
         ]
         
-        available_mcps = [
+        all_mcp_configs: List[MCPServerConfig] = secrets.get("mcps", [])
+        available_mcps: List[AvailableMCP] = [
             {
                 "id": cfg.get("id"),
                 "name": cfg.get("name", ""),

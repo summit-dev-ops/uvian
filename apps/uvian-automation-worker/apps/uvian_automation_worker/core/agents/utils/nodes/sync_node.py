@@ -19,6 +19,7 @@ from langchain_core.runnables import RunnableConfig
 from repositories.thread_inbox import thread_inbox_repository
 from repositories.agent_memory import agent_memory_repository
 from core.agents.utils.loader import transform_event, get_hooks_for_event
+from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP, MCPServerConfig
 from core.logging import log
 
 
@@ -137,10 +138,10 @@ def create_sync_node(mcp_client):
             if mcp_id and mcp_id not in seen:
                 seen[mcp_id] = True
                 unique_mcp_configs.append(cfg)
-        relevant_mcp_configs = unique_mcp_configs
+        relevant_mcp_configs: List[MCPServerConfig] = unique_mcp_configs
         
         # Handle both string names and dict entries in loaded_mcps
-        loaded_mcps = state.get("loaded_mcps", [])
+        loaded_mcps: List[LoadedMCP] = state.get("loaded_mcps", [])
         loaded_mcp_names: set = set()
         for m in loaded_mcps:
             if isinstance(m, dict) and m.get("name"):
@@ -156,8 +157,8 @@ def create_sync_node(mcp_client):
             if mcp_config and mcp_config not in relevant_mcp_configs:
                 relevant_mcp_configs.append(mcp_config)
         
-        connected_mcp_names = []
-        failed_mcp_names = []
+        connected_mcp_names: List[str] = []
+        failed_mcp_names: List[str] = []
         
         if mcp_client:
             mcp_ids_to_connect = [cfg.get("id") for cfg in relevant_mcp_configs if cfg.get("id")]

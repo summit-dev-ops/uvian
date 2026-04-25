@@ -3,6 +3,8 @@ from typing import TypedDict, List, Dict, Any
 from typing_extensions import TypedDict, Annotated
 import operator
 
+from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP
+
 
 class MessagesState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
@@ -13,9 +15,9 @@ class MessagesState(TypedDict):
     custom_instructions: str
     channel_id: str
     loaded_skills: Annotated[List[Dict[str, Any]], operator.add]
-    loaded_mcps: Annotated[List[Dict[str, Any]], operator.add]
+    loaded_mcps: Annotated[List[LoadedMCP], operator.add]
     available_skills: List[Dict[str, str]]
-    available_mcps: List[Dict[str, str]]
+    available_mcps: List[AvailableMCP]
     conversation_id: str
     agent_profile_id: str
     message_id: str
@@ -30,6 +32,7 @@ class MessagesState(TypedDict):
     tokens_used: int
     pending_tool_approval: Dict[str, Any] | None
     expected_tool_calls: List[Dict[str, Any]]
+    connected_mcps: List[str]
 
 
 class Skill(TypedDict):

@@ -1,8 +1,9 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
-from typing import List
+from typing import List, Dict, Any
 import json
 from core.logging import log
+from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP
 
 SYSTEM_PROMPT = """You are an autonomous headless agent with access to internal tools and external mcps. 
 You will not be communicating with the clients directly. You will be provided events and it is your responsibility to plan, and act based on the events you receive.
@@ -49,8 +50,8 @@ def create_model_node(model, default_tools, mcp_client):
         available_skill_names = [s.get("name") for s in available_skills if isinstance(s, dict) and s.get("name")]
         
         # Handle both string names and dict entries
-        available_mcps = state.get("available_mcps", [])
-        loaded_mcps = state.get("loaded_mcps", [])
+        available_mcps: List[AvailableMCP] = state.get("available_mcps", [])
+        loaded_mcps: List[LoadedMCP] = state.get("loaded_mcps", [])
         loaded_mcp_names: List[str] = []
         for m in loaded_mcps:
             if isinstance(m, dict) and m.get("name"):
