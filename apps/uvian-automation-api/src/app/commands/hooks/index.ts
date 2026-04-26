@@ -10,7 +10,7 @@ import {
 } from '../../services/hooks/types';
 import { createHookService } from '../../services/hooks';
 import type { CommandContext } from '../types';
-import { getUserIdFromClient, getAccountIdFromUserId } from '../account-utils';
+import { getUserIdFromContext, getAccountIdFromUserId } from '../account-utils';
 
 const hookService = createHookService({});
 
@@ -23,9 +23,9 @@ export interface CreateHookCommandOutput {
 export async function createHook(
   clients: ServiceClients,
   input: CreateHookCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<CreateHookCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const { hookId } = await hookService.scoped(clients).create(accountId, input);
@@ -44,9 +44,9 @@ export interface UpdateHookCommandOutput {
 export async function updateHook(
   clients: ServiceClients,
   input: UpdateHookCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<UpdateHookCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const { hookId, ...updateData } = input;
@@ -67,9 +67,9 @@ export interface DeleteHookCommandOutput {
 export async function deleteHook(
   clients: ServiceClients,
   input: DeleteHookCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<DeleteHookCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const service = hookService.scoped(clients);
@@ -86,9 +86,9 @@ export interface ListHooksCommandOutput {
 export async function listHooks(
   clients: ServiceClients,
   input: ListHooksCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<ListHooksCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const service = hookService.scoped(clients);
@@ -107,7 +107,7 @@ export interface GetHookCommandOutput {
 export async function getHook(
   clients: ServiceClients,
   input: GetHookCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<GetHookCommandOutput> {
   const service = hookService.scoped(clients);
   const hook = await service.get(input.hookId);
@@ -126,7 +126,7 @@ export interface LinkHookCommandOutput {
 export async function linkHook(
   clients: ServiceClients,
   input: LinkHookCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<LinkHookCommandOutput> {
   const service = hookService.scoped(clients);
   await service.linkToAgent(input.hookId, input.agentId);
@@ -145,7 +145,7 @@ export interface UnlinkHookCommandOutput {
 export async function unlinkHook(
   clients: ServiceClients,
   input: UnlinkHookCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<UnlinkHookCommandOutput> {
   const service = hookService.scoped(clients);
   await service.unlinkFromAgent(input.hookId, input.agentId);
@@ -163,9 +163,9 @@ export interface AddHookEffectCommandOutput {
 export async function addHookEffect(
   clients: ServiceClients,
   input: AddHookEffectCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<AddHookEffectCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const service = hookService.scoped(clients);
@@ -186,9 +186,9 @@ export interface RemoveHookEffectCommandOutput {
 export async function removeHookEffect(
   clients: ServiceClients,
   input: RemoveHookEffectCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<RemoveHookEffectCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const service = hookService.scoped(clients);
@@ -207,7 +207,7 @@ export interface ListHookEffectsCommandOutput {
 export async function listHookEffects(
   clients: ServiceClients,
   input: ListHookEffectsCommandInput,
-  _context?: CommandContext,
+  context?: CommandContext,
 ): Promise<ListHookEffectsCommandOutput> {
   const service = hookService.scoped(clients);
   const { effects } = await service.listEffects(input.hookId);

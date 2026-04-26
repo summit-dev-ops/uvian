@@ -143,6 +143,8 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
 
     const accountId = await getAccountIdFromUserId(clients, userId);
 
+    const serverContext = { userId, accountId };
+
     const server = new McpServer(
       {
         name: 'uvian-automation-secrets',
@@ -183,7 +185,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
                 createdBy: 'mcp-secrets-plugin',
               },
             },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
 
           return {
@@ -271,7 +273,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           await deleteSecret(
             clients,
             { secretId: args.secretId },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return {
             content: [
@@ -343,7 +345,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               maxConversationHistory: args.maxConversationHistory,
               config: args.config,
             },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
         } catch (error) {
@@ -398,7 +400,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               config: args.config,
               isActive: args.isActive,
             },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(agent) }] };
         } catch (error) {
@@ -470,7 +472,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { llm } = await createLlm(
             clients,
             { ...args },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(llm) }] };
         } catch (error) {
@@ -731,7 +733,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               content: args.content,
               isPrivate: args.isPrivate,
             },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(skill) }] };
         } catch (error) {
@@ -802,7 +804,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { skill } = await updateSkill(
             clients,
             { skillId, ...updateData },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(skill) }] };
         } catch (error) {
@@ -824,7 +826,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           await deleteSkill(
             clients,
             { skillId: args.skillId },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return {
             content: [
@@ -853,7 +855,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { link } = await linkSkill(
             clients,
             { agentId: args.agentId, userId: userId, skillId: args.skillId },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(link) }] };
         } catch (error) {
@@ -878,7 +880,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           await unlinkSkill(
             clients,
             { agentId: args.agentId, userId: userId, skillId: args.skillId },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return {
             content: [
@@ -1056,7 +1058,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               assignedTo: args.assignedTo,
               userId,
             },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
@@ -1134,7 +1136,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { ticket } = await updateTicket(
             clients,
             { ticketId, userId, updates },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
@@ -1167,7 +1169,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               userId,
               resolution: args.resolution,
             },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
@@ -1200,7 +1202,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
               assignedTo: args.assignedTo,
               assignedBy: userId,
             },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(ticket) }] };
         } catch (error) {
@@ -1228,7 +1230,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const result = await deleteTicket(
             clients,
             { ticketId: args.ticketId, userId },
-            { eventEmitter: fastify.eventEmitter },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return {
             content: [{ type: 'text', text: JSON.stringify(result) }],

@@ -55,13 +55,12 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
         const body = request.body as any;
-        const { mcp } = await createMcp(clients, { ...body, accountId });
+        const { mcp } = await createMcp(clients, { ...body });
         return reply.code(201).send({ mcp });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

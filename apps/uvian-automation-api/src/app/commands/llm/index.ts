@@ -5,7 +5,7 @@ import {
 } from '../../services/llm/types';
 import { createLlmService } from '../../services/llm';
 import type { CommandContext } from '../types';
-import { getUserIdFromClient, getAccountIdFromUserId } from '../account-utils';
+import { getUserIdFromContext, getAccountIdFromUserId } from '../account-utils';
 
 const llmService = createLlmService({});
 
@@ -20,7 +20,7 @@ export async function createLlm(
   input: CreateLlmCommandInput,
   context?: CommandContext,
 ): Promise<CreateLlmCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const llm = await llmService.scoped(clients).create(accountId, input);

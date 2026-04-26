@@ -3,6 +3,7 @@ import type { AutomationEventEmitter } from '../plugins/event-emitter';
 
 export interface CommandContext {
   eventEmitter?: AutomationEventEmitter;
+  userId?: string;
 }
 
 export type { ServiceClients };

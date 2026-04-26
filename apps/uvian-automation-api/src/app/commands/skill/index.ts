@@ -6,7 +6,7 @@ import {
 } from '../../services/skill/types';
 import { createSkillService } from '../../services/skill';
 import type { CommandContext } from '../types';
-import { getUserIdFromClient, getAccountIdFromUserId } from '../account-utils';
+import { getUserIdFromContext, getAccountIdFromUserId } from '../account-utils';
 
 const skillService = createSkillService();
 
@@ -21,7 +21,7 @@ export async function createSkill(
   input: CreateSkillCommandInput,
   context?: CommandContext,
 ): Promise<CreateSkillCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const skill = await skillService.scoped(clients).create(accountId, {
@@ -59,7 +59,7 @@ export async function updateSkill(
   input: UpdateSkillCommandInput,
   context?: CommandContext,
 ): Promise<UpdateSkillCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const { skillId, ...updateData } = input;
@@ -94,7 +94,7 @@ export async function deleteSkill(
   input: DeleteSkillCommandInput,
   context?: CommandContext,
 ): Promise<DeleteSkillCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   await skillService.scoped(clients).delete(input.skillId);

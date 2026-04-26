@@ -5,7 +5,7 @@ import {
 } from '../../services/mcp/types';
 import { createMcpService } from '../../services/mcp';
 import type { CommandContext } from '../types';
-import { getUserIdFromClient, getAccountIdFromUserId } from '../account-utils';
+import { getUserIdFromContext, getAccountIdFromUserId } from '../account-utils';
 
 const mcpService = createMcpService({});
 
@@ -20,7 +20,7 @@ export async function createMcp(
   input: CreateMcpCommandInput,
   context?: CommandContext,
 ): Promise<CreateMcpCommandOutput> {
-  const userId = await getUserIdFromClient(clients);
+  const userId = getUserIdFromContext(context);
   const accountId = await getAccountIdFromUserId(clients, userId);
 
   const mcp = await mcpService.scoped(clients).create(accountId, input);

@@ -60,14 +60,13 @@ export default async function llmRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
         const body = request.body as any;
-        const { llm } = await createLlm(clients, { ...body, accountId }, {
-          eventEmitter: fastify.eventEmitter,
+        const { llm } = await createLlm(clients, { ...body }, {
+          eventEmitter: fastify.eventEmitter, userId: request.user?.id
         });
         return reply.code(201).send({ llm });
       } catch (error: any) {
@@ -115,7 +114,7 @@ export default async function llmRoutes(fastify: FastifyInstance) {
         const { llm } = await updateLlm(
           clients,
           { llmId, ...(request.body as any) },
-          { eventEmitter: fastify.eventEmitter },
+          { eventEmitter: fastify.eventEmitter, userId: request.user?.id },
         );
         return reply.send({ llm });
       } catch (error: any) {
@@ -146,7 +145,7 @@ export default async function llmRoutes(fastify: FastifyInstance) {
         await deleteLlm(
           clients,
           { llmId },
-          { eventEmitter: fastify.eventEmitter },
+          { eventEmitter: fastify.eventEmitter, userId: request.user?.id },
         );
         return reply.send({ success: true });
       } catch (error: any) {

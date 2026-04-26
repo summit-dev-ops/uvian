@@ -54,7 +54,6 @@ export default async function skillRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
@@ -62,8 +61,8 @@ export default async function skillRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
         const { skill } = await createSkill(
           clients,
-          { ...body, accountId },
-          { eventEmitter: fastify.eventEmitter },
+          { ...body },
+          { eventEmitter: fastify.eventEmitter, userId: request.user?.id },
         );
         return reply.code(201).send({ skill });
       } catch (error: any) {
@@ -105,7 +104,7 @@ export default async function skillRoutes(fastify: FastifyInstance) {
         const { skill } = await updateSkill(
           clients,
           { skillId, ...body },
-          { eventEmitter: fastify.eventEmitter },
+          { eventEmitter: fastify.eventEmitter, userId: request.user?.id },
         );
         return reply.send({ skill });
       } catch (error: any) {
@@ -136,7 +135,7 @@ export default async function skillRoutes(fastify: FastifyInstance) {
         await deleteSkill(
           clients,
           { skillId },
-          { eventEmitter: fastify.eventEmitter },
+          { eventEmitter: fastify.eventEmitter, userId: request.user?.id },
         );
         return reply.send({ success: true });
       } catch (error: any) {

@@ -153,12 +153,21 @@ def create_model_node(model, default_tools, mcp_client):
                     expected_lines.append(f"- **{pattern}** (Required by hook: {source_hook})")
             if expected_lines:
                 expectations_section = "\n\n## Expected Actions\n" + "\n".join(expected_lines)
+        
+        max_context_size = state.get("max_context_size")
+        session_context_size = state.get("session_context_size", 0)
+        tokens_used = state.get("tokens_used", 0)
+        
+        context_section = ""
+        if max_context_size:
+            remaining = max(max_context_size - session_context_size, 0)
+            context_section = f"\n\n## Context Information\n- Current session tokens: {session_context_size}\n- Total tokens used: {tokens_used}\n- Maximum context size: {max_context_size}\n- Remaining: {remaining}"
 
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
             agent_user_id=state.get("agent_user_id", "unknown"),
             custom_instructions=state.get("custom_instructions", ""),
-        ) + mcps_section + skills_section + memory_section + expectations_section
+        ) + context_section + mcps_section + skills_section + memory_section + expectations_section
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")
         
@@ -179,6 +188,9 @@ def create_model_node(model, default_tools, mcp_client):
                 "compaction_offset": message_offset if compaction_state else 0,
                 "last_message_type": messages[-1].type if messages else "none",
                 "last_message_content": str(messages[-1].content)[:200] if messages else "none",
+                "session_context_size": session_context_size,
+                "max_context_size": max_context_size,
+                "remaining_context": max(max_context_size - session_context_size, 0) if max_context_size else None,
             },
         )
         

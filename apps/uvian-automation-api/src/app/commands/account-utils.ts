@@ -1,17 +1,12 @@
 import { agentConfigService } from '../services';
 import type { ServiceClients } from '../services/llm/types';
+import type { CommandContext } from './types';
 
-export async function getUserIdFromClient(
-  clients: ServiceClients,
-): Promise<string> {
-  const {
-    data: { user },
-    error,
-  } = await clients.userClient.auth.getUser();
-  if (error || !user) {
-    throw new Error('Unable to get authenticated user');
+export function getUserIdFromContext(context?: CommandContext): string {
+  if (!context?.userId) {
+    throw new Error('User ID not provided');
   }
-  return user.id;
+  return context.userId;
 }
 
 export async function getAccountIdFromUserId(
