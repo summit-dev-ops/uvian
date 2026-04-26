@@ -139,6 +139,7 @@ export type Database = {
           base_url: string | null;
           temperature: number;
           max_tokens: number;
+          max_context_size: number;
           config: any;
           is_active: boolean;
           is_default: boolean;
@@ -155,6 +156,7 @@ export type Database = {
           base_url?: string | null;
           temperature?: number;
           max_tokens?: number;
+          max_context_size?: number;
           config?: any;
           is_active?: boolean;
           is_default?: boolean;

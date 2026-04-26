@@ -1,0 +1,1 @@
+ALTER TABLE core_automation.llms ADD COLUMN max_context_size INT DEFAULT 128000;
