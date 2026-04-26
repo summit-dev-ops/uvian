@@ -109,4 +109,4 @@ async def build_agent(
      #agent_builder.add_edge("cleanup_node", END)
 
     agent = agent_builder.compile(checkpointer=checkpointer)
-    return agent, mcp_client
+    return agent
