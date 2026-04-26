@@ -6,12 +6,11 @@ import {
 } from '../../services/skill/types';
 import { createSkillService } from '../../services/skill';
 import type { CommandContext } from '../types';
+import { getUserIdFromClient, getAccountIdFromUserId } from '../account-utils';
 
 const skillService = createSkillService();
 
-export interface CreateSkillCommandInput extends CreateSkillPayload {
-  accountId: string;
-}
+export interface CreateSkillCommandInput extends CreateSkillPayload {}
 
 export interface CreateSkillCommandOutput {
   skill: SkillRecord;
@@ -22,17 +21,25 @@ export async function createSkill(
   input: CreateSkillCommandInput,
   context?: CommandContext,
 ): Promise<CreateSkillCommandOutput> {
-  const skill = await skillService.scoped(clients).create(input);
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
+  const skill = await skillService.scoped(clients).create(accountId, {
+    name: input.name,
+    description: input.description,
+    content: input.content,
+    isPrivate: input.isPrivate,
+  });
 
   if (context?.eventEmitter) {
     context.eventEmitter.emitSkillCreated(
       {
         skillId: skill.id,
-        accountId: input.accountId,
+        accountId,
         name: input.name,
-        createdBy: input.accountId,
+        createdBy: userId,
       },
-      input.accountId,
+      accountId,
     );
   }
 
@@ -41,7 +48,6 @@ export async function createSkill(
 
 export interface UpdateSkillCommandInput extends UpdateSkillPayload {
   skillId: string;
-  accountId: string;
 }
 
 export interface UpdateSkillCommandOutput {
@@ -53,14 +59,19 @@ export async function updateSkill(
   input: UpdateSkillCommandInput,
   context?: CommandContext,
 ): Promise<UpdateSkillCommandOutput> {
-  const { skillId, accountId, ...updateData } = input;
-  const skill = await skillService.scoped(clients).update(skillId, updateData);
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
+  const { skillId, ...updateData } = input;
+  const skill = await skillService
+    .scoped(clients)
+    .update(skillId, accountId, updateData);
 
   if (context?.eventEmitter) {
     context.eventEmitter.emitSkillUpdated(
       {
         skillId: skill.id,
-        updatedBy: accountId,
+        updatedBy: userId,
         name: updateData.name,
       },
       accountId,
@@ -72,7 +83,6 @@ export async function updateSkill(
 
 export interface DeleteSkillCommandInput {
   skillId: string;
-  accountId: string;
 }
 
 export interface DeleteSkillCommandOutput {
@@ -84,15 +94,18 @@ export async function deleteSkill(
   input: DeleteSkillCommandInput,
   context?: CommandContext,
 ): Promise<DeleteSkillCommandOutput> {
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
   await skillService.scoped(clients).delete(input.skillId);
 
   if (context?.eventEmitter) {
     context.eventEmitter.emitSkillDeleted(
       {
         skillId: input.skillId,
-        deletedBy: input.accountId,
+        deletedBy: userId,
       },
-      input.accountId,
+      accountId,
     );
   }
 

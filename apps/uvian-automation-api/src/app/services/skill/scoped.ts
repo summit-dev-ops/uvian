@@ -36,12 +36,15 @@ export function createSkillScopedService(
       return mapRow(data);
     },
 
-    async create(payload: CreateSkillPayload): Promise<SkillRecord> {
+    async create(
+      accountId: string,
+      payload: CreateSkillPayload,
+    ): Promise<SkillRecord> {
       const { data, error } = await clients.adminClient
         .schema('core_automation')
         .from('skills')
         .insert({
-          account_id: payload.accountId,
+          account_id: accountId,
           name: payload.name,
           description: payload.description,
           content: payload.content,
@@ -57,6 +60,7 @@ export function createSkillScopedService(
 
     async update(
       skillId: string,
+      accountId: string,
       payload: UpdateSkillPayload,
     ): Promise<SkillRecord> {
       const updateData: Record<string, unknown> = {};
@@ -75,6 +79,7 @@ export function createSkillScopedService(
         .from('skills')
         .update(updateData)
         .eq('id', skillId)
+        .eq('account_id', accountId)
         .select()
         .single();
 

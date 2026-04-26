@@ -10,12 +10,11 @@ import {
 } from '../../services/hooks/types';
 import { createHookService } from '../../services/hooks';
 import type { CommandContext } from '../types';
+import { getUserIdFromClient, getAccountIdFromUserId } from '../account-utils';
 
 const hookService = createHookService({});
 
-export interface CreateHookCommandInput extends CreateHookPayload {
-  accountId: string;
-}
+export interface CreateHookCommandInput extends CreateHookPayload {}
 
 export interface CreateHookCommandOutput {
   hook: HookRecord;
@@ -26,15 +25,16 @@ export async function createHook(
   input: CreateHookCommandInput,
   _context?: CommandContext,
 ): Promise<CreateHookCommandOutput> {
-  const service = hookService.scoped(clients);
-  const { hookId } = await service.create(input);
-  const hook = await service.get(hookId);
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
+  const { hookId } = await hookService.scoped(clients).create(accountId, input);
+  const hook = await hookService.scoped(clients).get(hookId);
   return { hook: hook! };
 }
 
 export interface UpdateHookCommandInput extends UpdateHookPayload {
   hookId: string;
-  accountId: string;
 }
 
 export interface UpdateHookCommandOutput {
@@ -46,15 +46,18 @@ export async function updateHook(
   input: UpdateHookCommandInput,
   _context?: CommandContext,
 ): Promise<UpdateHookCommandOutput> {
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
   const { hookId, ...updateData } = input;
   const service = hookService.scoped(clients);
-  const hook = await service.update(hookId, updateData);
-  return { hook };
+  await service.update(hookId, accountId, updateData);
+  const hook = await service.get(hookId);
+  return { hook: hook! };
 }
 
 export interface DeleteHookCommandInput {
   hookId: string;
-  accountId: string;
 }
 
 export interface DeleteHookCommandOutput {
@@ -66,14 +69,15 @@ export async function deleteHook(
   input: DeleteHookCommandInput,
   _context?: CommandContext,
 ): Promise<DeleteHookCommandOutput> {
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
   const service = hookService.scoped(clients);
-  await service.delete(input.hookId);
+  await service.delete(input.hookId, accountId);
   return { success: true };
 }
 
-export interface ListHooksCommandInput extends ListHooksFilters {
-  accountId: string;
-}
+export interface ListHooksCommandInput extends ListHooksFilters {}
 
 export interface ListHooksCommandOutput {
   hooks: HookRecord[];
@@ -84,14 +88,16 @@ export async function listHooks(
   input: ListHooksCommandInput,
   _context?: CommandContext,
 ): Promise<ListHooksCommandOutput> {
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
   const service = hookService.scoped(clients);
-  const { hooks } = await service.list(input);
+  const { hooks } = await service.list(accountId, input);
   return { hooks };
 }
 
 export interface GetHookCommandInput {
   hookId: string;
-  accountId: string;
 }
 
 export interface GetHookCommandOutput {
@@ -111,7 +117,6 @@ export async function getHook(
 export interface LinkHookCommandInput {
   hookId: string;
   agentId: string;
-  accountId: string;
 }
 
 export interface LinkHookCommandOutput {
@@ -131,7 +136,6 @@ export async function linkHook(
 export interface UnlinkHookCommandInput {
   hookId: string;
   agentId: string;
-  accountId: string;
 }
 
 export interface UnlinkHookCommandOutput {
@@ -150,7 +154,6 @@ export async function unlinkHook(
 
 export interface AddHookEffectCommandInput extends AddEffectPayload {
   hookId: string;
-  accountId: string;
 }
 
 export interface AddHookEffectCommandOutput {
@@ -162,8 +165,11 @@ export async function addHookEffect(
   input: AddHookEffectCommandInput,
   _context?: CommandContext,
 ): Promise<AddHookEffectCommandOutput> {
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
   const service = hookService.scoped(clients);
-  await service.addEffect(input.hookId, input);
+  await service.addEffect(input.hookId, accountId, input);
   return { success: true };
 }
 
@@ -171,7 +177,6 @@ export interface RemoveHookEffectCommandInput {
   hookId: string;
   effectType: EffectType;
   effectId: string;
-  accountId: string;
 }
 
 export interface RemoveHookEffectCommandOutput {
@@ -183,14 +188,16 @@ export async function removeHookEffect(
   input: RemoveHookEffectCommandInput,
   _context?: CommandContext,
 ): Promise<RemoveHookEffectCommandOutput> {
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
   const service = hookService.scoped(clients);
-  await service.removeEffect(input.hookId, input.effectType, input.effectId);
+  await service.removeEffect(input.hookId, accountId, input.effectType, input.effectId);
   return { success: true };
 }
 
 export interface ListHookEffectsCommandInput {
   hookId: string;
-  accountId: string;
 }
 
 export interface ListHookEffectsCommandOutput {

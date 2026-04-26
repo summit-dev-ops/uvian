@@ -6,7 +6,6 @@ export interface ServiceClients {
 }
 
 export interface CreateSkillPayload {
-  accountId: string;
   name: string;
   description: string;
   content: Record<string, unknown>;
@@ -45,8 +44,8 @@ export interface LinkedSkill {
 export interface SkillScopedService {
   list(accountId: string): Promise<SkillRecord[]>;
   get(skillId: string): Promise<SkillRecord | null>;
-  create(payload: CreateSkillPayload): Promise<SkillRecord>;
-  update(skillId: string, payload: UpdateSkillPayload): Promise<SkillRecord>;
+  create(accountId: string, payload: CreateSkillPayload): Promise<SkillRecord>;
+  update(skillId: string, accountId: string, payload: UpdateSkillPayload): Promise<SkillRecord>;
   delete(skillId: string): Promise<{ success: boolean }>;
 }
 

@@ -34,12 +34,15 @@ export function createLlmScopedService(
       return mapRow(data);
     },
 
-    async create(payload: CreateLlmPayload): Promise<LlmRecord> {
+    async create(
+      accountId: string,
+      payload: CreateLlmPayload,
+    ): Promise<LlmRecord> {
       const { data, error } = await clients.adminClient
         .schema('core_automation')
         .from('llms')
         .insert({
-          account_id: payload.accountId,
+          account_id: accountId,
           name: payload.name,
           type: payload.type,
           provider: payload.provider,

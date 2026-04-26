@@ -1,6 +1,14 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { hookService, secretsService } from '../services';
+import { hookService } from '../services';
+import {
+  createHook,
+  listHooks,
+  updateHook,
+  deleteHook,
+  addHookEffect,
+  removeHookEffect,
+} from '../commands';
 import {
   CreateHookRequest,
   GetHooksRequest,
@@ -10,20 +18,6 @@ import {
   LinkHookToAgentRequest,
   UnlinkHookFromAgentRequest,
 } from '../types/hook.types';
-
-async function getAccountIdFromRequest(
-  request: FastifyRequest,
-): Promise<string> {
-  const userId = request.user?.id;
-  if (!userId) throw new Error('User not authenticated');
-  const clients = {
-    adminClient: adminSupabase,
-    userClient: request.supabase,
-  };
-  const accountId = await secretsService.admin(clients).getAccountIdForUser(userId);
-  if (!accountId) throw new Error('User does not have an account');
-  return accountId;
-}
 
 export default async function (fastify: FastifyInstance) {
   fastify.post<CreateHookRequest>(
@@ -46,7 +40,6 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request: FastifyRequest<CreateHookRequest>, reply: FastifyReply) => {
       try {
-        const accountId = await getAccountIdFromRequest(request);
         const body = request.body || {};
         const { name, triggerJson, action, config } = body;
 
@@ -54,15 +47,14 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await hookService.scoped(clients).create({
-          accountId,
+        const { hook } = await createHook(clients, {
           name,
           triggerJson,
           action,
           config,
         });
 
-        reply.code(201).send(result);
+        reply.code(201).send({ hookId: hook.hookId });
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to create hook' });
       }
@@ -85,19 +77,17 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request: FastifyRequest<GetHooksRequest>, reply: FastifyReply) => {
       try {
-        const accountId = await getAccountIdFromRequest(request);
         const query = request.query || {};
 
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const result = await hookService.scoped(clients).list({
-          accountId,
+        const { hooks } = await listHooks(clients, {
           isActive: query.isActive,
         });
 
-        reply.send(result);
+        reply.send({ hooks });
       } catch (error: any) {
         reply.code(400).send({ error: 'Failed to fetch hooks' });
       }
@@ -170,7 +160,8 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const hook = await hookService.scoped(clients).update(id, {
+        const { hook } = await updateHook(clients, {
+          hookId: id,
           name: updates.name,
           triggerJson: updates.triggerJson,
           action: updates.action as 'interrupt' | 'log' | 'block',
@@ -205,7 +196,7 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        await hookService.scoped(clients).delete(id);
+        await deleteHook(clients, { hookId: id });
 
         reply.code(204).send();
       } catch (error: any) {
@@ -347,7 +338,8 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        await hookService.scoped(clients).addEffect(id, {
+        await addHookEffect(clients, {
+          hookId: id,
           effectType: effectType as any,
           effectId,
           config,
@@ -391,9 +383,11 @@ export default async function (fastify: FastifyInstance) {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        await hookService
-          .scoped(clients)
-          .removeEffect(id, type as any, effectId);
+        await removeHookEffect(clients, {
+          hookId: id,
+          effectType: type as any,
+          effectId,
+        });
 
         reply.code(204).send();
       } catch (error: any) {

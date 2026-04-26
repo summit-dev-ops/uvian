@@ -14,12 +14,15 @@ export function createHookScopedService(
   clients: ServiceClients,
 ): HookScopedService {
   return {
-    async create(payload: CreateHookPayload): Promise<{ hookId: string }> {
+    async create(
+      accountId: string,
+      payload: CreateHookPayload,
+    ): Promise<{ hookId: string }> {
       const { data, error } = await clients.adminClient
         .schema('core_automation')
         .from('hooks')
         .insert({
-          account_id: payload.accountId,
+          account_id: accountId,
           name: payload.name,
           trigger_json: payload.triggerJson,
           action: payload.action,
@@ -34,14 +37,15 @@ export function createHookScopedService(
     },
 
     async list(
-      filters: ListHooksFilters,
+      accountId: string,
+      filters?: ListHooksFilters,
     ): Promise<{ hooks: HookRecord[] }> {
       const { data, error } = await clients.userClient
         .schema('core_automation')
         .from('hooks')
         .select('*')
         .or(
-          `account_id.eq.${filters.accountId},and(is_active.eq.true)`,
+          `account_id.eq.${accountId},and(is_active.eq.true)`,
         )
         .order('created_at', { ascending: false });
 
@@ -66,6 +70,7 @@ export function createHookScopedService(
 
     async update(
       hookId: string,
+      accountId: string,
       payload: UpdateHookPayload,
     ): Promise<HookRecord> {
       const updateData: Record<string, unknown> = {
@@ -83,6 +88,7 @@ export function createHookScopedService(
         .from('hooks')
         .update(updateData)
         .eq('id', hookId)
+        .eq('account_id', accountId)
         .select()
         .single();
 
@@ -90,12 +96,13 @@ export function createHookScopedService(
       return mapRow(data);
     },
 
-    async delete(hookId: string): Promise<{ success: boolean }> {
+    async delete(hookId: string, accountId: string): Promise<{ success: boolean }> {
       const { error } = await clients.adminClient
         .schema('core_automation')
         .from('hooks')
         .delete()
-        .eq('id', hookId);
+        .eq('id', hookId)
+        .eq('account_id', accountId);
 
       if (error) throw new Error('Cannot delete hook');
       return { success: true };
@@ -134,6 +141,7 @@ export function createHookScopedService(
 
     async addEffect(
       hookId: string,
+      accountId: string,
       payload: AddEffectPayload,
     ): Promise<{ success: boolean }> {
       const { error } = await clients.adminClient
@@ -141,6 +149,7 @@ export function createHookScopedService(
         .from('hook_effects')
         .insert({
           hook_id: hookId,
+          account_id: accountId,
           effect_type: payload.effectType,
           effect_id: payload.effectId || null,
           config: payload.config || {},
@@ -152,6 +161,7 @@ export function createHookScopedService(
 
     async removeEffect(
       hookId: string,
+      accountId: string,
       effectType: EffectType,
       effectId: string,
     ): Promise<{ success: boolean }> {
@@ -160,6 +170,7 @@ export function createHookScopedService(
         .from('hook_effects')
         .delete()
         .eq('hook_id', hookId)
+        .eq('account_id', accountId)
         .eq('effect_type', effectType)
         .eq('effect_id', effectId);
 

@@ -6,7 +6,6 @@ export interface ServiceClients {
 }
 
 export interface CreateMcpPayload {
-  accountId: string;
   name: string;
   type: string;
   url?: string;
@@ -39,7 +38,7 @@ export interface McpRecord {
 export interface McpScopedService {
   list(accountId: string): Promise<McpRecord[]>;
   get(mcpId: string): Promise<McpRecord | null>;
-  create(payload: CreateMcpPayload): Promise<McpRecord>;
+  create(accountId: string, payload: CreateMcpPayload): Promise<McpRecord>;
   update(mcpId: string, payload: UpdateMcpPayload): Promise<McpRecord>;
   delete(mcpId: string): Promise<{ success: boolean }>;
 }

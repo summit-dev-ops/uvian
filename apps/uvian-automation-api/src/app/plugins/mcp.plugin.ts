@@ -44,6 +44,7 @@ import {
   addHookEffect,
   removeHookEffect,
   listHookEffects,
+  getAccountIdFromUserId,
 } from '../commands';
 import { generateRSAKeyPair, decryptRSA } from '@org/utils-encryption';
 import jwt from 'jsonwebtoken';
@@ -135,11 +136,12 @@ function extractUserIdFromJwt(token: string): string {
 export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
   async function createAuthenticatedServer(
     userId: string,
-    accountId: string,
     userJwt: string,
   ): Promise<McpServer> {
     const userClient = createUserClient(userJwt);
     const clients = { adminClient: adminSupabase, userClient };
+
+    const accountId = await getAccountIdFromUserId(clients, userId);
 
     const server = new McpServer(
       {
@@ -172,7 +174,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { secret } = await createSecret(
             clients,
             {
-              accountId,
               name: `${args.name}_private_key`,
               valueType: 'text',
               value: keyPair.privateKey,
@@ -269,7 +270,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           await deleteSecret(
             clients,
-            { accountId, secretId: args.secretId },
+            { secretId: args.secretId },
             { eventEmitter: fastify.eventEmitter },
           );
           return {
@@ -468,7 +469,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const { llm } = await createLlm(
             clients,
-            { ...args, accountId },
+            { ...args },
             { eventEmitter: fastify.eventEmitter },
           );
           return { content: [{ type: 'text', text: JSON.stringify(llm) }] };
@@ -536,7 +537,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const { mcp } = await createMcp(
             clients,
-            { ...args, accountId },
+            { ...args },
           );
           return { content: [{ type: 'text', text: JSON.stringify(mcp) }] };
         } catch (error) {
@@ -725,7 +726,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { skill } = await createSkill(
             clients,
             {
-              accountId,
               name: args.name,
               description: args.description,
               content: args.content,
@@ -801,7 +801,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { skillId, ...updateData } = args;
           const { skill } = await updateSkill(
             clients,
-            { skillId, accountId, ...updateData },
+            { skillId, ...updateData },
             { eventEmitter: fastify.eventEmitter },
           );
           return { content: [{ type: 'text', text: JSON.stringify(skill) }] };
@@ -823,7 +823,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           await deleteSkill(
             clients,
-            { skillId: args.skillId, accountId },
+            { skillId: args.skillId },
             { eventEmitter: fastify.eventEmitter },
           );
           return {
@@ -1257,12 +1257,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
           const { hook } = await createHook(clients, {
-            accountId,
             name: args.name,
             triggerJson: args.triggerJson,
             action: args.action,
@@ -1294,7 +1289,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { hooks } = await listHooks(clients, {
-            accountId,
             isActive: args.isActive,
           });
           return {
@@ -1323,7 +1317,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { hook } = await getHook(clients, {
-            accountId,
             hookId: args.hookId,
           });
           return {
@@ -1360,7 +1353,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { hook } = await updateHook(clients, {
-            accountId,
             hookId: args.hookId,
             name: args.name,
             triggerJson: args.triggerJson,
@@ -1394,7 +1386,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await deleteHook(clients, {
-            accountId,
             hookId: args.hookId,
           });
           return {
@@ -1424,7 +1415,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await linkHook(clients, {
-            accountId,
             hookId: args.hookId,
             agentId: args.agentId,
           });
@@ -1455,7 +1445,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await unlinkHook(clients, {
-            accountId,
             hookId: args.hookId,
             agentId: args.agentId,
           });
@@ -1488,7 +1477,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await addHookEffect(clients, {
-            accountId,
             hookId: args.hookId,
             effectType: args.effectType,
             effectId: args.effectId,
@@ -1522,7 +1510,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await removeHookEffect(clients, {
-            accountId,
             hookId: args.hookId,
             effectType: args.effectType,
             effectId: args.effectId,
@@ -1553,7 +1540,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { effects } = await listHookEffects(clients, {
-            accountId,
             hookId: args.hookId,
           });
           return {
@@ -1590,7 +1576,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       }
 
       let userId: string;
-      let accountId = '';
       let userJwt: string;
 
       if (token.startsWith('sk_agent_')) {
@@ -1602,17 +1587,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         }
         userId = result.userId;
         userJwt = result.jwt;
-
-        const clients = { adminClient: adminSupabase, userClient: adminSupabase };
-        const agent = await agentConfigService
-          .scoped(clients)
-          .getByUserId(userId);
-        if (!agent) {
-          return reply
-            .code(401)
-            .send({ error: 'Unauthorized', message: 'Agent not found' });
-        }
-        accountId = agent.accountId;
       } else {
         const jwtSecret = process.env.SUPABASE_JWT_SECRET;
         if (!jwtSecret) {
@@ -1638,26 +1612,11 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         }
 
         userId = decoded.sub;
-        accountId = (decoded as Record<string, unknown>)?.account_id as string;
         userJwt = token;
-
-        if (!accountId) {
-          const clients = { adminClient: adminSupabase, userClient: adminSupabase };
-          const agent = await agentConfigService
-            .scoped(clients)
-            .getByUserId(userId);
-          if (!agent) {
-            return reply
-              .code(401)
-              .send({ error: 'Unauthorized', message: 'Agent not found' });
-          }
-          accountId = agent.accountId;
-        }
       }
 
       const server = await createAuthenticatedServer(
         userId,
-        accountId,
         userJwt,
       );
       const transport = new StreamableHTTPServerTransport({

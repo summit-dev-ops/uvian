@@ -34,12 +34,15 @@ export function createMcpScopedService(
       return mapRow(data);
     },
 
-    async create(payload: CreateMcpPayload): Promise<McpRecord> {
+    async create(
+      accountId: string,
+      payload: CreateMcpPayload,
+    ): Promise<McpRecord> {
       const { data, error } = await clients.adminClient
         .schema('core_automation')
         .from('mcps')
         .insert({
-          account_id: payload.accountId,
+          account_id: accountId,
           name: payload.name,
           type: payload.type,
           url: payload.url || null,

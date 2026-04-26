@@ -6,7 +6,6 @@ export interface ServiceClients {
 }
 
 export interface CreateLlmPayload {
-  accountId: string;
   name: string;
   type: string;
   provider: string;
@@ -51,7 +50,7 @@ export interface LlmRecord {
 export interface LlmScopedService {
   list(accountId: string): Promise<LlmRecord[]>;
   get(llmId: string): Promise<LlmRecord | null>;
-  create(payload: CreateLlmPayload): Promise<LlmRecord>;
+  create(accountId: string, payload: CreateLlmPayload): Promise<LlmRecord>;
   update(llmId: string, payload: UpdateLlmPayload): Promise<LlmRecord>;
   delete(llmId: string): Promise<{ success: boolean }>;
 }

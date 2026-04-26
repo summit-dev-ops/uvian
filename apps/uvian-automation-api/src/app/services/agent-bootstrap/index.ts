@@ -151,8 +151,7 @@ async function bootstrapLlms(
       if (existingLlm) {
         llmId = existingLlm.id;
       } else {
-        const created = await llmService.scoped(clients).create({
-          accountId,
+        const created = await llmService.scoped(clients).create(accountId, {
           name: config.name,
           type: config.type,
           provider: config.type,

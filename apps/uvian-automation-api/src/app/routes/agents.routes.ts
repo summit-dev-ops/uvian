@@ -116,7 +116,6 @@ export default async function agentRoutes(fastify: FastifyInstance) {
         });
 
         await createSecret(clients, {
-          accountId: account_id,
           name: 'Uvian Hub API Key',
           valueType: 'text',
           value: encryptedApiKey,
@@ -128,7 +127,6 @@ export default async function agentRoutes(fastify: FastifyInstance) {
         let mcpId: string;
         try {
           const { mcp } = await createMcp(clients, {
-            accountId: account_id,
             name: 'Uvian Hub',
             type: 'external',
             authMethod: 'bearer',

@@ -10,7 +10,6 @@ export type TriggerJson =
   | { type: 'tool_name_prefix'; pattern: string };
 
 export interface CreateHookPayload {
-  accountId: string;
   name: string;
   triggerJson: TriggerJson;
   action: 'interrupt' | 'log' | 'block';
@@ -37,16 +36,15 @@ export interface HookRecord {
 }
 
 export interface ListHooksFilters {
-  accountId: string;
   isActive?: boolean;
 }
 
 export interface HookScopedService {
-  create(payload: CreateHookPayload): Promise<{ hookId: string }>;
-  list(filters?: ListHooksFilters): Promise<{ hooks: HookRecord[] }>;
+  create(accountId: string, payload: CreateHookPayload): Promise<{ hookId: string }>;
+  list(accountId: string, filters?: ListHooksFilters): Promise<{ hooks: HookRecord[] }>;
   get(hookId: string): Promise<HookRecord | null>;
-  update(hookId: string, payload: UpdateHookPayload): Promise<HookRecord>;
-  delete(hookId: string): Promise<{ success: boolean }>;
+  update(hookId: string, accountId: string, payload: UpdateHookPayload): Promise<HookRecord>;
+  delete(hookId: string, accountId: string): Promise<{ success: boolean }>;
   linkToAgent(hookId: string, agentId: string): Promise<{ success: boolean }>;
   unlinkFromAgent(
     hookId: string,
@@ -54,10 +52,12 @@ export interface HookScopedService {
   ): Promise<{ success: boolean }>;
   addEffect(
     hookId: string,
+    accountId: string,
     payload: AddEffectPayload,
   ): Promise<{ success: boolean }>;
   removeEffect(
     hookId: string,
+    accountId: string,
     effectType: EffectType,
     effectId: string,
   ): Promise<{ success: boolean }>;

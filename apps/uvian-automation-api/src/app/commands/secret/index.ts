@@ -4,13 +4,13 @@ import {
   CreateSecretPayload,
 } from '@org/services-secrets';
 import type { CommandContext } from '../types';
+import { getUserIdFromClient, getAccountIdFromUserId } from '../account-utils';
 
 const secretsService = createSecretsService({
   encryptionSecret: process.env.SECRET_INTERNAL_API_KEY!,
 });
 
 export interface CreateSecretCommandInput {
-  accountId: string;
   name: string;
   valueType: CreateSecretPayload['valueType'];
   value: string;
@@ -26,7 +26,10 @@ export async function createSecret(
   input: CreateSecretCommandInput,
   context?: CommandContext,
 ): Promise<CreateSecretCommandOutput> {
-  const secret = await secretsService.scoped(clients).create(input.accountId, {
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
+  const secret = await secretsService.scoped(clients).create(accountId, {
     name: input.name,
     valueType: input.valueType,
     value: input.value,
@@ -36,7 +39,6 @@ export async function createSecret(
 }
 
 export interface DeleteSecretCommandInput {
-  accountId: string;
   secretId: string;
 }
 
@@ -49,6 +51,9 @@ export async function deleteSecret(
   input: DeleteSecretCommandInput,
   context?: CommandContext,
 ): Promise<DeleteSecretCommandOutput> {
-  await secretsService.scoped(clients).delete(input.accountId, input.secretId);
+  const userId = await getUserIdFromClient(clients);
+  const accountId = await getAccountIdFromUserId(clients, userId);
+
+  await secretsService.scoped(clients).delete(accountId, input.secretId);
   return { success: true };
 }
