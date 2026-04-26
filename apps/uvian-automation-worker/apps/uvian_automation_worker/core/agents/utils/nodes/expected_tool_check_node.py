@@ -20,7 +20,7 @@ def create_expected_tool_check_node():
         
         if not expected:
             log.debug("expected_tool_check_no_expectations", node="expected_tool_check_node")
-            return Command(goto="cleanup_node")
+            return {}
         
         pending_list = sorted({e.get("pattern") for e in expected if e.get("pattern")})
         log.debug(
@@ -32,6 +32,6 @@ def create_expected_tool_check_node():
         reminder = HumanMessage(
             content=f"The following actions are expected but not yet performed: {', '.join(pending_list)}"
         )
-        return Command(update={"messages": [reminder]}, goto="model_node")
+        return Command(update={"messages": [reminder]}, goto="sync_node")
     
     return check_node
