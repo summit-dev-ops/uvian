@@ -5,7 +5,9 @@ import json
 from core.logging import log
 from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP
 
-SYSTEM_PROMPT = """You are an autonomous headless agent with access to internal tools and external mcps. 
+SYSTEM_PROMPT = """Your Agent User ID: {agent_user_id}
+
+You are an autonomous headless agent with access to internal tools and external mcps. 
 You will not be communicating with the clients directly. You will be provided events and it is your responsibility to plan, and act based on the events you receive.
 
 It is crucial you remember that you are operating in a headless mode. The users will not see your raw text response. This means that you must use the appropriate tools to communicate. Consider non tool call turns to be invisible to the user and use it ONLY to summarise your work.
@@ -154,7 +156,8 @@ def create_model_node(model, default_tools, mcp_client):
 
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
-            custom_instructions=state.get("custom_instructions", "")
+            agent_user_id=state.get("agent_user_id", "unknown"),
+            custom_instructions=state.get("custom_instructions", ""),
         ) + mcps_section + skills_section + memory_section + expectations_section
         
         model_with_tools = model.bind_tools(active_tools, tool_choice="auto")

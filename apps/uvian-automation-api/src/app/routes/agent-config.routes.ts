@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase, createUserClient } from '../clients/supabase.client';
-import { agentConfigService } from '../services';
+import { agentConfigService, secretsService } from '../services';
 import { createAgent, updateAgent } from '../commands';
 
 function getClients(request: FastifyRequest) {
@@ -12,6 +12,15 @@ function getClients(request: FastifyRequest) {
     adminClient: adminSupabase,
     userClient,
   };
+}
+
+async function getAccountIdFromRequest(request: FastifyRequest): Promise<string> {
+  const userId = request.user?.id;
+  if (!userId) throw new Error('User not authenticated');
+  const clients = getClients(request);
+  const accountId = await secretsService.admin(clients).getAccountIdForUser(userId);
+  if (!accountId) throw new Error('User does not have an account');
+  return accountId;
 }
 
 export default async function agentConfigRoutes(fastify: FastifyInstance) {
@@ -99,10 +108,9 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['userId', 'accountId'],
+          required: ['userId'],
           properties: {
             userId: { type: 'string' },
-            accountId: { type: 'string' },
             systemPrompt: { type: 'string' },
             maxConversationHistory: { type: 'number' },
             config: { type: 'object' },
@@ -113,13 +121,11 @@ export default async function agentConfigRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const clients = {
-          adminClient: adminSupabase,
-          userClient: request.supabase,
-        };
+        const accountId = await getAccountIdFromRequest(request);
+        const clients = getClients(request);
         const body = request.body as any;
 
-        const { agent } = await createAgent(clients, body, {
+        const { agent } = await createAgent(clients, { ...body, accountId }, {
           eventEmitter: fastify.eventEmitter,
         });
 

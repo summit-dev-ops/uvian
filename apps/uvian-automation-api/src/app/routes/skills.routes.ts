@@ -1,15 +1,27 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { skillService } from '../services';
+import { skillService, secretsService } from '../services';
 import { createSkill, updateSkill, deleteSkill } from '../commands';
+
+async function getAccountIdFromRequest(request: FastifyRequest): Promise<string> {
+  const userId = request.user?.id;
+  if (!userId) throw new Error('User not authenticated');
+  const clients = {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+  const accountId = await secretsService.admin(clients).getAccountIdForUser(userId);
+  if (!accountId) throw new Error('User does not have an account');
+  return accountId;
+}
 
 export default async function skillRoutes(fastify: FastifyInstance) {
   fastify.get(
-    '/api/config/skills/:accountId',
+    '/api/config/skills',
     { preHandler: [fastify.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { accountId } = request.params as any as { accountId: string };
+        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
@@ -29,9 +41,8 @@ export default async function skillRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['accountId', 'name', 'description', 'content'],
+          required: ['name', 'description', 'content'],
           properties: {
-            accountId: { type: 'string' },
             name: { type: 'string' },
             description: { type: 'string' },
             content: { type: 'object' },
@@ -43,6 +54,7 @@ export default async function skillRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
@@ -50,7 +62,7 @@ export default async function skillRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
         const { skill } = await createSkill(
           clients,
-          { ...body, accountId: body.accountId },
+          { ...body, accountId },
           { eventEmitter: fastify.eventEmitter },
         );
         return reply.code(201).send({ skill });
@@ -84,6 +96,7 @@ export default async function skillRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
@@ -92,7 +105,7 @@ export default async function skillRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
         const { skill } = await updateSkill(
           clients,
-          { skillId, ...body, accountId: body.accountId || '' },
+          { skillId, accountId, ...body },
           { eventEmitter: fastify.eventEmitter },
         );
         return reply.send({ skill });
@@ -116,15 +129,15 @@ export default async function skillRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
         const { skillId } = request.params as any as { skillId: string };
-        const body = request.body as any;
         await deleteSkill(
           clients,
-          { skillId, accountId: body.accountId || '' },
+          { skillId, accountId },
           { eventEmitter: fastify.eventEmitter },
         );
         return reply.send({ success: true });

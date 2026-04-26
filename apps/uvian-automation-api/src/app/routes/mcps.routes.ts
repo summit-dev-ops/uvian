@@ -1,15 +1,27 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { mcpService } from '../services';
+import { mcpService, secretsService } from '../services';
 import { createMcp, updateMcp, deleteMcp } from '../commands';
+
+async function getAccountIdFromRequest(request: FastifyRequest): Promise<string> {
+  const userId = request.user?.id;
+  if (!userId) throw new Error('User not authenticated');
+  const clients = {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+  const accountId = await secretsService.admin(clients).getAccountIdForUser(userId);
+  if (!accountId) throw new Error('User does not have an account');
+  return accountId;
+}
 
 export default async function mcpRoutes(fastify: FastifyInstance) {
   fastify.get(
-    '/api/config/mcps/:accountId',
+    '/api/config/mcps',
     { preHandler: [fastify.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { accountId } = request.params as any as { accountId: string };
+        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
@@ -29,9 +41,8 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['accountId', 'name', 'type', 'authMethod'],
+          required: ['name', 'type', 'authMethod'],
           properties: {
-            accountId: { type: 'string' },
             name: { type: 'string' },
             type: { type: 'string' },
             url: { type: 'string' },
@@ -44,11 +55,13 @@ export default async function mcpRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdFromRequest(request);
         const clients = {
           adminClient: adminSupabase,
           userClient: request.supabase,
         };
-        const { mcp } = await createMcp(clients, request.body as any);
+        const body = request.body as any;
+        const { mcp } = await createMcp(clients, { ...body, accountId });
         return reply.code(201).send({ mcp });
       } catch (error: any) {
         return reply.code(400).send({ error: error.message });

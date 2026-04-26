@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { adminSupabase } from '../clients/supabase.client';
-import { hookService } from '../services';
+import { hookService, secretsService } from '../services';
 import {
   CreateHookRequest,
   GetHooksRequest,
@@ -11,6 +11,20 @@ import {
   UnlinkHookFromAgentRequest,
 } from '../types/hook.types';
 
+async function getAccountIdFromRequest(
+  request: FastifyRequest,
+): Promise<string> {
+  const userId = request.user?.id;
+  if (!userId) throw new Error('User not authenticated');
+  const clients = {
+    adminClient: adminSupabase,
+    userClient: request.supabase,
+  };
+  const accountId = await secretsService.admin(clients).getAccountIdForUser(userId);
+  if (!accountId) throw new Error('User does not have an account');
+  return accountId;
+}
+
 export default async function (fastify: FastifyInstance) {
   fastify.post<CreateHookRequest>(
     '/api/hooks',
@@ -19,9 +33,8 @@ export default async function (fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['accountId', 'name', 'triggerJson', 'action'],
+          required: ['name', 'triggerJson', 'action'],
           properties: {
-            accountId: { type: 'string' },
             name: { type: 'string' },
             triggerJson: { type: 'object' },
             action: { type: 'string', enum: ['interrupt', 'log', 'block'] },
@@ -33,8 +46,9 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request: FastifyRequest<CreateHookRequest>, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdFromRequest(request);
         const body = request.body || {};
-        const { accountId, name, triggerJson, action, config } = body;
+        const { name, triggerJson, action, config } = body;
 
         const clients = {
           adminClient: adminSupabase,
@@ -62,9 +76,7 @@ export default async function (fastify: FastifyInstance) {
       schema: {
         querystring: {
           type: 'object',
-          required: ['accountId'],
           properties: {
-            accountId: { type: 'string' },
             isActive: { type: 'boolean' },
           },
           additionalProperties: false,
@@ -73,6 +85,7 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request: FastifyRequest<GetHooksRequest>, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdFromRequest(request);
         const query = request.query || {};
 
         const clients = {
@@ -80,7 +93,7 @@ export default async function (fastify: FastifyInstance) {
           userClient: request.supabase,
         };
         const result = await hookService.scoped(clients).list({
-          accountId: query.accountId,
+          accountId,
           isActive: query.isActive,
         });
 

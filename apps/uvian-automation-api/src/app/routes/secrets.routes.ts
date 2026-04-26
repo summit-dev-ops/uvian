@@ -24,12 +24,12 @@ async function getAccountIdForRequest(
 
 export default async function secretsRoutes(fastify: FastifyInstance) {
   fastify.get(
-    '/api/config/secrets/:accountId',
+    '/api/config/secrets',
     { preHandler: [fastify.authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdForRequest(request);
         const clients = getClients(request);
-        const { accountId } = request.params as any as { accountId: string };
         const secrets = await secretsService.scoped(clients).list(accountId);
         return reply.send({ secrets });
       } catch (error: any) {
@@ -45,9 +45,8 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['accountId', 'name', 'valueType', 'value'],
+          required: ['name', 'valueType', 'value'],
           properties: {
-            accountId: { type: 'string' },
             name: { type: 'string' },
             valueType: {
               type: 'string',
@@ -62,9 +61,9 @@ export default async function secretsRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        const accountId = await getAccountIdForRequest(request);
         const clients = getClients(request);
-        const { accountId, name, valueType, value, metadata } =
-          request.body as any;
+        const { name, valueType, value, metadata } = request.body as any;
         const secret = await secretsService
           .scoped(clients)
           .create(accountId, { name, valueType, value, metadata });

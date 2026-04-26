@@ -326,7 +326,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       {
         inputSchema: z.object({
           userId: z.string(),
-          accountId: z.string(),
           systemPrompt: z.string().optional(),
           maxConversationHistory: z.number().optional(),
           config: z.record(z.string(), z.unknown()).optional(),
@@ -338,7 +337,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             clients,
             {
               userId: args.userId,
-              accountId: args.accountId,
+              accountId,
               systemPrompt: args.systemPrompt,
               maxConversationHistory: args.maxConversationHistory,
               config: args.config,
@@ -413,13 +412,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     server.registerTool(
       'list_llms',
       {
-        inputSchema: z.object({ accountId: z.string() }),
+        inputSchema: z.object({}),
       },
-      async (args): Promise<ToolResult> => {
+      async (): Promise<ToolResult> => {
         try {
           const llms = await llmService
             .scoped(clients)
-            .list(args.accountId);
+            .list(accountId);
           return { content: [{ type: 'text', text: JSON.stringify(llms) }] };
         } catch (error) {
           return {
@@ -454,7 +453,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'create_llm',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           name: z.string(),
           type: z.string(),
           provider: z.string(),
@@ -470,7 +468,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const { llm } = await createLlm(
             clients,
-            args,
+            { ...args, accountId },
             { eventEmitter: fastify.eventEmitter },
           );
           return { content: [{ type: 'text', text: JSON.stringify(llm) }] };
@@ -486,13 +484,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     server.registerTool(
       'list_mcps',
       {
-        inputSchema: z.object({ accountId: z.string() }),
+        inputSchema: z.object({}),
       },
-      async (args): Promise<ToolResult> => {
+      async (): Promise<ToolResult> => {
         try {
           const mcps = await mcpService
             .scoped(clients)
-            .list(args.accountId);
+            .list(accountId);
           return { content: [{ type: 'text', text: JSON.stringify(mcps) }] };
         } catch (error) {
           return {
@@ -527,7 +525,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'create_mcp',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           name: z.string(),
           type: z.string(),
           url: z.string().optional(),
@@ -539,7 +536,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         try {
           const { mcp } = await createMcp(
             clients,
-            args,
+            { ...args, accountId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(mcp) }] };
         } catch (error) {
@@ -716,7 +713,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'create_skill',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           name: z.string(),
           description: z.string(),
           content: z.record(z.string(), z.unknown()),
@@ -729,7 +725,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { skill } = await createSkill(
             clients,
             {
-              accountId: args.accountId,
+              accountId,
               name: args.name,
               description: args.description,
               content: args.content,
@@ -750,13 +746,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     server.registerTool(
       'list_skills',
       {
-        inputSchema: z.object({ accountId: z.string() }),
+        inputSchema: z.object({}),
       },
-      async (args): Promise<ToolResult> => {
+      async (): Promise<ToolResult> => {
         try {
           const skills = await skillService
             .scoped(clients)
-            .list(args.accountId);
+            .list(accountId);
           return { content: [{ type: 'text', text: JSON.stringify(skills) }] };
         } catch (error) {
           return {
@@ -792,7 +788,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       {
         inputSchema: z.object({
           skillId: z.string(),
-          accountId: z.string(),
           name: z.string().optional(),
           description: z.string().optional(),
           content: z.record(z.string(), z.unknown()).optional(),
@@ -803,7 +798,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const { skillId, accountId, ...updateData } = args;
+          const { skillId, ...updateData } = args;
           const { skill } = await updateSkill(
             clients,
             { skillId, accountId, ...updateData },
@@ -822,13 +817,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
     server.registerTool(
       'delete_skill',
       {
-        inputSchema: z.object({ skillId: z.string(), accountId: z.string() }),
+        inputSchema: z.object({ skillId: z.string() }),
       },
       async (args): Promise<ToolResult> => {
         try {
           await deleteSkill(
             clients,
-            { skillId: args.skillId, accountId: args.accountId },
+            { skillId: args.skillId, accountId },
             { eventEmitter: fastify.eventEmitter },
           );
           return {
@@ -1251,7 +1246,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'create_hook',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           name: z.string().min(1),
           triggerJson: z.union([
             z.object({ type: z.literal('event'), patterns: z.array(z.string()).min(1) }),
@@ -1268,7 +1262,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { hook } = await createHook(clients, {
-            accountId: args.accountId,
+            accountId,
             name: args.name,
             triggerJson: args.triggerJson,
             action: args.action,
@@ -1290,7 +1284,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'list_hooks',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           isActive: z.boolean().optional(),
         }),
       },
@@ -1301,7 +1294,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { hooks } = await listHooks(clients, {
-            accountId: args.accountId,
+            accountId,
             isActive: args.isActive,
           });
           return {
@@ -1320,7 +1313,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'get_hook',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
         }),
       },
@@ -1331,7 +1323,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { hook } = await getHook(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
           });
           return {
@@ -1350,7 +1342,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'update_hook',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
           name: z.string().min(1).optional(),
           triggerJson: z.union([
@@ -1369,7 +1360,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { hook } = await updateHook(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
             name: args.name,
             triggerJson: args.triggerJson,
@@ -1393,7 +1384,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'delete_hook',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
         }),
       },
@@ -1404,7 +1394,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await deleteHook(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
           });
           return {
@@ -1423,7 +1413,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'link_hook',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
           agentId: z.string(),
         }),
@@ -1435,7 +1424,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await linkHook(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
             agentId: args.agentId,
           });
@@ -1455,7 +1444,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'unlink_hook',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
           agentId: z.string(),
         }),
@@ -1467,7 +1455,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await unlinkHook(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
             agentId: args.agentId,
           });
@@ -1487,7 +1475,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'add_hook_effect',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
           effectType: z.enum(['load_mcp', 'load_skill', 'expect_tool_call']),
           effectId: z.string().optional(),
@@ -1501,7 +1488,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await addHookEffect(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
             effectType: args.effectType,
             effectId: args.effectId,
@@ -1523,7 +1510,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'remove_hook_effect',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
           effectType: z.enum(['load_mcp', 'load_skill', 'expect_tool_call']),
           effectId: z.string(),
@@ -1536,7 +1522,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { success } = await removeHookEffect(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
             effectType: args.effectType,
             effectId: args.effectId,
@@ -1557,7 +1543,6 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       'list_hook_effects',
       {
         inputSchema: z.object({
-          accountId: z.string(),
           hookId: z.string(),
         }),
       },
@@ -1568,7 +1553,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
             userClient: adminSupabase,
           };
           const { effects } = await listHookEffects(clients, {
-            accountId: args.accountId,
+            accountId,
             hookId: args.hookId,
           });
           return {
