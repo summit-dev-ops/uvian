@@ -7,7 +7,8 @@ export interface ServiceClients {
 
 export type TriggerJson =
   | { type: 'event'; patterns: string[] }
-  | { type: 'tool_name_prefix'; pattern: string };
+  | { type: 'tool_name_prefix'; pattern: string }
+  | { type: 'keyword'; keywords: string[] };
 
 export interface CreateHookPayload {
   name: string;

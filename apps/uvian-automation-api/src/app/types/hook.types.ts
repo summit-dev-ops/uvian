@@ -1,4 +1,4 @@
-export type TriggerType = 'event' | 'tool_name_prefix';
+export type TriggerType = 'event' | 'tool_name_prefix' | 'keyword';
 
 export interface TriggerJsonEvent {
   type: 'event';
@@ -10,7 +10,12 @@ export interface TriggerJsonToolNamePrefix {
   pattern: string;
 }
 
-export type TriggerJson = TriggerJsonEvent | TriggerJsonToolNamePrefix;
+export interface TriggerJsonKeyword {
+  type: 'keyword';
+  keywords: string[];
+}
+
+export type TriggerJson = TriggerJsonEvent | TriggerJsonToolNamePrefix | TriggerJsonKeyword;
 
 export interface Hook {
   id: string;

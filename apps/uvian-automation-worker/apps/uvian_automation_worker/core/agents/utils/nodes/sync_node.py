@@ -18,7 +18,7 @@ from langchain_core.runnables import RunnableConfig
 from clients.mcp import PersistentMCPClient
 from repositories.thread_inbox import thread_inbox_repository
 from repositories.agent_memory import agent_memory_repository
-from core.agents.utils.loader import transform_event, get_hooks_for_event
+from core.agents.utils.loader import transform_pending_messages, get_hooks_for_transformed_events
 from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP, MCPServerConfig
 from core.logging import log
 
@@ -49,7 +49,31 @@ def create_sync_node(mcp_client: PersistentMCPClient):
         all_skills = config.get("configurable", {}).get("all_skills", [])
         all_hooks = config.get("configurable", {}).get("available_hooks", [])
 
-# ============================================
+        # ============================================
+        # TRANSFORM MESSAGES
+        # ============================================
+        # Single transformation pass - creates TransformedEvent objects for keyword matching
+        transformed_events = transform_pending_messages(pending_messages, agent_user_id)
+        
+        # Build HumanMessages and track metadata
+        new_messages: List[HumanMessage] = [HumanMessage(content=e.content) for e in transformed_events]
+        processed_ids = [e.message_id for e in transformed_events]
+        pending_tool_approval_cleared = any(
+            e.event_type == "com.uvian.ticket.ticket_resolved" and e.payload.get("approvalStatus") == "approved"
+            for e in transformed_events
+        )
+        event_types = list(set(e.event_type for e in transformed_events))
+        
+        if processed_ids:
+            await thread_inbox_repository.mark_processed(processed_ids)
+        
+        if pending_tool_approval_cleared:
+            log.info(
+                "tool_approval_resolved",
+                node="sync_node",
+            )
+
+        # ============================================
         # DETERMINE MCPs TO LOAD
         # ============================================
         # Step 1: Extract current loaded_mcps from state
@@ -59,8 +83,8 @@ def create_sync_node(mcp_client: PersistentMCPClient):
         # Get MCP configs from current state
         state_mcp_configs = _get_mcp_configs_by_names(state_mcp_names, all_mcp_configs)
 
-        # Step 2: Extract to-be-loaded mcps from events
-        event_mcp_configs = _get_mcp_configs_from_events(pending_messages, all_hooks, all_mcp_configs)
+        # Step 2: Extract to-be-loaded mcps from transformed events (with event + keyword matching)
+        event_mcp_configs = _get_mcp_configs_from_events(transformed_events, all_hooks, all_mcp_configs)
 
         # Step 3: Filter - remove already-loaded from to-be-loaded
         mcp_configs_to_load = [c for c in event_mcp_configs if c.get("name") not in state_mcp_names]
@@ -128,43 +152,12 @@ def create_sync_node(mcp_client: PersistentMCPClient):
                 await mcp_client.fetch_all_metadata()
 
         # ============================================
-        # PROCESS MESSAGES
-        # ============================================
-        new_messages: List[HumanMessage] = []
-        processed_ids: List[str] = []
-        pending_tool_approval_cleared = False
-        event_types: List[str] = []
-
-        for msg_data in pending_messages:
-            event_type = msg_data["event_type"]
-            payload = msg_data["payload"]
-            message_id = msg_data["id"]
-            event_types.append(event_type)
-
-            if event_type == "com.uvian.ticket.ticket_resolved":
-                if payload.get("approvalStatus") == "approved":
-                    pending_tool_approval_cleared = True
-                    log.info(
-                        "tool_approval_resolved",
-                        ticket_id=payload.get("ticketId"),
-                        tool_name=payload.get("toolName"),
-                        node="sync_node",
-                    )
-
-            event_message = transform_event(event_type, payload, agent_user_id)
-            new_messages.append(event_message if event_message else HumanMessage(content=f"Event received: {event_type}"))
-            processed_ids.append(message_id)
-
-        if processed_ids:
-            await thread_inbox_repository.mark_processed(processed_ids)
-
-        # ============================================
         # LOAD SKILLS
         # ============================================
         loaded_skills = state.get("loaded_skills", [])
-        new_skills = _get_skills_from_events(pending_messages, all_hooks, all_skills, loaded_skills)
+        new_skills = _get_skills_from_events(transformed_events, all_hooks, all_skills, loaded_skills)
 
-        expected_tool_calls = _get_expected_tool_calls_from_events(pending_messages, all_hooks)
+        expected_tool_calls = _get_expected_tool_calls_from_events(transformed_events, all_hooks)
 
         # ============================================
         # BUILD RESULT
@@ -227,60 +220,34 @@ def _get_mcp_configs_by_names(names: Set[str], all_configs: List[MCPServerConfig
 
 
 def _get_mcp_configs_from_events(
-    pending_messages: List[Dict[str, Any]],
+    transformed_events,
     all_hooks: List[Dict[str, Any]],
     all_mcp_configs: List[MCPServerConfig]
 ) -> List[MCPServerConfig]:
-    """Determine MCP configs to load based on event types (via hooks)."""
-    if not pending_messages:
+    """Determine MCP configs to load based on event types and keywords (via hooks)."""
+    if not transformed_events:
         return []
 
-    event_types = list(set(msg["event_type"] for msg in pending_messages))
-
-    mcp_ids_to_load: Set[str] = set()
-    for event_type in event_types:
-        hooks_result = get_hooks_for_event(event_type, all_hooks)
-        for effect in hooks_result.get("load_mcp", []):
-            effect_id = effect.get("effect_id")
-            if effect_id:
-                mcp_ids_to_load.add(effect_id)
+    hooks_result = get_hooks_for_transformed_events(transformed_events, all_hooks)
+    mcp_ids_to_load = {e.get("effect_id") for e in hooks_result.get("load_mcp", []) if e.get("effect_id")}
 
     return [c for c in all_mcp_configs if c.get("id") in mcp_ids_to_load]
 
 
-def _deduplicate_configs(configs: List[MCPServerConfig]) -> List[MCPServerConfig]:
-    """Deduplicate MCP configs by ID."""
-    seen: Set[str] = set()
-    result: List[MCPServerConfig] = []
-    for cfg in configs:
-        mcp_id = cfg.get("id")
-        if mcp_id and mcp_id not in seen:
-            seen.add(mcp_id)
-            result.append(cfg)
-    return result
-
-
 def _get_skills_from_events(
-    pending_messages: List[Dict[str, Any]],
+    transformed_events,
     all_hooks: List[Dict[str, Any]],
     all_skills: List[Dict[str, Any]],
     loaded_skills: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
-    """Determine skills to load based on event types (via hooks), filtering already-loaded."""
-    if not pending_messages:
+    """Determine skills to load based on event types and keywords (via hooks), filtering already-loaded."""
+    if not transformed_events:
         return []
 
     loaded_skill_names = {s.get("name") for s in loaded_skills if isinstance(s, dict) and s.get("name")}
 
-    event_types = list(set(msg["event_type"] for msg in pending_messages))
-
-    skill_ids_to_load: Set[str] = set()
-    for event_type in event_types:
-        hooks_result = get_hooks_for_event(event_type, all_hooks)
-        for effect in hooks_result.get("load_skill", []):
-            effect_id = effect.get("effect_id")
-            if effect_id:
-                skill_ids_to_load.add(effect_id)
+    hooks_result = get_hooks_for_transformed_events(transformed_events, all_hooks)
+    skill_ids_to_load = {e.get("effect_id") for e in hooks_result.get("load_skill", []) if e.get("effect_id")}
 
     return [
         s for s in all_skills
@@ -289,31 +256,24 @@ def _get_skills_from_events(
 
 
 def _get_expected_tool_calls_from_events(
-    pending_messages: List[Dict[str, Any]],
+    transformed_events,
     all_hooks: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
-    """Get expected tool calls from hooks based on event types."""
-    if not pending_messages:
+    """Get expected tool calls from hooks based on event types and keywords."""
+    if not transformed_events:
         return []
 
-    event_types = list(set(msg["event_type"] for msg in pending_messages))
-
-    expected: List[Dict[str, Any]] = []
-    seen: Set[str] = set()
-
-    for event_type in event_types:
-        hooks_result = get_hooks_for_event(event_type, all_hooks)
-        for effect in hooks_result.get("expected_tool_calls", []):
-            pattern = effect.get("pattern")
-            if pattern and pattern not in seen:
-                seen.add(pattern)
-                expected.append({
-                    "pattern": pattern,
-                    "source_hook": effect.get("source_hook", "unknown"),
-                    "event_type": event_type,
-                })
-
-    return expected
+    hooks_result = get_hooks_for_transformed_events(transformed_events, all_hooks)
+    expected = hooks_result.get("expected_tool_calls", [])
+    
+    return [
+        {
+            "pattern": e.get("pattern"),
+            "source_hook": e.get("source_hook", "unknown"),
+            "event_type": e.get("event_type", ""),
+        }
+        for e in expected
+    ]
 
 
 def _build_available_mcps(
