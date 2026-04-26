@@ -1602,6 +1602,17 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
         }
         userId = result.userId;
         userJwt = result.jwt;
+
+        const clients = { adminClient: adminSupabase, userClient: adminSupabase };
+        const agent = await agentConfigService
+          .scoped(clients)
+          .getByUserId(userId);
+        if (!agent) {
+          return reply
+            .code(401)
+            .send({ error: 'Unauthorized', message: 'Agent not found' });
+        }
+        accountId = agent.accountId;
       } else {
         const jwtSecret = process.env.SUPABASE_JWT_SECRET;
         if (!jwtSecret) {
