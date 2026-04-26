@@ -16,6 +16,7 @@ This consolidates logic previously spread across:
 from typing import Dict, Any, List
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
+from clients.mcp import PersistentMCPClient
 from repositories.thread_inbox import thread_inbox_repository
 from repositories.agent_memory import agent_memory_repository
 from core.agents.utils.loader import transform_event, get_hooks_for_event
@@ -23,7 +24,7 @@ from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP, MCPServerConfig
 from core.logging import log
 
 
-def create_sync_node(mcp_client):
+def create_sync_node(mcp_client: PersistentMCPClient):
     async def sync_node(state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
         """Synchronize agent state at start of each iteration.
         
@@ -66,6 +67,9 @@ def create_sync_node(mcp_client):
         
         pending_messages = await thread_inbox_repository.fetch_pending_messages(thread_id)
         
+        memory_result = await _fetch_agent_memory(state)
+        all_mcp_configs = config.get("configurable", {}).get("all_mcp_configs", [])
+        
         if not pending_messages:
             log.debug(
                 "sync_node_no_pending_messages",
@@ -75,8 +79,62 @@ def create_sync_node(mcp_client):
                 execution_id=execution_id,
                 node="sync_node",
             )
-            memory_result = await _fetch_agent_memory(state)
-            all_mcp_configs = config.get("configurable", {}).get("all_mcp_configs", [])
+            
+            loaded_mcps = state.get("loaded_mcps", [])
+            loaded_mcp_names = {m.get("name") for m in loaded_mcps if isinstance(m, dict) and m.get("name")}
+            
+            if loaded_mcp_names and mcp_client:
+                relevant_mcp_configs = []
+                for mcp_name in loaded_mcp_names:
+                    mcp_cfg = next(
+                        (c for c in all_mcp_configs if c.get("name") == mcp_name),
+                        None
+                    )
+                    if mcp_cfg:
+                        relevant_mcp_configs.append(mcp_cfg)
+                
+                if relevant_mcp_configs:
+                    for cfg in relevant_mcp_configs:
+                        try:
+                            mcp_id = cfg.get("id")
+                            if mcp_id:
+                                await mcp_client.connect(mcp_id)
+                        except Exception as e:
+                            log.warning("mcp_connect_failed", mcp_id=cfg.get("id"), error=str(e), node="sync_node")
+                    
+                    for cfg in relevant_mcp_configs:
+                        try:
+                            mcp_id = cfg.get("id")
+                            if mcp_id:
+                                await mcp_client.get_tools_for_mcp(mcp_id)
+                        except Exception as e:
+                            log.warning("mcp_load_tools_failed", mcp_id=cfg.get("id"), error=str(e), node="sync_node")
+            
+            updated_loaded_mcps = []
+            if loaded_mcp_names and mcp_client and all_mcp_configs:
+                for mcp_name in loaded_mcp_names:
+                    original_entry = next(
+                        (m for m in loaded_mcps if isinstance(m, dict) and m.get("name") == mcp_name),
+                        None
+                    )
+                    mcp_cfg = next(
+                        (c for c in all_mcp_configs if c.get("name") == mcp_name),
+                        None
+                    )
+                    if mcp_cfg:
+                        mcp_id = mcp_cfg.get("id")
+                        if mcp_id:
+                            raw_tools = await mcp_client.get_tools_for_mcp(mcp_id)
+                            tools = [
+                                {"name": t.name, "description": t.description or ""}
+                                for t in raw_tools
+                            ]
+                            updated_loaded_mcps.append({
+                                "name": mcp_name,
+                                "description": original_entry.get("description", "") if original_entry else "",
+                                "tools": tools
+                            })
+            
             available_mcps = [
                 {
                     "id": cfg.get("id"),
@@ -88,6 +146,7 @@ def create_sync_node(mcp_client):
             ]
             return {
                 "available_mcps": available_mcps,
+                "loaded_mcps": updated_loaded_mcps,
                 **memory_result
             }
         

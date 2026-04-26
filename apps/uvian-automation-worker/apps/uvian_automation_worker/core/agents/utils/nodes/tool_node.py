@@ -88,6 +88,7 @@ from langgraph.store.base import BaseStore  # noqa: TC002
 from langgraph.types import Command, Send, StreamWriter
 from pydantic import BaseModel, ValidationError
 from typing_extensions import TypeVar, Unpack
+from clients.mcp import PersistentMCPClient
 from core.logging import log
 
 if TYPE_CHECKING:
@@ -789,7 +790,7 @@ class ToolNode(RunnableCallable):
         messages_key: str = "messages",
         wrap_tool_call: ToolCallWrapper | None = None,
         awrap_tool_call: AsyncToolCallWrapper | None = None,
-        mcp_client: Any = None,
+        mcp_client: PersistentMCPClient = None,
     ) -> None:
         """Initialize `ToolNode` with tools and configuration.
 
