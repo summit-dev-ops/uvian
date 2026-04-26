@@ -92,7 +92,12 @@ def create_sync_node(mcp_client: PersistentMCPClient):
                     failed_mcp_ids.append(mcp_id)
                     continue
 
-                if is_new_mcp or needs_tools:
+                # Check if tools are actually in the mcp_client cache
+                # On checkpoint restore, state may have tool metadata but the cache is empty (fresh client)
+                cache_has_tools = bool(mcp_client._tool_cache.get(mcp_id))
+                cache_needs_load = not cache_has_tools
+
+                if is_new_mcp or needs_tools or cache_needs_load:
                     try:
                         raw_tools = await mcp_client.load_tools_for_mcp(mcp_id)
                         tools = [{"name": t.name, "description": t.description or ""} for t in raw_tools]
