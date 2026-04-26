@@ -65,11 +65,15 @@ def create_sync_node(mcp_client: PersistentMCPClient):
         loaded_mcps_entries: List[LoadedMCP] = []
         failed_mcp_ids: List[str] = []
 
+        state_mcp_ids = {c.get("id") for c in state_mcp_configs if c.get("id")}
+
         if mcp_client:
             for cfg in mcp_configs_to_load:
                 mcp_id = cfg.get("id")
                 if not mcp_id:
                     continue
+
+                is_new_mcp = mcp_id not in state_mcp_ids
 
                 try:
                     await mcp_client.connect(mcp_id)
@@ -79,17 +83,18 @@ def create_sync_node(mcp_client: PersistentMCPClient):
                     failed_mcp_ids.append(mcp_id)
                     continue
 
-                try:
-                    raw_tools = await mcp_client.load_tools_for_mcp(mcp_id)
-                    tools = [{"name": t.name, "description": t.description or ""} for t in raw_tools]
-                    loaded_mcps_entries.append({
-                        "name": cfg.get("name", mcp_id),
-                        "description": cfg.get("usage_guidance", ""),
-                        "tools": tools
-                    })
-                except Exception as e:
-                    log.warning("mcp_load_tools_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
-                    failed_mcp_ids.append(mcp_id)
+                if is_new_mcp:
+                    try:
+                        raw_tools = await mcp_client.load_tools_for_mcp(mcp_id)
+                        tools = [{"name": t.name, "description": t.description or ""} for t in raw_tools]
+                        loaded_mcps_entries.append({
+                            "name": cfg.get("name", mcp_id),
+                            "description": cfg.get("usage_guidance", ""),
+                            "tools": tools
+                        })
+                    except Exception as e:
+                        log.warning("mcp_load_tools_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
+                        failed_mcp_ids.append(mcp_id)
 
             if connected_mcp_names:
                 await mcp_client.fetch_all_metadata()
