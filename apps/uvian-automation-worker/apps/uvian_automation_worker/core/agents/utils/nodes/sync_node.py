@@ -49,21 +49,21 @@ def create_sync_node(mcp_client: PersistentMCPClient):
         all_skills = config.get("configurable", {}).get("all_skills", [])
         all_hooks = config.get("configurable", {}).get("available_hooks", [])
 
-        # ============================================
+# ============================================
         # DETERMINE MCPs TO LOAD
         # ============================================
+        # Step 1: Extract current loaded_mcps from state
         state_loaded_mcps = state.get("loaded_mcps", [])
         state_mcp_names = _get_mcp_names_from_state(state_loaded_mcps)
 
-        state_mcps_without_tools = {
-            m.get("name") for m in state_loaded_mcps
-            if isinstance(m, dict) and m.get("name") and not m.get("tools")
-        }
-
-        event_mcp_configs = _get_mcp_configs_from_events(pending_messages, all_hooks, all_mcp_configs)
+        # Get MCP configs from current state
         state_mcp_configs = _get_mcp_configs_by_names(state_mcp_names, all_mcp_configs)
 
-        mcp_configs_to_load = _deduplicate_configs(event_mcp_configs + state_mcp_configs)
+        # Step 2: Extract to-be-loaded mcps from events
+        event_mcp_configs = _get_mcp_configs_from_events(pending_messages, all_hooks, all_mcp_configs)
+
+        # Step 3: Filter - remove already-loaded from to-be-loaded
+        mcp_configs_to_load = [c for c in event_mcp_configs if c.get("name") not in state_mcp_names]
 
         # ============================================
         # CONNECT AND LOAD MCPs
@@ -72,17 +72,13 @@ def create_sync_node(mcp_client: PersistentMCPClient):
         loaded_mcps_entries: List[LoadedMCP] = []
         failed_mcp_ids: List[str] = []
 
-        state_mcp_ids = {c.get("id") for c in state_mcp_configs if c.get("id")}
-
         if mcp_client:
-            for cfg in mcp_configs_to_load:
+            # Step 4: Iterate over current loaded_mcps - ensure connected + tools loaded
+            for cfg in state_mcp_configs:
                 mcp_id = cfg.get("id")
                 mcp_name = cfg.get("name", "")
                 if not mcp_id:
                     continue
-
-                is_new_mcp = mcp_id not in state_mcp_ids
-                needs_tools = mcp_name in state_mcps_without_tools
 
                 try:
                     await mcp_client.connect(mcp_id)
@@ -92,23 +88,41 @@ def create_sync_node(mcp_client: PersistentMCPClient):
                     failed_mcp_ids.append(mcp_id)
                     continue
 
-                # Check if tools are actually in the mcp_client cache
-                # On checkpoint restore, state may have tool metadata but the cache is empty (fresh client)
+                # Verify tools are loaded in cache
                 cache_has_tools = bool(mcp_client._tool_cache.get(mcp_id))
-                cache_needs_load = not cache_has_tools
-
-                if is_new_mcp or needs_tools or cache_needs_load:
+                if not cache_has_tools:
                     try:
                         raw_tools = await mcp_client.load_tools_for_mcp(mcp_id)
-                        tools = [{"name": t.name, "description": t.description or ""} for t in raw_tools]
-                        loaded_mcps_entries.append({
-                            "name": mcp_name or mcp_id,
-                            "description": cfg.get("usage_guidance", ""),
-                            "tools": tools
-                        })
                     except Exception as e:
                         log.warning("mcp_load_tools_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
                         failed_mcp_ids.append(mcp_id)
+
+            # Step 5: Connect NEW filtered mcps
+            for cfg in mcp_configs_to_load:
+                mcp_id = cfg.get("id")
+                mcp_name = cfg.get("name", "")
+                if not mcp_id:
+                    continue
+
+                try:
+                    await mcp_client.connect(mcp_id)
+                    connected_mcp_names.append(mcp_name or mcp_id)
+                except Exception as e:
+                    log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
+                    failed_mcp_ids.append(mcp_id)
+                    continue
+
+                try:
+                    raw_tools = await mcp_client.load_tools_for_mcp(mcp_id)
+                    tools = [{"name": t.name, "description": t.description or ""} for t in raw_tools]
+                    loaded_mcps_entries.append({
+                        "name": mcp_name or mcp_id,
+                        "description": cfg.get("usage_guidance", ""),
+                        "tools": tools
+                    })
+                except Exception as e:
+                    log.warning("mcp_load_tools_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
+                    failed_mcp_ids.append(mcp_id)
 
             if connected_mcp_names:
                 await mcp_client.fetch_all_metadata()
