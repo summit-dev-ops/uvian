@@ -52,7 +52,14 @@ def create_sync_node(mcp_client: PersistentMCPClient):
         # ============================================
         # DETERMINE MCPs TO LOAD
         # ============================================
-        state_mcp_names = _get_mcp_names_from_state(state.get("loaded_mcps", []))
+        state_loaded_mcps = state.get("loaded_mcps", [])
+        state_mcp_names = _get_mcp_names_from_state(state_loaded_mcps)
+
+        state_mcps_without_tools = {
+            m.get("name") for m in state_loaded_mcps
+            if isinstance(m, dict) and m.get("name") and not m.get("tools")
+        }
+
         event_mcp_configs = _get_mcp_configs_from_events(pending_messages, all_hooks, all_mcp_configs)
         state_mcp_configs = _get_mcp_configs_by_names(state_mcp_names, all_mcp_configs)
 
@@ -70,25 +77,27 @@ def create_sync_node(mcp_client: PersistentMCPClient):
         if mcp_client:
             for cfg in mcp_configs_to_load:
                 mcp_id = cfg.get("id")
+                mcp_name = cfg.get("name", "")
                 if not mcp_id:
                     continue
 
                 is_new_mcp = mcp_id not in state_mcp_ids
+                needs_tools = mcp_name in state_mcps_without_tools
 
                 try:
                     await mcp_client.connect(mcp_id)
-                    connected_mcp_names.append(cfg.get("name", mcp_id))
+                    connected_mcp_names.append(mcp_name or mcp_id)
                 except Exception as e:
                     log.warning("mcp_connect_failed", mcp_id=mcp_id, error=str(e), node="sync_node")
                     failed_mcp_ids.append(mcp_id)
                     continue
 
-                if is_new_mcp:
+                if is_new_mcp or needs_tools:
                     try:
                         raw_tools = await mcp_client.load_tools_for_mcp(mcp_id)
                         tools = [{"name": t.name, "description": t.description or ""} for t in raw_tools]
                         loaded_mcps_entries.append({
-                            "name": cfg.get("name", mcp_id),
+                            "name": mcp_name or mcp_id,
                             "description": cfg.get("usage_guidance", ""),
                             "tools": tools
                         })
