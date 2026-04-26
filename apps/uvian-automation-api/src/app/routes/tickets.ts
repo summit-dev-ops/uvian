@@ -35,7 +35,6 @@ export default async function (fastify: FastifyInstance) {
               enum: ['low', 'medium', 'high', 'critical'],
             },
             assignedTo: { type: 'string' },
-            requesterJobId: { type: 'string' },
           },
           additionalProperties: false,
         },
@@ -47,8 +46,7 @@ export default async function (fastify: FastifyInstance) {
     ) => {
       try {
         const body = request.body || {};
-        const { id, title, description, priority, assignedTo, requesterJobId } =
-          body;
+        const { id, title, description, priority, assignedTo } = body;
 
         if (!title) {
           reply.code(400).send({
@@ -75,7 +73,6 @@ export default async function (fastify: FastifyInstance) {
             description,
             priority,
             assignedTo,
-            requesterJobId,
             userId,
           },
           { eventEmitter: request.server.eventEmitter },

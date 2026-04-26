@@ -1,6 +1,5 @@
 export interface Ticket {
   id: string;
-  requesterJobId: string | null;
   status: 'open' | 'in_progress' | 'resolved' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'critical';
   title: string;
@@ -24,7 +23,6 @@ export interface CreateTicketRequest {
     description?: string;
     priority?: 'low' | 'medium' | 'high' | 'critical';
     assignedTo?: string;
-    requesterJobId?: string;
     content?: Record<string, unknown>;
   };
 }

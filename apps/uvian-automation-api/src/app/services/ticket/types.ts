@@ -11,7 +11,6 @@ export interface CreateTicketPayload {
   description?: string;
   priority?: 'low' | 'medium' | 'high' | 'critical';
   assignedTo?: string;
-  requesterJobId?: string;
   createdBy?: string;
   content?: Record<string, unknown>;
 }

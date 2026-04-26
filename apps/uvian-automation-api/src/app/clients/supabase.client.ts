@@ -87,7 +87,6 @@ export type Database = {
       tickets: {
         Row: {
           id: string;
-          requester_job_id: string | null;
           status: string;
           priority: string;
           title: string;
@@ -101,7 +100,6 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          requester_job_id?: string | null;
           status?: string;
           priority?: string;
           title: string;

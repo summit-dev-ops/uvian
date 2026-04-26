@@ -33,7 +33,6 @@ export function createTicketScopedService(
         description: payload.description || null,
         priority: payload.priority || 'medium',
         assigned_to: payload.assignedTo || null,
-        requester_job_id: payload.requesterJobId || null,
         created_by: payload.createdBy || null,
       };
 
