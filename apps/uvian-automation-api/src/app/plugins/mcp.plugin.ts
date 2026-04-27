@@ -1253,6 +1253,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           triggerJson: z.union([
             z.object({ type: z.literal('event'), patterns: z.array(z.string()).min(1) }),
             z.object({ type: z.literal('tool_name_prefix'), pattern: z.string().min(1) }),
+            z.object({ type: z.literal('keyword'), keywords: z.array(z.string()).min(1) }),
           ]),
           action: z.enum(['interrupt', 'log', 'block']),
           config: z.record(z.string(), z.unknown()).optional(),
@@ -1260,12 +1261,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const { hook } = await createHook(clients, {
-            name: args.name,
-            triggerJson: args.triggerJson,
-            action: args.action,
-            config: args.config,
-          });
+          const { hook } = await createHook(
+            clients,
+            {
+              name: args.name,
+              triggerJson: args.triggerJson,
+              action: args.action,
+              config: args.config,
+            },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify({ hookId: hook.hookId }) }],
           };
@@ -1287,13 +1292,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
-          const { hooks } = await listHooks(clients, {
-            isActive: args.isActive,
-          });
+          const { hooks } = await listHooks(
+            clients,
+            {
+              isActive: args.isActive,
+            },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify({ hooks }) }],
           };
@@ -1343,6 +1348,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           triggerJson: z.union([
             z.object({ type: z.literal('event'), patterns: z.array(z.string()).min(1) }),
             z.object({ type: z.literal('tool_name_prefix'), pattern: z.string().min(1) }),
+            z.object({ type: z.literal('keyword'), keywords: z.array(z.string()).min(1) }),
           ]).optional(),
           action: z.enum(['interrupt', 'log', 'block']).optional(),
           config: z.record(z.string(), z.unknown()).optional(),
@@ -1351,18 +1357,18 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
-          const { hook } = await updateHook(clients, {
-            hookId: args.hookId,
-            name: args.name,
-            triggerJson: args.triggerJson,
-            action: args.action,
-            config: args.config,
-            isActive: args.isActive,
-          });
+          const { hook } = await updateHook(
+            clients,
+            {
+              hookId: args.hookId,
+              name: args.name,
+              triggerJson: args.triggerJson,
+              action: args.action,
+              config: args.config,
+              isActive: args.isActive,
+            },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify({ hook }) }],
           };
@@ -1384,13 +1390,13 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
-          const { success } = await deleteHook(clients, {
-            hookId: args.hookId,
-          });
+          const { success } = await deleteHook(
+            clients,
+            {
+              hookId: args.hookId,
+            },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify({ success }) }],
           };
@@ -1413,14 +1419,10 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
           const { success } = await linkHook(clients, {
             hookId: args.hookId,
             agentId: args.agentId,
-          });
+          }, { userId: serverContext.userId });
           return {
             content: [{ type: 'text', text: JSON.stringify({ success }) }],
           };
@@ -1475,16 +1477,16 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
-          const { success } = await addHookEffect(clients, {
-            hookId: args.hookId,
-            effectType: args.effectType,
-            effectId: args.effectId,
-            config: args.config,
-          });
+          const { success } = await addHookEffect(
+            clients,
+            {
+              hookId: args.hookId,
+              effectType: args.effectType,
+              effectId: args.effectId,
+              config: args.config,
+            },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify({ success }) }],
           };
@@ -1508,15 +1510,15 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
       },
       async (args): Promise<ToolResult> => {
         try {
-          const clients = {
-            adminClient: adminSupabase,
-            userClient: adminSupabase,
-          };
-          const { success } = await removeHookEffect(clients, {
-            hookId: args.hookId,
-            effectType: args.effectType,
-            effectId: args.effectId,
-          });
+          const { success } = await removeHookEffect(
+            clients,
+            {
+              hookId: args.hookId,
+              effectType: args.effectType,
+              effectId: args.effectId,
+            },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
+          );
           return {
             content: [{ type: 'text', text: JSON.stringify({ success }) }],
           };
