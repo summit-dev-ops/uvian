@@ -540,6 +540,7 @@ export const mcpPlugin: FastifyPluginAsync = async (fastify) => {
           const { mcp } = await createMcp(
             clients,
             { ...args },
+            { eventEmitter: fastify.eventEmitter, userId: serverContext.userId },
           );
           return { content: [{ type: 'text', text: JSON.stringify(mcp) }] };
         } catch (error) {
