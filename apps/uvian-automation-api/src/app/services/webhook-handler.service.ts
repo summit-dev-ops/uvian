@@ -89,8 +89,8 @@ export class WebhookHandlerService {
       const { data: agent, error: agentError } = await adminSupabase
         .schema('core_automation')
         .from('agents')
-        .select('user_id')
-        .eq('id', agentId)
+        .select('id, user_id')
+        .eq('user_id', agentId)
         .single();
 
       if (agentError || !agent?.user_id) {
