@@ -44,10 +44,11 @@ class AgentExecutor(BaseExecutor):
     async def _execute_thread_wakeup(self, job_data: JobData, inputs: dict) -> JobResult:
         job_id = job_data["id"]
         thread_id = inputs.get("threadId")
-        agent_user_id = inputs.get("agentId")
+        agent_id = inputs.get("agentId")
+        agent_user_id = inputs.get("agentUserId")
         
-        if not thread_id or not agent_user_id:
-            raise ValueError("threadId and agentId are required for thread-wakeup jobs")
+        if not thread_id or not agent_id or not agent_user_id:
+            raise ValueError("threadId, agentId, and agentUserId are required for thread-wakeup jobs")
         
         execution_id = str(uuid.uuid4())
         log.info(
@@ -55,6 +56,7 @@ class AgentExecutor(BaseExecutor):
             execution_id=execution_id,
             job_id=job_id,
             thread_id=thread_id,
+            agent_id=agent_id,
             agent_user_id=agent_user_id,
         )
         
@@ -160,6 +162,7 @@ class AgentExecutor(BaseExecutor):
             "tokens_used": 0,
             "channel_id": channel,
             "conversation_id": "",
+            "agent_id": agent_id,
             "agent_user_id": agent_user_id,
             "thread_id": thread_id,
             "message_id": str(uuid.uuid4()),

@@ -86,6 +86,18 @@ export class WebhookHandlerService {
       }
 
       const jobId = randomUUID();
+      const { data: agent, error: agentError } = await adminSupabase
+        .schema('core_automation')
+        .from('agents')
+        .select('user_id')
+        .eq('id', agentId)
+        .single();
+
+      if (agentError || !agent?.user_id) {
+        console.error(`[webhook] Failed to fetch agent user_id:`, agentError);
+        throw new Error('Agent not found or has no user_id');
+      }
+
       const { error: jobError } = await adminSupabase
         .schema('core_automation')
         .from('jobs')
@@ -96,6 +108,7 @@ export class WebhookHandlerService {
             inputType: 'thread-wakeup',
             threadId,
             agentId,
+            agentUserId: agent.user_id,
           },
         });
 

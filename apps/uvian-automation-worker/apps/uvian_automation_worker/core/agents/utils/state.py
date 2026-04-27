@@ -23,6 +23,7 @@ class MessagesState(TypedDict):
     message_id: str
     event_metadata: Dict[str, Any]
     thread_id: str
+    agent_id: str
     agent_user_id: str
     execution_id: str
     inbox_messages_added: int

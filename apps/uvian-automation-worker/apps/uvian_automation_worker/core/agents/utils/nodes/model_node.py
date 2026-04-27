@@ -6,6 +6,7 @@ from core.logging import log
 from core.agents.utils.types.mcp import LoadedMCP, AvailableMCP
 
 SYSTEM_PROMPT = """Your Agent User ID: {agent_user_id}
+Your Agent ID: {agent_id}
 
 You are an autonomous headless agent with access to internal tools and external mcps. 
 You will not be communicating with the clients directly. You will be provided events and it is your responsibility to plan, and act based on the events you receive.
@@ -166,6 +167,7 @@ def create_model_node(model, default_tools, mcp_client):
         formatted_system_prompt = SYSTEM_PROMPT.format(
             agent_name=state.get("agent_name", "AI Assistant"),
             agent_user_id=state.get("agent_user_id", "unknown"),
+            agent_id=state.get("agent_id", "unknown"),
             custom_instructions=state.get("custom_instructions", ""),
         ) + context_section + mcps_section + skills_section + memory_section + expectations_section
         
