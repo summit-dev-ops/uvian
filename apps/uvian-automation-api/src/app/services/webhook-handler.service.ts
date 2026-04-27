@@ -107,7 +107,7 @@ export class WebhookHandlerService {
           input: {
             inputType: 'thread-wakeup',
             threadId,
-            agentId,
+            agentId: agent.id,
             agentUserId: agent.user_id,
           },
         });
